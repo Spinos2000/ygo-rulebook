@@ -496,11 +496,11 @@ form.add input[type=text]{font:inherit;font-size:16px;padding:10px 12px;border-r
 #admin{border:2px dashed var(--info)}
 /* ===== GXテーマ v2：アカデミアの3寮カラー × アメコミ風（ポップ・スポーティ） ===== */
 :root{
-  --bg:#e8f3ff; --surface:#ffffff; --surface2:#f1f5fb; --ink:#111522; --muted:#4f5870; --line:#c9d3e6;
-  --spell:#00936e; --spell-bg:#d8f5ea; --trap:#c4167a; --trap-bg:#fbe0ef; --monster:#e0620a; --monster-bg:#ffead6;
-  --gold:#b98500; --gold-bg:#fff2c2; --red:#e3001b; --red-bg:#ffe1e3; --info:#0062d6; --info-bg:#dceaff; --mark:#ffe14a;
-  --osiris:#e3001b; --osiris-d:#8e0010; --ra:#ffc800; --ra-d:#b58a00; --obelisk:#0062d6; --obelisk-d:#003a85;
-  --edge:#111522; --dot:rgba(0,98,214,.10);
+  --bg:#edf3f9; --surface:#fdfdfb; --surface2:#f2f5f9; --ink:#2f3445; --muted:#646b7e; --line:#d3dae6;
+  --spell:#2f9a7e; --spell-bg:#e0f2ec; --trap:#b8558f; --trap-bg:#f7e6ef; --monster:#d57a3c; --monster-bg:#fbeee2;
+  --gold:#ad8a2c; --gold-bg:#fbf1d2; --red:#cf5257; --red-bg:#f9e5e5; --info:#3f74c4; --info-bg:#e3ebf7; --mark:#fbe6a0;
+  --osiris:#d65c60; --osiris-d:#9b3a3e; --ra:#f3cf6b; --ra-d:#b8932e; --obelisk:#4a7fcc; --obelisk-d:#2f5a9a;
+  --edge:#3b4255; --dot:rgba(74,127,204,.09);
   --title:"Zen Maru Gothic","M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
   --display:"Zen Maru Gothic","M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
   --latin:"Fredoka","M PLUS Rounded 1c",sans-serif;
@@ -508,17 +508,17 @@ form.add input[type=text]{font:inherit;font-size:16px;padding:10px 12px;border-r
   --body:"M PLUS Rounded 1c","Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0b1630; --surface:#131f3d; --surface2:#1b2a50; --ink:#f2f5ff; --muted:#a8b4d4; --line:#2e3f6e;
-  --spell:#3fe0ad; --spell-bg:#0f3a35; --trap:#ff6fc0; --trap-bg:#3d1736; --monster:#ff9c4a; --monster-bg:#3d2610;
-  --gold:#ffd23f; --gold-bg:#3a2f0c; --red:#ff4d5e; --red-bg:#45141c; --info:#5aa2ff; --info-bg:#132a57; --mark:#7a5d10;
-  --osiris:#ff3346; --ra:#ffd23f; --ra-d:#e0a800; --obelisk:#2f86ff;
-  --edge:#000; --dot:rgba(90,162,255,.10); color-scheme:dark}}
+  --bg:#141d33; --surface:#1c2742; --surface2:#24314f; --ink:#e9ecf4; --muted:#a9b2c8; --line:#34426a;
+  --spell:#6ccfb0; --spell-bg:#1a3a3a; --trap:#e590c3; --trap-bg:#3a2240; --monster:#eba26e; --monster-bg:#3b2b1e;
+  --gold:#ecd07c; --gold-bg:#3a3220; --red:#eb7f84; --red-bg:#43222a; --info:#86aaea; --info-bg:#1f3060; --mark:#6b5a2a;
+  --osiris:#e07479; --ra:#f0d27a; --ra-d:#cfae4f; --obelisk:#6b97dd;
+  --edge:#0f1628; --dot:rgba(134,170,234,.08); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0b1630; --surface:#131f3d; --surface2:#1b2a50; --ink:#f2f5ff; --muted:#a8b4d4; --line:#2e3f6e;
-  --spell:#3fe0ad; --spell-bg:#0f3a35; --trap:#ff6fc0; --trap-bg:#3d1736; --monster:#ff9c4a; --monster-bg:#3d2610;
-  --gold:#ffd23f; --gold-bg:#3a2f0c; --red:#ff4d5e; --red-bg:#45141c; --info:#5aa2ff; --info-bg:#132a57; --mark:#7a5d10;
-  --osiris:#ff3346; --ra:#ffd23f; --ra-d:#e0a800; --obelisk:#2f86ff;
-  --edge:#000; --dot:rgba(90,162,255,.10); color-scheme:dark}
+  --bg:#141d33; --surface:#1c2742; --surface2:#24314f; --ink:#e9ecf4; --muted:#a9b2c8; --line:#34426a;
+  --spell:#6ccfb0; --spell-bg:#1a3a3a; --trap:#e590c3; --trap-bg:#3a2240; --monster:#eba26e; --monster-bg:#3b2b1e;
+  --gold:#ecd07c; --gold-bg:#3a3220; --red:#eb7f84; --red-bg:#43222a; --info:#86aaea; --info-bg:#1f3060; --mark:#6b5a2a;
+  --osiris:#e07479; --ra:#f0d27a; --ra-d:#cfae4f; --obelisk:#6b97dd;
+  --edge:#0f1628; --dot:rgba(134,170,234,.08); color-scheme:dark}
 
 /* 背景：アメコミの網点 */
 body{background:radial-gradient(circle,var(--dot) 1.6px,transparent 2px) 0 0/12px 12px,var(--bg)}
@@ -526,18 +526,18 @@ h2,h3,.summary b,.who-q,.modal-box b,.dv-head{font-family:var(--display);font-we
 
 /* ヘッダー：集中線 × コマ */
 header{position:relative;overflow:hidden;color:#fff;border:4px solid var(--edge);border-radius:4px;padding:18px 16px 26px;
-  background:radial-gradient(circle,rgba(255,255,255,.22) 1.8px,transparent 2.2px) 0 0/14px 14px,linear-gradient(160deg,#1a7cff 0%,#0058cf 55%,#003a99 100%);
+  background:radial-gradient(circle,rgba(255,255,255,.16) 1.8px,transparent 2.2px) 0 0/14px 14px,linear-gradient(160deg,#6a9fe0 0%,#4a7fcc 55%,#3a67ab 100%);
   box-shadow:7px 7px 0 var(--edge)}
-header::after{content:"";position:absolute;left:-10%;right:-10%;bottom:0;height:12px;background:linear-gradient(90deg,var(--osiris) 0 33.3%,var(--ra) 33.3% 66.6%,#fff 66.6%);transform:skewX(-20deg)}
+header::after{content:"";position:absolute;left:-10%;right:-10%;bottom:0;height:12px;background:linear-gradient(90deg,var(--osiris) 0 33.3%,var(--ra) 33.3% 66.6%,#f4f7fb 66.6%);transform:skewX(-20deg)}
 header > *{position:relative}
 header .eyebrow{font-family:var(--latin);font-weight:700;color:var(--ra);letter-spacing:.1em;font-size:12px;text-shadow:2px 2px 0 var(--edge)}
-header .lead,header .updated{color:#e6efff}
+header .lead,header .updated{color:#eef3fb}
 header .updated a{color:var(--ra)}
 .gx-title{display:flex;flex-direction:column;gap:0;font-family:var(--title);font-weight:400;line-height:1;margin:6px 0 2px;transform:skewX(-10deg);transform-origin:left bottom}
-.gx-title .t-pre{position:relative;align-self:flex-start;font-size:16px;color:var(--edge);background:#fff;border:3px solid var(--edge);border-radius:999px;padding:4px 14px;margin-bottom:10px;letter-spacing:.08em}
-.gx-title .t-pre::after{content:"";position:absolute;left:22px;bottom:-11px;width:14px;height:14px;background:#fff;border-right:3px solid var(--edge);border-bottom:3px solid var(--edge);transform:rotate(45deg) skewX(10deg)}
-.gx-title .t-main{font-size:clamp(54px,17vw,84px);letter-spacing:.02em;
-  background:linear-gradient(180deg,#fff7c2 0%,#ffd400 45%,#ff9500 55%,#ffcc00 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+.gx-title .t-pre{position:relative;z-index:0;isolation:isolate;align-self:flex-start;font-size:16px;color:var(--edge);background:#fff;border:3px solid var(--edge);border-radius:999px;padding:5px 16px;margin-bottom:18px;letter-spacing:.12em}
+.gx-title .t-pre::after{content:"";position:absolute;z-index:-1;left:22px;bottom:-9px;width:14px;height:14px;background:#fff;border-right:3px solid var(--edge);border-bottom:3px solid var(--edge);transform:rotate(45deg) skewX(10deg)}
+.gx-title .t-main{position:relative;z-index:1;font-size:clamp(54px,17vw,84px);letter-spacing:.02em;
+  color:#f6d77c;
   -webkit-text-stroke:3px var(--edge);paint-order:stroke fill;filter:drop-shadow(5px 5px 0 var(--osiris)) drop-shadow(3px 3px 0 var(--edge))}
 .gx-title .t-sub{margin-top:6px;align-self:flex-start;font-size:clamp(19px,5.6vw,26px);color:#fff;background:var(--osiris);border:3px solid var(--edge);padding:2px 12px;box-shadow:4px 4px 0 var(--edge)}
 .gx-stars{display:none}
@@ -597,14 +597,43 @@ button,input,select,textarea{font-family:inherit}
 .opp{border:3px solid var(--edge);border-radius:4px;box-shadow:4px 4px 0 var(--edge)}
 .opp-lp b{color:var(--osiris)}
 .me{border:3px solid var(--edge);border-radius:4px;box-shadow:5px 5px 0 var(--edge);
-  background:repeating-conic-gradient(from 0deg at 50% 60%,rgba(255,255,255,.07) 0 5deg,transparent 5deg 12deg),linear-gradient(170deg,#1a7cff,#003a99)}
-.me-who b{color:var(--ra)} .me-who span{color:#d6e4ff}
-.me .lp{color:#ffe14a;-webkit-text-stroke:2px var(--edge);paint-order:stroke fill;text-shadow:4px 4px 0 var(--edge)}
-.me .lp.hit{background:rgba(227,0,27,.45);color:#fff}
-.me .lp.heal{background:rgba(0,147,110,.5);color:#fff}
-.me .lp.zero{color:#ff4d5e}
+  background:repeating-conic-gradient(from 0deg at 50% 60%,rgba(255,255,255,.07) 0 5deg,transparent 5deg 12deg),linear-gradient(170deg,#5a8fd8,#3a67ab)}
+.me-who b{color:var(--ra)} .me-who span{color:#e3ebf8}
+.me .lp{color:#f8dc84;-webkit-text-stroke:2px var(--edge);paint-order:stroke fill;text-shadow:4px 4px 0 var(--edge)}
+.me .lp.hit{background:rgba(214,92,96,.5);color:#fff}
+.me .lp.heal{background:rgba(47,154,126,.55);color:#fff}
+.me .lp.zero{color:#f2a0a3}
 .me .meter{background:rgba(255,255,255,.2);border:2px solid var(--edge)}
 .me.my-turn{box-shadow:5px 5px 0 var(--ra),0 0 0 3px var(--ra)}
+
+/* 文字と余白：ゆったり読みやすく */
+body{letter-spacing:.04em;line-height:1.95}
+h1,h2,h3{letter-spacing:.06em;line-height:1.5}
+h2{font-size:clamp(20px,5.6vw,24px)} h3{font-size:17px}
+.note{letter-spacing:.03em;line-height:1.8}
+.gx-title{gap:4px}
+.gx-title .t-main{letter-spacing:.06em;line-height:1.1}
+.gx-title .t-sub{letter-spacing:.1em;padding:4px 14px}
+.wrap{gap:30px}
+section{gap:22px;padding:26px 18px}
+section.fold.open{gap:22px;padding-bottom:26px}
+.sec-h{gap:8px;padding-bottom:16px}
+.block{gap:14px} .block + .block{padding-top:22px}
+ul,ol{gap:12px}
+.steps,.reasons,.ex,.faq-list,.rb-list,.al-items,.checklist{gap:12px}
+.steps li,.reasons li,.faq-item,.rb-item,.ex li{padding:14px 16px}
+.steps li{gap:12px}
+.summary{gap:14px;padding:18px}
+.summary ol{gap:12px}
+.summary li{grid-template-columns:30px 1fr;gap:8px;line-height:1.8}
+.toc{gap:8px;padding-block:12px}
+.toc a{padding:6px 14px;letter-spacing:.05em}
+.grp{letter-spacing:.08em;padding:4px 18px;margin-top:14px}
+.fold-in > summary{padding:14px 16px;letter-spacing:.04em}
+.start-btn,.btn{letter-spacing:.1em;padding:14px 16px}
+.cards{gap:8px} .card{padding:4px 11px;letter-spacing:.03em}
+.stats{gap:8px} .stat{padding:10px}
+strong,b{letter-spacing:.05em}
 </style>
 </head>
 <body>
