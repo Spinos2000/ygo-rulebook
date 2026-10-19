@@ -871,7 +871,8 @@ strong,b{letter-spacing:.05em}
     <div class="fold-body">
     <div class="pf-guest" id="pf-guest" hidden><span>💡 ログインすると、どの端末でも同じプロフィール・記録が使えて、テーマ一覧にも自動で載ります。</span><button type="button" class="acct-btn" data-login>🔑 Googleでログイン</button></div>
     <div class="pf-cur"><span>いま使っている人</span><b id="pf-cur-name">未登録</b><button type="button" class="chip" id="pf-switch">🔄 切り替え・追加</button></div>
-    <label class="field" for="pf-name">ニックネーム<input type="text" id="pf-name" maxlength="20" placeholder="例：たろう"></label>
+    <label class="field" for="pf-name">ニックネーム<span class="note">苗字を<strong>ひらがな</strong>で入れてください（例：やまだ）。みんなの一覧や対戦相手の選択で、だれかすぐわかります</span><input type="text" id="pf-name" maxlength="20" placeholder="例：やまだ" autocomplete="off"></label>
+    <p class="note" id="pf-name-hint" hidden>💡 苗字をひらがなで入れると、ほかのメンバーが見分けやすくなります（例：やまだ）</p>
     <div class="field">
       <span>デッキテーマ</span>
       <div class="theme-list" id="pf-themes"></div>
@@ -911,7 +912,7 @@ strong,b{letter-spacing:.05em}
     <h3>📜 リザルトログ</h3>
     <div class="rl-filter">
       <label class="field" for="rl-f-theme">自分のテーマ<select id="rl-f-theme"></select></label>
-      <label class="field" for="rl-f-q">相手・メモで検索<input type="search" id="rl-f-q" placeholder="例：じろう、ミラーフォース"></label>
+      <label class="field" for="rl-f-q">相手・メモで検索<input type="search" id="rl-f-q" placeholder="例：さとう、ミラーフォース"></label>
       <div class="seg4" id="rl-f-res" role="radiogroup" aria-label="結果で絞り込み">
         <button type="button" role="radio" data-r="">すべて</button><button type="button" role="radio" data-r="win">🏆 勝ち</button><button type="button" role="radio" data-r="lose">💀 負け</button><button type="button" role="radio" data-r="draw">🤝 分け</button>
       </div>
@@ -925,7 +926,7 @@ strong,b{letter-spacing:.05em}
     <div class="fold-body">
       <p class="note">ログインしたメンバー全員のリザルトを、人とテーマごとに集計します。</p>
       <button type="button" class="ghost" id="ar-load">📥 みんなの成績を読み込む</button>
-      <label class="field" for="ar-q" id="ar-q-wrap" hidden>🔎 名前・テーマで絞り込み<input type="search" id="ar-q" placeholder="例：たろう、ドラゴン"></label>
+      <label class="field" for="ar-q" id="ar-q-wrap" hidden>🔎 名前・テーマで絞り込み<input type="search" id="ar-q" placeholder="例：やまだ、ドラゴン"></label>
       <div id="ar-out"></div>
     </div>
   </details>
@@ -938,7 +939,7 @@ strong,b{letter-spacing:.05em}
     <button type="button" role="tab" id="ow-tab-p" aria-selected="true">👤 人ごと</button>
     <button type="button" role="tab" id="ow-tab-t" aria-selected="false">🃏 テーマごと</button>
   </div>
-  <label class="field" for="ow-q">🔎 名前・テーマで検索<input type="search" id="ow-q" placeholder="例：ドラゴン、たろう"></label>
+  <label class="field" for="ow-q">🔎 名前・テーマで検索<input type="search" id="ow-q" placeholder="例：ドラゴン、やまだ"></label>
   <div class="ow-list" id="ow-list"></div>
 
   <p class="note">➕ ログインして「👤 プロフィール」にテーマを保存すると、ここに<strong>自動で載ります</strong>。</p>
@@ -949,7 +950,7 @@ strong,b{letter-spacing:.05em}
 <section id="board">
   <div class="sec-h"><span>REPORT BOARD</span><h2>📋 規制報告ボード</h2><p class="note">デッキごとの規制の記録。新しい順に表示</p></div>
   <label for="rb-q" class="rb-search">🔎 テーマ名・使用者名・カード名で検索
-    <input type="search" id="rb-q" placeholder="例：ドラゴン族、たろう、増援">
+    <input type="search" id="rb-q" placeholder="例：ドラゴン族、やまだ、増援">
   </label>
   <p class="note" id="rb-count"></p>
   <ul class="rb-list" id="rb-list"></ul>
@@ -1696,7 +1697,7 @@ strong,b{letter-spacing:.05em}
     <div class="dv-head"><b>🏁 リザルト</b></div>
     <div class="rs-sum" id="rs-sum"></div>
     <div class="rs-opp" id="rs-opp" hidden>
-      <label class="field" for="rs-opp-name">相手の名前<input type="text" id="rs-opp-name" maxlength="20" placeholder="例：じろう" list="dl-members" autocomplete="off"></label>
+      <label class="field" for="rs-opp-name">相手の名前<input type="text" id="rs-opp-name" maxlength="20" placeholder="例：さとう" list="dl-members" autocomplete="off"></label>
       <label class="field" for="rs-opp-theme">相手のデッキテーマ<input type="text" id="rs-opp-theme" maxlength="30" placeholder="例：E・HERO" list="dl-opp-themes" autocomplete="off"></label>
     </div>
     <div class="field"><span>結果</span>
@@ -1810,7 +1811,8 @@ strong,b{letter-spacing:.05em}
   function isDirty(){return draft&&(draft.name!==(pf.name||'')||draft.themes.join('\u0001')!==pf.themes.join('\u0001')||JSON.stringify(draft.kinds)!==JSON.stringify(pf.kinds||{}));}
   function markDirty(){$('pf-dirty').hidden=!isDirty();}
   function renderCur(){$('pf-cur-name').textContent=pf.name||'未登録';$('pf-sum-name').textContent=pf.name||'未登録';if(!pf.name)$('profile').open=true;$('pf-delete').hidden=CL?true:!findP(pf.id);$('pf-switch').hidden=!!CL;}
-  $('pf-name').addEventListener('input',function(){draft.name=this.value.trim();markDirty();});
+  function nameHint(){var v=$('pf-name').value.trim();$('pf-name-hint').hidden=!v||/^[ぁ-んー]+$/.test(v);}
+  $('pf-name').addEventListener('input',function(){draft.name=this.value.trim();markDirty();nameHint();});
   function renderThemes(){
     var box=$('pf-themes');box.innerHTML='';
     if(!draft.themes.length){box.appendChild(el('span','note','まだ登録がありません。'));return;}
@@ -1912,7 +1914,7 @@ strong,b{letter-spacing:.05em}
     CL.ref.onSnapshot(function(d){var x=d.exists?(d.data()||{}):{};var dirty=!firstSnap&&isDirty();
       pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;pf.kinds=normK(x.kinds);
       if(!dirty)resetDraft();else renderCur();
-      if(firstSnap&&!pf.name){var sug=str((u.displayName||'').split(/\s+/)[0],20);if(sug){draft.name=sug;$('pf-name').value=sug;markDirty();}$('profile').open=true;pfStatus('👋 はじめまして！ニックネームとデッキテーマを入れて「💾 プロフィールを保存」を押してください。','');}
+      if(firstSnap&&!pf.name){$('profile').open=true;pfStatus('👋 はじめまして！ニックネームに苗字をひらがなで（例：やまだ）、デッキテーマも入れて「💾 プロフィールを保存」を押してください。','');}
       firstSnap=false;},function(){pfStatus('プロフィールを読み込めませんでした。ページを開き直してください。','err');});
     CL.results.where('uid','==',u.uid).onSnapshot(function(s){var loc=pf.log.filter(function(r){return !r._id;});var have={};
       pf.log=s.docs.map(function(d){var r=d.data()||{};r._id=d.id;have[r.at]=1;return r;});loc.forEach(function(r){if(!have[r.at])pf.log.push(r);});
