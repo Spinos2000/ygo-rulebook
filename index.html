@@ -1406,6 +1406,7 @@ strong,b{letter-spacing:.05em}
   <form class="ll-form" id="ll-form" hidden>
     <b>✏️ 規制リストに追加・変更（ルール管理者のみ）</b>
     <label for="ll-name">カード名<input type="text" id="ll-name" maxlength="60" placeholder="例：サイクロン" autocomplete="off"></label>
+    <p class="note" id="ll-hint" role="status"></p>
     <div class="ll-row">
       <label for="ll-level">規制<select id="ll-level"><option value="lim">☝️ 制限（1枚まで）</option><option value="ban">❌ 禁止</option><option value="out">⛔ 完全使用不可</option><option value="free">🔓 リストから外す（無制限に）</option></select></label>
       <label for="ll-type">種類<select id="ll-type"><option value="sp">魔法</option><option value="tr">罠</option></select></label>
@@ -2746,6 +2747,9 @@ strong,b{letter-spacing:.05em}
   var Y=window.YGO,sec=$('list');if(!sec)return;
   var TIER={out:sec.querySelector('.t-out'),ban:sec.querySelector('.t-ban'),lim:sec.querySelector('.t-lim')};
   var LVN={out:'完全使用不可',ban:'禁止',lim:'制限',free:'リストから外す'};
+  /* よく使われる汎用魔法・罠の辞書（名前から種類と分類を自動入力） */
+  var DICT={"ブラック・ホール": ["sp", "全体除去"], "ライトニング・ボルテックス": ["sp", "全体除去"], "サンダー・ボルト": ["sp", "全体除去"], "激流葬": ["tr", "全体除去"], "聖なるバリア －ミラーフォース－": ["tr", "全体除去"], "地砕き": ["sp", "単体除去"], "地割れ": ["sp", "単体除去"], "シールドクラッシュ": ["sp", "単体除去"], "抹殺の使徒": ["sp", "単体除去"], "死者への手向け": ["sp", "単体除去"], "奈落の落とし穴": ["tr", "単体除去"], "落とし穴": ["tr", "単体除去"], "炸裂装甲": ["tr", "単体除去"], "次元幽閉": ["tr", "単体除去"], "万能地雷グレイモヤ": ["tr", "単体除去"], "破壊輪": ["tr", "単体除去"], "底なし落とし穴": ["tr", "単体除去"], "強制脱出装置": ["tr", "単体除去"], "サイクロン": ["sp", "魔法・罠除去"], "大嵐": ["sp", "魔法・罠除去"], "ハーピィの羽根帚": ["sp", "魔法・罠除去"], "砂塵の大竜巻": ["tr", "魔法・罠除去"], "撲滅の使徒": ["sp", "魔法・罠除去"], "魔法除去": ["sp", "魔法・罠除去"], "ハリケーン": ["sp", "魔法・罠除去"], "ナイト・ショット": ["tr", "魔法・罠除去"], "ツインツイスター": ["sp", "魔法・罠除去"], "コズミック・サイクロン": ["sp", "魔法・罠除去"], "神の宣告": ["tr", "カウンター罠"], "神の警告": ["tr", "カウンター罠"], "神の通告": ["tr", "カウンター罠"], "魔宮の賄賂": ["tr", "カウンター罠"], "天罰": ["tr", "カウンター罠"], "盗賊の七つ道具": ["tr", "カウンター罠"], "強欲な壺": ["sp", "ドロー"], "天使の施し": ["sp", "ドロー"], "成金ゴブリン": ["sp", "ドロー"], "打ち出の小槌": ["sp", "ドロー"], "手札抹殺": ["sp", "ドロー"], "貪欲な壺": ["sp", "ドロー"], "一時休戦": ["sp", "ドロー"], "凡骨の意地": ["sp", "ドロー"], "無謀な欲張り": ["tr", "ドロー"], "八汰烏の骸": ["tr", "ドロー"], "ゴブリンのやりくり上手": ["tr", "ドロー"], "強欲で謙虚な壺": ["sp", "ドロー"], "増援": ["sp", "サーチ"], "封印の黄金櫃": ["sp", "サーチ"], "苦渋の選択": ["sp", "サーチ"], "テラ・フォーミング": ["sp", "サーチ"], "光の援軍": ["sp", "サーチ"], "おろかな埋葬": ["sp", "墓地操作"], "死者蘇生": ["sp", "蘇生"], "早すぎた埋葬": ["sp", "蘇生"], "リビングデッドの呼び声": ["tr", "蘇生"], "次元融合": ["sp", "蘇生・帰還"], "超融合": ["sp", "召喚補助"], "未来融合－フューチャー・フュージョン": ["sp", "召喚補助"], "血の代償": ["tr", "召喚補助"], "心変わり": ["sp", "コントロール奪取"], "強奪": ["sp", "コントロール奪取"], "洗脳－ブレインコントロール": ["sp", "コントロール奪取"], "精神操作": ["sp", "コントロール奪取"], "光の護封剣": ["sp", "攻撃の防御"], "闇の護封剣": ["sp", "攻撃の防御"], "威嚇する咆哮": ["tr", "攻撃の防御"], "和睦の使者": ["tr", "攻撃の防御"], "攻撃の無力化": ["tr", "攻撃の防御"], "魔法の筒": ["tr", "攻撃の防御"], "王宮のお触れ": ["tr", "ロック"], "スキルドレイン": ["tr", "ロック"], "平和の使者": ["sp", "ロック"], "グラヴィティ・バインド－超重力の網－": ["tr", "ロック"], "レベル制限B地区": ["sp", "ロック"], "生贄封じの仮面": ["tr", "ロック"], "魔封じの芳香": ["sp", "ロック"], "禁じられた聖杯": ["sp", "効果無効"], "我が身を盾に": ["tr", "効果無効"], "墓穴の指名者": ["sp", "効果無効"], "抹殺の指名者": ["sp", "効果無効"], "月の書": ["sp", "妨害"], "収縮": ["sp", "強化"], "突進": ["sp", "強化"], "団結の力": ["sp", "強化"], "魔導師の力": ["sp", "強化"], "リミッター解除": ["sp", "強化"]};
+  var DK={};Object.keys(DICT).forEach(function(n){DK[key(n)]=DICT[n];});
   function nameOf(c){return (c.firstChild&&c.firstChild.nodeType===3?c.firstChild.nodeValue:c.textContent).replace(/後\s*$/,'').trim();}
   var statics=[].slice.call(sec.querySelectorAll('.tier .card'));
   var cats={};Object.keys(TIER).forEach(function(l){[].forEach.call(TIER[l].querySelectorAll('.cat > b'),function(b){cats[b.textContent]=1;});});
@@ -2780,8 +2784,12 @@ strong,b{letter-spacing:.05em}
   Y.ready.then(function(u){if(!Y.db)return;owner=Y.isAdmin;col=Y.db.collection('limitlist');
     col.onSnapshot(function(s){docs=s.docs.map(function(d){return {id:d.id,d:d.data()||{}};});render();},function(){});
     if(owner)$('ll-form').hidden=false;});
-  $('ll-name').addEventListener('input',function(){var k=key(this.value),hit=null;statics.forEach(function(c){if(key(nameOf(c))===k)hit=c;});
-    if(hit){$('ll-type').value=hit.classList.contains('tr')?'tr':'sp';$('ll-after').checked=!!hit.querySelector('.after');var cb=hit.closest('.cat');if(cb)$('ll-cat').value=cb.querySelector('b').textContent;}});
+  function setCat(c){if(!cats[c]){cats[c]=1;fillCats();}$('ll-cat').value=c;$('ll-newcat-wrap').hidden=true;}
+  $('ll-name').addEventListener('input',function(){var k=key(this.value),hit=null,hint=$('ll-hint');statics.concat([].slice.call(sec.querySelectorAll('.card.dyn'))).forEach(function(c){if(key(nameOf(c))===k)hit=c;});
+    if(!k){hint.textContent='';return;}
+    if(hit){$('ll-type').value=hit.classList.contains('tr')?'tr':'sp';$('ll-after').checked=!!hit.querySelector('.after');var cb=hit.closest('.cat');if(cb)setCat(cb.querySelector('b').textContent);hint.textContent='📋 リストにあるカードです。規制を選ぶと変更になります。';return;}
+    var d=DK[k];if(d){$('ll-type').value=d[0];setCat(d[1]);hint.textContent='📖 '+(d[0]==='tr'?'罠':'魔法')+'・「'+d[1]+'」を自動で選びました。違っていたら直してください。';}
+    else hint.textContent='❔ 辞書にないカードです。種類と分類を選んでください。';});
   $('ll-form').addEventListener('submit',function(e){e.preventDefault();var st=$('ll-st'),n=$('ll-name').value.trim(),lv=$('ll-level').value,cat=$('ll-cat').value==='__new'?$('ll-newcat').value.trim():$('ll-cat').value;
     if(!n){st.className='status err';st.textContent='カード名を入力してください。';return;}
     if(lv!=='free'&&!cat){st.className='status err';st.textContent='分類を選ぶか、新しい分類の名前を入れてください。';return;}
