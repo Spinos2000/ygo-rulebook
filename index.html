@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>あのころ遊戯王 ｜ 独自環境ルール</title>
 <meta name="description" content="GX時代の遊戯王をもう一度遊ぶためのルールブックとデュエルツール">
-<meta name="theme-color" content="#1d1b26">
+<meta name="theme-color" content="#0058cf">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%83%8F%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=M+PLUS+Rounded+1c:wght@400;700&family=Zen+Maru+Gothic:wght@700;900&display=swap">
 <style>
 /* Layout: スマホ前提の1カラム・ルールブック。カード種別色（魔法=緑・罠=紫・モンスター=橙）と規制ランク色を色言語にする */
 :root{
@@ -21,8 +21,8 @@
   --ban:#2a2433; --ban-fg:#ffffff;
   --info:#2d5fb8; --info-bg:#e3ebf9;
   --mark:#fbe08c;
-  --display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
-  --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif;
+  --display:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
+  --body:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#15131b; --surface:#1f1c27; --surface2:#2a2633; --ink:#efecf4; --muted:#aaa3b8; --line:#3a3446;
@@ -494,6 +494,146 @@ form.add input[type=text]{font:inherit;font-size:16px;padding:10px 12px;border-r
 .ar-person > b{font-weight:900;font-size:16px}
 #ar-out{display:flex;flex-direction:column;gap:10px}
 #admin{border:2px dashed var(--info)}
+/* ===== GXテーマ v2：アカデミアの3寮カラー × アメコミ風（ポップ・スポーティ） ===== */
+:root{
+  --bg:#edf3f9; --surface:#fdfdfb; --surface2:#f2f5f9; --ink:#2f3445; --muted:#646b7e; --line:#d3dae6;
+  --spell:#2f9a7e; --spell-bg:#e0f2ec; --trap:#b8558f; --trap-bg:#f7e6ef; --monster:#d57a3c; --monster-bg:#fbeee2;
+  --gold:#ad8a2c; --gold-bg:#fbf1d2; --red:#cf5257; --red-bg:#f9e5e5; --info:#3f74c4; --info-bg:#e3ebf7; --mark:#fbe6a0;
+  --osiris:#d65c60; --osiris-d:#9b3a3e; --ra:#f3cf6b; --ra-d:#b8932e; --obelisk:#4a7fcc; --obelisk-d:#2f5a9a;
+  --edge:#3b4255; --dot:rgba(74,127,204,.09);
+  --title:"Zen Maru Gothic","M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
+  --display:"Zen Maru Gothic","M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
+  --latin:"Fredoka","M PLUS Rounded 1c",sans-serif;
+  --digit:"Fredoka","M PLUS Rounded 1c",sans-serif;
+  --body:"M PLUS Rounded 1c","Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141d33; --surface:#1c2742; --surface2:#24314f; --ink:#e9ecf4; --muted:#a9b2c8; --line:#34426a;
+  --spell:#6ccfb0; --spell-bg:#1a3a3a; --trap:#e590c3; --trap-bg:#3a2240; --monster:#eba26e; --monster-bg:#3b2b1e;
+  --gold:#ecd07c; --gold-bg:#3a3220; --red:#eb7f84; --red-bg:#43222a; --info:#86aaea; --info-bg:#1f3060; --mark:#6b5a2a;
+  --osiris:#e07479; --ra:#f0d27a; --ra-d:#cfae4f; --obelisk:#6b97dd;
+  --edge:#0f1628; --dot:rgba(134,170,234,.08); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141d33; --surface:#1c2742; --surface2:#24314f; --ink:#e9ecf4; --muted:#a9b2c8; --line:#34426a;
+  --spell:#6ccfb0; --spell-bg:#1a3a3a; --trap:#e590c3; --trap-bg:#3a2240; --monster:#eba26e; --monster-bg:#3b2b1e;
+  --gold:#ecd07c; --gold-bg:#3a3220; --red:#eb7f84; --red-bg:#43222a; --info:#86aaea; --info-bg:#1f3060; --mark:#6b5a2a;
+  --osiris:#e07479; --ra:#f0d27a; --ra-d:#cfae4f; --obelisk:#6b97dd;
+  --edge:#0f1628; --dot:rgba(134,170,234,.08); color-scheme:dark}
+
+/* 背景：アメコミの網点 */
+body{background:radial-gradient(circle,var(--dot) 1.6px,transparent 2px) 0 0/12px 12px,var(--bg)}
+h2,h3,.summary b,.who-q,.modal-box b,.dv-head{font-family:var(--display);font-weight:400}
+
+/* ヘッダー：集中線 × コマ */
+header{position:relative;overflow:hidden;color:#fff;border:4px solid var(--edge);border-radius:4px;padding:18px 16px 26px;
+  background:radial-gradient(circle,rgba(255,255,255,.16) 1.8px,transparent 2.2px) 0 0/14px 14px,linear-gradient(160deg,#6a9fe0 0%,#4a7fcc 55%,#3a67ab 100%);
+  box-shadow:7px 7px 0 var(--edge)}
+header::after{content:"";position:absolute;left:-10%;right:-10%;bottom:0;height:12px;background:linear-gradient(90deg,var(--osiris) 0 33.3%,var(--ra) 33.3% 66.6%,#f4f7fb 66.6%);transform:skewX(-20deg)}
+header > *{position:relative}
+header .eyebrow{font-family:var(--latin);font-weight:700;color:var(--ra);letter-spacing:.1em;font-size:12px;text-shadow:2px 2px 0 var(--edge)}
+header .lead,header .updated{color:#eef3fb}
+header .updated a{color:var(--ra)}
+.gx-title{display:flex;flex-direction:column;gap:0;font-family:var(--title);font-weight:400;line-height:1;margin:6px 0 2px;transform:skewX(-10deg);transform-origin:left bottom}
+.gx-title .t-pre{position:relative;z-index:0;isolation:isolate;align-self:flex-start;font-size:16px;color:var(--edge);background:#fff;border:3px solid var(--edge);border-radius:999px;padding:5px 16px;margin-bottom:18px;letter-spacing:.12em}
+.gx-title .t-pre::after{content:"";position:absolute;z-index:-1;left:22px;bottom:-9px;width:14px;height:14px;background:#fff;border-right:3px solid var(--edge);border-bottom:3px solid var(--edge);transform:rotate(45deg) skewX(10deg)}
+.gx-title .t-main{position:relative;z-index:1;font-size:clamp(54px,17vw,84px);letter-spacing:.02em;
+  color:#f6d77c;
+  -webkit-text-stroke:3px var(--edge);paint-order:stroke fill;filter:drop-shadow(5px 5px 0 var(--osiris)) drop-shadow(3px 3px 0 var(--edge))}
+.gx-title .t-sub{margin-top:6px;align-self:flex-start;font-size:clamp(19px,5.6vw,26px);color:#fff;background:var(--osiris);border:3px solid var(--edge);padding:2px 12px;box-shadow:4px 4px 0 var(--edge)}
+.gx-stars{display:none}
+header .summary{color:var(--ink);border:3px solid var(--edge);border-radius:4px;box-shadow:5px 5px 0 var(--edge)}
+header .summary b{color:var(--obelisk)}
+.life-jump{background:var(--ra)!important;color:var(--edge)!important;border:3px solid var(--edge);border-radius:4px!important;box-shadow:4px 4px 0 var(--edge);font-family:var(--title);font-weight:400!important;transform:skewX(-8deg)}
+.acct{color:var(--ink);border:3px solid var(--edge);border-radius:4px;box-shadow:4px 4px 0 var(--edge)}
+.acct-btn{background:var(--obelisk);border:2px solid var(--edge);border-radius:4px}
+
+/* 目次 */
+.toc{border-bottom:3px solid var(--edge)}
+.toc a{border:2px solid var(--edge);border-radius:4px;background:var(--surface);box-shadow:2px 2px 0 var(--edge)}
+.toc a.on{background:var(--ra);color:var(--edge)}
+
+/* グループ見出し：寮カラーの斜めバナー */
+.grp{align-self:flex-start;color:#fff;font-family:var(--title);background:var(--osiris);border:3px solid var(--edge);padding:2px 16px;box-shadow:4px 4px 0 var(--edge);transform:skewX(-10deg)}
+#g-rules{background:var(--obelisk)}
+#g-other{background:var(--ra);color:var(--edge)}
+
+/* セクション：マンガのコマ */
+section{--c:var(--osiris);border:3px solid var(--edge);border-radius:4px;box-shadow:6px 6px 0 var(--edge)}
+#why,#base,#pool,#basic,#cmp,#flow,#balance,#tune,#deck,#list,#allow{--c:var(--obelisk)}
+#data,#faq,#log,#admin{--c:var(--ra)}
+.sec-h{position:relative;border-bottom:3px solid var(--edge)!important;padding-left:14px!important}
+.sec-h::before{content:"";position:absolute;left:0;top:4px;bottom:16px;width:6px;background:var(--c);border:1px solid var(--edge)}
+section.fold > .sec-h::before{bottom:16px;top:16px}
+section.fold:not(.open) > .sec-h{border-bottom:0!important}
+.sec-h > span{align-self:flex-start;font-family:var(--latin);font-weight:700;font-size:11px;letter-spacing:.06em;color:#fff;background:var(--c);border:2px solid var(--edge);padding:0 8px;line-height:1.7;transform:skewX(-10deg)}
+#data .sec-h > span,#faq .sec-h > span,#log .sec-h > span,#admin .sec-h > span{color:var(--edge)}
+section.fold > .sec-h::after{content:"＋";font-family:var(--title);color:var(--edge);width:26px;height:26px;display:grid;place-items:center;background:var(--ra);border:2px solid var(--edge);border-radius:50%;font-size:14px}
+section.fold.open > .sec-h::after{content:"－";transform:translateY(-50%)}
+
+/* 部品 */
+.fold-in{border:2px solid var(--edge);border-radius:4px}
+.reasons li,.steps li,.faq-item,.rb-item,.ss-row,.keyfact,.ex li,.al-items li,.stat{border-radius:4px}
+.start-btn{background:var(--osiris);color:#fff;border:3px solid var(--edge);border-radius:4px;font-family:var(--title);font-weight:400;letter-spacing:.06em;box-shadow:5px 5px 0 var(--edge)}
+.start-btn:active,.btn:active{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--edge)}
+.btn{background:var(--obelisk);border:3px solid var(--edge);border-radius:4px;font-family:var(--title);font-weight:400;box-shadow:4px 4px 0 var(--edge)}
+.ghost{border:2px solid var(--edge);border-radius:4px;color:var(--ink)}
+.totop{border:3px solid var(--edge);box-shadow:3px 3px 0 var(--edge);background:var(--ra);color:var(--edge)}
+.badge.new{background:var(--osiris);color:#fff;border:2px solid var(--edge)}
+.updated,.note{letter-spacing:.01em}
+
+.chip{border:2px solid var(--edge)!important;border-radius:4px!important;box-shadow:2px 2px 0 var(--edge);background:var(--surface);color:var(--ink)}
+/* 数字 */
+.lp,.opp-lp b,.stat b,.amt output,.key-show b,.key-in input,.turn-v b,.steps .n,.scale div{font-family:var(--digit);font-weight:700}
+strong,b,.hl{font-family:"Zen Maru Gothic",var(--body);font-weight:900}
+h1,h2,h3,.gx-title,.summary b,.ss,.dv-head,.dv-head b,.modal-box b,.turn-now b,.who-q,.grp,.life-jump,.start-btn,.btn,section.fold > .sec-h::after{font-weight:900!important}
+button,input,select,textarea{font-family:inherit}
+
+/* デュエル画面 */
+.duel{background:radial-gradient(circle,var(--dot) 1.6px,transparent 2px) 0 0/12px 12px,var(--bg)}
+.turnbar{background:var(--obelisk);border:3px solid var(--edge);border-radius:4px;box-shadow:4px 4px 0 var(--edge)}
+.turnbar.opp-turn{background:var(--osiris)}
+.turnbar.opp-turn .turn-go{color:var(--osiris)}
+.turn-go{border:2px solid var(--edge);border-radius:4px}
+.opp{border:3px solid var(--edge);border-radius:4px;box-shadow:4px 4px 0 var(--edge)}
+.opp-lp b{color:var(--osiris)}
+.me{border:3px solid var(--edge);border-radius:4px;box-shadow:5px 5px 0 var(--edge);
+  background:repeating-conic-gradient(from 0deg at 50% 60%,rgba(255,255,255,.07) 0 5deg,transparent 5deg 12deg),linear-gradient(170deg,#5a8fd8,#3a67ab)}
+.me-who b{color:var(--ra)} .me-who span{color:#e3ebf8}
+.me .lp{color:#f8dc84;-webkit-text-stroke:2px var(--edge);paint-order:stroke fill;text-shadow:4px 4px 0 var(--edge)}
+.me .lp.hit{background:rgba(214,92,96,.5);color:#fff}
+.me .lp.heal{background:rgba(47,154,126,.55);color:#fff}
+.me .lp.zero{color:#f2a0a3}
+.me .meter{background:rgba(255,255,255,.2);border:2px solid var(--edge)}
+.me.my-turn{box-shadow:5px 5px 0 var(--ra),0 0 0 3px var(--ra)}
+
+/* 文字と余白：ゆったり読みやすく */
+body{letter-spacing:.04em;line-height:1.95}
+h1,h2,h3{letter-spacing:.06em;line-height:1.5}
+h2{font-size:clamp(20px,5.6vw,24px)} h3{font-size:17px}
+.note{letter-spacing:.03em;line-height:1.8}
+.gx-title{gap:4px}
+.gx-title .t-main{letter-spacing:.06em;line-height:1.1}
+.gx-title .t-sub{letter-spacing:.1em;padding:4px 14px}
+.wrap{gap:30px}
+section{gap:22px;padding:26px 18px}
+section.fold.open{gap:22px;padding-bottom:26px}
+.sec-h{gap:8px;padding-bottom:16px}
+.block{gap:14px} .block + .block{padding-top:22px}
+ul,ol{gap:12px}
+.steps,.reasons,.ex,.faq-list,.rb-list,.al-items,.checklist{gap:12px}
+.steps li,.reasons li,.faq-item,.rb-item,.ex li{padding:14px 16px}
+.steps li{gap:12px}
+.summary{gap:14px;padding:18px}
+.summary ol{gap:12px}
+.summary li{grid-template-columns:30px 1fr;gap:8px;line-height:1.8}
+.toc{gap:8px;padding-block:12px}
+.toc a{padding:6px 14px;letter-spacing:.05em}
+.grp{letter-spacing:.08em;padding:4px 18px;margin-top:14px}
+.fold-in > summary{padding:14px 16px;letter-spacing:.04em}
+.start-btn,.btn{letter-spacing:.1em;padding:14px 16px}
+.cards{gap:8px} .card{padding:4px 11px;letter-spacing:.03em}
+.stats{gap:8px} .stat{padding:10px}
+strong,b{letter-spacing:.05em}
 </style>
 </head>
 <body>
@@ -588,8 +728,9 @@ form.add input[type=text]{font:inherit;font-size:16px;padding:10px 12px;border-r
 <div class="wrap">
 
 <header>
-  <span class="eyebrow">YU-GI-OH! ORIGINAL FORMAT</span>
-  <h1>🃏 遊戯王<br>独自環境ルール</h1>
+  <span class="eyebrow">GX ERA ORIGINAL FORMAT</span>
+  <h1 class="gx-title"><span class="t-pre">あのころ</span><span class="t-main">遊戯王</span><span class="t-sub">独自環境ルール</span></h1>
+  <div class="gx-stars" aria-hidden="true">★★★★★★★★</div>
   <p class="lead">GX時代の遊戯王を<br>もう一度遊ぶためのルールブック</p>
   <p class="updated">📅 最終更新：<span id="last-upd">2026年10月19日</span>　<a href="#log">🗒️ 更新履歴を見る</a></p>
   <div class="acct" id="acct"><span class="acct-l" id="acct-l">🔄 ログイン状態を確認中…</span><button type="button" class="acct-btn" id="acct-in" hidden>🔑 Googleでログイン</button><button type="button" class="acct-out" id="acct-out" hidden>ログアウト</button><p class="acct-err" id="acct-err" role="status"></p></div>
