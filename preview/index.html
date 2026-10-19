@@ -879,8 +879,8 @@ strong,b{letter-spacing:.05em}
         <input type="text" id="pf-theme-in" maxlength="30" placeholder="例：ドラゴン族ビート" aria-label="追加するデッキテーマ">
         <button type="button" id="pf-theme-add">追加</button>
       </div>
-      <div class="kind-pick" id="pf-kind" role="radiogroup" aria-label="追加するテーマの種類"><span class="note">追加するテーマは</span><button type="button" role="radio" data-k="std" aria-checked="true">🎓 ルールに沿ったデッキ</button><button type="button" role="radio" data-k="ryu" aria-checked="false">🌏 留学生デッキ</button></div>
-      <span class="note">登録したテーマの「🎓／🌏」を押すと、あとから切り替えられます。<a href="#ryu">留学生デッキとは？</a></span>
+      <div class="kind-pick" id="pf-kind" role="radiogroup" aria-label="追加するテーマの種類"><span class="note">追加するテーマは</span><button type="button" role="radio" data-k="std" aria-checked="true">🏫 本校デッキ</button><button type="button" role="radio" data-k="ryu" aria-checked="false">🌏 留学生デッキ</button></div>
+      <span class="note">登録したテーマの「🏫／🌏」を押すと、あとから切り替えられます。<a href="#ryu">留学生デッキとは？</a></span>
     </div>
     <p class="dirty" id="pf-dirty" hidden>✏️ まだ保存されていない変更があります</p>
     <button type="button" class="start-btn" id="pf-save">💾 プロフィールを保存</button>
@@ -1385,13 +1385,13 @@ strong,b{letter-spacing:.05em}
       <li>当時の環境で活躍したデッキは、このルールに当てはめると<strong>弱化を重ねるだけ</strong>になってしまうことがある</li>
       <li>どうしても使いたい専用カードが、2008年4月以降のカードだったり、規制リストに引っかかったりする</li>
     </ul>
-    <p>そんなデッキも、この環境に<span class="hlw"><span class="hl">遊びに来て大歓迎</span></span>です。<br>このルールやカード規制には沿っていなくても、<strong>環境のトップにならないように調整したデッキ</strong>を「<strong>🌏 留学生デッキ</strong>」と呼んで、アカデミアに迎えます。</p>
+    <p>そんなデッキも、この環境に<span class="hlw"><span class="hl">遊びに来て大歓迎</span></span>です。<br>このルールやカード規制には沿っていなくても、<strong>環境のトップにならないように調整したデッキ</strong>を「<strong>🌏 留学生デッキ</strong>」と呼んで、アカデミアに迎えます。<br>このルールに沿ったデッキは「<strong>🏫 本校デッキ</strong>」と呼びます。</p>
     <ol class="steps seq">
       <li><span class="n">1</span><div><strong>対戦前に「留学生デッキです」とひとこと</strong><span class="note">相手が知っていれば、それで十分です</span></div></li>
       <li><span class="n">2</span><div><strong>強さの目標は、みんなと同じ6〜7</strong><span class="note">強すぎたかな？と思ったら、カードの入れ替えなどで一緒に調整しましょう</span></div></li>
       <li><span class="n">3</span><div><strong>プロフィールでテーマを「🌏 留学生」として登録</strong><span class="note">戦績・テーマ一覧・規制報告ボード・リンク対戦など、サイトの機能はすべて同じように使えます</span></div></li>
     </ol>
-    <p class="ryu-heart">💬 ルールに沿ったデッキと留学生デッキに、上も下もありません。どちらも「自分のやりたいことをやりに来た仲間」です。違う入口から来たデッキとのデュエルも、この環境の楽しみのひとつとして歓迎してください。</p>
+    <p class="ryu-heart">💬 本校デッキと留学生デッキに、上も下もありません。どちらも「自分のやりたいことをやりに来た仲間」です。違う入口から来たデッキとのデュエルも、この環境の楽しみのひとつとして歓迎してください。</p>
   </div>
 </section>
 
@@ -1815,7 +1815,7 @@ strong,b{letter-spacing:.05em}
     var box=$('pf-themes');box.innerHTML='';
     if(!draft.themes.length){box.appendChild(el('span','note','まだ登録がありません。'));return;}
     draft.themes.forEach(function(t,i){var tag=el('span','theme-tag');tag.appendChild(el('span','',t));
-      var kb=el('button','kind-btn'+(draft.kinds[t]==='ryu'?' on':''),draft.kinds[t]==='ryu'?'🌏 留学生':'🎓 ルール準拠');kb.type='button';kb.title='タップで切り替え';
+      var kb=el('button','kind-btn'+(draft.kinds[t]==='ryu'?' on':''),draft.kinds[t]==='ryu'?'🌏 留学生':'🏫 本校');kb.type='button';kb.title='タップで切り替え';
       kb.addEventListener('click',function(){if(draft.kinds[t]==='ryu')delete draft.kinds[t];else draft.kinds[t]='ryu';renderThemes();markDirty();});tag.appendChild(kb);
       var x=el('button','','×');x.type='button';x.setAttribute('aria-label',t+'を削除');
       x.addEventListener('click',function(){if(!x.classList.contains('confirm')){x.classList.add('confirm');setTimeout(function(){x.classList.remove('confirm');},3000);return;}draft.themes.splice(i,1);delete draft.kinds[t];renderThemes();markDirty();});
@@ -2348,7 +2348,7 @@ strong,b{letter-spacing:.05em}
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
-      {id:'auto-2026-10-19-ryu',createdAt:1792417500000,text:'🌏「留学生デッキ」を新設：このルールでは組めないロマンデッキも、トップにならないよう調整すれば歓迎。プロフィールのテーマ登録で「🎓 ルール準拠／🌏 留学生」を選べ、テーマ一覧や戦績で見分けられるように'},
+      {id:'auto-2026-10-19-ryu',createdAt:1792417500000,text:'🌏「留学生デッキ」を新設：このルールでは組めないロマンデッキも、トップにならないよう調整すれば歓迎。プロフィールのテーマ登録で「🏫 本校／🌏 留学生」を選べ、テーマ一覧や戦績で見分けられるように'},
       {id:'auto-2026-10-19-design',createdAt:1792413060000,text:'🎨 デザインを一新：アカデミアの3寮カラー（赤・黄・青）とアメコミ風の見た目に。文字を丸ゴシックにして、行間・余白をゆったり読みやすく'},
       {id:'auto-2026-10-19-features',createdAt:1792414680000,text:'🆕 アカウント連動の機能を追加：相手ごとの成績・テーマ対テーマの成績、デッキの強さ（1〜10の評価とデータの目安）、記録のあとから編集、デュエル準備画面に今の規制を表示、👑ロマン図鑑、📈戦績グラフ。ニックネームの重複もチェックするように'},
       {id:'auto-2026-10-19-limitlist',createdAt:1792415280000,text:'🚨 汎用魔法・罠 規制リストに、あとからカードを追加・変更できるように（追加されたカードには🆕マーク）'},
