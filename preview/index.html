@@ -688,6 +688,22 @@ strong,b{letter-spacing:.05em}
 .ll-hist{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px}
 .ll-hist li{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--surface2);border-radius:4px;padding:8px 12px;font-size:14px}
 .ll-note{font-size:13px;color:var(--muted)}
+
+/* 留学生デッキ */
+.ryu{display:inline-flex;align-items:center;gap:2px;font-size:11px;font-weight:900;letter-spacing:.02em;color:var(--trap);background:var(--trap-bg);border:1px solid var(--trap);border-radius:999px;padding:0 7px;line-height:1.7;white-space:nowrap;vertical-align:middle}
+.kind-btn{font:inherit;font-size:11px;font-weight:900;border:1px solid var(--line);background:var(--surface2);color:var(--muted);border-radius:999px;padding:0 8px;line-height:1.8;cursor:pointer}
+.kind-btn.on{color:var(--trap);background:var(--trap-bg);border-color:var(--trap)}
+.theme-tag .kind-btn{width:auto;height:auto;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:11px;padding:1px 8px;line-height:1.7;white-space:nowrap;flex:none}
+.theme-tag .kind-btn.on{color:var(--trap);background:var(--trap-bg);border-color:var(--trap)}
+.theme-tag{flex-wrap:wrap;max-width:100%}
+.kind-pick{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}
+.kind-pick button{font:inherit;font-size:13px;font-weight:700;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:3px 12px;cursor:pointer}
+.kind-pick button[aria-checked="true"]{border-color:var(--obelisk);background:var(--info-bg);color:var(--obelisk)}
+.kind-pick button[data-k="ryu"][aria-checked="true"]{border-color:var(--trap);background:var(--trap-bg);color:var(--trap)}
+.ryu-box{display:flex;flex-direction:column;gap:12px;background:var(--trap-bg);border:2px solid var(--trap);border-radius:6px;padding:16px}
+.ryu-box h3{color:var(--trap)}
+.ryu-box ol{gap:10px}
+.ryu-heart{background:var(--surface);border-radius:4px;padding:12px 14px;font-weight:700}
 </style>
 </head>
 <body>
@@ -863,6 +879,8 @@ strong,b{letter-spacing:.05em}
         <input type="text" id="pf-theme-in" maxlength="30" placeholder="例：ドラゴン族ビート" aria-label="追加するデッキテーマ">
         <button type="button" id="pf-theme-add">追加</button>
       </div>
+      <div class="kind-pick" id="pf-kind" role="radiogroup" aria-label="追加するテーマの種類"><span class="note">追加するテーマは</span><button type="button" role="radio" data-k="std" aria-checked="true">🎓 ルールに沿ったデッキ</button><button type="button" role="radio" data-k="ryu" aria-checked="false">🌏 留学生デッキ</button></div>
+      <span class="note">登録したテーマの「🎓／🌏」を押すと、あとから切り替えられます。<a href="#ryu">留学生デッキとは？</a></span>
     </div>
     <p class="dirty" id="pf-dirty" hidden>✏️ まだ保存されていない変更があります</p>
     <button type="button" class="start-btn" id="pf-save">💾 プロフィールを保存</button>
@@ -1014,6 +1032,7 @@ strong,b{letter-spacing:.05em}
     <span><span class="red">原則使用不可。</span></span>
     <span><a href="#allow">許可リスト</a>に載っているカードだけ、<strong>弱いデッキが強化手順1で1枚</strong>投入できます。</span>
   </div>
+  <p class="note">🌏 このルールでは組めないデッキを使いたいときは、<a href="#ryu">留学生デッキ</a>として遊べます。</p>
 </section>
 
 <!-- 基本ルール -->
@@ -1357,6 +1376,22 @@ strong,b{letter-spacing:.05em}
       <li><span class="n">1</span><div>デュエル後、決まった規制を<strong>ボードに自分で登録する</strong><span class="note">ログインが必要。日付は登録した日が自動で入ります</span></div></li>
       <li><span class="n">2</span><div>次に対戦するときは、ボードで<strong>相手のデッキの最新の規制</strong>を確認する</div></li>
     </ol>
+  </div>
+
+  <div class="block ryu-box" id="ryu">
+    <h3>🌏 留学生デッキ ― ルールの外から来た仲間</h3>
+    <p>このルールでは、どうしても組めない<strong>ロマンデッキ</strong>もあります。</p>
+    <ul>
+      <li>当時の環境で活躍したデッキは、このルールに当てはめると<strong>弱化を重ねるだけ</strong>になってしまうことがある</li>
+      <li>どうしても使いたい専用カードが、2008年4月以降のカードだったり、規制リストに引っかかったりする</li>
+    </ul>
+    <p>そんなデッキも、この環境に<span class="hlw"><span class="hl">遊びに来て大歓迎</span></span>です。<br>このルールやカード規制には沿っていなくても、<strong>環境のトップにならないように調整したデッキ</strong>を「<strong>🌏 留学生デッキ</strong>」と呼んで、アカデミアに迎えます。</p>
+    <ol class="steps seq">
+      <li><span class="n">1</span><div><strong>対戦前に「留学生デッキです」とひとこと</strong><span class="note">相手が知っていれば、それで十分です</span></div></li>
+      <li><span class="n">2</span><div><strong>強さの目標は、みんなと同じ6〜7</strong><span class="note">強すぎたかな？と思ったら、カードの入れ替えなどで一緒に調整しましょう</span></div></li>
+      <li><span class="n">3</span><div><strong>プロフィールでテーマを「🌏 留学生」として登録</strong><span class="note">戦績・テーマ一覧・規制報告ボード・リンク対戦など、サイトの機能はすべて同じように使えます</span></div></li>
+    </ol>
+    <p class="ryu-heart">💬 ルールに沿ったデッキと留学生デッキに、上も下もありません。どちらも「自分のやりたいことをやりに来た仲間」です。違う入口から来たデッキとのデュエルも、この環境の楽しみのひとつとして歓迎してください。</p>
   </div>
 </section>
 
@@ -1752,7 +1787,8 @@ strong,b{letter-spacing:.05em}
 
   /* ---------- プロフィール（複数人対応） ---------- */
   function uid(){return 'p'+Date.now().toString(36)+rnd(1e6).toString(36);}
-  function normP(x){x=x||{};return {id:x.id||uid(),name:str(x.name,20),themes:Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[],log:Array.isArray(x.log)?x.log:[],lastTheme:x.lastTheme==null?null:str(x.lastTheme,30),recDefault:x.recDefault!==false};}
+  function normP(x){x=x||{};return {id:x.id||uid(),name:str(x.name,20),themes:Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[],log:Array.isArray(x.log)?x.log:[],lastTheme:x.lastTheme==null?null:str(x.lastTheme,30),recDefault:x.recDefault!==false,kinds:normK(x.kinds)};}
+  function normK(k){var o={};if(k&&typeof k==='object')Object.keys(k).forEach(function(t){if(k[t]==='ryu')o[str(t,30)]='ryu';});return o;}
   var store=load(SKEY,null);
   if(!store||!Array.isArray(store.list)){
     var old=load(PKEY,null);store={cur:null,list:[]};
@@ -1765,13 +1801,13 @@ strong,b{letter-spacing:.05em}
   if(!pf){pf=normP({});}
   var CL=null;
   function savePf(){
-    if(CL){CL.ref.set({name:pf.name,themes:pf.themes,lastTheme:pf.lastTheme,recDefault:pf.recDefault!==false,updatedAt:Date.now()},{merge:true}).catch(function(){pfStatus('保存できませんでした。通信状態を確認して、もう一度お試しください。','err');});return;}
+    if(CL){CL.ref.set({name:pf.name,themes:pf.themes,kinds:pf.kinds||{},lastTheme:pf.lastTheme,recDefault:pf.recDefault!==false,updatedAt:Date.now()},{merge:true}).catch(function(){pfStatus('保存できませんでした。通信状態を確認して、もう一度お試しください。','err');});return;}
     if(!findP(pf.id)&&(pf.name||pf.themes.length||pf.log.length)){store.list.push(pf);}store.cur=pf.id;save(SKEY,store);}
   function cleanRec(r){var o=JSON.parse(JSON.stringify(r||{}));delete o._id;if(CL){o.uid=CL.uid;}o.myName=str(o.myName||pf.name||'',20);return o;}
 
   var draft=null;
-  function resetDraft(){draft={name:pf.name||'',themes:pf.themes.slice()};$('pf-name').value=draft.name;renderThemes();markDirty();renderCur();}
-  function isDirty(){return draft&&(draft.name!==(pf.name||'')||draft.themes.join('\u0001')!==pf.themes.join('\u0001'));}
+  function resetDraft(){draft={name:pf.name||'',themes:pf.themes.slice(),kinds:Object.assign({},pf.kinds||{})};$('pf-name').value=draft.name;renderThemes();markDirty();renderCur();}
+  function isDirty(){return draft&&(draft.name!==(pf.name||'')||draft.themes.join('\u0001')!==pf.themes.join('\u0001')||JSON.stringify(draft.kinds)!==JSON.stringify(pf.kinds||{}));}
   function markDirty(){$('pf-dirty').hidden=!isDirty();}
   function renderCur(){$('pf-cur-name').textContent=pf.name||'未登録';$('pf-sum-name').textContent=pf.name||'未登録';if(!pf.name)$('profile').open=true;$('pf-delete').hidden=CL?true:!findP(pf.id);$('pf-switch').hidden=!!CL;}
   $('pf-name').addEventListener('input',function(){draft.name=this.value.trim();markDirty();});
@@ -1779,11 +1815,15 @@ strong,b{letter-spacing:.05em}
     var box=$('pf-themes');box.innerHTML='';
     if(!draft.themes.length){box.appendChild(el('span','note','まだ登録がありません。'));return;}
     draft.themes.forEach(function(t,i){var tag=el('span','theme-tag');tag.appendChild(el('span','',t));
+      var kb=el('button','kind-btn'+(draft.kinds[t]==='ryu'?' on':''),draft.kinds[t]==='ryu'?'🌏 留学生':'🎓 ルール準拠');kb.type='button';kb.title='タップで切り替え';
+      kb.addEventListener('click',function(){if(draft.kinds[t]==='ryu')delete draft.kinds[t];else draft.kinds[t]='ryu';renderThemes();markDirty();});tag.appendChild(kb);
       var x=el('button','','×');x.type='button';x.setAttribute('aria-label',t+'を削除');
-      x.addEventListener('click',function(){if(!x.classList.contains('confirm')){x.classList.add('confirm');setTimeout(function(){x.classList.remove('confirm');},3000);return;}draft.themes.splice(i,1);renderThemes();markDirty();});
+      x.addEventListener('click',function(){if(!x.classList.contains('confirm')){x.classList.add('confirm');setTimeout(function(){x.classList.remove('confirm');},3000);return;}draft.themes.splice(i,1);delete draft.kinds[t];renderThemes();markDirty();});
       tag.appendChild(x);box.appendChild(tag);});
   }
-  function addTheme(){var i=$('pf-theme-in'),v=i.value.trim().slice(0,30);if(!v)return;if(draft.themes.indexOf(v)<0)draft.themes.push(v);i.value='';renderThemes();markDirty();}
+  var newKind='std';
+  [].forEach.call(document.querySelectorAll('#pf-kind button'),function(b){b.addEventListener('click',function(){newKind=b.getAttribute('data-k');[].forEach.call(document.querySelectorAll('#pf-kind button'),function(x){x.setAttribute('aria-checked',String(x===b));});});});
+  function addTheme(){var i=$('pf-theme-in'),v=i.value.trim().slice(0,30);if(!v)return;if(draft.themes.indexOf(v)<0)draft.themes.push(v);if(newKind==='ryu')draft.kinds[v]='ryu';else delete draft.kinds[v];i.value='';renderThemes();markDirty();}
   $('pf-theme-add').addEventListener('click',addTheme);
   $('pf-theme-in').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addTheme();}});
   function pfStatus(t,c){var e=$('pf-status');e.textContent=t;e.className='status'+(c?' '+c:'');}
@@ -1791,7 +1831,7 @@ strong,b{letter-spacing:.05em}
     var pend=$('pf-theme-in').value.trim();if(pend){addTheme();}
     if(!draft.name){pfStatus('ニックネームを入力してください。','err');return;}
     if(CL&&YGO.nameTaken&&YGO.nameTaken(draft.name)){pfStatus('「'+draft.name+'」はほかのメンバーが使っています。成績が混ざらないよう、別のニックネームにしてください。','err');return;}
-    pf.name=draft.name;pf.themes=draft.themes.slice();savePf();markDirty();renderCur();pfStatus('💾 保存しました！','ok');
+    pf.name=draft.name;pf.themes=draft.themes.slice();pf.kinds={};pf.themes.forEach(function(t){if(draft.kinds[t]==='ryu')pf.kinds[t]='ryu';});savePf();markDirty();renderCur();pfStatus('💾 保存しました！','ok');
   });
   var delBtn=$('pf-delete');
   delBtn.addEventListener('click',function(){
@@ -1870,7 +1910,7 @@ strong,b{letter-spacing:.05em}
     who.hidden=true;pf=normP({id:u.uid});resetDraft();renderLog();
     var firstSnap=true;
     CL.ref.onSnapshot(function(d){var x=d.exists?(d.data()||{}):{};var dirty=!firstSnap&&isDirty();
-      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;
+      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;pf.kinds=normK(x.kinds);
       if(!dirty)resetDraft();else renderCur();
       if(firstSnap&&!pf.name){var sug=str((u.displayName||'').split(/\s+/)[0],20);if(sug){draft.name=sug;$('pf-name').value=sug;markDirty();}$('profile').open=true;pfStatus('👋 はじめまして！ニックネームとデッキテーマを入れて「💾 プロフィールを保存」を押してください。','');}
       firstSnap=false;},function(){pfStatus('プロフィールを読み込めませんでした。ページを開き直してください。','err');});
@@ -1937,7 +1977,7 @@ strong,b{letter-spacing:.05em}
     ['テーマ','戦','勝','敗','分','勝率','👑平均'].forEach(function(h){tr.appendChild(el('th','',h));});th.appendChild(tr);tbl.appendChild(th);
     var tb=el('tbody');
     keys.forEach(function(k){var t=m[k],r=el('tr');var dec=t.w+t.l;var rate=dec?Math.round(t.w/dec*100):null;
-      r.appendChild(el('td','tn',k));r.className='tr-click';r.title='このテーマの記録だけを見る';r.addEventListener('click',function(){$('rl-f-theme').value=(k==='テーマ未選択'?'__none':k);renderLog();$('rl-list').scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});});[t.n,t.w,t.l,t.d].forEach(function(v){r.appendChild(el('td','',String(v)));});
+      var tdn=el('td','tn',k);if((pf.kinds||{})[k]==='ryu'){tdn.appendChild(document.createTextNode(' '));tdn.appendChild(el('span','ryu','🌏 留学生'));}r.appendChild(tdn);r.className='tr-click';r.title='このテーマの記録だけを見る';r.addEventListener('click',function(){$('rl-f-theme').value=(k==='テーマ未選択'?'__none':k);renderLog();$('rl-list').scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});});[t.n,t.w,t.l,t.d].forEach(function(v){r.appendChild(el('td','',String(v)));});
       var rc=el('td','rate',rate==null?'―':rate+'%');if(rate!=null){rc.style.setProperty('--r',rate+'%');}r.appendChild(rc);
       r.appendChild(el('td','',t.ace.length?(t.ace.reduce(function(a,b){return a+b;},0)/t.ace.length).toFixed(1)+'T':'―'));
       tb.appendChild(r);});
@@ -2034,7 +2074,7 @@ strong,b{letter-spacing:.05em}
     $('su-name').textContent=pf.name||'名前未設定（プロフィールで登録できます）';
     var sel=$('su-theme');sel.innerHTML='';
     var o0=el('option','','テーマを選ばない');o0.value='';sel.appendChild(o0);
-    pf.themes.forEach(function(t){var o=el('option','',t);o.value=t;sel.appendChild(o);});
+    pf.themes.forEach(function(t){var o=el('option','',t+((pf.kinds||{})[t]==='ryu'?'（🌏 留学生）':''));o.value=t;sel.appendChild(o);});
     if(pf.lastTheme!=null&&(pf.lastTheme===''||pf.themes.indexOf(pf.lastTheme)>=0))sel.value=pf.lastTheme;else if(pf.themes.length)sel.value=pf.themes[0];
     $('su-theme-hint').hidden=pf.themes.length>0;renderFirst();
   }
@@ -2172,7 +2212,7 @@ strong,b{letter-spacing:.05em}
     pf.log.push(Object.assign({at:Date.now(),result:res,why:why.slice(),memo:$('rs-memo').value.trim(),myName:myName(),myTheme:D.myTheme,
       oppName:o?o.name:($('rs-opp-name').value.trim()||null),oppTheme:o?o.theme:($('rs-opp-theme').value.trim()||null),
       myLp:D.lp,oppLp:o?o.lp:null,turn:D.T,first:D.first,myTurns:myTurnsUpTo(D.T),
-      aceTurn:D.aceT?Math.max(1,myTurnsUpTo(D.aceT)):null,aceT:D.aceT,dmg:t.dmg,cost:t.cost,heal:t.heal,tl:tl,linked:!!o},window.YGO&&YGO.resultExtras?YGO.resultExtras(o):{}));
+      aceTurn:D.aceT?Math.max(1,myTurnsUpTo(D.aceT)):null,aceT:D.aceT,dmg:t.dmg,cost:t.cost,heal:t.heal,tl:tl,linked:!!o,ryu:(pf.kinds||{})[D.myTheme]==='ryu'},window.YGO&&YGO.resultExtras?YGO.resultExtras(o):{}));
     if(CL){CL.results.add(cleanRec(pf.log[pf.log.length-1])).catch(function(){alert('記録を保存できませんでした。通信状態を確認してください。');});}
     savePf();finish();
     var sec=$('results');if(sec)sec.scrollIntoView({behavior:reduce?'auto':'smooth'});
@@ -2223,7 +2263,7 @@ strong,b{letter-spacing:.05em}
       rows.forEach(function(r){
         var themes=(r.themes||[]);if(f&&key(r.name).indexOf(f)<0&&!themes.some(function(t){return key(t).indexOf(f)>=0;}))return;shown++;
         var card=el('div','ow-card');var top=el('div','ow-top');top.appendChild(el('b','','👤 '+r.name));top.appendChild(el('span','note',themes.length+'テーマ'));card.appendChild(top);
-        var box=el('div','ow-themes');themes.forEach(function(t){var dup=count[key(t)]>1;var c=el('span','ow-t'+(dup?' dup':''),t+(dup?' ⚠️':''));if(dup)c.title='他の人も使っています';box.appendChild(c);});card.appendChild(box);
+        var box=el('div','ow-themes');themes.forEach(function(t){var dup=count[key(t)]>1;var c=el('span','ow-t'+(dup?' dup':''),t+(dup?' ⚠️':''));if(dup)c.title='他の人も使っています';if(r.kinds&&r.kinds[t]==='ryu'){c.appendChild(document.createTextNode(' '));c.appendChild(el('span','ryu','🌏 留学生'));}box.appendChild(c);});card.appendChild(box);
         if(false){var acts=el('div','ow-acts');var ed=el('button','del','編集');ed.type='button';ed.addEventListener('click',function(){$('ow-name').value=r.name;$('ow-themes').value=themes.join('、');$('ow-form').scrollIntoView({behavior:'smooth',block:'center'});});
           var dl=el('button','del','削除');dl.type='button';dl.addEventListener('click',function(){if(!dl.classList.contains('confirm')){dl.classList.add('confirm');dl.textContent='本当に削除';setTimeout(function(){dl.classList.remove('confirm');dl.textContent='削除';},4000);return;}col.doc(r.id).delete().catch(function(){});});
           acts.appendChild(ed);acts.appendChild(dl);card.appendChild(acts);}
@@ -2231,7 +2271,7 @@ strong,b{letter-spacing:.05em}
       });
       if(!shown)msg('見つかりませんでした。');
     }else{
-      var map={};rows.forEach(function(r){(r.themes||[]).forEach(function(t){var k=key(t);(map[k]=map[k]||{name:t,people:[]}).people.push(r.name);});});
+      var map={};rows.forEach(function(r){(r.themes||[]).forEach(function(t){var k=key(t);(map[k]=map[k]||{name:t,people:[]}).people.push(r.name+(r.kinds&&r.kinds[t]==='ryu'?'（🌏留学生）':''));});});
       var ks=Object.keys(map).sort(function(a,b){return map[b].people.length-map[a].people.length||map[a].name.localeCompare(map[b].name,'ja');});
       var shown2=0;
       ks.forEach(function(k){var m=map[k];if(f&&k.indexOf(f)<0&&!m.people.some(function(p){return key(p).indexOf(f)>=0;}))return;shown2++;
@@ -2247,7 +2287,7 @@ strong,b{letter-spacing:.05em}
     if(!YGO.db){msg('読み込めませんでした。ページを開き直してください。');return;}
     if(!u){msg('🔑 ログインすると、メンバーのテーマ一覧が見られます。');return;}
     YGO.db.collection('users').onSnapshot(function(s){
-      rows=s.docs.map(function(d){var x=d.data()||{};return {id:d.id,name:String(x.name||'').slice(0,20),themes:Array.isArray(x.themes)?x.themes.map(String):[]};})
+      rows=s.docs.map(function(d){var x=d.data()||{};return {id:d.id,name:String(x.name||'').slice(0,20),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{}};})
         .filter(function(r){return r.name;}).sort(function(a,b){return a.name.localeCompare(b.name,'ja');});
       render();
     },function(){msg('読み込めませんでした。ページを開き直してください。');});
@@ -2308,6 +2348,7 @@ strong,b{letter-spacing:.05em}
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-10-19-ryu',createdAt:1792417500000,text:'🌏「留学生デッキ」を新設：このルールでは組めないロマンデッキも、トップにならないよう調整すれば歓迎。プロフィールのテーマ登録で「🎓 ルール準拠／🌏 留学生」を選べ、テーマ一覧や戦績で見分けられるように'},
       {id:'auto-2026-10-19-design',createdAt:1792413060000,text:'🎨 デザインを一新：アカデミアの3寮カラー（赤・黄・青）とアメコミ風の見た目に。文字を丸ゴシックにして、行間・余白をゆったり読みやすく'},
       {id:'auto-2026-10-19-features',createdAt:1792414680000,text:'🆕 アカウント連動の機能を追加：相手ごとの成績・テーマ対テーマの成績、デッキの強さ（1〜10の評価とデータの目安）、記録のあとから編集、デュエル準備画面に今の規制を表示、👑ロマン図鑑、📈戦績グラフ。ニックネームの重複もチェックするように'},
       {id:'auto-2026-10-19-limitlist',createdAt:1792415280000,text:'🚨 汎用魔法・罠 規制リストに、あとからカードを追加・変更できるように（追加されたカードには🆕マーク）'},
@@ -2541,7 +2582,7 @@ strong,b{letter-spacing:.05em}
     var f=key($('ar-q').value),people={};
     all.forEach(function(r){var n=String(r.myName||'名前なし').slice(0,20),t=String(r.myTheme||'テーマ未選択').slice(0,30);
       if(f&&key(n).indexOf(f)<0&&key(t).indexOf(f)<0)return;
-      var p=people[n]||(people[n]={n:0,w:0,l:0,d:0,th:{},uid:r.uid});var m=p.th[t]||(p.th[t]={n:0,w:0,l:0,d:0,ace:[],logs:[]});m.logs.push(r);
+      var p=people[n]||(people[n]={n:0,w:0,l:0,d:0,th:{},uid:r.uid});var m=p.th[t]||(p.th[t]={n:0,w:0,l:0,d:0,ace:[],logs:[]});m.logs.push(r);if(r.ryu)m.ryu=true;
       [p,m].forEach(function(x){x.n++;if(r.result==='win')x.w++;else if(r.result==='lose')x.l++;else x.d++;});if(r.aceTurn)m.ace.push(Number(r.aceTurn)||0);});
     all.forEach(function(r){if(!r.oppUid||!r.oppRate||!r.oppTheme)return;var mm=Y.members&&Y.members[r.oppUid];var n=String((mm&&mm.name)||r.oppName||'名前なし').slice(0,20),t=String(r.oppTheme).slice(0,30);
       if(f&&key(n).indexOf(f)<0&&key(t).indexOf(f)<0)return;var p=people[n]||(people[n]={n:0,w:0,l:0,d:0,th:{},uid:r.oppUid});p.uid=p.uid||r.oppUid;if(!p.th[t])p.th[t]={n:0,w:0,l:0,d:0,ace:[],logs:[]};});
@@ -2551,7 +2592,7 @@ strong,b{letter-spacing:.05em}
       box.appendChild(el('b','','👤 '+n+'　'+p.n+'戦 '+p.w+'勝 '+p.l+'敗'+(p.d?' '+p.d+'分':'')+(dec?'（勝率'+Math.round(p.w/dec*100)+'%）':'')));
       var tbl=el('table','tstats ar-tbl'),th=el('thead'),tr=el('tr');['テーマ','戦','勝','敗','分','勝率','評価','目安'].forEach(function(x){tr.appendChild(el('th','',x));});th.appendChild(tr);tbl.appendChild(th);
       var tb=el('tbody');Object.keys(p.th).sort(function(a,b){return p.th[b].n-p.th[a].n;}).forEach(function(t){var m=p.th[t],r=el('tr'),d=m.w+m.l,rate=d?Math.round(m.w/d*100):null;
-        r.appendChild(el('td','tn',t));[m.n,m.w,m.l,m.d].forEach(function(v){r.appendChild(el('td','',String(v)));});
+        var mm=p.uid&&Y.members&&Y.members[p.uid],isR=m.ryu||!!(mm&&mm.kinds&&mm.kinds[t]==='ryu');var tdn=el('td','tn',t);if(isR){tdn.appendChild(document.createTextNode(' '));tdn.appendChild(el('span','ryu','🌏'));}r.appendChild(tdn);[m.n,m.w,m.l,m.d].forEach(function(v){r.appendChild(el('td','',String(v)));});
         var rc=el('td','rate',rate==null?'―':rate+'%');if(rate!=null)rc.style.setProperty('--r',rate+'%');r.appendChild(rc);
         var rv=Y.avgRate?Y.avgRate(all.filter(function(x){return x.oppUid&&x.oppUid===p.uid&&key(x.oppTheme)===key(t);})):null;r.appendChild(el('td','sc-v '+(rv?(rv.v>=8?'hi':rv.v<=4.5?'lo':rv.v>=6&&rv.v<=7?'ok':'mid'):''),rv?String(rv.v):'―'));
         var ds=Y.dataScore?Y.dataScore(m.logs):null;r.appendChild(el('td','sc-v '+(ds==null?'':ds>=8?'hi':ds<=4.5?'lo':ds>=6&&ds<=7?'ok':'mid'),ds==null?'―':String(ds)));tb.appendChild(r);});
@@ -2599,7 +2640,7 @@ strong,b{letter-spacing:.05em}
     if(!Y.db)return;
     Y.db.collection('reports').orderBy('createdAt','desc').onSnapshot(function(s){Y.reports=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
     if(!u)return;
-    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[]};});Y.members=m;fillLists();fire('ygo:data');},function(){});
+    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{}};});Y.members=m;fillLists();fire('ygo:data');},function(){});
     Y.db.collection('results').where('oppUid','==',u.uid).onSnapshot(function(s){Y.ratedMe=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
   });
 
@@ -2696,6 +2737,7 @@ strong,b{letter-spacing:.05em}
   Y.resultExtras=function(o){
     var ext={oppRate:rate,aceName:$('rs-ace').value.trim().slice(0,40)||null,oppUid:null};
     if(o&&o.uid)ext.oppUid=o.uid;else{var m=Y.memberByName(o?o.name:$('rs-opp-name').value);if(m&&(!Y.user||m.uid!==Y.user.uid))ext.oppUid=m.uid;}
+    var om=ext.oppUid&&Y.members[ext.oppUid],ot=o?o.theme:$('rs-opp-theme').value.trim();ext.oppRyu=!!(om&&om.kinds&&ot&&om.kinds[ot]==='ryu');
     return ext;
   };
 
@@ -2727,9 +2769,11 @@ strong,b{letter-spacing:.05em}
     if(!cl.childNodes.length)cl.appendChild(el('span','note','規制カードなし'));b.appendChild(cl);
     b.appendChild(el('span','note','📅 '+fmtD(r.createdAt)+' の登録'+(r.reason?'・'+String(r.reason).slice(0,60):'')));return b;}
   function renderRegs(){var box=$('su-regs');if(!box||$('duel').hidden)return;var app=A();if(!app)return;box.innerHTML='';
-    box.appendChild(regBox('あなた：'+($('su-theme').value||'テーマ未選択'),app.pf().name,$('su-theme').value));
+    var myk=(app.pf().kinds||{})[$('su-theme').value]==='ryu';
+    box.appendChild(regBox('あなた：'+($('su-theme').value||'テーマ未選択')+(myk?'（🌏 留学生デッキ）':''),app.pf().name,$('su-theme').value));
     var o=app.opp();
-    if(o&&o.name)box.appendChild(regBox(o.name+'：'+(o.theme||'テーマ未選択'),o.name,o.theme));
+    var om=o&&o.name?Y.memberByName(o.name):null,ok=!!(om&&om.kinds&&o.theme&&om.kinds[o.theme]==='ryu');
+    if(o&&o.name)box.appendChild(regBox(o.name+'：'+(o.theme||'テーマ未選択')+(ok?'（🌏 留学生デッキ）':''),o.name,o.theme));
     else box.appendChild(el('span','note','相手とリンクすると、相手のデッキの規制もここに出ます。'));}
   $('su-theme').addEventListener('change',renderRegs);
   $('duel-open').addEventListener('click',function(){setTimeout(renderRegs,0);});
