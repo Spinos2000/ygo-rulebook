@@ -2922,16 +2922,27 @@ strong,b{letter-spacing:.05em}
     noise(t,.3,.5,{type:'bandpass',f:5000,f1:700,q:1.1,wet:.3});                         // 斬撃
     fm(140,1.41,3.5,t,big?1.6:1.1,.22*k,{f1:70,wet:.5});                                 // 金属の響き
     if(big){voice('sine',55,24,t+.15,1.4,.6,{glide:.7,wet:.35});noise(t+.12,1.2,.25,{f:600,f1:60,wet:.6});}}
+  // カウンターが止まったときの「ミョン」：音程がしなりながら落ち、母音のように響きが動く
+  function myon(t,base,vol,up){var c=ac,dur=.55,f0=up?base*.8:base*1.32,f1=up?base*1.12:base*.92;
+    var o1=c.createOscillator(),o2=c.createOscillator(),lfo=c.createOscillator(),lg=c.createGain(),bp=c.createBiquadFilter(),g=c.createGain();
+    o1.type='sawtooth';o2.type='sine';o1.frequency.setValueAtTime(f0,t);o2.frequency.setValueAtTime(f0,t);
+    o1.frequency.setTargetAtTime(f1,t+.03,.07);o2.frequency.setTargetAtTime(f1,t+.03,.07);
+    lfo.frequency.value=7;lg.gain.setValueAtTime(0,t);lg.gain.linearRampToValueAtTime(f1*.012,t+.25);lfo.connect(lg);lg.connect(o1.frequency);lg.connect(o2.frequency);
+    bp.type='bandpass';bp.Q.value=6;bp.frequency.setValueAtTime(base*.9,t);bp.frequency.exponentialRampToValueAtTime(base*3.2,t+.07);bp.frequency.exponentialRampToValueAtTime(base*1.4,t+dur);
+    var g2=c.createGain();g2.gain.value=.55;
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.012);g.gain.setValueAtTime(vol,t+.12);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o1.connect(bp);bp.connect(g);o2.connect(g2);g2.connect(g);out(g,null,.35);
+    [o1,o2,lfo].forEach(function(o){o.start(t);o.stop(t+dur+.05);});}
   function settle(t,vol){fm(220,1,1.2,t,.9,vol,{wet:.4});voice('sine',55,0,t,.8,vol*1.6,{att:.01});voice('triangle',110,0,t,.7,vol*.6,{cut:800,wet:.3});}
   var SE={
-    dmg:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;impact(t,amt>=2000);var e=ticks(t+.2,cdur(amt),1046,.1);settle(e,.2);},
-    cost:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;noise(t,.5,.3,{type:'bandpass',f:300,f1:3000,q:.9,wet:.35});var e=ticks(t+.1,cdur(amt),1046,.1);settle(e,.16);},
+    dmg:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;impact(t,amt>=2000);var e=ticks(t+.2,cdur(amt),1046,.1);myon(e,784,.3);settle(e+.05,.12);},
+    cost:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;noise(t,.5,.3,{type:'bandpass',f:300,f1:3000,q:.9,wet:.35});var e=ticks(t+.1,cdur(amt),1046,.1);myon(e,784,.28);settle(e+.05,.1);},
     heal:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;
       [220,277.2,329.6,440,554.4].forEach(function(f,i){voice('sine',f,0,t,1.8,.09,{att:.25,hold:.5,wet:.55,detune:4});voice('triangle',f,0,t,1.8,.04,{att:.3,cut:1500,detune:-5,wet:.55});});
       [1318.5,1760,2217].forEach(function(f,i){fm(f,3.5,1.2,t+.15+i*.12,1.6,.05,{wet:.7});});
       noise(t,1.4,.08,{type:'highpass',f:6000,wet:.6});
-      var e=ticks(t+.2,cdur(amt),1318.5,.08);fm(880,2,1,e,1.4,.12,{wet:.55});fm(1108.7,2,1,e,1.4,.09,{wet:.55});},
-    zero:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;impact(t,true);var e=ticks(t+.2,cdur(amt),1046,.1);
+      var e=ticks(t+.2,cdur(amt),1318.5,.08);myon(e,988,.26,true);fm(880,2,1,e,1.4,.12,{wet:.55});fm(1108.7,2,1,e,1.4,.09,{wet:.55});},
+    zero:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;impact(t,true);var e=ticks(t+.2,cdur(amt),1046,.1);myon(e,659,.3);e+=.3;
       fm(110,1.41,4,e,2.4,.25,{f1:40,wet:.6});voice('sine',55,24,e,2.4,.6,{glide:1.8,wet:.35});noise(e,1.8,.3,{f:900,f1:60,wet:.6,dest:shaper});}
   };
   document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};var a=d.amt||0;if(d.zero)SE.zero(a);else if(d.kind==='heal')SE.heal(a);else if(d.kind==='cost')SE.cost(a);else SE.dmg(a);});
