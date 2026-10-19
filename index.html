@@ -2278,16 +2278,26 @@ strong,b{letter-spacing:.05em}
         var a=document.createElement('div');a.className='faq-a';a.textContent=String(d.a||'');
         li.appendChild(q);li.appendChild(a); if(owner) li.appendChild(delBtn(function(){return faq.doc(doc.id).delete();})); faqEl.appendChild(li);});
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
-    log.orderBy('createdAt','desc').onSnapshot(function(snap){
+    /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
+    var AUTO_LOG=[
+      {id:'auto-2026-10-19-design',createdAt:1792413060000,text:'🎨 デザインを一新：アカデミアの3寮カラー（赤・黄・青）とアメコミ風の見た目に。文字を丸ゴシックにして、行間・余白をゆったり読みやすく'},
+      {id:'auto-2026-10-19-features',createdAt:1792414680000,text:'🆕 アカウント連動の機能を追加：相手ごとの成績・テーマ対テーマの成績、デッキの強さ（1〜10の評価とデータの目安）、記録のあとから編集、デュエル準備画面に今の規制を表示、👑ロマン図鑑、📈戦績グラフ。ニックネームの重複もチェックするように'},
+      {id:'auto-2026-10-19-autolog',createdAt:1792415100000,text:'🗒️ サイトを更新したときは、更新履歴とお知らせに自動で載るように'}
+    ];
+    function renderLogs(docs){
+      var items=docs.map(function(doc){var d=doc.data()||{};return {id:doc.id,createdAt:Number(d.createdAt)||0,text:String(d.text||''),fs:true};})
+        .concat(AUTO_LOG.filter(function(a){return !docs.some(function(x){return x.id===a.id;});}))
+        .sort(function(a,b){return b.createdAt-a.createdAt;});
       logEl.innerHTML='';
-      if(snap.empty){empty(logEl,'まだ履歴はありません。');return;}
-      snap.docs.forEach(function(doc,i){var d=doc.data()||{};var li=document.createElement('li');li.className='log-item';
+      if(!items.length){empty(logEl,'まだ履歴はありません。');return;}
+      items.forEach(function(d,i){var li=document.createElement('li');li.className='log-item';
         var dt=document.createElement('span');dt.className='log-date';dt.textContent=fmtDate(d.createdAt,true);
-        var tx=document.createElement('span');tx.className='log-text';tx.textContent=String(d.text||'');
-        li.appendChild(dt);li.appendChild(tx); if(owner) li.appendChild(delBtn(function(){return log.doc(doc.id).delete();})); logEl.appendChild(li);
+        var tx=document.createElement('span');tx.className='log-text';tx.textContent=d.text;
+        li.appendChild(dt);li.appendChild(tx); if(owner&&d.fs) li.appendChild(delBtn(function(){return log.doc(d.id).delete();})); logEl.appendChild(li);
         if(i===0&&lastUpd&&d.createdAt) lastUpd.textContent=fmtDate(d.createdAt,false);});
-      if(!popDone){popDone=true;showUpdates(snap.docs.map(function(x){return x.data()||{};}));}
-    },function(){empty(logEl,'読み込めませんでした。ページを開き直してください。');});
+      if(!popDone){popDone=true;showUpdates(items);}
+    }
+    log.orderBy('createdAt','desc').onSnapshot(function(snap){renderLogs(snap.docs);},function(){renderLogs([]);});
     if(!owner) return;
     function wire(formId,btnId,stId,build,reset){var f=document.getElementById(formId),b=document.getElementById(btnId),st=document.getElementById(stId);f.hidden=false;
       f.addEventListener('submit',async function(e){e.preventDefault();var r=build();if(!r.ok){st.className='status err';st.textContent=r.msg;return;}
