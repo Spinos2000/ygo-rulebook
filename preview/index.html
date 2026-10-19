@@ -2150,7 +2150,7 @@ strong,b{letter-spacing:.05em}
     $('me-name').textContent=myName();$('me-theme').textContent=D.myTheme||'';$('me-ace').textContent=D.aceT?'👑'+turnLabel(D.aceT,D.first).replace('あなたの','自分').replace('ターン目','T'):'';
     lpEl.classList.toggle('zero',to<=0);meter('me-meter',to);
     if(from==null||reduce){lpEl.textContent=String(to);return;}
-    var t0=null,DUR=Math.min(10,Math.max(3,Math.ceil(Math.abs(to-from)/400)+2))*85+120;function step(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/DUR);lpEl.textContent=String(Math.round(from+(to-from)*k));if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step);
+    var df=Math.abs(to-from),t0=null,DUR=(df>=4000?11:df>2000?8:df>1000?6:4)*85+120;function step(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/DUR);lpEl.textContent=String(Math.round(from+(to-from)*k));if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step);
   }
   function renderOpp(){
     if(opp){$('opp-name').textContent=opp.name;$('opp-theme').textContent=opp.theme||'テーマ未選択';$('opp-lp').textContent=opp.lp==null?'----':String(opp.lp);$('opp-ace').textContent=opp.aceT?'👑':'';meter('opp-meter',opp.lp==null?START:opp.lp);
@@ -2910,7 +2910,8 @@ strong,b{letter-spacing:.05em}
   /* ライフカウンターの音（送ってもらった参考音を分析して寄せたもの）
      ・ピッ：1662Hzの澄んだ音＋約2.5倍の金属的な倍音、長さ70ms、0.125秒ごと
      ・最後：470Hzのジャッという濁り＋高いシャー（0.13秒）→ 1756Hzの「ミョン」（少し高めから落ち着き、伸びて消える） */
-  function nBeeps(amt){return Math.min(10,Math.max(3,Math.ceil(amt/400)+2));}
+  // 量で4段階：〜1000＝4回、〜2000＝6回、〜3999＝8回、4000〜＝11回
+  function nBeeps(amt){return amt>=4000?11:amt>2000?8:amt>1000?6:4;}
   var IV=0.085;
   function cdur(amt){return nBeeps(amt)*IV;}
   function partial(f,t,dur,vol,o){o=o||{};var c=ac,os=c.createOscillator(),g=c.createGain();os.type='sine';os.frequency.setValueAtTime(o.f0||f,t);if(o.f0)os.frequency.exponentialRampToValueAtTime(f,t+(o.glide||.015));if(o.f1)os.frequency.linearRampToValueAtTime(o.f1,t+dur);
@@ -2938,7 +2939,7 @@ strong,b{letter-spacing:.05em}
     if(big)voice('sine',50,22,t+.12,1.3,.6,{glide:.7,wet:.35});}
   // 爆発：低いドカン＋砕ける轟音＋パチパチ＋長い地鳴り
   var SE={
-    dmg:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;impact(t,amt>=2000);t+=.14;var e=ticks(t,cdur(amt),0,.2);burst(e+.01,.3);myon(e+.1,.5);},
+    dmg:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;impact(t,amt>2000);t+=.14;var e=ticks(t,cdur(amt),0,.2);burst(e+.01,.3);myon(e+.1,.5);},
     cost:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;var e=ticks(t,cdur(amt),0,.19);burst(e+.01,.26);myon(e+.1,.45);},
     heal:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;
       [440,554.4,659.3].forEach(function(f){voice('sine',f,0,t,1.6,.05,{att:.3,hold:.6,wet:.55});});
