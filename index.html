@@ -634,6 +634,49 @@ ul,ol{gap:12px}
 .cards{gap:8px} .card{padding:4px 11px;letter-spacing:.03em}
 .stats{gap:8px} .stat{padding:10px}
 strong,b{letter-spacing:.05em}
+
+/* ===== 追加機能 ===== */
+.rx{display:flex;flex-direction:column;gap:10px}
+.rx .fold-body{display:flex;flex-direction:column;gap:10px}
+.tt i{font-style:normal;color:var(--muted);font-size:12px}
+.str-row{display:flex;flex-direction:column;gap:6px;background:var(--surface2);border-radius:4px;padding:12px 14px}
+.str-chips{display:flex;flex-wrap:wrap;gap:8px}
+.sc{display:inline-flex;align-items:baseline;gap:6px;background:var(--surface);border:2px solid var(--line);border-radius:4px;padding:4px 10px}
+.sc small{font-size:12px;color:var(--muted);font-weight:700}
+.sc-v{font-family:var(--digit);font-size:22px;line-height:1.2}
+.sc-v.ok{color:var(--spell)} .sc-v.hi{color:var(--red)} .sc-v.lo{color:var(--info)} .sc-v.mid{color:var(--gold)}
+.g-tabs{display:flex;flex-wrap:wrap;gap:6px}
+.g-tabs button{font:inherit;font-size:13px;font-weight:700;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:4px;padding:4px 10px;cursor:pointer}
+.g-tabs button.on{background:var(--obelisk);border-color:var(--obelisk);color:#fff}
+.g-wrap{background:var(--surface2);border-radius:4px;padding:8px}
+.g-svg{display:block;width:100%;height:auto}
+.g-grid{stroke:var(--line);stroke-width:1}.g-grid.mid{stroke-dasharray:4 4;stroke:var(--muted)}
+.g-ax{font-size:10px;fill:var(--muted);font-family:var(--digit)}
+.g-line{fill:none;stroke:var(--obelisk);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.g-dot{stroke:var(--surface);stroke-width:1.5}.g-dot.win{fill:var(--spell)}.g-dot.lose{fill:var(--red)}.g-dot.draw{fill:var(--muted)}
+.zk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.zk-card{display:flex;flex-direction:column;gap:6px;background:var(--surface);border:2px solid var(--edge,var(--ink));border-radius:6px;padding:10px 12px;box-shadow:3px 3px 0 var(--ra)}
+.zk-card.roman{box-shadow:3px 3px 0 var(--osiris)}
+.zk-theme{font-size:12px;color:var(--muted);font-weight:700}
+.zk-name{font-family:var(--display);font-size:16px;line-height:1.4;overflow-wrap:anywhere}
+.zk-st{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px}
+.zk-st span{display:flex;flex-direction:column}
+.zk-st small{font-size:11px;color:var(--muted)}
+.zk-st b{font-size:14px}
+.zk-first{font-size:11px;color:var(--muted)}
+.rl-acts{display:flex;gap:8px;justify-content:flex-end}
+.rate10{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.rate10 button{font:inherit;font-family:var(--digit);font-weight:700;font-size:15px;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:4px;padding:8px 0;cursor:pointer}
+.rate10 button:nth-child(6),.rate10 button:nth-child(7){border-color:var(--spell)}
+.rate10 button[aria-checked="true"]{background:var(--obelisk);border-color:var(--obelisk);color:#fff}
+.seg3x{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg3x button{font:inherit;font-weight:700;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:4px;padding:10px 4px;cursor:pointer}
+.seg3x button[aria-checked="true"]{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+.modal.top{position:fixed;z-index:60}
+.me-box{max-height:88vh;overflow-y:auto}
+.reg-box{display:flex;flex-direction:column;gap:6px;background:var(--surface2);border-radius:4px;padding:10px 12px}
+.reg-box > b{font-size:14px}
+.su-regs{display:flex;flex-direction:column;gap:8px}
 </style>
 </head>
 <body>
@@ -697,7 +740,7 @@ strong,b{letter-spacing:.05em}
           return col.onSnapshot(function(s){
             var now=Date.now(),peers=[];
             s.docs.forEach(function(d){var x=d.data()||{};if(now-(Number(x.updatedAt)||0)>6*3600e3)return;
-              peers.push({isMe:d.id===u.uid,presence:x.p||null,updatedAt:Number(x.updatedAt)||0});});
+              peers.push({uid:d.id,isMe:d.id===u.uid,presence:x.p||null,updatedAt:Number(x.updatedAt)||0});});
             cb({peers:peers});
           },function(e){if(err)err(e);});
         },
@@ -827,6 +870,14 @@ strong,b{letter-spacing:.05em}
   <div class="stats" id="rl-stats"></div>
   <div class="tstats-wrap" id="rl-theme"></div>
 
+  <div class="rx" id="rx">
+    <details class="fold-in"><summary>🔟 デッキの強さ（1〜10）</summary><div class="fold-body" id="rx-str"></div></details>
+    <details class="fold-in"><summary>🤝 相手ごとの成績</summary><div class="fold-body" id="rx-vs"></div></details>
+    <details class="fold-in"><summary>🃏 テーマ対テーマの成績</summary><div class="fold-body" id="rx-tt"></div></details>
+    <details class="fold-in"><summary>📈 戦績グラフ</summary><div class="fold-body" id="rx-graph"></div></details>
+    <details class="fold-in"><summary>👑 ロマン図鑑</summary><div class="fold-body" id="rx-zukan"></div></details>
+  </div>
+
   <div class="block">
     <h3>📜 リザルトログ</h3>
     <div class="rl-filter">
@@ -878,7 +929,7 @@ strong,b{letter-spacing:.05em}
   <form class="add" id="rb-form" hidden>
     <b>➕ 規制を登録</b>
     <span class="note">ログインしているメンバーなら誰でも登録できます。自分が登録したものは自分で削除できます。</span>
-    <label for="rb-user">使用者の名前<input type="text" id="rb-user" maxlength="40" required placeholder="例：たろう"></label>
+    <label for="rb-user">使用者の名前<input type="text" id="rb-user" maxlength="40" placeholder="空欄なら自分のニックネーム"></label>
     <label for="rb-theme">デッキテーマ名<input type="text" id="rb-theme" maxlength="60" required placeholder="例：ドラゴン族"></label>
     <div class="rb-cards">
       <b>規制するカード</b>
@@ -1505,6 +1556,10 @@ strong,b{letter-spacing:.05em}
       <div class="key-show" id="key-show" hidden><span>キー番号</span><b id="key-num">----</b><span class="note">相手にこの番号を入力してもらってください</span></div>
       <p class="link-st" id="link-st">リンクしなくても、自分のライフ計算だけで使えます。</p>
     </div>
+    <div class="su-block">
+      <span class="su-l">📋 いまの規制（規制報告ボードより）</span>
+      <div class="su-regs" id="su-regs"></div>
+    </div>
     <button type="button" class="start-btn" id="duel-start">▶ デュエル開始</button>
   </div>
 
@@ -1578,8 +1633,8 @@ strong,b{letter-spacing:.05em}
     <div class="dv-head"><b>🏁 リザルト</b></div>
     <div class="rs-sum" id="rs-sum"></div>
     <div class="rs-opp" id="rs-opp" hidden>
-      <label class="field" for="rs-opp-name">相手の名前<input type="text" id="rs-opp-name" maxlength="20" placeholder="例：じろう"></label>
-      <label class="field" for="rs-opp-theme">相手のデッキテーマ<input type="text" id="rs-opp-theme" maxlength="30" placeholder="例：E・HERO"></label>
+      <label class="field" for="rs-opp-name">相手の名前<input type="text" id="rs-opp-name" maxlength="20" placeholder="例：じろう" list="dl-members" autocomplete="off"></label>
+      <label class="field" for="rs-opp-theme">相手のデッキテーマ<input type="text" id="rs-opp-theme" maxlength="30" placeholder="例：E・HERO" list="dl-opp-themes" autocomplete="off"></label>
     </div>
     <div class="field"><span>結果</span>
       <div class="seg3" role="radiogroup" aria-label="結果">
@@ -1589,6 +1644,11 @@ strong,b{letter-spacing:.05em}
       </div>
     </div>
     <div class="field" id="rs-why-wrap"><span id="rs-why-label">勝因・敗因（いくつでも）</span><div class="why" id="rs-why"></div></div>
+    <div class="field"><span>🔟 相手のデッキの強さ（任意）　<small id="rs-rate-v"></small></span>
+      <div class="rate10" id="rs-rate" role="radiogroup" aria-label="相手のデッキの強さ"></div>
+      <span class="note">1＝最下位、10＝環境トップ。目標は6〜7（緑の枠）。勝ち負けではなく、試合の中身で判断してください</span></div>
+    <label class="field" for="rs-ace" id="rs-ace-wrap">👑 出したエース（任意）<input type="text" id="rs-ace" maxlength="40" list="dl-aces" autocomplete="off" placeholder="例：E・HERO シャイニング・フレア・ウィングマン"><span class="note"></span></label>
+    <datalist id="dl-aces"></datalist><datalist id="dl-members"></datalist><datalist id="dl-opp-themes"></datalist>
     <label class="field" for="rs-memo">メモ（任意）<textarea id="rs-memo" rows="3" maxlength="300" placeholder="例：伏せたミラーフォースで逆転"></textarea></label>
     <p class="status err" id="rs-err" hidden>結果を選んでください。</p>
     <button type="button" class="start-btn" id="rs-save">💾 保存して終わる</button>
@@ -1604,6 +1664,20 @@ strong,b{letter-spacing:.05em}
       <button type="button" class="ghost rec-yes" id="m-end-rec" hidden>📊 やっぱり戦績に残して終了</button>
       <button type="button" class="ghost" id="m-end-no">続ける</button>
     </div>
+  </div>
+</div>
+
+<div class="modal top" id="m-edit" hidden role="dialog" aria-modal="true" aria-label="記録の編集">
+  <div class="modal-box me-box">
+    <b>✏️ 記録を編集</b>
+    <div class="seg3x" id="me-res" role="radiogroup" aria-label="結果"><button type="button" data-r="win" role="radio">🏆 勝ち</button><button type="button" data-r="lose" role="radio">💀 負け</button><button type="button" data-r="draw" role="radio">🤝 分け</button></div>
+    <label class="field" for="me-opp-name">相手の名前<input type="text" id="me-opp-name" maxlength="20" list="dl-members" autocomplete="off"></label>
+    <label class="field" for="me-opp-theme">相手のデッキテーマ<input type="text" id="me-opp-theme" maxlength="30" list="dl-opp-themes2" autocomplete="off"></label><datalist id="dl-opp-themes2"></datalist>
+    <div class="field"><span>🔟 相手のデッキの強さ</span><div class="rate10" id="me-rate" role="radiogroup" aria-label="相手のデッキの強さ"></div></div>
+    <label class="field" for="me-ace">👑 出したエース<input type="text" id="me-ace" maxlength="40" list="dl-aces" autocomplete="off"></label>
+    <label class="field" for="me-memo">メモ<textarea id="me-memo" rows="3" maxlength="300"></textarea></label>
+    <button type="button" class="start-btn" id="me-save">💾 保存</button>
+    <button type="button" class="ghost" id="me-cancel">やめる</button>
   </div>
 </div>
 
@@ -1688,6 +1762,7 @@ strong,b{letter-spacing:.05em}
   $('pf-save').addEventListener('click',function(){
     var pend=$('pf-theme-in').value.trim();if(pend){addTheme();}
     if(!draft.name){pfStatus('ニックネームを入力してください。','err');return;}
+    if(CL&&YGO.nameTaken&&YGO.nameTaken(draft.name)){pfStatus('「'+draft.name+'」はほかのメンバーが使っています。成績が混ざらないよう、別のニックネームにしてください。','err');return;}
     pf.name=draft.name;pf.themes=draft.themes.slice();savePf();markDirty();renderCur();pfStatus('💾 保存しました！','ok');
   });
   var delBtn=$('pf-delete');
@@ -1780,6 +1855,7 @@ strong,b{letter-spacing:.05em}
 
   /* ---------- リザルトログ ---------- */
   function renderLog(){
+    setTimeout(function(){document.dispatchEvent(new Event('ygo:log'));},0);
     var list=$('rl-list'),stats=$('rl-stats');list.innerHTML='';stats.innerHTML='';
     var w=0,l=0,d=0;pf.log.forEach(function(r){if(r.result==='win')w++;else if(r.result==='lose')l++;else d++;});
     [['戦',pf.log.length],['勝',w],['敗',l],['分',d]].forEach(function(s){var b=el('div','stat');b.appendChild(el('b','',String(s[1])));b.appendChild(el('span','',s[0]));stats.appendChild(b);});
@@ -1800,13 +1876,15 @@ strong,b{letter-spacing:.05em}
       li.appendChild(el('div','rl-meta',meta));
       if(r.dmg!=null){var tt=el('div','rs-tot');tt.appendChild(el('span','k-dmg','💥 '+r.dmg));tt.appendChild(el('span','k-cost','💸 '+r.cost));tt.appendChild(el('span','k-heal','💚 '+r.heal));li.appendChild(tt);}
       if(r.why&&r.why.length){var wb=el('div','rl-why');r.why.forEach(function(x){wb.appendChild(el('span','',x));});li.appendChild(wb);}
+      if(r.aceName||r.oppRate)li.appendChild(el('div','rl-meta',(r.aceName?'👑 '+r.aceName:'')+(r.oppRate?(r.aceName?' ・ ':'')+'🔟 相手の強さ '+r.oppRate:'')));
       if(r.memo)li.appendChild(el('div','rl-memo',r.memo));
       if(r.tl&&r.tl.length){var dt=el('details'),sm=el('summary','','📜 ターンごとの記録');dt.appendChild(sm);var tlb=el('div','tl');dt.appendChild(tlb);
         dt.addEventListener('toggle',function(){if(dt.open&&!tlb.childNodes.length)buildTimeline(tlb,r.tl,r.turn,r.first);});li.appendChild(dt);}
       var del=el('button','del','削除');del.type='button';del.style.alignSelf='flex-end';
       del.addEventListener('click',function(){if(!del.classList.contains('confirm')){del.classList.add('confirm');del.textContent='本当に削除';setTimeout(function(){del.classList.remove('confirm');del.textContent='削除';},4000);return;}
         var idx=pf.log.indexOf(r);if(idx>=0)pf.log.splice(idx,1);if(CL){if(r._id)CL.results.doc(r._id).delete().catch(function(){});}else savePf();renderLog();});
-      li.appendChild(del);list.appendChild(li);
+      var ed=el('button','del','✏️ 編集');ed.type='button';ed.addEventListener('click',function(){document.dispatchEvent(new CustomEvent('ygo:edit',{detail:r}));});
+      del.style.alignSelf='';var acts=el('div','rl-acts');acts.appendChild(ed);acts.appendChild(del);li.appendChild(acts);list.appendChild(li);
     });
     $('rl-count').textContent=(fT||fRes||fQ)?(shown+'件 表示中（全'+pf.log.length+'件）'):('全'+pf.log.length+'件');
     if(!shown)list.appendChild(el('div','al-empty','条件に合う記録はありません。'));
@@ -1899,7 +1977,7 @@ strong,b{letter-spacing:.05em}
     var others=ch.peers.filter(function(p){return !p.isMe&&p.presence&&p.presence.app==='ygo';});
     others.sort(function(a,b){return b.updatedAt-a.updatedAt;});
     var o=others[0]||null,pr=o?o.presence:null;
-    opp=o?{name:str(pr.name,20)||'相手',theme:str(pr.theme,30),lp:num(pr.lp),T:num(pr.T),TAt:Number(pr.TAt)||0,first:!!pr.first,firstAt:Number(pr.firstAt)||0,aceT:num(pr.aceT),phase:str(pr.phase,10),seq:Number(pr.seq)||0,lk:str(pr.lk,6),la:num(pr.la)}:null;
+    opp=o?{uid:o.uid||null,name:str(pr.name,20)||'相手',theme:str(pr.theme,30),lp:num(pr.lp),T:num(pr.T),TAt:Number(pr.TAt)||0,first:!!pr.first,firstAt:Number(pr.firstAt)||0,aceT:num(pr.aceT),phase:str(pr.phase,10),seq:Number(pr.seq)||0,lk:str(pr.lk,6),la:num(pr.la)}:null;
     if(opp){setLinkSt('🔗 '+opp.name+' とつながりました！','ok');}else if(sub){setLinkSt('キー '+linkKey+' で待機中。相手が入ると自動でつながります。');}
     if(opp){
       // 先攻・後攻をそろえる（あとから選んだ方に合わせる）
@@ -1915,7 +1993,7 @@ strong,b{letter-spacing:.05em}
         lastOppSeq=opp.seq;lastOppLp=opp.lp;
       }
     }
-    setDot();renderOpp();checkOppZero();
+    setDot();renderOpp();checkOppZero();document.dispatchEvent(new Event('ygo:opp'));
   }
 
   /* ---------- 準備画面 ---------- */
@@ -2047,7 +2125,7 @@ strong,b{letter-spacing:.05em}
     sum.appendChild(el('div','note','全体 '+D.T+'ターン（自分のターン '+myTurnsUpTo(D.T)+'回）'+(D.aceT?' ・ 👑 '+turnLabel(D.aceT,D.first)+'にエース登場':'')));
     var t=totals(D.hist),tot=el('div','rs-tot');tot.appendChild(el('span','k-dmg','💥 受けたダメージ '+t.dmg));tot.appendChild(el('span','k-cost','💸 払ったコスト '+t.cost));tot.appendChild(el('span','k-heal','💚 回復 '+t.heal));sum.appendChild(tot);
     $('rs-opp').hidden=!!o;$('rs-opp-name').value='';$('rs-opp-theme').value='';$('rs-memo').value='';$('rs-err').hidden=true;
-    renderRes();show('result');
+    renderRes();show('result');document.dispatchEvent(new Event('ygo:result'));
   }
   function renderRes(){
     [].forEach.call(document.querySelectorAll('.seg3 button'),function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-r')===res));});
@@ -2063,10 +2141,10 @@ strong,b{letter-spacing:.05em}
     if(!res){$('rs-err').hidden=false;return;}
     var o=opp||D.oppSnap,t=totals(D.hist);
     var tl=D.hist.filter(function(e){return e.k==='lp'||e.k==='ace';}).map(function(e){return e.k==='ace'?{T:e.T,who:'me',kind:'ace'}:{T:e.T,who:e.who,kind:e.kind,amt:e.amt,b:e.b,a:e.a};});
-    pf.log.push({at:Date.now(),result:res,why:why.slice(),memo:$('rs-memo').value.trim(),myName:myName(),myTheme:D.myTheme,
+    pf.log.push(Object.assign({at:Date.now(),result:res,why:why.slice(),memo:$('rs-memo').value.trim(),myName:myName(),myTheme:D.myTheme,
       oppName:o?o.name:($('rs-opp-name').value.trim()||null),oppTheme:o?o.theme:($('rs-opp-theme').value.trim()||null),
       myLp:D.lp,oppLp:o?o.lp:null,turn:D.T,first:D.first,myTurns:myTurnsUpTo(D.T),
-      aceTurn:D.aceT?Math.max(1,myTurnsUpTo(D.aceT)):null,aceT:D.aceT,dmg:t.dmg,cost:t.cost,heal:t.heal,tl:tl,linked:!!o});
+      aceTurn:D.aceT?Math.max(1,myTurnsUpTo(D.aceT)):null,aceT:D.aceT,dmg:t.dmg,cost:t.cost,heal:t.heal,tl:tl,linked:!!o},window.YGO&&YGO.resultExtras?YGO.resultExtras(o):{}));
     if(CL){CL.results.add(cleanRec(pf.log[pf.log.length-1])).catch(function(){alert('記録を保存できませんでした。通信状態を確認してください。');});}
     savePf();finish();
     var sec=$('results');if(sec)sec.scrollIntoView({behavior:reduce?'auto':'smooth'});
@@ -2079,6 +2157,8 @@ strong,b{letter-spacing:.05em}
   function releaseWake(){if(wl){try{wl.release();}catch(e){}wl=null;}}
   document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&!overlay.hidden&&D&&D.phase==='play')acquireWake();});
 
+  YGO.app={pf:function(){return pf;},opp:function(){return opp||null;},D:function(){return D;},
+    editLog:function(r,patch){Object.assign(r,patch);if(CL&&r._id){CL.results.doc(r._id).set(cleanRec(r)).catch(function(){alert('保存できませんでした。通信状態を確認してください。');});}else savePf();renderLog();}};
   if(D&&D.phase==='result'){D.phase='play';saveD();}
   if(D&&D.phase==='play'){$('duel-open').textContent='⚔️ デュエルを再開する';}
 })();
@@ -2294,7 +2374,7 @@ strong,b{letter-spacing:.05em}
     col.orderBy('createdAt','desc').onSnapshot(function(s){docs=s.docs;render();},function(){msg('ボードを読み込めませんでした。ページを開き直してください。');});
     form.addEventListener('submit',async function(e){
       e.preventDefault();
-      var u=document.getElementById('rb-user').value.trim(), t=document.getElementById('rb-theme').value.trim(), reason=document.getElementById('rb-reason').value.trim();
+      var u=document.getElementById('rb-user').value.trim()||((window.YGO&&YGO.app&&YGO.app.pf().name)||''), t=document.getElementById('rb-theme').value.trim(), reason=document.getElementById('rb-reason').value.trim();
       var cards=[].slice.call(rows.children).map(function(r){return {name:r.querySelector('input').value.trim(),level:r.querySelector('select').value};}).filter(function(c){return c.name;});
       if(!u||!t){setStatus('使用者の名前とデッキテーマ名を入力してください。','err');return;}
       if(!cards.length && !reason){setStatus('規制するカードか理由のどちらかを入力してください。','err');return;}
@@ -2422,19 +2502,22 @@ strong,b{letter-spacing:.05em}
     var f=key($('ar-q').value),people={};
     all.forEach(function(r){var n=String(r.myName||'名前なし').slice(0,20),t=String(r.myTheme||'テーマ未選択').slice(0,30);
       if(f&&key(n).indexOf(f)<0&&key(t).indexOf(f)<0)return;
-      var p=people[n]||(people[n]={n:0,w:0,l:0,d:0,th:{}});var m=p.th[t]||(p.th[t]={n:0,w:0,l:0,d:0,ace:[]});
+      var p=people[n]||(people[n]={n:0,w:0,l:0,d:0,th:{},uid:r.uid});var m=p.th[t]||(p.th[t]={n:0,w:0,l:0,d:0,ace:[],logs:[]});m.logs.push(r);
       [p,m].forEach(function(x){x.n++;if(r.result==='win')x.w++;else if(r.result==='lose')x.l++;else x.d++;});if(r.aceTurn)m.ace.push(Number(r.aceTurn)||0);});
+    all.forEach(function(r){if(!r.oppUid||!r.oppRate||!r.oppTheme)return;var mm=Y.members&&Y.members[r.oppUid];var n=String((mm&&mm.name)||r.oppName||'名前なし').slice(0,20),t=String(r.oppTheme).slice(0,30);
+      if(f&&key(n).indexOf(f)<0&&key(t).indexOf(f)<0)return;var p=people[n]||(people[n]={n:0,w:0,l:0,d:0,th:{},uid:r.oppUid});p.uid=p.uid||r.oppUid;if(!p.th[t])p.th[t]={n:0,w:0,l:0,d:0,ace:[],logs:[]};});
     var names=Object.keys(people).sort(function(a,b){return people[b].n-people[a].n||a.localeCompare(b,'ja');});
     if(!names.length){out.appendChild(el('div','al-empty','見つかりませんでした。'));return;}
     names.forEach(function(n){var p=people[n],box=el('div','ar-person'),dec=p.w+p.l;
       box.appendChild(el('b','','👤 '+n+'　'+p.n+'戦 '+p.w+'勝 '+p.l+'敗'+(p.d?' '+p.d+'分':'')+(dec?'（勝率'+Math.round(p.w/dec*100)+'%）':'')));
-      var tbl=el('table','tstats ar-tbl'),th=el('thead'),tr=el('tr');['テーマ','戦','勝','敗','分','勝率','👑平均'].forEach(function(x){tr.appendChild(el('th','',x));});th.appendChild(tr);tbl.appendChild(th);
+      var tbl=el('table','tstats ar-tbl'),th=el('thead'),tr=el('tr');['テーマ','戦','勝','敗','分','勝率','評価','目安'].forEach(function(x){tr.appendChild(el('th','',x));});th.appendChild(tr);tbl.appendChild(th);
       var tb=el('tbody');Object.keys(p.th).sort(function(a,b){return p.th[b].n-p.th[a].n;}).forEach(function(t){var m=p.th[t],r=el('tr'),d=m.w+m.l,rate=d?Math.round(m.w/d*100):null;
         r.appendChild(el('td','tn',t));[m.n,m.w,m.l,m.d].forEach(function(v){r.appendChild(el('td','',String(v)));});
         var rc=el('td','rate',rate==null?'―':rate+'%');if(rate!=null)rc.style.setProperty('--r',rate+'%');r.appendChild(rc);
-        r.appendChild(el('td','',m.ace.length?(m.ace.reduce(function(a,b){return a+b;},0)/m.ace.length).toFixed(1)+'T':'―'));tb.appendChild(r);});
+        var rv=Y.avgRate?Y.avgRate(all.filter(function(x){return x.oppUid&&x.oppUid===p.uid&&key(x.oppTheme)===key(t);})):null;r.appendChild(el('td','sc-v '+(rv?(rv.v>=8?'hi':rv.v<=4.5?'lo':rv.v>=6&&rv.v<=7?'ok':'mid'):''),rv?String(rv.v):'―'));
+        var ds=Y.dataScore?Y.dataScore(m.logs):null;r.appendChild(el('td','sc-v '+(ds==null?'':ds>=8?'hi':ds<=4.5?'lo':ds>=6&&ds<=7?'ok':'mid'),ds==null?'―':String(ds)));tb.appendChild(r);});
       tbl.appendChild(tb);var sc=el('div','tstats-scroll');sc.appendChild(tbl);box.appendChild(sc);out.appendChild(box);});
-    out.appendChild(el('p','note','勝率は引き分けを除いて計算。最新2000件までを集計しています。'));
+    out.appendChild(el('p','note','勝率は引き分けを除いて計算。「評価」は対戦相手が付けた強さ（1〜10）の平均、「目安」はエースが出たターンから計算した強さ（3戦以上）。目標は6〜7。最新2000件までを集計しています。'));
   }
   $('ar-q').addEventListener('input',renderAll);
   $('ar-load').addEventListener('click',function(){var b=this,out=$('ar-out');
@@ -2456,6 +2539,163 @@ strong,b{letter-spacing:.05em}
     batch.commit().then(function(){st.className='status ok';st.textContent='✅ '+n+' 件を取り込みました。';b.disabled=false;},
       function(e){st.className='status err';st.textContent='取り込めませんでした（'+(e&&e.code||'error')+'）。セキュリティルールの設定を確認してください。';b.disabled=false;});
   });
+})();
+</script>
+<script>
+/* ===== アカウント連動の機能：相手別成績・強さ1〜10・記録の編集・規制の連動・ロマン図鑑・戦績グラフ ===== */
+(function(){
+  function $(id){return document.getElementById(id);}
+  function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
+  function key(t){return String(t||'').normalize('NFKC').replace(/[\s　]+/g,'').toLowerCase();}
+  function cardKey(t){return key(t).replace(/[－−‐-]/g,'-').replace(/[「」『』]/g,'');}
+  function fmtD(ms){try{return new Date(ms).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'numeric',day:'numeric'});}catch(e){return '';}}
+  var Y=window.YGO, A=function(){return Y.app;};
+  Y.members={}; Y.reports=[]; Y.ratedMe=[];
+  function fire(n){document.dispatchEvent(new Event(n));}
+
+  /* ---------- 共通データ（メンバー・規制・自分への評価） ---------- */
+  Y.memberByName=function(n){var k=key(n);if(!k)return null;for(var u in Y.members)if(key(Y.members[u].name)===k)return Object.assign({uid:u},Y.members[u]);return null;};
+  Y.nameTaken=function(n){var m=Y.memberByName(n);return !!(m&&Y.user&&m.uid!==Y.user.uid);};
+  Y.ready.then(function(u){
+    if(!Y.db)return;
+    Y.db.collection('reports').orderBy('createdAt','desc').onSnapshot(function(s){Y.reports=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
+    if(!u)return;
+    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[]};});Y.members=m;fillLists();fire('ygo:data');},function(){});
+    Y.db.collection('results').where('oppUid','==',u.uid).onSnapshot(function(s){Y.ratedMe=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
+  });
+
+  /* ---------- 強さ（1〜10） ---------- */
+  // データの目安：エースが出た「自分のターン数」から。3ターン目ごろ＝6.5（目標ライン6〜7）
+  function dataScore(logs){
+    var ts=logs.map(function(r){return r.aceTurn?Number(r.aceTurn):6;}).filter(function(x){return x>0;});
+    if(ts.length<3)return null;
+    var a=ts.reduce(function(p,c){return p+c;},0)/ts.length;
+    return Math.max(1,Math.min(10,Math.round((10-(a-1)*1.75)*10)/10));
+  }
+  function avgRate(list){var v=list.map(function(r){return Number(r.oppRate);}).filter(function(x){return x>=1&&x<=10;});if(!v.length)return null;return {v:Math.round(v.reduce(function(p,c){return p+c;},0)/v.length*10)/10,n:v.length};}
+  function scoreChip(label,v,n){var s=el('span','sc');s.appendChild(el('small','',label));var b=el('b','sc-v',v==null?'―':String(v));if(v!=null){b.classList.add(v>=8?'hi':v<=4.5?'lo':v>=6&&v<=7?'ok':'mid');}s.appendChild(b);if(n)s.appendChild(el('small','','（'+n+'件）'));return s;}
+  Y.scoreChip=scoreChip; Y.dataScore=dataScore; Y.avgRate=avgRate;
+
+  /* ---------- 戦績の追加ビュー ---------- */
+  function themeOf(r){return r.myTheme||'テーマ未選択';}
+  function oppLabel(r){var m=r.oppUid&&Y.members[r.oppUid];return (m&&m.name)||r.oppName||'相手（名前なし）';}
+  function wl(list){var w=0,l=0,d=0;list.forEach(function(r){if(r.result==='win')w++;else if(r.result==='lose')l++;else d++;});var dec=w+l;return {n:list.length,w:w,l:l,d:d,rate:dec?Math.round(w/dec*100):null};}
+  function table(head,rows){var t=el('table','tstats'),th=el('thead'),tr=el('tr');head.forEach(function(h){tr.appendChild(el('th','',h));});th.appendChild(tr);t.appendChild(th);var tb=el('tbody');rows.forEach(function(r){var x=el('tr');r.forEach(function(c,i){var td;if(c&&c.nodeType){td=el('td');td.appendChild(c);}else td=el('td',i===0?'tn':'',String(c));x.appendChild(td);});tb.appendChild(x);});t.appendChild(tb);var sc=el('div','tstats-scroll');sc.appendChild(t);return sc;}
+  function rateCell(s){var c=el('span','rate-t',s.rate==null?'―':s.rate+'%');return c;}
+  function renderExtras(){
+    var app=A();if(!app)return;var log=app.pf().log||[];
+    var box=$('rx');if(!box)return;
+    ['rx-vs','rx-tt','rx-str','rx-graph','rx-zukan'].forEach(function(id){$(id).innerHTML='';});
+    var themes={};log.forEach(function(r){(themes[themeOf(r)]=themes[themeOf(r)]||[]).push(r);});
+    var sT={};(app.pf().themes||[]).forEach(function(t){sT[t]=1;});Object.keys(themes).forEach(function(t){if(t!=='テーマ未選択')sT[t]=1;});Y.ratedMe.forEach(function(r){if(r.oppTheme)sT[r.oppTheme]=1;});
+    Object.keys(sT).forEach(function(t){var row=el('div','str-row');row.appendChild(el('b','',t));
+      var rs=avgRate(Y.ratedMe.filter(function(r){return key(r.oppTheme)===key(t);}));
+      var chips=el('div','str-chips');chips.appendChild(scoreChip('みんなの評価',rs&&rs.v,rs&&rs.n));chips.appendChild(scoreChip('データの目安',dataScore(themes[t]||[])));row.appendChild(chips);$('rx-str').appendChild(row);});
+    if(!Object.keys(sT).length)$('rx-str').appendChild(el('div','al-empty','プロフィールにデッキテーマを登録すると表示されます。'));
+    $('rx-str').appendChild(el('p','note','1＝最下位、10＝環境トップ。目標は6〜7。「みんなの評価」は対戦相手が付けた点の平均、「データの目安」はエースが出たターンの平均から計算（3戦以上で表示）。あくまで話し合いの材料です。'));
+    if(!log.length){['rx-vs','rx-tt','rx-graph','rx-zukan'].forEach(function(id){$(id).appendChild(el('div','al-empty','まだ記録がありません。'));});return;}
+    // 相手ごと
+    var byO={};log.forEach(function(r){var k=r.oppUid||('n:'+key(r.oppName||''));(byO[k]=byO[k]||{label:oppLabel(r),list:[]}).list.push(r);});
+    var rows=Object.keys(byO).map(function(k){var s=wl(byO[k].list);return [byO[k].label,s.n,s.w,s.l,s.d,rateCell(s)];}).sort(function(a,b){return b[1]-a[1];});
+    $('rx-vs').appendChild(table(['相手','戦','勝','敗','分','勝率'],rows));
+    // テーマ×テーマ
+    var byT={};log.forEach(function(r){var k=themeOf(r)+'\u0001'+(r.oppTheme||'不明');(byT[k]=byT[k]||[]).push(r);});
+    rows=Object.keys(byT).map(function(k){var p=k.split('\u0001'),s=wl(byT[k]);var c=el('span','tt');c.appendChild(el('b','',p[0]));c.appendChild(el('i','',' vs '));c.appendChild(document.createTextNode(p[1]));return [c,s.n,s.w,s.l,s.d,rateCell(s)];}).sort(function(a,b){return b[1]-a[1];});
+    $('rx-tt').appendChild(table(['自分 vs 相手のテーマ','戦','勝','敗','分','勝率'],rows));
+    // グラフ
+    renderGraph(themes);
+    // ロマン図鑑
+    renderZukan(log);
+  }
+  var gTheme=null;
+  function renderGraph(themes){
+    var box=$('rx-graph'),names=Object.keys(themes).sort(function(a,b){return themes[b].length-themes[a].length;});
+    if(!gTheme||!themes[gTheme])gTheme=names[0];
+    var tabs=el('div','g-tabs');names.forEach(function(n){var b=el('button',n===gTheme?'on':'',n);b.type='button';b.addEventListener('click',function(){gTheme=n;renderExtras();});tabs.appendChild(b);});box.appendChild(tabs);
+    var list=themes[gTheme].slice().sort(function(a,b){return a.at-b.at;}),w=0,l=0,pts=[];
+    list.forEach(function(r){if(r.result==='win')w++;else if(r.result==='lose')l++;var dec=w+l;pts.push(dec?w/dec*100:50);});
+    var W=320,H=150,P=24,n=pts.length;
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" class="g-svg" role="img" aria-label="'+gTheme+'の勝率の移り変わり">';
+    [0,50,100].forEach(function(v){var y=H-P-(H-2*P)*v/100;svg+='<line x1="'+P+'" x2="'+(W-8)+'" y1="'+y+'" y2="'+y+'" class="g-grid'+(v===50?' mid':'')+'"/><text x="'+(P-4)+'" y="'+(y+4)+'" class="g-ax" text-anchor="end">'+v+'</text>';});
+    var xs=function(i){return n<=1?(P+W-8)/2:P+(W-8-P)*i/(n-1);},ys=function(v){return H-P-(H-2*P)*v/100;};
+    if(n){svg+='<polyline class="g-line" points="'+pts.map(function(v,i){return xs(i).toFixed(1)+','+ys(v).toFixed(1);}).join(' ')+'"/>';
+      pts.forEach(function(v,i){var r=list[i];svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(v).toFixed(1)+'" r="3.5" class="g-dot '+(r.result||'draw')+'"><title>'+fmtD(r.at)+' '+(r.result==='win'?'勝ち':r.result==='lose'?'負け':'分け')+'（通算'+Math.round(v)+'%）</title></circle>';});}
+    svg+='<text x="'+P+'" y="'+(H-6)+'" class="g-ax">1戦目</text><text x="'+(W-8)+'" y="'+(H-6)+'" class="g-ax" text-anchor="end">'+n+'戦目</text></svg>';
+    var wrap=el('div','g-wrap');wrap.innerHTML=svg;box.appendChild(wrap);
+    var s=wl(list);box.appendChild(el('p','note','通算の勝率の移り変わり（引き分けは除く）。いま '+(s.rate==null?'―':s.rate+'%')+'・'+s.n+'戦。点の色：緑＝勝ち／赤＝負け'));
+  }
+  function renderZukan(log){
+    var box=$('rx-zukan'),m={};
+    log.forEach(function(r){if(!r.aceName)return;var k=themeOf(r)+'\u0001'+r.aceName;var z=m[k]||(m[k]={theme:themeOf(r),name:r.aceName,n:0,first:r.at,fast:null,wins:0,roman:0});
+      z.n++;if(r.at<z.first)z.first=r.at;if(r.aceTurn&&(z.fast==null||r.aceTurn<z.fast))z.fast=r.aceTurn;if(r.result==='win')z.wins++;if((r.why||[]).some(function(w){return /ロマン/.test(w);}))z.roman++;});
+    var ks=Object.keys(m).sort(function(a,b){return m[b].n-m[a].n;});
+    if(!ks.length){box.appendChild(el('div','al-empty','まだ登録がありません。デュエル終了時に「👑 出したエース」を入れると、ここに集まります。'));return;}
+    var grid=el('div','zk-grid');
+    ks.forEach(function(k){var z=m[k],c=el('div','zk-card'+(z.roman?' roman':''));
+      c.appendChild(el('span','zk-theme',z.theme));c.appendChild(el('b','zk-name','👑 '+z.name));
+      var st=el('div','zk-st');[['登場',z.n+'回'],['最速',z.fast?'自分の'+z.fast+'T':'―'],['勝ち',z.wins+'回'],['🌹ロマン',z.roman+'回']].forEach(function(p){var s=el('span');s.appendChild(el('small','',p[0]));s.appendChild(el('b','',p[1]));st.appendChild(s);});
+      c.appendChild(st);c.appendChild(el('span','zk-first','初登場 '+fmtD(z.first)));grid.appendChild(c);});
+    box.appendChild(grid);
+  }
+  document.addEventListener('ygo:log',renderExtras);
+  document.addEventListener('ygo:data',function(){renderExtras();renderRegs();});
+
+  /* ---------- リザルト画面：相手の選択・強さ評価・エース名 ---------- */
+  function fillLists(){
+    var dl=$('dl-members');if(dl){dl.innerHTML='';Object.keys(Y.members).forEach(function(u){if(Y.user&&u===Y.user.uid)return;var o=el('option');o.value=Y.members[u].name;dl.appendChild(o);});}
+    fillOppThemes();
+  }
+  function fillOppThemes(){var dl=$('dl-opp-themes');if(!dl)return;dl.innerHTML='';var m=Y.memberByName($('rs-opp-name').value);(m?m.themes:[]).forEach(function(t){var o=el('option');o.value=t;dl.appendChild(o);});}
+  $('rs-opp-name').addEventListener('input',fillOppThemes);
+  var rate=null;
+  function renderRate(){[].forEach.call(document.querySelectorAll('#rs-rate button'),function(b){b.setAttribute('aria-checked',String(Number(b.getAttribute('data-v'))===rate));});$('rs-rate-v').textContent=rate?rate+' / 10':'未選択（任意）';}
+  (function(){var box=$('rs-rate');for(var i=1;i<=10;i++){var b=el('button','',String(i));b.type='button';b.setAttribute('role','radio');b.setAttribute('data-v',String(i));b.addEventListener('click',function(){var v=Number(this.getAttribute('data-v'));rate=rate===v?null:v;renderRate();});box.appendChild(b);}renderRate();})();
+  function fillAces(theme){var dl=$('dl-aces');dl.innerHTML='';var seen={};(A().pf().log||[]).forEach(function(r){if(r.aceName&&themeOf(r)===(theme||'テーマ未選択')&&!seen[r.aceName]){seen[r.aceName]=1;var o=el('option');o.value=r.aceName;dl.appendChild(o);}});}
+  document.addEventListener('ygo:result',function(){var D=A().D();rate=null;renderRate();$('rs-ace').value='';fillAces(D&&D.myTheme);fillLists();
+    $('rs-ace-wrap').querySelector('.note').textContent=D&&D.aceT?'👑 エースが出た記録があります。名前を入れると「ロマン図鑑」に載ります。':'エースを出したなら名前を入れてください。「ロマン図鑑」に載ります。';});
+  Y.app=Y.app||{};
+  Y.resultExtras=function(o){
+    var ext={oppRate:rate,aceName:$('rs-ace').value.trim().slice(0,40)||null,oppUid:null};
+    if(o&&o.uid)ext.oppUid=o.uid;else{var m=Y.memberByName(o?o.name:$('rs-opp-name').value);if(m&&(!Y.user||m.uid!==Y.user.uid))ext.oppUid=m.uid;}
+    return ext;
+  };
+
+  /* ---------- 記録の編集 ---------- */
+  var editing=null,eRes=null,eRate=null;
+  function openEdit(r){editing=r;eRes=r.result||'draw';eRate=Number(r.oppRate)||null;
+    $('me-opp-name').value=oppLabel(r)==='相手（名前なし）'?'':oppLabel(r);$('me-opp-theme').value=r.oppTheme||'';$('me-ace').value=r.aceName||'';$('me-memo').value=r.memo||'';
+    renderE();$('m-edit').hidden=false;}
+  function renderE(){[].forEach.call(document.querySelectorAll('#me-res button'),function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-r')===eRes));});
+    [].forEach.call(document.querySelectorAll('#me-rate button'),function(b){b.setAttribute('aria-checked',String(Number(b.getAttribute('data-v'))===eRate));});}
+  (function(){var box=$('me-rate');for(var i=1;i<=10;i++){var b=el('button','',String(i));b.type='button';b.setAttribute('data-v',String(i));b.setAttribute('role','radio');b.addEventListener('click',function(){var v=Number(this.getAttribute('data-v'));eRate=eRate===v?null:v;renderE();});box.appendChild(b);}})();
+  [].forEach.call(document.querySelectorAll('#me-res button'),function(b){b.addEventListener('click',function(){eRes=b.getAttribute('data-r');renderE();});});
+  document.addEventListener('ygo:edit',function(e){openEdit(e.detail);});
+  $('me-cancel').addEventListener('click',function(){$('m-edit').hidden=true;editing=null;});
+  $('me-save').addEventListener('click',function(){if(!editing)return;var n=$('me-opp-name').value.trim().slice(0,20),m=Y.memberByName(n);
+    A().editLog(editing,{result:eRes,oppName:n||null,oppUid:m&&(!Y.user||m.uid!==Y.user.uid)?m.uid:(editing.linked?editing.oppUid||null:null),oppTheme:$('me-opp-theme').value.trim().slice(0,30)||null,oppRate:eRate,aceName:$('me-ace').value.trim().slice(0,40)||null,memo:$('me-memo').value.trim().slice(0,300)});
+    $('m-edit').hidden=true;editing=null;});
+  $('me-opp-name').addEventListener('input',function(){var dl=$('dl-opp-themes2');dl.innerHTML='';var m=Y.memberByName(this.value);(m?m.themes:[]).forEach(function(t){var o=el('option');o.value=t;dl.appendChild(o);});});
+
+  /* ---------- 規制とデュエルの連動 ---------- */
+  var LV={ban:['禁止','lv-ban'],lim:['制限','lv-lim'],semi:['準制限','lv-semi']};
+  function latestReg(user,theme){if(!user||!theme)return null;var ku=key(user),kt=key(theme);for(var i=0;i<Y.reports.length;i++){var r=Y.reports[i];if(key(r.user)===ku&&key(r.theme)===kt)return r;}return null;}
+  Y.latestReg=latestReg;
+  function regBox(title,user,theme){var b=el('div','reg-box');b.appendChild(el('b','',title));
+    if(!theme){b.appendChild(el('span','note','テーマ未選択'));return b;}
+    var r=latestReg(user,theme);
+    if(!r){b.appendChild(el('span','note','ボードに記録なし → 汎用規制リストだけで対戦'));return b;}
+    var cl=el('div','rb-cardlist');(r.cards||[]).forEach(function(c){if(!c||!c.name)return;var l=LV[c.level]||LV.lim;var s=el('span','lv '+l[1]);s.appendChild(el('i','',l[0]));s.appendChild(document.createTextNode(String(c.name)));cl.appendChild(s);});
+    if(!cl.childNodes.length)cl.appendChild(el('span','note','規制カードなし'));b.appendChild(cl);
+    b.appendChild(el('span','note','📅 '+fmtD(r.createdAt)+' の登録'+(r.reason?'・'+String(r.reason).slice(0,60):'')));return b;}
+  function renderRegs(){var box=$('su-regs');if(!box||$('duel').hidden)return;var app=A();if(!app)return;box.innerHTML='';
+    box.appendChild(regBox('あなた：'+($('su-theme').value||'テーマ未選択'),app.pf().name,$('su-theme').value));
+    var o=app.opp();
+    if(o&&o.name)box.appendChild(regBox(o.name+'：'+(o.theme||'テーマ未選択'),o.name,o.theme));
+    else box.appendChild(el('span','note','相手とリンクすると、相手のデッキの規制もここに出ます。'));}
+  $('su-theme').addEventListener('change',renderRegs);
+  $('duel-open').addEventListener('click',function(){setTimeout(renderRegs,0);});
+  document.addEventListener('ygo:opp',renderRegs);
+
 })();
 </script>
 </body>
