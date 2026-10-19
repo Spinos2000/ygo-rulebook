@@ -2938,8 +2938,8 @@ strong,b{letter-spacing:.05em}
     if(big)voice('sine',50,22,t+.12,1.3,.6,{glide:.7,wet:.35});}
   // 爆発：低いドカン＋砕ける轟音＋パチパチ＋長い地鳴り
   function explode(t){
-    voice('sine',70,22,t,2.2,1,{glide:.9,wet:.4});voice('sine',45,20,t+.05,2.6,.8,{glide:1.4,wet:.4});
-    noise(t,1.8,1,{f:3500,f1:60,dest:shaper,wet:.6});noise(t,.35,.6,{type:'highpass',f:2500,wet:.3});
+    voice('sine',70,22,t,2.2,.7,{glide:.9,wet:.4});voice('sine',45,20,t+.05,2.6,.55,{glide:1.4,wet:.4});
+    noise(t,1.8,.6,{f:3500,f1:60,dest:shaper,wet:.6});noise(t,.35,.45,{type:'highpass',f:2500,wet:.3});
     noise(t+.15,2.8,.45,{f:400,f1:40,wet:.7});
     for(var i=0;i<14;i++){var tt=t+.08+Math.random()*1.1;noise(tt,.03+Math.random()*.05,.12+Math.random()*.15,{type:'bandpass',f:1500+Math.random()*3500,q:1.5,wet:.4});}}
   var SE={
