@@ -2906,29 +2906,37 @@ strong,b{letter-spacing:.05em}
   var nb=null;function noiseBuf(){if(nb)return nb;var c=ac,n=c.sampleRate*1.5;nb=c.createBuffer(1,n,c.sampleRate);var d=nb.getChannelData(0);for(var i=0;i<n;i++)d[i]=Math.random()*2-1;return nb;}
   function noise(t,dur,vol,o){o=o||{};var c=ac,s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=noiseBuf();f.type=o.type||'lowpass';f.frequency.setValueAtTime(o.f||2000,t);if(o.f1)f.frequency.exponentialRampToValueAtTime(o.f1,t+dur);f.Q.value=o.q||.8;
     g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);s.connect(f);f.connect(g);out(g,o.dest,o.wet);s.start(t);s.stop(t+dur+.05);}
-  /* --- 効果音：重い衝撃＋ライフカウンター --- */
+  /* --- 効果音：映画のような衝撃＋なめらかなカウンター（四角い波・のこぎり波は使わない） --- */
   function cdur(amt){return Math.min(1.3,.35+amt*0.00012);}
-  function ticks(t,dur,f,vol){var n=Math.max(4,Math.floor(dur/0.042));for(var i=0;i<n;i++){var tt=t+i*0.042;voice('square',f,0,tt,.03,vol,{cut:1800,wet:.12});voice('triangle',f/2,0,tt,.035,vol*.8,{cut:1200});}return t+n*0.042;}
+  // FMで金属・電子的な響きを作る
+  function fm(fc,ratio,index,t,dur,vol,o){o=o||{};var c=ac,car=c.createOscillator(),mod=c.createOscillator(),mg=c.createGain(),g=c.createGain();car.type='sine';mod.type='sine';
+    car.frequency.setValueAtTime(fc,t);if(o.f1)car.frequency.exponentialRampToValueAtTime(o.f1,t+dur);mod.frequency.setValueAtTime(fc*ratio,t);if(o.f1)mod.frequency.exponentialRampToValueAtTime(o.f1*ratio,t+dur);
+    mg.gain.setValueAtTime(fc*index,t);mg.gain.exponentialRampToValueAtTime(Math.max(1,fc*index*.05),t+dur);mod.connect(mg);mg.connect(car.frequency);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+(o.att||.004));g.gain.exponentialRampToValueAtTime(0.0001,t+dur);car.connect(g);out(g,o.dest,o.wet);
+    car.start(t);mod.start(t);car.stop(t+dur+.05);mod.stop(t+dur+.05);}
+  // カウンター：柔らかい電子音＋小さなクリック
+  function ticks(t,dur,f,vol){var n=Math.max(4,Math.floor(dur/0.045));for(var i=0;i<n;i++){var tt=t+i*0.045;fm(f,2,.6,tt,.06,vol,{wet:.15});noise(tt,.012,vol*.6,{type:'bandpass',f:4500,q:2});}return t+n*0.045;}
   function impact(t,big){var k=big?1.25:1;
-    voice('sine',95,30,t,big?1.1:.8,.95*k,{glide:.5,wet:.25});                       // 低いドーン
-    voice('sawtooth',70,35,t,.5,.35*k,{cut:600,cut1:120,dest:shaper});                 // うなり
-    noise(t,big?.55:.4,.8*k,{f:1400,f1:180,dest:shaper,wet:.35});                       // バキッ
-    noise(t,.22,.45,{type:'bandpass',f:3200,f1:500,q:1.2,wet:.2});                      // 斬撃
-    if(big)voice('sine',62,28,t+.12,1,.7,{glide:.6,wet:.3});}
-  function settle(t,vol){voice('sawtooth',196,0,t,.5,vol,{cut:900,cut1:300,wet:.3});voice('sawtooth',98,0,t,.6,vol,{cut:600,wet:.3});voice('sine',49,0,t,.6,vol*1.2);}
+    voice('sine',85,28,t,big?1.4:1,.95*k,{glide:.55,wet:.3});                          // 低いドーン
+    noise(t,big?.9:.6,.75*k,{f:2200,f1:90,dest:shaper,wet:.45});                       // 砕ける音
+    noise(t,.3,.5,{type:'bandpass',f:5000,f1:700,q:1.1,wet:.3});                         // 斬撃
+    fm(140,1.41,3.5,t,big?1.6:1.1,.22*k,{f1:70,wet:.5});                                 // 金属の響き
+    if(big){voice('sine',55,24,t+.15,1.4,.6,{glide:.7,wet:.35});noise(t+.12,1.2,.25,{f:600,f1:60,wet:.6});}}
+  function settle(t,vol){fm(220,1,1.2,t,.9,vol,{wet:.4});voice('sine',55,0,t,.8,vol*1.6,{att:.01});voice('triangle',110,0,t,.7,vol*.6,{cut:800,wet:.3});}
   var SE={
-    dmg:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;impact(t,amt>=2000);var e=ticks(t+.18,cdur(amt),760,.11);settle(e,.22);},
-    cost:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;noise(t,.35,.25,{type:'bandpass',f:400,f1:2400,q:.9,wet:.2});var e=ticks(t+.05,cdur(amt),760,.11);settle(e,.18);},
+    dmg:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;impact(t,amt>=2000);var e=ticks(t+.2,cdur(amt),1046,.1);settle(e,.2);},
+    cost:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;noise(t,.5,.3,{type:'bandpass',f:300,f1:3000,q:.9,wet:.35});var e=ticks(t+.1,cdur(amt),1046,.1);settle(e,.16);},
     heal:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;
-      [220,277.2,329.6,440].forEach(function(f){voice('sawtooth',f,0,t,1.5,.09,{att:.18,cut:1400,detune:6,wet:.45});voice('sawtooth',f,0,t,1.5,.06,{att:.18,cut:1400,detune:-6});});
-      [1760,2637].forEach(function(f,i){voice('sine',f,0,t+.08+i*.1,1.2,.05,{att:.05,wet:.6});});
-      var e=ticks(t+.15,cdur(amt),990,.09);voice('sawtooth',440,0,e,.9,.14,{cut:2200,cut1:700,wet:.4});voice('sawtooth',554.4,0,e,.9,.1,{cut:2200,cut1:700,wet:.4});},
-    zero:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;impact(t,true);var e=ticks(t+.18,cdur(amt),760,.11);
-      voice('sawtooth',220,55,e,1.8,.18,{glide:1.4,cut:1200,cut1:150,wet:.5,dest:shaper});voice('sine',55,27,e,2,.55,{glide:1.6,wet:.3});noise(e,1.2,.35,{f:800,f1:100,wet:.5});}
+      [220,277.2,329.6,440,554.4].forEach(function(f,i){voice('sine',f,0,t,1.8,.09,{att:.25,hold:.5,wet:.55,detune:4});voice('triangle',f,0,t,1.8,.04,{att:.3,cut:1500,detune:-5,wet:.55});});
+      [1318.5,1760,2217].forEach(function(f,i){fm(f,3.5,1.2,t+.15+i*.12,1.6,.05,{wet:.7});});
+      noise(t,1.4,.08,{type:'highpass',f:6000,wet:.6});
+      var e=ticks(t+.2,cdur(amt),1318.5,.08);fm(880,2,1,e,1.4,.12,{wet:.55});fm(1108.7,2,1,e,1.4,.09,{wet:.55});},
+    zero:function(amt){var c=ctx();if(!c)return;var t=c.currentTime;impact(t,true);var e=ticks(t+.2,cdur(amt),1046,.1);
+      fm(110,1.41,4,e,2.4,.25,{f1:40,wet:.6});voice('sine',55,24,e,2.4,.6,{glide:1.8,wet:.35});noise(e,1.8,.3,{f:900,f1:60,wet:.6,dest:shaper});}
   };
   document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};var a=d.amt||0;if(d.zero)SE.zero(a);else if(d.kind==='heal')SE.heal(a);else if(d.kind==='cost')SE.cost(a);else SE.dmg(a);});
 
-  /* --- オリジナルの勝ち確BGM（ニ長調・132BPM・8小節ループ。ブラスとパワーコードの重めの編成） --- */
+  /* --- オリジナルの勝ち確BGM（ニ長調・132BPM・8小節ループ。ストリングスとブラス風の重ね） --- */
   var BPM=132,B=60/BPM;
   var MEL=[[62,.5],[62,.5],[64,.5],[66,1],[69,1.5],[67,.5],[66,.5],[64,1],[62,2],[59,.5],[62,.5],[64,.5],[66,1],[67,.5],[69,1],[71,1.5],[69,.5],[66,2],
            [62,.5],[62,.5],[64,.5],[66,1],[69,1.5],[74,1],[73,.5],[71,.5],[69,2],[67,.5],[69,.5],[71,.5],[73,1],[74,1.5],[74,2],[0,2]];
@@ -2936,18 +2944,20 @@ strong,b{letter-spacing:.05em}
   function mf(m){return 440*Math.pow(2,(m-69)/12);}
   var bgmGain=null,loopTimer=null,playing=false,nextT=0,audioEl=null;
   function schedLoop(t0){var t=t0,G=bgmGain;
-    // ブラス（主旋律）
-    MEL.forEach(function(n){if(n[0]){var d=n[1]*B*.95,f=mf(n[0]);voice('sawtooth',f,0,t,d,.12,{att:.03,cut:1900,detune:7,dest:G,wet:.25});voice('sawtooth',f,0,t,d,.1,{att:.03,cut:1900,detune:-7,dest:G});voice('sawtooth',f/2,0,t,d,.06,{att:.03,cut:900,dest:G});}t+=n[1]*B;});
+    // 主旋律：ブラス風（フィルターがふくらむ）＋ストリングスの重ね
+    MEL.forEach(function(n){if(n[0]){var d=n[1]*B*.97,f=mf(n[0]);
+      [-9,-3,3,9].forEach(function(dt){voice('sawtooth',f,0,t,d+.12,.045,{att:.06,cut:600,cut1:1500,q:.9,detune:dt,dest:G,wet:.35});});
+      voice('sine',f*2,0,t,d+.1,.035,{att:.08,dest:G,wet:.4});}t+=n[1]*B;});
     for(var bar=0;bar<8;bar++){var r=ROOT[bar],tb0=t0+bar*4*B;
-      // パワーコード（ルート＋5度＋オクターブ）
-      [0,7,12].forEach(function(iv){voice('sawtooth',mf(r+12+iv),0,tb0,4*B,.045,{att:.04,hold:3.2*B,cut:850,detune:5,dest:G,wet:.2});});
-      // ベース（8分）
-      for(var i=0;i<8;i++){var tt=tb0+i*.5*B;voice('sawtooth',mf(r),0,tt,B*.45,.22,{cut:420,dest:G});}
-      // ドラム：キック・スネア・ハイハット
-      for(var bt=0;bt<4;bt++){var tb=tb0+bt*B;if(bt%2===0){voice('sine',140,38,tb,.32,.9,{glide:.12,dest:G});}else{noise(tb,.2,.45,{type:'bandpass',f:1900,q:.6,dest:G,wet:.3});voice('triangle',190,120,tb,.12,.25,{dest:G});}
-        noise(tb+.5*B,.04,.08,{type:'highpass',f:7000,dest:G});noise(tb,.04,.06,{type:'highpass',f:7000,dest:G});}
-      if(bar===0||bar===4)noise(tb0,1.6,.28,{type:'highpass',f:4000,dest:G,wet:.4});
-      if(bar===7){for(var k=0;k<6;k++)voice('sine',110,60,tb0+2*B+k*B/3,.25,.5,{glide:.2,dest:G,wet:.2});}}
+      // ストリングス風パッド（ルート・3度・5度、柔らかく）
+      var third=(bar===2)?3:4;[12,12+third,19,24].forEach(function(iv){[-8,0,8].forEach(function(dt){voice('sawtooth',mf(r+iv),0,tb0,4*B+.3,.016,{att:.35,hold:3*B,cut:700,detune:dt,dest:G,wet:.5});});});
+      // ベース（丸い音）
+      for(var i=0;i<4;i++){var tt=tb0+i*B;voice('triangle',mf(r),0,tt,B*.9,.3,{cut:300,dest:G});voice('sine',mf(r)/2,0,tt,B*.9,.25,{dest:G});}
+      // 打楽器：キック・スネア（胴鳴り）・シンバル・ティンパニ
+      for(var bt=0;bt<4;bt++){var tb=tb0+bt*B;if(bt%2===0){voice('sine',120,40,tb,.4,.85,{glide:.1,dest:G});}else{noise(tb,.28,.35,{type:'bandpass',f:1500,q:.5,dest:G,wet:.45});voice('sine',180,110,tb,.15,.25,{dest:G});}
+        noise(tb+.5*B,.06,.05,{type:'highpass',f:8000,dest:G,wet:.2});}
+      if(bar===0||bar===4)noise(tb0,2,.22,{type:'highpass',f:5000,dest:G,wet:.6});
+      if(bar===7){for(var k=0;k<8;k++){voice('sine',98,70,tb0+2*B+k*B/4,.3,.35+k*.04,{glide:.25,dest:G,wet:.3});noise(tb0+2*B+k*B/4,.08,.08,{f:600,dest:G});}}}
     return t0+32*B;}
   function startOrig(){var c=ctx();if(!c)return;bgmGain=c.createGain();bgmGain.gain.value=.8;bgmGain.connect(master);nextT=c.currentTime+.08;
     (function pump(){if(!playing)return;while(nextT<ac.currentTime+4){nextT=schedLoop(nextT);}loopTimer=setTimeout(pump,1000);})();}
