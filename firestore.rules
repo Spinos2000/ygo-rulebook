@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() && request.auth.token.email_verified == true
+        && request.auth.token.email in ['hasukixx@gmail.com', 'takuver3@gmail.com'];
+    }
+    function isMe(uid) { return signedIn() && request.auth.uid == uid; }
+
+    // ルール本文まわり：だれでも読める／管理者だけ書ける
+    match /faq/{id}       { allow read: if true; allow write: if isAdmin(); }
+    match /changelog/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /allowlist/{id} { allow read: if true; allow write: if isAdmin(); }
+
+    // 規制報告ボード：だれでも読める／ログインした人が登録／本人か管理者が削除
+    match /reports/{id} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    // プロフィール：ログインした人が読める／本人だけ書ける
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow write: if isMe(uid);
+    }
+
+    // リザルト：ログインした人が読める／本人だけ登録・削除
+    match /results/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // リンク対戦の部屋
+    match /rooms/{room}/peers/{uid} {
+      allow read: if signedIn();
+      allow write: if isMe(uid);
+    }
+  }
+}
