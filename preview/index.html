@@ -2949,7 +2949,10 @@ strong,b{letter-spacing:.05em}
       [440,554.4,659.3].forEach(function(f){voice('sine',f,0,t,1.6,.05,{att:.3,hold:.6,wet:.55});});
       var e=ticks(t,cdur(amt),0,.18,1.122);myon(e+.04,.45,1.122);},
     zero:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;impact(t,true);t+=.14;var e=ticks(t,cdur(amt),0,.2);burst(e+.01,.32);myon(e+.1,.5);
-      explode(e+.75);}
+      explode(e+.75);
+      // 心電図：ピッ…ピッ…（だんだん弱く）→ ピーーー（脈がなくなる）
+      var hb=e+2.1;[[0,.3],[.8,.22],[1.7,.14]].forEach(function(b){partial(988,hb+b[0],.13,b[1],{wet:.25});voice('sine',70,40,hb+b[0],.18,b[1]*1.4,{glide:.1});});
+      var fl=hb+2.6;partial(988,fl,3.2,.26,{att:.02,env:[[2.4,.9]],wet:.3});partial(1976,fl,3.2,.03,{att:.02,env:[[2.4,.9]]});}
   };
   document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};var a=d.amt||0;if(d.zero)SE.zero(a);else if(d.kind==='heal')SE.heal(a);else if(d.kind==='cost')SE.cost(a);else SE.dmg(a);});
 
