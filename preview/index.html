@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#0058cf">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%83%8F%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@400;700;800&family=Russo+One&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=M+PLUS+Rounded+1c:wght@400;700;800;900&family=Mochiy+Pop+One&display=swap">
 <style>
 /* Layout: スマホ前提の1カラム・ルールブック。カード種別色（魔法=緑・罠=紫・モンスター=橙）と規制ランク色を色言語にする */
 :root{
@@ -501,10 +501,10 @@ form.add input[type=text]{font:inherit;font-size:16px;padding:10px 12px;border-r
   --gold:#b98500; --gold-bg:#fff2c2; --red:#e3001b; --red-bg:#ffe1e3; --info:#0062d6; --info-bg:#dceaff; --mark:#ffe14a;
   --osiris:#e3001b; --osiris-d:#8e0010; --ra:#ffc800; --ra-d:#b58a00; --obelisk:#0062d6; --obelisk-d:#003a85;
   --edge:#111522; --dot:rgba(0,98,214,.10);
-  --title:"Dela Gothic One","Hiragino Sans",sans-serif;
-  --display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
-  --latin:"Bungee","Dela Gothic One",sans-serif;
-  --digit:"Russo One","Dela Gothic One",sans-serif;
+  --title:"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif;
+  --display:"Mochiy Pop One","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif;
+  --latin:"Fredoka","M PLUS Rounded 1c",sans-serif;
+  --digit:"Fredoka","M PLUS Rounded 1c",sans-serif;
   --body:"M PLUS Rounded 1c","Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -530,7 +530,7 @@ header{position:relative;overflow:hidden;color:#fff;border:4px solid var(--edge)
   box-shadow:7px 7px 0 var(--edge)}
 header::after{content:"";position:absolute;left:-10%;right:-10%;bottom:0;height:12px;background:linear-gradient(90deg,var(--osiris) 0 33.3%,var(--ra) 33.3% 66.6%,#fff 66.6%);transform:skewX(-20deg)}
 header > *{position:relative}
-header .eyebrow{font-family:var(--latin);font-weight:400;color:var(--ra);letter-spacing:.1em;font-size:12px;text-shadow:2px 2px 0 var(--edge)}
+header .eyebrow{font-family:var(--latin);font-weight:700;color:var(--ra);letter-spacing:.1em;font-size:12px;text-shadow:2px 2px 0 var(--edge)}
 header .lead,header .updated{color:#e6efff}
 header .updated a{color:var(--ra)}
 .gx-title{display:flex;flex-direction:column;gap:0;font-family:var(--title);font-weight:400;line-height:1;margin:6px 0 2px;transform:skewX(-10deg);transform-origin:left bottom}
@@ -565,7 +565,7 @@ section{--c:var(--osiris);border:3px solid var(--edge);border-radius:4px;box-sha
 .sec-h::before{content:"";position:absolute;left:0;top:4px;bottom:16px;width:6px;background:var(--c);border:1px solid var(--edge)}
 section.fold > .sec-h::before{bottom:16px;top:16px}
 section.fold:not(.open) > .sec-h{border-bottom:0!important}
-.sec-h > span{align-self:flex-start;font-family:var(--latin);font-weight:400;font-size:11px;letter-spacing:.06em;color:#fff;background:var(--c);border:2px solid var(--edge);padding:0 8px;line-height:1.7;transform:skewX(-10deg)}
+.sec-h > span{align-self:flex-start;font-family:var(--latin);font-weight:700;font-size:11px;letter-spacing:.06em;color:#fff;background:var(--c);border:2px solid var(--edge);padding:0 8px;line-height:1.7;transform:skewX(-10deg)}
 #data .sec-h > span,#faq .sec-h > span,#log .sec-h > span,#admin .sec-h > span{color:var(--edge)}
 section.fold > .sec-h::after{content:"＋";font-family:var(--title);color:var(--edge);width:26px;height:26px;display:grid;place-items:center;background:var(--ra);border:2px solid var(--edge);border-radius:50%;font-size:14px}
 section.fold.open > .sec-h::after{content:"－";transform:translateY(-50%)}
@@ -583,7 +583,8 @@ section.fold.open > .sec-h::after{content:"－";transform:translateY(-50%)}
 
 .chip{border:2px solid var(--edge)!important;border-radius:4px!important;box-shadow:2px 2px 0 var(--edge);background:var(--surface);color:var(--ink)}
 /* 数字 */
-.lp,.opp-lp b,.stat b,.amt output,.key-show b,.key-in input,.turn-v b,.steps .n,.scale div{font-family:var(--digit);font-weight:400}
+.lp,.opp-lp b,.stat b,.amt output,.key-show b,.key-in input,.turn-v b,.steps .n,.scale div{font-family:var(--digit);font-weight:700}
+strong,b,.hl{font-weight:900}
 
 /* デュエル画面 */
 .duel{background:radial-gradient(circle,var(--dot) 1.6px,transparent 2px) 0 0/12px 12px,var(--bg)}
