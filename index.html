@@ -688,6 +688,32 @@ strong,b{letter-spacing:.05em}
 .ll-hist{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px}
 .ll-hist li{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--surface2);border-radius:4px;padding:8px 12px;font-size:14px}
 .ll-note{font-size:13px;color:var(--muted)}
+
+/* 留学生デッキ */
+.ryu{display:inline-flex;align-items:center;gap:2px;font-size:11px;font-weight:900;letter-spacing:.02em;color:var(--trap);background:var(--trap-bg);border:1px solid var(--trap);border-radius:999px;padding:0 7px;line-height:1.7;white-space:nowrap;vertical-align:middle}
+.kind-btn{font:inherit;font-size:11px;font-weight:900;border:1px solid var(--line);background:var(--surface2);color:var(--muted);border-radius:999px;padding:0 8px;line-height:1.8;cursor:pointer}
+.kind-btn.on{color:var(--trap);background:var(--trap-bg);border-color:var(--trap)}
+.theme-tag .kind-btn{width:auto;height:auto;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:11px;padding:1px 8px;line-height:1.7;white-space:nowrap;flex:none}
+.theme-tag .kind-btn.on{color:var(--trap);background:var(--trap-bg);border-color:var(--trap)}
+.theme-tag{flex-wrap:wrap;max-width:100%}
+.kind-pick{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}
+.kind-pick button{font:inherit;font-size:13px;font-weight:700;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:3px 12px;cursor:pointer}
+.kind-pick button[aria-checked="true"]{border-color:var(--obelisk);background:var(--info-bg);color:var(--obelisk)}
+.kind-pick button[data-k="ryu"][aria-checked="true"]{border-color:var(--trap);background:var(--trap-bg);color:var(--trap)}
+.ryu-box{display:flex;flex-direction:column;gap:12px;background:var(--trap-bg);border:2px solid var(--trap);border-radius:6px;padding:16px}
+.ryu-box h3{color:var(--trap)}
+.ryu-box ol{gap:10px}
+.ryu-heart{background:var(--surface);border-radius:4px;padding:12px 14px;font-weight:700}
+
+/* サウンド */
+.bottom{grid-template-columns:repeat(5,1fr) 1.2fr}
+.bb.bgm.on{background:var(--ra);border-color:var(--ra-d);color:var(--ink)}
+.bb.bgm.on span{color:var(--ink)}
+.tb.snd.off{opacity:.55}
+.topbar{gap:6px;flex-wrap:nowrap}.topbar .tb{white-space:nowrap;flex:none}.topbar .rec-chip{flex:none}.topbar .tb.end{margin-left:auto}
+.snd-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.snd-row .su-first{flex:1}
+.bgm-own{display:flex;flex-direction:column;gap:6px}
 </style>
 </head>
 <body>
@@ -855,7 +881,8 @@ strong,b{letter-spacing:.05em}
     <div class="fold-body">
     <div class="pf-guest" id="pf-guest" hidden><span>💡 ログインすると、どの端末でも同じプロフィール・記録が使えて、テーマ一覧にも自動で載ります。</span><button type="button" class="acct-btn" data-login>🔑 Googleでログイン</button></div>
     <div class="pf-cur"><span>いま使っている人</span><b id="pf-cur-name">未登録</b><button type="button" class="chip" id="pf-switch">🔄 切り替え・追加</button></div>
-    <label class="field" for="pf-name">ニックネーム<input type="text" id="pf-name" maxlength="20" placeholder="例：たろう"></label>
+    <label class="field" for="pf-name">ニックネーム<span class="note">苗字を<strong>ひらがな</strong>で入れてください（例：やまだ）。みんなの一覧や対戦相手の選択で、だれかすぐわかります</span><input type="text" id="pf-name" maxlength="20" placeholder="例：やまだ" autocomplete="off"></label>
+    <p class="note" id="pf-name-hint" hidden>💡 苗字をひらがなで入れると、ほかのメンバーが見分けやすくなります（例：やまだ）</p>
     <div class="field">
       <span>デッキテーマ</span>
       <div class="theme-list" id="pf-themes"></div>
@@ -863,6 +890,8 @@ strong,b{letter-spacing:.05em}
         <input type="text" id="pf-theme-in" maxlength="30" placeholder="例：ドラゴン族ビート" aria-label="追加するデッキテーマ">
         <button type="button" id="pf-theme-add">追加</button>
       </div>
+      <div class="kind-pick" id="pf-kind" role="radiogroup" aria-label="追加するテーマの種類"><span class="note">追加するテーマは</span><button type="button" role="radio" data-k="std" aria-checked="true">🏫 在校生デッキ</button><button type="button" role="radio" data-k="ryu" aria-checked="false">🌏 留学生デッキ</button></div>
+      <span class="note">登録したテーマの「🏫／🌏」を押すと、あとから切り替えられます。<a href="#ryu">留学生デッキとは？</a></span>
     </div>
     <p class="dirty" id="pf-dirty" hidden>✏️ まだ保存されていない変更があります</p>
     <button type="button" class="start-btn" id="pf-save">💾 プロフィールを保存</button>
@@ -893,7 +922,7 @@ strong,b{letter-spacing:.05em}
     <h3>📜 リザルトログ</h3>
     <div class="rl-filter">
       <label class="field" for="rl-f-theme">自分のテーマ<select id="rl-f-theme"></select></label>
-      <label class="field" for="rl-f-q">相手・メモで検索<input type="search" id="rl-f-q" placeholder="例：じろう、ミラーフォース"></label>
+      <label class="field" for="rl-f-q">相手・メモで検索<input type="search" id="rl-f-q" placeholder="例：さとう、ミラーフォース"></label>
       <div class="seg4" id="rl-f-res" role="radiogroup" aria-label="結果で絞り込み">
         <button type="button" role="radio" data-r="">すべて</button><button type="button" role="radio" data-r="win">🏆 勝ち</button><button type="button" role="radio" data-r="lose">💀 負け</button><button type="button" role="radio" data-r="draw">🤝 分け</button>
       </div>
@@ -907,7 +936,7 @@ strong,b{letter-spacing:.05em}
     <div class="fold-body">
       <p class="note">ログインしたメンバー全員のリザルトを、人とテーマごとに集計します。</p>
       <button type="button" class="ghost" id="ar-load">📥 みんなの成績を読み込む</button>
-      <label class="field" for="ar-q" id="ar-q-wrap" hidden>🔎 名前・テーマで絞り込み<input type="search" id="ar-q" placeholder="例：たろう、ドラゴン"></label>
+      <label class="field" for="ar-q" id="ar-q-wrap" hidden>🔎 名前・テーマで絞り込み<input type="search" id="ar-q" placeholder="例：やまだ、ドラゴン"></label>
       <div id="ar-out"></div>
     </div>
   </details>
@@ -920,7 +949,7 @@ strong,b{letter-spacing:.05em}
     <button type="button" role="tab" id="ow-tab-p" aria-selected="true">👤 人ごと</button>
     <button type="button" role="tab" id="ow-tab-t" aria-selected="false">🃏 テーマごと</button>
   </div>
-  <label class="field" for="ow-q">🔎 名前・テーマで検索<input type="search" id="ow-q" placeholder="例：ドラゴン、たろう"></label>
+  <label class="field" for="ow-q">🔎 名前・テーマで検索<input type="search" id="ow-q" placeholder="例：ドラゴン、やまだ"></label>
   <div class="ow-list" id="ow-list"></div>
 
   <p class="note">➕ ログインして「👤 プロフィール」にテーマを保存すると、ここに<strong>自動で載ります</strong>。</p>
@@ -931,7 +960,7 @@ strong,b{letter-spacing:.05em}
 <section id="board">
   <div class="sec-h"><span>REPORT BOARD</span><h2>📋 規制報告ボード</h2><p class="note">デッキごとの規制の記録。新しい順に表示</p></div>
   <label for="rb-q" class="rb-search">🔎 テーマ名・使用者名・カード名で検索
-    <input type="search" id="rb-q" placeholder="例：ドラゴン族、たろう、増援">
+    <input type="search" id="rb-q" placeholder="例：ドラゴン族、やまだ、増援">
   </label>
   <p class="note" id="rb-count"></p>
   <ul class="rb-list" id="rb-list"></ul>
@@ -1014,6 +1043,7 @@ strong,b{letter-spacing:.05em}
     <span><span class="red">原則使用不可。</span></span>
     <span><a href="#allow">許可リスト</a>に載っているカードだけ、<strong>弱いデッキが強化手順1で1枚</strong>投入できます。</span>
   </div>
+  <p class="note">🌏 このルールでは組めないデッキを使いたいときは、<a href="#ryu">留学生デッキ</a>として遊べます。</p>
 </section>
 
 <!-- 基本ルール -->
@@ -1358,6 +1388,22 @@ strong,b{letter-spacing:.05em}
       <li><span class="n">2</span><div>次に対戦するときは、ボードで<strong>相手のデッキの最新の規制</strong>を確認する</div></li>
     </ol>
   </div>
+
+  <div class="block ryu-box" id="ryu">
+    <h3>🌏 留学生デッキ ― ルールの外から来た仲間</h3>
+    <p>このルールでは、どうしても組めない<strong>ロマンデッキ</strong>もあります。</p>
+    <ul>
+      <li>当時の環境で活躍したデッキは、このルールに当てはめると<strong>弱化を重ねるだけ</strong>になってしまうことがある</li>
+      <li>どうしても使いたい専用カードが、2008年4月以降のカードだったり、規制リストに引っかかったりする</li>
+    </ul>
+    <p>そんなデッキも、この環境に<span class="hlw"><span class="hl">遊びに来て大歓迎</span></span>です。<br>このルールやカード規制には沿っていなくても、<strong>環境のトップにならないように調整したデッキ</strong>を「<strong>🌏 留学生デッキ</strong>」と呼んで、アカデミアに迎えます。<br>このルールに沿ったデッキは「<strong>🏫 在校生デッキ</strong>」と呼びます。</p>
+    <ol class="steps seq">
+      <li><span class="n">1</span><div><strong>対戦前に「留学生デッキです」とひとこと</strong><span class="note">相手が知っていれば、それで十分です</span></div></li>
+      <li><span class="n">2</span><div><strong>強さの目標は、みんなと同じ6〜7</strong><span class="note">強すぎたかな？と思ったら、カードの入れ替えなどで一緒に調整しましょう</span></div></li>
+      <li><span class="n">3</span><div><strong>プロフィールでテーマを「🌏 留学生」として登録</strong><span class="note">戦績・テーマ一覧・規制報告ボード・リンク対戦など、サイトの機能はすべて同じように使えます</span></div></li>
+    </ol>
+    <p class="ryu-heart">💬 在校生デッキと留学生デッキに、上も下もありません。どちらも「自分のやりたいことをやりに来た仲間」です。違う入口から来たデッキとのデュエルも、この環境の楽しみのひとつとして歓迎してください。</p>
+  </div>
 </section>
 
 <!-- 規制リスト -->
@@ -1585,6 +1631,20 @@ strong,b{letter-spacing:.05em}
       <p class="link-st" id="link-st">リンクしなくても、自分のライフ計算だけで使えます。</p>
     </div>
     <div class="su-block">
+      <span class="su-l">🔊 サウンド</span>
+      <div class="field"><span>効果音（ダメージ・回復）</span>
+        <div class="su-first" id="snd-se" role="radiogroup" aria-label="効果音"><button type="button" role="radio" data-v="1">🔊 鳴らす</button><button type="button" role="radio" data-v="0">🔇 鳴らさない</button></div></div>
+      <div class="field"><span>🎺 勝ち確BGM（対戦中に「BGM」ボタンで再生）</span>
+        <div class="su-first" id="snd-bgm" role="radiogroup" aria-label="勝ち確BGMの曲"><button type="button" role="radio" data-v="orig">🎼 オリジナル曲</button><button type="button" role="radio" data-v="own">📁 自分の曲</button></div>
+        <div class="bgm-own" id="bgm-own" hidden>
+          <label class="field" for="bgm-file">スマホの中の音楽ファイルを選ぶ<input type="file" id="bgm-file" accept="audio/*"></label>
+          <span class="note" id="bgm-file-st">まだ選ばれていません。曲はこのスマホの中だけに保存され、ほかの人には送られません。</span>
+        </div>
+        <button type="button" class="ghost" id="bgm-try">▶ 試しに聴く</button>
+      </div>
+      <span class="note">スマホがマナーモード（消音）だと鳴らないことがあります。</span>
+    </div>
+    <div class="su-block">
       <span class="su-l">📋 いまの規制（規制報告ボードより）</span>
       <div class="su-regs" id="su-regs"></div>
     </div>
@@ -1595,7 +1655,8 @@ strong,b{letter-spacing:.05em}
   <div class="dv dv-play" id="dv-play" hidden>
     <div class="topbar">
       <button type="button" class="tb lock" id="lock-btn" aria-pressed="false" aria-label="画面ロック">🔓</button>
-      <button type="button" class="tb" id="tl-btn" aria-label="ターンごとの記録">📜 ログ</button>
+      <button type="button" class="tb" id="tl-btn" aria-label="ターンごとの記録" title="ターンごとの記録">📜</button>
+      <button type="button" class="tb snd" id="snd-btn" aria-label="効果音のオン・オフ">🔊</button>
       <button type="button" class="rec-chip" id="rec-chip" aria-label="戦績に残すかどうかの切り替え">📊 戦績ON</button>
       <span class="dot" id="link-dot" title="リンク状態"></span>
       <button type="button" class="tb end" id="end-btn">終了</button>
@@ -1643,6 +1704,7 @@ strong,b{letter-spacing:.05em}
       <button type="button" class="bb" id="undo-btn">↶<span>戻す</span></button>
       <button type="button" class="bb" id="coin-btn">🪙<span>コイン</span></button>
       <button type="button" class="bb" id="dice-btn">🎲<span>サイコロ</span></button>
+      <button type="button" class="bb bgm" id="bgm-btn" aria-pressed="false">🎺<span>BGM</span></button>
       <output class="rng" id="rng">—</output>
     </div>
 
@@ -1661,7 +1723,7 @@ strong,b{letter-spacing:.05em}
     <div class="dv-head"><b>🏁 リザルト</b></div>
     <div class="rs-sum" id="rs-sum"></div>
     <div class="rs-opp" id="rs-opp" hidden>
-      <label class="field" for="rs-opp-name">相手の名前<input type="text" id="rs-opp-name" maxlength="20" placeholder="例：じろう" list="dl-members" autocomplete="off"></label>
+      <label class="field" for="rs-opp-name">相手の名前<input type="text" id="rs-opp-name" maxlength="20" placeholder="例：さとう" list="dl-members" autocomplete="off"></label>
       <label class="field" for="rs-opp-theme">相手のデッキテーマ<input type="text" id="rs-opp-theme" maxlength="30" placeholder="例：E・HERO" list="dl-opp-themes" autocomplete="off"></label>
     </div>
     <div class="field"><span>結果</span>
@@ -1752,7 +1814,8 @@ strong,b{letter-spacing:.05em}
 
   /* ---------- プロフィール（複数人対応） ---------- */
   function uid(){return 'p'+Date.now().toString(36)+rnd(1e6).toString(36);}
-  function normP(x){x=x||{};return {id:x.id||uid(),name:str(x.name,20),themes:Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[],log:Array.isArray(x.log)?x.log:[],lastTheme:x.lastTheme==null?null:str(x.lastTheme,30),recDefault:x.recDefault!==false};}
+  function normP(x){x=x||{};return {id:x.id||uid(),name:str(x.name,20),themes:Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[],log:Array.isArray(x.log)?x.log:[],lastTheme:x.lastTheme==null?null:str(x.lastTheme,30),recDefault:x.recDefault!==false,kinds:normK(x.kinds)};}
+  function normK(k){var o={};if(k&&typeof k==='object')Object.keys(k).forEach(function(t){if(k[t]==='ryu')o[str(t,30)]='ryu';});return o;}
   var store=load(SKEY,null);
   if(!store||!Array.isArray(store.list)){
     var old=load(PKEY,null);store={cur:null,list:[]};
@@ -1765,25 +1828,30 @@ strong,b{letter-spacing:.05em}
   if(!pf){pf=normP({});}
   var CL=null;
   function savePf(){
-    if(CL){CL.ref.set({name:pf.name,themes:pf.themes,lastTheme:pf.lastTheme,recDefault:pf.recDefault!==false,updatedAt:Date.now()},{merge:true}).catch(function(){pfStatus('保存できませんでした。通信状態を確認して、もう一度お試しください。','err');});return;}
+    if(CL){CL.ref.set({name:pf.name,themes:pf.themes,kinds:pf.kinds||{},lastTheme:pf.lastTheme,recDefault:pf.recDefault!==false,updatedAt:Date.now()},{merge:true}).catch(function(){pfStatus('保存できませんでした。通信状態を確認して、もう一度お試しください。','err');});return;}
     if(!findP(pf.id)&&(pf.name||pf.themes.length||pf.log.length)){store.list.push(pf);}store.cur=pf.id;save(SKEY,store);}
   function cleanRec(r){var o=JSON.parse(JSON.stringify(r||{}));delete o._id;if(CL){o.uid=CL.uid;}o.myName=str(o.myName||pf.name||'',20);return o;}
 
   var draft=null;
-  function resetDraft(){draft={name:pf.name||'',themes:pf.themes.slice()};$('pf-name').value=draft.name;renderThemes();markDirty();renderCur();}
-  function isDirty(){return draft&&(draft.name!==(pf.name||'')||draft.themes.join('\u0001')!==pf.themes.join('\u0001'));}
+  function resetDraft(){draft={name:pf.name||'',themes:pf.themes.slice(),kinds:Object.assign({},pf.kinds||{})};$('pf-name').value=draft.name;renderThemes();markDirty();renderCur();}
+  function isDirty(){return draft&&(draft.name!==(pf.name||'')||draft.themes.join('\u0001')!==pf.themes.join('\u0001')||JSON.stringify(draft.kinds)!==JSON.stringify(pf.kinds||{}));}
   function markDirty(){$('pf-dirty').hidden=!isDirty();}
   function renderCur(){$('pf-cur-name').textContent=pf.name||'未登録';$('pf-sum-name').textContent=pf.name||'未登録';if(!pf.name)$('profile').open=true;$('pf-delete').hidden=CL?true:!findP(pf.id);$('pf-switch').hidden=!!CL;}
-  $('pf-name').addEventListener('input',function(){draft.name=this.value.trim();markDirty();});
+  function nameHint(){var v=$('pf-name').value.trim();$('pf-name-hint').hidden=!v||/^[ぁ-んー]+$/.test(v);}
+  $('pf-name').addEventListener('input',function(){draft.name=this.value.trim();markDirty();nameHint();});
   function renderThemes(){
     var box=$('pf-themes');box.innerHTML='';
     if(!draft.themes.length){box.appendChild(el('span','note','まだ登録がありません。'));return;}
     draft.themes.forEach(function(t,i){var tag=el('span','theme-tag');tag.appendChild(el('span','',t));
+      var kb=el('button','kind-btn'+(draft.kinds[t]==='ryu'?' on':''),draft.kinds[t]==='ryu'?'🌏 留学生':'🏫 在校生');kb.type='button';kb.title='タップで切り替え';
+      kb.addEventListener('click',function(){if(draft.kinds[t]==='ryu')delete draft.kinds[t];else draft.kinds[t]='ryu';renderThemes();markDirty();});tag.appendChild(kb);
       var x=el('button','','×');x.type='button';x.setAttribute('aria-label',t+'を削除');
-      x.addEventListener('click',function(){if(!x.classList.contains('confirm')){x.classList.add('confirm');setTimeout(function(){x.classList.remove('confirm');},3000);return;}draft.themes.splice(i,1);renderThemes();markDirty();});
+      x.addEventListener('click',function(){if(!x.classList.contains('confirm')){x.classList.add('confirm');setTimeout(function(){x.classList.remove('confirm');},3000);return;}draft.themes.splice(i,1);delete draft.kinds[t];renderThemes();markDirty();});
       tag.appendChild(x);box.appendChild(tag);});
   }
-  function addTheme(){var i=$('pf-theme-in'),v=i.value.trim().slice(0,30);if(!v)return;if(draft.themes.indexOf(v)<0)draft.themes.push(v);i.value='';renderThemes();markDirty();}
+  var newKind='std';
+  [].forEach.call(document.querySelectorAll('#pf-kind button'),function(b){b.addEventListener('click',function(){newKind=b.getAttribute('data-k');[].forEach.call(document.querySelectorAll('#pf-kind button'),function(x){x.setAttribute('aria-checked',String(x===b));});});});
+  function addTheme(){var i=$('pf-theme-in'),v=i.value.trim().slice(0,30);if(!v)return;if(draft.themes.indexOf(v)<0)draft.themes.push(v);if(newKind==='ryu')draft.kinds[v]='ryu';else delete draft.kinds[v];i.value='';renderThemes();markDirty();}
   $('pf-theme-add').addEventListener('click',addTheme);
   $('pf-theme-in').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addTheme();}});
   function pfStatus(t,c){var e=$('pf-status');e.textContent=t;e.className='status'+(c?' '+c:'');}
@@ -1791,7 +1859,7 @@ strong,b{letter-spacing:.05em}
     var pend=$('pf-theme-in').value.trim();if(pend){addTheme();}
     if(!draft.name){pfStatus('ニックネームを入力してください。','err');return;}
     if(CL&&YGO.nameTaken&&YGO.nameTaken(draft.name)){pfStatus('「'+draft.name+'」はほかのメンバーが使っています。成績が混ざらないよう、別のニックネームにしてください。','err');return;}
-    pf.name=draft.name;pf.themes=draft.themes.slice();savePf();markDirty();renderCur();pfStatus('💾 保存しました！','ok');
+    pf.name=draft.name;pf.themes=draft.themes.slice();pf.kinds={};pf.themes.forEach(function(t){if(draft.kinds[t]==='ryu')pf.kinds[t]='ryu';});savePf();markDirty();renderCur();pfStatus('💾 保存しました！','ok');
   });
   var delBtn=$('pf-delete');
   delBtn.addEventListener('click',function(){
@@ -1870,9 +1938,9 @@ strong,b{letter-spacing:.05em}
     who.hidden=true;pf=normP({id:u.uid});resetDraft();renderLog();
     var firstSnap=true;
     CL.ref.onSnapshot(function(d){var x=d.exists?(d.data()||{}):{};var dirty=!firstSnap&&isDirty();
-      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;
+      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;pf.kinds=normK(x.kinds);
       if(!dirty)resetDraft();else renderCur();
-      if(firstSnap&&!pf.name){var sug=str((u.displayName||'').split(/\s+/)[0],20);if(sug){draft.name=sug;$('pf-name').value=sug;markDirty();}$('profile').open=true;pfStatus('👋 はじめまして！ニックネームとデッキテーマを入れて「💾 プロフィールを保存」を押してください。','');}
+      if(firstSnap&&!pf.name){$('profile').open=true;pfStatus('👋 はじめまして！ニックネームに苗字をひらがなで（例：やまだ）、デッキテーマも入れて「💾 プロフィールを保存」を押してください。','');}
       firstSnap=false;},function(){pfStatus('プロフィールを読み込めませんでした。ページを開き直してください。','err');});
     CL.results.where('uid','==',u.uid).onSnapshot(function(s){var loc=pf.log.filter(function(r){return !r._id;});var have={};
       pf.log=s.docs.map(function(d){var r=d.data()||{};r._id=d.id;have[r.at]=1;return r;});loc.forEach(function(r){if(!have[r.at])pf.log.push(r);});
@@ -1937,7 +2005,7 @@ strong,b{letter-spacing:.05em}
     ['テーマ','戦','勝','敗','分','勝率','👑平均'].forEach(function(h){tr.appendChild(el('th','',h));});th.appendChild(tr);tbl.appendChild(th);
     var tb=el('tbody');
     keys.forEach(function(k){var t=m[k],r=el('tr');var dec=t.w+t.l;var rate=dec?Math.round(t.w/dec*100):null;
-      r.appendChild(el('td','tn',k));r.className='tr-click';r.title='このテーマの記録だけを見る';r.addEventListener('click',function(){$('rl-f-theme').value=(k==='テーマ未選択'?'__none':k);renderLog();$('rl-list').scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});});[t.n,t.w,t.l,t.d].forEach(function(v){r.appendChild(el('td','',String(v)));});
+      var tdn=el('td','tn',k);if((pf.kinds||{})[k]==='ryu'){tdn.appendChild(document.createTextNode(' '));tdn.appendChild(el('span','ryu','🌏 留学生'));}r.appendChild(tdn);r.className='tr-click';r.title='このテーマの記録だけを見る';r.addEventListener('click',function(){$('rl-f-theme').value=(k==='テーマ未選択'?'__none':k);renderLog();$('rl-list').scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});});[t.n,t.w,t.l,t.d].forEach(function(v){r.appendChild(el('td','',String(v)));});
       var rc=el('td','rate',rate==null?'―':rate+'%');if(rate!=null){rc.style.setProperty('--r',rate+'%');}r.appendChild(rc);
       r.appendChild(el('td','',t.ace.length?(t.ace.reduce(function(a,b){return a+b;},0)/t.ace.length).toFixed(1)+'T':'―'));
       tb.appendChild(r);});
@@ -2034,7 +2102,7 @@ strong,b{letter-spacing:.05em}
     $('su-name').textContent=pf.name||'名前未設定（プロフィールで登録できます）';
     var sel=$('su-theme');sel.innerHTML='';
     var o0=el('option','','テーマを選ばない');o0.value='';sel.appendChild(o0);
-    pf.themes.forEach(function(t){var o=el('option','',t);o.value=t;sel.appendChild(o);});
+    pf.themes.forEach(function(t){var o=el('option','',t+((pf.kinds||{})[t]==='ryu'?'（🌏 留学生）':''));o.value=t;sel.appendChild(o);});
     if(pf.lastTheme!=null&&(pf.lastTheme===''||pf.themes.indexOf(pf.lastTheme)>=0))sel.value=pf.lastTheme;else if(pf.themes.length)sel.value=pf.themes[0];
     $('su-theme-hint').hidden=pf.themes.length>0;renderFirst();
   }
@@ -2082,7 +2150,7 @@ strong,b{letter-spacing:.05em}
     $('me-name').textContent=myName();$('me-theme').textContent=D.myTheme||'';$('me-ace').textContent=D.aceT?'👑'+turnLabel(D.aceT,D.first).replace('あなたの','自分').replace('ターン目','T'):'';
     lpEl.classList.toggle('zero',to<=0);meter('me-meter',to);
     if(from==null||reduce){lpEl.textContent=String(to);return;}
-    var t0=null;function step(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/400);lpEl.textContent=String(Math.round(from+(to-from)*k));if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step);
+    var df=Math.abs(to-from),t0=null,DUR=(df>=4000?11:df>2000?8:df>1000?6:4)*85+120;function step(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/DUR);lpEl.textContent=String(Math.round(from+(to-from)*k));if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step);
   }
   function renderOpp(){
     if(opp){$('opp-name').textContent=opp.name;$('opp-theme').textContent=opp.theme||'テーマ未選択';$('opp-lp').textContent=opp.lp==null?'----':String(opp.lp);$('opp-ace').textContent=opp.aceT?'👑':'';meter('opp-meter',opp.lp==null?START:opp.lp);
@@ -2100,7 +2168,7 @@ strong,b{letter-spacing:.05em}
     D.hist.push({k:'lp',who:'me',kind:kind,amt:Math.abs(D.lp-b),b:b,a:D.lp,T:D.T});if(D.hist.length>400)D.hist.shift();
     if(D.lp>0)D.zeroAsked=false;
     if(kind!=='heal'){mode='dmg';renderMode();}
-    seq++;saveD();renderMe(b);renderTrack();flash(d<0?'hit':'heal');pushPresence(kind,Math.abs(d));
+    seq++;saveD();renderMe(b);renderTrack();flash(d<0?'hit':'heal');pushPresence(kind,Math.abs(d));document.dispatchEvent(new CustomEvent('ygo:lp',{detail:{kind:kind,amt:Math.abs(D.lp-b),zero:D.lp<=0}}));
     if(D.lp<=0&&!D.zeroAsked){D.zeroAsked=true;saveD();askEnd('ライフが0になりました','バトルを終了しますか？ まちがえて押した場合は「続ける」を押して、「↶ 戻す」で元に戻せます。');}
   }
   $('mode-btn').addEventListener('click',function(){if(locked)return;mode=mode==='dmg'?'cost':'dmg';renderMode();});
@@ -2172,7 +2240,7 @@ strong,b{letter-spacing:.05em}
     pf.log.push(Object.assign({at:Date.now(),result:res,why:why.slice(),memo:$('rs-memo').value.trim(),myName:myName(),myTheme:D.myTheme,
       oppName:o?o.name:($('rs-opp-name').value.trim()||null),oppTheme:o?o.theme:($('rs-opp-theme').value.trim()||null),
       myLp:D.lp,oppLp:o?o.lp:null,turn:D.T,first:D.first,myTurns:myTurnsUpTo(D.T),
-      aceTurn:D.aceT?Math.max(1,myTurnsUpTo(D.aceT)):null,aceT:D.aceT,dmg:t.dmg,cost:t.cost,heal:t.heal,tl:tl,linked:!!o},window.YGO&&YGO.resultExtras?YGO.resultExtras(o):{}));
+      aceTurn:D.aceT?Math.max(1,myTurnsUpTo(D.aceT)):null,aceT:D.aceT,dmg:t.dmg,cost:t.cost,heal:t.heal,tl:tl,linked:!!o,ryu:(pf.kinds||{})[D.myTheme]==='ryu'},window.YGO&&YGO.resultExtras?YGO.resultExtras(o):{}));
     if(CL){CL.results.add(cleanRec(pf.log[pf.log.length-1])).catch(function(){alert('記録を保存できませんでした。通信状態を確認してください。');});}
     savePf();finish();
     var sec=$('results');if(sec)sec.scrollIntoView({behavior:reduce?'auto':'smooth'});
@@ -2223,7 +2291,7 @@ strong,b{letter-spacing:.05em}
       rows.forEach(function(r){
         var themes=(r.themes||[]);if(f&&key(r.name).indexOf(f)<0&&!themes.some(function(t){return key(t).indexOf(f)>=0;}))return;shown++;
         var card=el('div','ow-card');var top=el('div','ow-top');top.appendChild(el('b','','👤 '+r.name));top.appendChild(el('span','note',themes.length+'テーマ'));card.appendChild(top);
-        var box=el('div','ow-themes');themes.forEach(function(t){var dup=count[key(t)]>1;var c=el('span','ow-t'+(dup?' dup':''),t+(dup?' ⚠️':''));if(dup)c.title='他の人も使っています';box.appendChild(c);});card.appendChild(box);
+        var box=el('div','ow-themes');themes.forEach(function(t){var dup=count[key(t)]>1;var c=el('span','ow-t'+(dup?' dup':''),t+(dup?' ⚠️':''));if(dup)c.title='他の人も使っています';if(r.kinds&&r.kinds[t]==='ryu'){c.appendChild(document.createTextNode(' '));c.appendChild(el('span','ryu','🌏 留学生'));}box.appendChild(c);});card.appendChild(box);
         if(false){var acts=el('div','ow-acts');var ed=el('button','del','編集');ed.type='button';ed.addEventListener('click',function(){$('ow-name').value=r.name;$('ow-themes').value=themes.join('、');$('ow-form').scrollIntoView({behavior:'smooth',block:'center'});});
           var dl=el('button','del','削除');dl.type='button';dl.addEventListener('click',function(){if(!dl.classList.contains('confirm')){dl.classList.add('confirm');dl.textContent='本当に削除';setTimeout(function(){dl.classList.remove('confirm');dl.textContent='削除';},4000);return;}col.doc(r.id).delete().catch(function(){});});
           acts.appendChild(ed);acts.appendChild(dl);card.appendChild(acts);}
@@ -2231,7 +2299,7 @@ strong,b{letter-spacing:.05em}
       });
       if(!shown)msg('見つかりませんでした。');
     }else{
-      var map={};rows.forEach(function(r){(r.themes||[]).forEach(function(t){var k=key(t);(map[k]=map[k]||{name:t,people:[]}).people.push(r.name);});});
+      var map={};rows.forEach(function(r){(r.themes||[]).forEach(function(t){var k=key(t);(map[k]=map[k]||{name:t,people:[]}).people.push(r.name+(r.kinds&&r.kinds[t]==='ryu'?'（🌏留学生）':''));});});
       var ks=Object.keys(map).sort(function(a,b){return map[b].people.length-map[a].people.length||map[a].name.localeCompare(map[b].name,'ja');});
       var shown2=0;
       ks.forEach(function(k){var m=map[k];if(f&&k.indexOf(f)<0&&!m.people.some(function(p){return key(p).indexOf(f)>=0;}))return;shown2++;
@@ -2247,7 +2315,7 @@ strong,b{letter-spacing:.05em}
     if(!YGO.db){msg('読み込めませんでした。ページを開き直してください。');return;}
     if(!u){msg('🔑 ログインすると、メンバーのテーマ一覧が見られます。');return;}
     YGO.db.collection('users').onSnapshot(function(s){
-      rows=s.docs.map(function(d){var x=d.data()||{};return {id:d.id,name:String(x.name||'').slice(0,20),themes:Array.isArray(x.themes)?x.themes.map(String):[]};})
+      rows=s.docs.map(function(d){var x=d.data()||{};return {id:d.id,name:String(x.name||'').slice(0,20),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{}};})
         .filter(function(r){return r.name;}).sort(function(a,b){return a.name.localeCompare(b.name,'ja');});
       render();
     },function(){msg('読み込めませんでした。ページを開き直してください。');});
@@ -2308,6 +2376,9 @@ strong,b{letter-spacing:.05em}
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-10-20-nickname-sound',createdAt:1792423320000,text:'👤 ニックネームは苗字をひらがなで（例：やまだ）入れる案内に。🔊 効果音を一新：ダメージ・回復はカウンター音と「ミョン」、量に合わせて4段階の長さ。ライフ0は「ピーーー」と脈が止まる音に'},
+      {id:'auto-2026-10-19-sound',createdAt:1792419000000,text:'🔊 デュエルに効果音と、🎺勝ち確BGMボタンを追加。BGMはオリジナル曲のほか、スマホの中の好きな曲も選べます'},
+      {id:'auto-2026-10-19-ryu',createdAt:1792417500000,text:'🌏「留学生デッキ」を新設：このルールでは組めないロマンデッキも、トップにならないよう調整すれば歓迎。プロフィールのテーマ登録で「🏫 在校生／🌏 留学生」を選べ、テーマ一覧や戦績で見分けられるように'},
       {id:'auto-2026-10-19-design',createdAt:1792413060000,text:'🎨 デザインを一新：アカデミアの3寮カラー（赤・黄・青）とアメコミ風の見た目に。文字を丸ゴシックにして、行間・余白をゆったり読みやすく'},
       {id:'auto-2026-10-19-features',createdAt:1792414680000,text:'🆕 アカウント連動の機能を追加：相手ごとの成績・テーマ対テーマの成績、デッキの強さ（1〜10の評価とデータの目安）、記録のあとから編集、デュエル準備画面に今の規制を表示、👑ロマン図鑑、📈戦績グラフ。ニックネームの重複もチェックするように'},
       {id:'auto-2026-10-19-limitlist',createdAt:1792415280000,text:'🚨 汎用魔法・罠 規制リストに、あとからカードを追加・変更できるように（追加されたカードには🆕マーク）'},
@@ -2541,7 +2612,7 @@ strong,b{letter-spacing:.05em}
     var f=key($('ar-q').value),people={};
     all.forEach(function(r){var n=String(r.myName||'名前なし').slice(0,20),t=String(r.myTheme||'テーマ未選択').slice(0,30);
       if(f&&key(n).indexOf(f)<0&&key(t).indexOf(f)<0)return;
-      var p=people[n]||(people[n]={n:0,w:0,l:0,d:0,th:{},uid:r.uid});var m=p.th[t]||(p.th[t]={n:0,w:0,l:0,d:0,ace:[],logs:[]});m.logs.push(r);
+      var p=people[n]||(people[n]={n:0,w:0,l:0,d:0,th:{},uid:r.uid});var m=p.th[t]||(p.th[t]={n:0,w:0,l:0,d:0,ace:[],logs:[]});m.logs.push(r);if(r.ryu)m.ryu=true;
       [p,m].forEach(function(x){x.n++;if(r.result==='win')x.w++;else if(r.result==='lose')x.l++;else x.d++;});if(r.aceTurn)m.ace.push(Number(r.aceTurn)||0);});
     all.forEach(function(r){if(!r.oppUid||!r.oppRate||!r.oppTheme)return;var mm=Y.members&&Y.members[r.oppUid];var n=String((mm&&mm.name)||r.oppName||'名前なし').slice(0,20),t=String(r.oppTheme).slice(0,30);
       if(f&&key(n).indexOf(f)<0&&key(t).indexOf(f)<0)return;var p=people[n]||(people[n]={n:0,w:0,l:0,d:0,th:{},uid:r.oppUid});p.uid=p.uid||r.oppUid;if(!p.th[t])p.th[t]={n:0,w:0,l:0,d:0,ace:[],logs:[]};});
@@ -2551,7 +2622,7 @@ strong,b{letter-spacing:.05em}
       box.appendChild(el('b','','👤 '+n+'　'+p.n+'戦 '+p.w+'勝 '+p.l+'敗'+(p.d?' '+p.d+'分':'')+(dec?'（勝率'+Math.round(p.w/dec*100)+'%）':'')));
       var tbl=el('table','tstats ar-tbl'),th=el('thead'),tr=el('tr');['テーマ','戦','勝','敗','分','勝率','評価','目安'].forEach(function(x){tr.appendChild(el('th','',x));});th.appendChild(tr);tbl.appendChild(th);
       var tb=el('tbody');Object.keys(p.th).sort(function(a,b){return p.th[b].n-p.th[a].n;}).forEach(function(t){var m=p.th[t],r=el('tr'),d=m.w+m.l,rate=d?Math.round(m.w/d*100):null;
-        r.appendChild(el('td','tn',t));[m.n,m.w,m.l,m.d].forEach(function(v){r.appendChild(el('td','',String(v)));});
+        var mm=p.uid&&Y.members&&Y.members[p.uid],isR=m.ryu||!!(mm&&mm.kinds&&mm.kinds[t]==='ryu');var tdn=el('td','tn',t);if(isR){tdn.appendChild(document.createTextNode(' '));tdn.appendChild(el('span','ryu','🌏'));}r.appendChild(tdn);[m.n,m.w,m.l,m.d].forEach(function(v){r.appendChild(el('td','',String(v)));});
         var rc=el('td','rate',rate==null?'―':rate+'%');if(rate!=null)rc.style.setProperty('--r',rate+'%');r.appendChild(rc);
         var rv=Y.avgRate?Y.avgRate(all.filter(function(x){return x.oppUid&&x.oppUid===p.uid&&key(x.oppTheme)===key(t);})):null;r.appendChild(el('td','sc-v '+(rv?(rv.v>=8?'hi':rv.v<=4.5?'lo':rv.v>=6&&rv.v<=7?'ok':'mid'):''),rv?String(rv.v):'―'));
         var ds=Y.dataScore?Y.dataScore(m.logs):null;r.appendChild(el('td','sc-v '+(ds==null?'':ds>=8?'hi':ds<=4.5?'lo':ds>=6&&ds<=7?'ok':'mid'),ds==null?'―':String(ds)));tb.appendChild(r);});
@@ -2599,7 +2670,7 @@ strong,b{letter-spacing:.05em}
     if(!Y.db)return;
     Y.db.collection('reports').orderBy('createdAt','desc').onSnapshot(function(s){Y.reports=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
     if(!u)return;
-    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[]};});Y.members=m;fillLists();fire('ygo:data');},function(){});
+    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{}};});Y.members=m;fillLists();fire('ygo:data');},function(){});
     Y.db.collection('results').where('oppUid','==',u.uid).onSnapshot(function(s){Y.ratedMe=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
   });
 
@@ -2696,6 +2767,7 @@ strong,b{letter-spacing:.05em}
   Y.resultExtras=function(o){
     var ext={oppRate:rate,aceName:$('rs-ace').value.trim().slice(0,40)||null,oppUid:null};
     if(o&&o.uid)ext.oppUid=o.uid;else{var m=Y.memberByName(o?o.name:$('rs-opp-name').value);if(m&&(!Y.user||m.uid!==Y.user.uid))ext.oppUid=m.uid;}
+    var om=ext.oppUid&&Y.members[ext.oppUid],ot=o?o.theme:$('rs-opp-theme').value.trim();ext.oppRyu=!!(om&&om.kinds&&ot&&om.kinds[ot]==='ryu');
     return ext;
   };
 
@@ -2727,9 +2799,11 @@ strong,b{letter-spacing:.05em}
     if(!cl.childNodes.length)cl.appendChild(el('span','note','規制カードなし'));b.appendChild(cl);
     b.appendChild(el('span','note','📅 '+fmtD(r.createdAt)+' の登録'+(r.reason?'・'+String(r.reason).slice(0,60):'')));return b;}
   function renderRegs(){var box=$('su-regs');if(!box||$('duel').hidden)return;var app=A();if(!app)return;box.innerHTML='';
-    box.appendChild(regBox('あなた：'+($('su-theme').value||'テーマ未選択'),app.pf().name,$('su-theme').value));
+    var myk=(app.pf().kinds||{})[$('su-theme').value]==='ryu';
+    box.appendChild(regBox('あなた：'+($('su-theme').value||'テーマ未選択')+(myk?'（🌏 留学生デッキ）':''),app.pf().name,$('su-theme').value));
     var o=app.opp();
-    if(o&&o.name)box.appendChild(regBox(o.name+'：'+(o.theme||'テーマ未選択'),o.name,o.theme));
+    var om=o&&o.name?Y.memberByName(o.name):null,ok=!!(om&&om.kinds&&o.theme&&om.kinds[o.theme]==='ryu');
+    if(o&&o.name)box.appendChild(regBox(o.name+'：'+(o.theme||'テーマ未選択')+(ok?'（🌏 留学生デッキ）':''),o.name,o.theme));
     else box.appendChild(el('span','note','相手とリンクすると、相手のデッキの規制もここに出ます。'));}
   $('su-theme').addEventListener('change',renderRegs);
   $('duel-open').addEventListener('click',function(){setTimeout(renderRegs,0);});
@@ -2802,6 +2876,133 @@ strong,b{letter-spacing:.05em}
       function(err){st.className='status err';st.textContent='反映できませんでした（'+(err&&err.code||'error')+'）。セキュリティルールの更新が必要かもしれません。';})
       .then(function(){$('ll-btn').disabled=false;});
   });
+})();
+</script>
+<script>
+
+/* ===== サウンド：効果音と勝ち確BGM（音はすべてこのページの中で合成。曲はオリジナル） ===== */
+(function(){
+  function $(id){return document.getElementById(id);}
+  var K='ygo-sound-v1',S={se:true,bgm:'orig'};
+  try{var s=JSON.parse(localStorage.getItem(K));if(s){S.se=s.se!==false;S.bgm=s.bgm==='own'?'own':'orig';}}catch(e){}
+  function saveS(){try{localStorage.setItem(K,JSON.stringify(S));}catch(e){}}
+  var ac=null,master=null,verb=null,shaper=null;
+  function ctx(){if(!ac){var C=window.AudioContext||window.webkitAudioContext;if(!C)return null;ac=new C();
+      var comp=ac.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;comp.attack.value=.003;comp.release.value=.25;comp.connect(ac.destination);
+      master=ac.createGain();master.gain.value=.65;master.connect(comp);
+      // 残響（ホールのような響き）
+      var len=ac.sampleRate*2.4,ir=ac.createBuffer(2,len,ac.sampleRate);for(var ch=0;ch<2;ch++){var d=ir.getChannelData(ch);for(var i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6);}
+      var cv=ac.createConvolver();cv.buffer=ir;verb=ac.createGain();verb.gain.value=.32;verb.connect(cv);cv.connect(master);
+      // 歪み（衝撃に重さを出す）
+      shaper=ac.createWaveShaper();var n=2048,cu=new Float32Array(n);for(var j=0;j<n;j++){var x=j*2/n-1;cu[j]=Math.tanh(x*3.2);}shaper.curve=cu;shaper.connect(master);}
+    if(ac.state==='suspended')ac.resume();return ac;}
+  // iPhone対策：最初のタップで音を使えるようにする
+  document.addEventListener('pointerdown',function un(){var c=ctx();if(c){var b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0);}document.removeEventListener('pointerdown',un);},{passive:true});
+  function out(node,dest,wet){node.connect(dest||master);if(wet&&verb){var w=ac.createGain();w.gain.value=wet;node.connect(w);w.connect(verb);}}
+  // 音の部品：発振器→ローパス→音量の山
+  function voice(type,f0,f1,t,dur,vol,o){o=o||{};var c=ac,os=c.createOscillator(),f=c.createBiquadFilter(),g=c.createGain();os.type=type;os.frequency.setValueAtTime(f0,t);if(f1)os.frequency.exponentialRampToValueAtTime(f1,t+(o.glide||dur));if(o.detune)os.detune.value=o.detune;
+    f.type='lowpass';f.frequency.setValueAtTime(o.cut||3000,t);if(o.cut1)f.frequency.exponentialRampToValueAtTime(o.cut1,t+dur);f.Q.value=o.q||.7;
+    var at=o.att||.005;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+at);if(o.hold)g.gain.setValueAtTime(vol,t+at+o.hold);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    os.connect(f);f.connect(g);out(g,o.dest,o.wet);os.start(t);os.stop(t+dur+.05);}
+  var nb=null;function noiseBuf(){if(nb)return nb;var c=ac,n=c.sampleRate*1.5;nb=c.createBuffer(1,n,c.sampleRate);var d=nb.getChannelData(0);for(var i=0;i<n;i++)d[i]=Math.random()*2-1;return nb;}
+  function noise(t,dur,vol,o){o=o||{};var c=ac,s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=noiseBuf();f.type=o.type||'lowpass';f.frequency.setValueAtTime(o.f||2000,t);if(o.f1)f.frequency.exponentialRampToValueAtTime(o.f1,t+dur);f.Q.value=o.q||.8;
+    g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);s.connect(f);f.connect(g);out(g,o.dest,o.wet);s.start(t);s.stop(t+dur+.05);}
+  /* --- 効果音：映画のような衝撃＋なめらかなカウンター（四角い波・のこぎり波は使わない） --- */
+  /* ライフカウンターの音（送ってもらった参考音を分析して寄せたもの）
+     ・ピッ：1662Hzの澄んだ音＋約2.5倍の金属的な倍音、長さ70ms、0.125秒ごと
+     ・最後：470Hzのジャッという濁り＋高いシャー（0.13秒）→ 1756Hzの「ミョン」（少し高めから落ち着き、伸びて消える） */
+  // 量で4段階：〜1000＝4回、〜2000＝6回、〜3999＝8回、4000〜＝11回
+  function nBeeps(amt){return amt>=4000?11:amt>2000?8:amt>1000?6:4;}
+  var IV=0.085;
+  function cdur(amt){return nBeeps(amt)*IV;}
+  function partial(f,t,dur,vol,o){o=o||{};var c=ac,os=c.createOscillator(),g=c.createGain();os.type='sine';os.frequency.setValueAtTime(o.f0||f,t);if(o.f0)os.frequency.exponentialRampToValueAtTime(f,t+(o.glide||.015));if(o.f1)os.frequency.linearRampToValueAtTime(o.f1,t+dur);
+    var at=o.att||.004;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+at);
+    if(o.env){o.env.forEach(function(p){g.gain.linearRampToValueAtTime(vol*p[1],t+p[0]);});}else g.gain.setValueAtTime(vol,t+dur-.012);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    if(o.trem){var l=c.createOscillator(),lg=c.createGain(),tg=c.createGain();l.frequency.value=o.trem;lg.gain.value=.15;tg.gain.value=1;l.connect(lg);lg.connect(tg.gain);os.connect(tg);tg.connect(g);l.start(t);l.stop(t+dur+.05);}else os.connect(g);
+    out(g,o.dest,o.wet);os.start(t);os.stop(t+dur+.05);}
+  function beep(t,vol,k){k=k||1;partial(1662*k,t,.058,vol,{trem:26,wet:.2});partial(4098*k,t,.05,vol*.12,{wet:.1});partial(831*k,t,.065,vol*.55,{wet:.25});partial(415.5*k,t,.07,vol*.45,{wet:.2});
+    voice('sine',150,55,t,.1,vol*1.6,{glide:.06});noise(t,.04,vol*.5,{f:500,f1:120});}
+  function ticks(t,dur,f,vol,k){var n=Math.round(dur/IV);for(var i=0;i<n;i++)beep(t+i*IV,vol,k);
+    // 刻んでいる間のかすかな低いうなり
+    noise(t,n*IV,.09,{f:220,q:.7,wet:.3});voice('sine',55,0,t,n*IV+.2,.22,{att:.06,hold:Math.max(.05,n*IV-.1)});voice('triangle',82.4,0,t,n*IV+.2,.08,{att:.06,hold:Math.max(.05,n*IV-.1),cut:300});return t+n*IV;}
+  function burst(t,vol){var c=ac,os=c.createOscillator(),f=c.createBiquadFilter(),g=c.createGain();os.type='sawtooth';os.frequency.value=470;f.type='lowpass';f.frequency.value=1700;
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.006);g.gain.exponentialRampToValueAtTime(0.0001,t+.13);os.connect(f);f.connect(g);out(g);os.start(t);os.stop(t+.15);
+    noise(t,.13,vol*.9,{type:'highpass',f:8500});voice('sine',120,38,t,.6,vol*2.4,{glide:.3,wet:.3});noise(t,.35,vol*1.2,{f:1200,f1:80,dest:shaper,wet:.4});}
+  function myon(t,vol,k){k=k||1;var env=[[.012,1],[.05,.55],[.17,.5],[.2,.3],[.6,.12]];
+    partial(1756*k,t,.95,vol,{f0:1803*k,glide:.015,f1:1772*k,env:env,wet:.2});
+    partial(2496*k,t,.6,vol*.09,{env:env});partial(6009*k,t,.5,vol*.16,{env:env,wet:.1});
+    partial(878*k,t,1.1,vol*.6,{f0:901*k,glide:.015,f1:886*k,env:env,wet:.35});partial(439*k,t,1.2,vol*.5,{f0:451*k,glide:.015,env:env,wet:.35});partial(219.5*k,t,1.2,vol*.35,{env:env,wet:.3});}
+  function impact(t,big){var k=big?1.2:1;
+    voice('sine',80,26,t,big?1.3:1,.9*k,{glide:.5,wet:.35});
+    noise(t,big?.8:.55,.7*k,{f:1800,f1:70,dest:shaper,wet:.45});
+    noise(t,.25,.35,{type:'bandpass',f:4200,f1:600,q:1,wet:.3});
+    if(big)voice('sine',50,22,t+.12,1.3,.6,{glide:.7,wet:.35});}
+  // 爆発：低いドカン＋砕ける轟音＋パチパチ＋長い地鳴り
+  var SE={
+    dmg:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;impact(t,amt>2000);t+=.14;var e=ticks(t,cdur(amt),0,.2);burst(e+.01,.3);myon(e+.1,.5);},
+    cost:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;var e=ticks(t,cdur(amt),0,.19);burst(e+.01,.26);myon(e+.1,.45);},
+    heal:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;
+      [440,554.4,659.3].forEach(function(f){voice('sine',f,0,t,1.6,.05,{att:.3,hold:.6,wet:.55});});
+      var e=ticks(t,cdur(amt),0,.18,1.122);myon(e+.04,.45,1.122);},
+    zero:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;impact(t,true);t+=.14;var e=ticks(t,cdur(amt),0,.2);
+      // 脈がなくなる：ピーーーー（約6秒続いて、静かに消える）
+      var fl=e+.15;partial(988,fl,6.4,.26,{att:.02,env:[[4.6,1],[6.2,.15]],wet:.3});partial(1976,fl,6.4,.03,{att:.02,env:[[4.6,1],[6.2,.15]]});}
+  };
+  document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};var a=d.amt||0;if(d.zero)SE.zero(a);else if(d.kind==='heal')SE.heal(a);else if(d.kind==='cost')SE.cost(a);else SE.dmg(a);});
+
+  /* --- オリジナルの勝ち確BGM（ニ長調・132BPM・8小節ループ。ストリングスとブラス風の重ね） --- */
+  var BPM=132,B=60/BPM;
+  var MEL=[[62,.5],[62,.5],[64,.5],[66,1],[69,1.5],[67,.5],[66,.5],[64,1],[62,2],[59,.5],[62,.5],[64,.5],[66,1],[67,.5],[69,1],[71,1.5],[69,.5],[66,2],
+           [62,.5],[62,.5],[64,.5],[66,1],[69,1.5],[74,1],[73,.5],[71,.5],[69,2],[67,.5],[69,.5],[71,.5],[73,1],[74,1.5],[74,2],[0,2]];
+  var ROOT=[38,43,35,45,38,43,45,38];
+  function mf(m){return 440*Math.pow(2,(m-69)/12);}
+  var bgmGain=null,loopTimer=null,playing=false,nextT=0,audioEl=null;
+  function schedLoop(t0){var t=t0,G=bgmGain;
+    // 主旋律：ブラス風（フィルターがふくらむ）＋ストリングスの重ね
+    MEL.forEach(function(n){if(n[0]){var d=n[1]*B*.97,f=mf(n[0]);
+      [-9,-3,3,9].forEach(function(dt){voice('sawtooth',f,0,t,d+.12,.045,{att:.06,cut:600,cut1:1500,q:.9,detune:dt,dest:G,wet:.35});});
+      voice('sine',f*2,0,t,d+.1,.035,{att:.08,dest:G,wet:.4});}t+=n[1]*B;});
+    for(var bar=0;bar<8;bar++){var r=ROOT[bar],tb0=t0+bar*4*B;
+      // ストリングス風パッド（ルート・3度・5度、柔らかく）
+      var third=(bar===2)?3:4;[12,12+third,19,24].forEach(function(iv){[-8,0,8].forEach(function(dt){voice('sawtooth',mf(r+iv),0,tb0,4*B+.3,.016,{att:.35,hold:3*B,cut:700,detune:dt,dest:G,wet:.5});});});
+      // ベース（丸い音）
+      for(var i=0;i<4;i++){var tt=tb0+i*B;voice('triangle',mf(r),0,tt,B*.9,.3,{cut:300,dest:G});voice('sine',mf(r)/2,0,tt,B*.9,.25,{dest:G});}
+      // 打楽器：キック・スネア（胴鳴り）・シンバル・ティンパニ
+      for(var bt=0;bt<4;bt++){var tb=tb0+bt*B;if(bt%2===0){voice('sine',120,40,tb,.4,.85,{glide:.1,dest:G});}else{noise(tb,.28,.35,{type:'bandpass',f:1500,q:.5,dest:G,wet:.45});voice('sine',180,110,tb,.15,.25,{dest:G});}
+        noise(tb+.5*B,.06,.05,{type:'highpass',f:8000,dest:G,wet:.2});}
+      if(bar===0||bar===4)noise(tb0,2,.22,{type:'highpass',f:5000,dest:G,wet:.6});
+      if(bar===7){for(var k=0;k<8;k++){voice('sine',98,70,tb0+2*B+k*B/4,.3,.35+k*.04,{glide:.25,dest:G,wet:.3});noise(tb0+2*B+k*B/4,.08,.08,{f:600,dest:G});}}}
+    return t0+32*B;}
+  function startOrig(){var c=ctx();if(!c)return;bgmGain=c.createGain();bgmGain.gain.value=.8;bgmGain.connect(master);nextT=c.currentTime+.08;
+    (function pump(){if(!playing)return;while(nextT<ac.currentTime+4){nextT=schedLoop(nextT);}loopTimer=setTimeout(pump,1000);})();}
+  function stopOrig(){clearTimeout(loopTimer);if(bgmGain){var g=bgmGain;g.gain.setTargetAtTime(0.0001,ac.currentTime,.08);setTimeout(function(){try{g.disconnect();}catch(e){}},600);bgmGain=null;}}
+  /* 自分の曲（このスマホのIndexedDBに保存） */
+  function idb(){return new Promise(function(res,rej){try{var r=indexedDB.open('ygo-audio',1);r.onupgradeneeded=function(){r.result.createObjectStore('f');};r.onsuccess=function(){res(r.result);};r.onerror=function(){rej(r.error);};}catch(e){rej(e);}});}
+  function putOwn(file){return idb().then(function(db){return new Promise(function(res,rej){var tx=db.transaction('f','readwrite');tx.objectStore('f').put({blob:file,name:file.name},'bgm');tx.oncomplete=res;tx.onerror=function(){rej(tx.error);};});});}
+  function getOwn(){return idb().then(function(db){return new Promise(function(res){var tx=db.transaction('f','readonly'),q=tx.objectStore('f').get('bgm');q.onsuccess=function(){res(q.result||null);};q.onerror=function(){res(null);};});}).catch(function(){return null;});}
+  function startOwn(){return getOwn().then(function(o){if(!o)return false;if(audioEl){audioEl.pause();URL.revokeObjectURL(audioEl.src);}audioEl=new Audio(URL.createObjectURL(o.blob));audioEl.loop=true;audioEl.volume=.9;return audioEl.play().then(function(){return true;},function(){return false;});});}
+  function stopOwn(){if(audioEl){audioEl.pause();audioEl.currentTime=0;}}
+  function setBtn(){var b=$('bgm-btn');b.classList.toggle('on',playing);b.setAttribute('aria-pressed',String(playing));b.querySelector('span').textContent=playing?'停止':'BGM';$('bgm-try').textContent=playing?'■ 止める':'▶ 試しに聴く';}
+  function play(){if(playing){stop();return;}playing=true;setBtn();
+    if(S.bgm==='own'){startOwn().then(function(ok){if(!ok){S.bgm='orig';renderS();startOrig();}});}else startOrig();}
+  function stop(){playing=false;stopOrig();stopOwn();setBtn();}
+  $('bgm-btn').addEventListener('click',play);
+  $('bgm-try').addEventListener('click',play);
+  // デュエルを閉じたら止める
+  ['setup-close','rs-save','rs-skip'].forEach(function(id){var e=$(id);if(e)e.addEventListener('click',function(){if(playing)stop();});});
+  /* 設定 */
+  function renderS(){[].forEach.call(document.querySelectorAll('#snd-se button'),function(b){b.setAttribute('aria-checked',String((b.getAttribute('data-v')==='1')===S.se));});
+    [].forEach.call(document.querySelectorAll('#snd-bgm button'),function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-v')===S.bgm));});
+    $('bgm-own').hidden=S.bgm!=='own';var sb=$('snd-btn');sb.textContent=S.se?'🔊':'🔇';sb.classList.toggle('off',!S.se);}
+  [].forEach.call(document.querySelectorAll('#snd-se button'),function(b){b.addEventListener('click',function(){S.se=b.getAttribute('data-v')==='1';saveS();renderS();if(S.se)SE.heal(1000);});});
+  [].forEach.call(document.querySelectorAll('#snd-bgm button'),function(b){b.addEventListener('click',function(){if(playing)stop();S.bgm=b.getAttribute('data-v');saveS();renderS();});});
+  $('snd-btn').addEventListener('click',function(){S.se=!S.se;saveS();renderS();});
+  $('bgm-file').addEventListener('change',function(){var f=this.files&&this.files[0],st=$('bgm-file-st');if(!f)return;
+    if(f.size>30*1024*1024){st.textContent='ファイルが大きすぎます（30MBまで）。';return;}
+    putOwn(f).then(function(){st.textContent='🎵 「'+f.name+'」を勝ち確BGMにしました（このスマホだけに保存）。';},function(){st.textContent='保存できませんでした。ブラウザの設定を確認してください。';});});
+  getOwn().then(function(o){if(o)$('bgm-file-st').textContent='🎵 いまの曲：「'+o.name+'」（このスマホだけに保存）';});
+  renderS();setBtn();
 })();
 </script>
 </body>
