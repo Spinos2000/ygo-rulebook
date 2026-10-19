@@ -2150,7 +2150,7 @@ strong,b{letter-spacing:.05em}
     $('me-name').textContent=myName();$('me-theme').textContent=D.myTheme||'';$('me-ace').textContent=D.aceT?'👑'+turnLabel(D.aceT,D.first).replace('あなたの','自分').replace('ターン目','T'):'';
     lpEl.classList.toggle('zero',to<=0);meter('me-meter',to);
     if(from==null||reduce){lpEl.textContent=String(to);return;}
-    var t0=null,DUR=Math.min(10,Math.max(3,Math.ceil(Math.abs(to-from)/400)+2))*125;function step(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/DUR);lpEl.textContent=String(Math.round(from+(to-from)*k));if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step);
+    var t0=null,DUR=Math.min(10,Math.max(3,Math.ceil(Math.abs(to-from)/400)+2))*85+120;function step(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/DUR);lpEl.textContent=String(Math.round(from+(to-from)*k));if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step);
   }
   function renderOpp(){
     if(opp){$('opp-name').textContent=opp.name;$('opp-theme').textContent=opp.theme||'テーマ未選択';$('opp-lp').textContent=opp.lp==null?'----':String(opp.lp);$('opp-ace').textContent=opp.aceT?'👑':'';meter('opp-meter',opp.lp==null?START:opp.lp);
@@ -2911,18 +2911,19 @@ strong,b{letter-spacing:.05em}
      ・ピッ：1662Hzの澄んだ音＋約2.5倍の金属的な倍音、長さ70ms、0.125秒ごと
      ・最後：470Hzのジャッという濁り＋高いシャー（0.13秒）→ 1756Hzの「ミョン」（少し高めから落ち着き、伸びて消える） */
   function nBeeps(amt){return Math.min(10,Math.max(3,Math.ceil(amt/400)+2));}
-  function cdur(amt){return nBeeps(amt)*0.125;}
+  var IV=0.085;
+  function cdur(amt){return nBeeps(amt)*IV;}
   function partial(f,t,dur,vol,o){o=o||{};var c=ac,os=c.createOscillator(),g=c.createGain();os.type='sine';os.frequency.setValueAtTime(o.f0||f,t);if(o.f0)os.frequency.exponentialRampToValueAtTime(f,t+(o.glide||.015));if(o.f1)os.frequency.linearRampToValueAtTime(o.f1,t+dur);
     var at=o.att||.004;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+at);
     if(o.env){o.env.forEach(function(p){g.gain.linearRampToValueAtTime(vol*p[1],t+p[0]);});}else g.gain.setValueAtTime(vol,t+dur-.012);
     g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
     if(o.trem){var l=c.createOscillator(),lg=c.createGain(),tg=c.createGain();l.frequency.value=o.trem;lg.gain.value=.15;tg.gain.value=1;l.connect(lg);lg.connect(tg.gain);os.connect(tg);tg.connect(g);l.start(t);l.stop(t+dur+.05);}else os.connect(g);
     out(g,o.dest,o.wet);os.start(t);os.stop(t+dur+.05);}
-  function beep(t,vol,k){k=k||1;partial(1662*k,t,.08,vol,{trem:26,wet:.2});partial(4098*k,t,.07,vol*.12,{wet:.1});partial(831*k,t,.09,vol*.55,{wet:.25});partial(415.5*k,t,.1,vol*.45,{wet:.2});
-    voice('sine',150,55,t,.14,vol*1.6,{glide:.08});noise(t,.05,vol*.5,{f:500,f1:120});}
-  function ticks(t,dur,f,vol,k){var n=Math.round(dur/0.125);for(var i=0;i<n;i++)beep(t+i*0.125,vol,k);
+  function beep(t,vol,k){k=k||1;partial(1662*k,t,.058,vol,{trem:26,wet:.2});partial(4098*k,t,.05,vol*.12,{wet:.1});partial(831*k,t,.065,vol*.55,{wet:.25});partial(415.5*k,t,.07,vol*.45,{wet:.2});
+    voice('sine',150,55,t,.1,vol*1.6,{glide:.06});noise(t,.04,vol*.5,{f:500,f1:120});}
+  function ticks(t,dur,f,vol,k){var n=Math.round(dur/IV);for(var i=0;i<n;i++)beep(t+i*IV,vol,k);
     // 刻んでいる間のかすかな低いうなり
-    noise(t,n*0.125,.09,{f:220,q:.7,wet:.3});voice('sine',55,0,t,n*0.125+.2,.22,{att:.08,hold:n*0.125-.1});voice('triangle',82.4,0,t,n*0.125+.2,.08,{att:.08,hold:n*0.125-.1,cut:300});return t+n*0.125;}
+    noise(t,n*IV,.09,{f:220,q:.7,wet:.3});voice('sine',55,0,t,n*IV+.2,.22,{att:.06,hold:Math.max(.05,n*IV-.1)});voice('triangle',82.4,0,t,n*IV+.2,.08,{att:.06,hold:Math.max(.05,n*IV-.1),cut:300});return t+n*IV;}
   function burst(t,vol){var c=ac,os=c.createOscillator(),f=c.createBiquadFilter(),g=c.createGain();os.type='sawtooth';os.frequency.value=470;f.type='lowpass';f.frequency.value=1700;
     g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.006);g.gain.exponentialRampToValueAtTime(0.0001,t+.13);os.connect(f);f.connect(g);out(g);os.start(t);os.stop(t+.15);
     noise(t,.13,vol*.9,{type:'highpass',f:8500});voice('sine',120,38,t,.6,vol*2.4,{glide:.3,wet:.3});noise(t,.35,vol*1.2,{f:1200,f1:80,dest:shaper,wet:.4});}
@@ -2936,12 +2937,12 @@ strong,b{letter-spacing:.05em}
     noise(t,.25,.35,{type:'bandpass',f:4200,f1:600,q:1,wet:.3});
     if(big)voice('sine',50,22,t+.12,1.3,.6,{glide:.7,wet:.35});}
   var SE={
-    dmg:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;impact(t,amt>=2000);t+=.25;var e=ticks(t,cdur(amt),0,.2);burst(e+.01,.3);myon(e+.15,.5);},
-    cost:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;var e=ticks(t,cdur(amt),0,.19);burst(e+.01,.26);myon(e+.15,.45);},
+    dmg:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;impact(t,amt>=2000);t+=.14;var e=ticks(t,cdur(amt),0,.2);burst(e+.01,.3);myon(e+.1,.5);},
+    cost:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;var e=ticks(t,cdur(amt),0,.19);burst(e+.01,.26);myon(e+.1,.45);},
     heal:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;
       [440,554.4,659.3].forEach(function(f){voice('sine',f,0,t,1.6,.05,{att:.3,hold:.6,wet:.55});});
       var e=ticks(t,cdur(amt),0,.18,1.122);myon(e+.04,.45,1.122);},
-    zero:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;impact(t,true);t+=.25;var e=ticks(t,cdur(amt),0,.2);burst(e+.01,.32);myon(e+.15,.5);
+    zero:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;impact(t,true);t+=.14;var e=ticks(t,cdur(amt),0,.2);burst(e+.01,.32);myon(e+.1,.5);
       voice('sine',110,40,e+.9,2,.5,{glide:1.5,wet:.4});noise(e+.9,1.6,.25,{f:700,f1:60,wet:.5});}
   };
   document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};var a=d.amt||0;if(d.zero)SE.zero(a);else if(d.kind==='heal')SE.heal(a);else if(d.kind==='cost')SE.cost(a);else SE.dmg(a);});
