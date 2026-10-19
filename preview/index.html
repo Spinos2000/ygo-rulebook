@@ -704,6 +704,16 @@ strong,b{letter-spacing:.05em}
 .ryu-box h3{color:var(--trap)}
 .ryu-box ol{gap:10px}
 .ryu-heart{background:var(--surface);border-radius:4px;padding:12px 14px;font-weight:700}
+
+/* サウンド */
+.bottom{grid-template-columns:repeat(5,1fr) 1.2fr}
+.bb.bgm.on{background:var(--ra);border-color:var(--ra-d);color:var(--ink)}
+.bb.bgm.on span{color:var(--ink)}
+.tb.snd.off{opacity:.55}
+.topbar{gap:6px;flex-wrap:nowrap}.topbar .tb{white-space:nowrap;flex:none}.topbar .rec-chip{flex:none}.topbar .tb.end{margin-left:auto}
+.snd-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.snd-row .su-first{flex:1}
+.bgm-own{display:flex;flex-direction:column;gap:6px}
 </style>
 </head>
 <body>
@@ -1621,6 +1631,20 @@ strong,b{letter-spacing:.05em}
       <p class="link-st" id="link-st">リンクしなくても、自分のライフ計算だけで使えます。</p>
     </div>
     <div class="su-block">
+      <span class="su-l">🔊 サウンド</span>
+      <div class="field"><span>効果音（ダメージ・回復）</span>
+        <div class="su-first" id="snd-se" role="radiogroup" aria-label="効果音"><button type="button" role="radio" data-v="1">🔊 鳴らす</button><button type="button" role="radio" data-v="0">🔇 鳴らさない</button></div></div>
+      <div class="field"><span>🎺 勝ち確BGM（対戦中に「BGM」ボタンで再生）</span>
+        <div class="su-first" id="snd-bgm" role="radiogroup" aria-label="勝ち確BGMの曲"><button type="button" role="radio" data-v="orig">🎼 オリジナル曲</button><button type="button" role="radio" data-v="own">📁 自分の曲</button></div>
+        <div class="bgm-own" id="bgm-own" hidden>
+          <label class="field" for="bgm-file">スマホの中の音楽ファイルを選ぶ<input type="file" id="bgm-file" accept="audio/*"></label>
+          <span class="note" id="bgm-file-st">まだ選ばれていません。曲はこのスマホの中だけに保存され、ほかの人には送られません。</span>
+        </div>
+        <button type="button" class="ghost" id="bgm-try">▶ 試しに聴く</button>
+      </div>
+      <span class="note">スマホがマナーモード（消音）だと鳴らないことがあります。</span>
+    </div>
+    <div class="su-block">
       <span class="su-l">📋 いまの規制（規制報告ボードより）</span>
       <div class="su-regs" id="su-regs"></div>
     </div>
@@ -1631,7 +1655,8 @@ strong,b{letter-spacing:.05em}
   <div class="dv dv-play" id="dv-play" hidden>
     <div class="topbar">
       <button type="button" class="tb lock" id="lock-btn" aria-pressed="false" aria-label="画面ロック">🔓</button>
-      <button type="button" class="tb" id="tl-btn" aria-label="ターンごとの記録">📜 ログ</button>
+      <button type="button" class="tb" id="tl-btn" aria-label="ターンごとの記録" title="ターンごとの記録">📜</button>
+      <button type="button" class="tb snd" id="snd-btn" aria-label="効果音のオン・オフ">🔊</button>
       <button type="button" class="rec-chip" id="rec-chip" aria-label="戦績に残すかどうかの切り替え">📊 戦績ON</button>
       <span class="dot" id="link-dot" title="リンク状態"></span>
       <button type="button" class="tb end" id="end-btn">終了</button>
@@ -1679,6 +1704,7 @@ strong,b{letter-spacing:.05em}
       <button type="button" class="bb" id="undo-btn">↶<span>戻す</span></button>
       <button type="button" class="bb" id="coin-btn">🪙<span>コイン</span></button>
       <button type="button" class="bb" id="dice-btn">🎲<span>サイコロ</span></button>
+      <button type="button" class="bb bgm" id="bgm-btn" aria-pressed="false">🎺<span>BGM</span></button>
       <output class="rng" id="rng">—</output>
     </div>
 
@@ -2142,7 +2168,7 @@ strong,b{letter-spacing:.05em}
     D.hist.push({k:'lp',who:'me',kind:kind,amt:Math.abs(D.lp-b),b:b,a:D.lp,T:D.T});if(D.hist.length>400)D.hist.shift();
     if(D.lp>0)D.zeroAsked=false;
     if(kind!=='heal'){mode='dmg';renderMode();}
-    seq++;saveD();renderMe(b);renderTrack();flash(d<0?'hit':'heal');pushPresence(kind,Math.abs(d));
+    seq++;saveD();renderMe(b);renderTrack();flash(d<0?'hit':'heal');pushPresence(kind,Math.abs(d));document.dispatchEvent(new CustomEvent('ygo:lp',{detail:{kind:kind,amt:Math.abs(D.lp-b),zero:D.lp<=0}}));
     if(D.lp<=0&&!D.zeroAsked){D.zeroAsked=true;saveD();askEnd('ライフが0になりました','バトルを終了しますか？ まちがえて押した場合は「続ける」を押して、「↶ 戻す」で元に戻せます。');}
   }
   $('mode-btn').addEventListener('click',function(){if(locked)return;mode=mode==='dmg'?'cost':'dmg';renderMode();});
@@ -2350,6 +2376,7 @@ strong,b{letter-spacing:.05em}
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-10-19-sound',createdAt:1792419000000,text:'🔊 デュエルに効果音（ダメージ・コスト・回復・ライフ0）と、🎺勝ち確BGMボタンを追加。BGMはオリジナル曲のほか、スマホの中の好きな曲も選べます'},
       {id:'auto-2026-10-19-ryu',createdAt:1792417500000,text:'🌏「留学生デッキ」を新設：このルールでは組めないロマンデッキも、トップにならないよう調整すれば歓迎。プロフィールのテーマ登録で「🏫 在校生／🌏 留学生」を選べ、テーマ一覧や戦績で見分けられるように'},
       {id:'auto-2026-10-19-design',createdAt:1792413060000,text:'🎨 デザインを一新：アカデミアの3寮カラー（赤・黄・青）とアメコミ風の見た目に。文字を丸ゴシックにして、行間・余白をゆったり読みやすく'},
       {id:'auto-2026-10-19-features',createdAt:1792414680000,text:'🆕 アカウント連動の機能を追加：相手ごとの成績・テーマ対テーマの成績、デッキの強さ（1〜10の評価とデータの目安）、記録のあとから編集、デュエル準備画面に今の規制を表示、👑ロマン図鑑、📈戦績グラフ。ニックネームの重複もチェックするように'},
@@ -2848,6 +2875,74 @@ strong,b{letter-spacing:.05em}
       function(err){st.className='status err';st.textContent='反映できませんでした（'+(err&&err.code||'error')+'）。セキュリティルールの更新が必要かもしれません。';})
       .then(function(){$('ll-btn').disabled=false;});
   });
+})();
+</script>
+<script>
+
+/* ===== サウンド：効果音と勝ち確BGM（音はすべてこのページの中で合成。曲はオリジナル） ===== */
+(function(){
+  function $(id){return document.getElementById(id);}
+  var K='ygo-sound-v1',S={se:true,bgm:'orig'};
+  try{var s=JSON.parse(localStorage.getItem(K));if(s){S.se=s.se!==false;S.bgm=s.bgm==='own'?'own':'orig';}}catch(e){}
+  function saveS(){try{localStorage.setItem(K,JSON.stringify(S));}catch(e){}}
+  var ac=null,master=null;
+  function ctx(){if(!ac){var C=window.AudioContext||window.webkitAudioContext;if(!C)return null;ac=new C();master=ac.createGain();master.gain.value=.7;master.connect(ac.destination);}if(ac.state==='suspended')ac.resume();return ac;}
+  // iPhone対策：最初のタップで音を使えるようにする
+  document.addEventListener('pointerdown',function un(){var c=ctx();if(c){var b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0);}document.removeEventListener('pointerdown',un);},{passive:true});
+  function tone(type,f0,f1,t,dur,vol,dest){var c=ac,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(f0,t);if(f1)o.frequency.exponentialRampToValueAtTime(f1,t+dur);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(dest||master);o.start(t);o.stop(t+dur+0.02);}
+  var nb=null;function noiseBuf(){if(nb)return nb;var c=ac,n=c.sampleRate*0.6;nb=c.createBuffer(1,n,c.sampleRate);var d=nb.getChannelData(0);for(var i=0;i<n;i++)d[i]=Math.random()*2-1;return nb;}
+  function noise(t,dur,vol,freq,dest){var c=ac,s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=noiseBuf();f.type='lowpass';f.frequency.value=freq||2000;
+    g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);s.connect(f);f.connect(g);g.connect(dest||master);s.start(t);s.stop(t+dur+0.02);}
+  var SE={
+    dmg:function(amt){var c=ctx();if(!c)return;var t=c.currentTime,big=amt>=2000;noise(t,big?.35:.2,big?.6:.45,1800);tone('square',big?260:320,55,t,big?.45:.3,.22);if(big)tone('sawtooth',140,40,t+.05,.5,.15);},
+    cost:function(){var c=ctx();if(!c)return;var t=c.currentTime;tone('triangle',880,440,t,.12,.25);tone('triangle',660,330,t+.09,.14,.2);},
+    heal:function(){var c=ctx();if(!c)return;var t=c.currentTime;[1047,1319,1568,2093].forEach(function(f,i){tone('sine',f,0,t+i*.07,.35,.22);tone('triangle',f*2,0,t+i*.07,.2,.04);});},
+    zero:function(){var c=ctx();if(!c)return;var t=c.currentTime;tone('square',392,0,t,.25,.2);tone('square',330,0,t+.25,.25,.2);tone('square',262,65,t+.5,.9,.22);}
+  };
+  document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};if(d.zero)SE.zero();else if(d.kind==='heal')SE.heal();else if(d.kind==='cost')SE.cost();else SE.dmg(d.amt||0);});
+
+  /* --- オリジナルの勝ち確BGM（ニ長調・152BPM・8小節ループ） --- */
+  var BPM=152,B=60/BPM;
+  var MEL=[[74,.5],[74,.5],[76,.5],[78,1],[81,1.5],[79,.5],[78,.5],[76,1],[74,2],[71,.5],[74,.5],[76,.5],[78,1],[79,.5],[81,1],[83,1.5],[81,.5],[78,2],
+           [74,.5],[74,.5],[76,.5],[78,1],[81,1.5],[86,1],[85,.5],[83,.5],[81,2],[79,.5],[81,.5],[83,.5],[85,1],[86,1.5],[86,2],[0,2]];
+  var ROOT=[50,55,47,45,50,55,57,50];
+  function mf(m){return 440*Math.pow(2,(m-69)/12);}
+  var bgmGain=null,loopTimer=null,playing=false,nextT=0,audioEl=null;
+  function schedLoop(t0){var c=ac,t=t0;
+    MEL.forEach(function(n){if(n[0]){var d=n[1]*B*.92;tone('square',mf(n[0]),0,t,d,.11,bgmGain);tone('square',mf(n[0])*1.004,0,t,d,.05,bgmGain);}t+=n[1]*B;});
+    for(var bar=0;bar<8;bar++){var r=ROOT[bar];for(var i=0;i<8;i++){var tt=t0+(bar*4+i*.5)*B;tone('triangle',mf(i%2?r+7:r),0,tt,B*.45,.2,bgmGain);noise(tt,.03,.06,9000,bgmGain);}
+      for(var bt=0;bt<4;bt++){var tb=t0+(bar*4+bt)*B;if(bt%2===0)tone('sine',120,45,tb,.18,.5,bgmGain);else noise(tb,.12,.3,3500,bgmGain);}}
+    return t0+32*B;}
+  function startOrig(){var c=ctx();if(!c)return;bgmGain=c.createGain();bgmGain.gain.value=.9;bgmGain.connect(master);nextT=c.currentTime+.08;
+    (function pump(){if(!playing)return;while(nextT<ac.currentTime+4){nextT=schedLoop(nextT);}loopTimer=setTimeout(pump,1000);})();}
+  function stopOrig(){clearTimeout(loopTimer);if(bgmGain){var g=bgmGain;g.gain.setTargetAtTime(0.0001,ac.currentTime,.08);setTimeout(function(){try{g.disconnect();}catch(e){}},600);bgmGain=null;}}
+  /* 自分の曲（このスマホのIndexedDBに保存） */
+  function idb(){return new Promise(function(res,rej){try{var r=indexedDB.open('ygo-audio',1);r.onupgradeneeded=function(){r.result.createObjectStore('f');};r.onsuccess=function(){res(r.result);};r.onerror=function(){rej(r.error);};}catch(e){rej(e);}});}
+  function putOwn(file){return idb().then(function(db){return new Promise(function(res,rej){var tx=db.transaction('f','readwrite');tx.objectStore('f').put({blob:file,name:file.name},'bgm');tx.oncomplete=res;tx.onerror=function(){rej(tx.error);};});});}
+  function getOwn(){return idb().then(function(db){return new Promise(function(res){var tx=db.transaction('f','readonly'),q=tx.objectStore('f').get('bgm');q.onsuccess=function(){res(q.result||null);};q.onerror=function(){res(null);};});}).catch(function(){return null;});}
+  function startOwn(){return getOwn().then(function(o){if(!o)return false;if(audioEl){audioEl.pause();URL.revokeObjectURL(audioEl.src);}audioEl=new Audio(URL.createObjectURL(o.blob));audioEl.loop=true;audioEl.volume=.9;return audioEl.play().then(function(){return true;},function(){return false;});});}
+  function stopOwn(){if(audioEl){audioEl.pause();audioEl.currentTime=0;}}
+  function setBtn(){var b=$('bgm-btn');b.classList.toggle('on',playing);b.setAttribute('aria-pressed',String(playing));b.querySelector('span').textContent=playing?'停止':'BGM';$('bgm-try').textContent=playing?'■ 止める':'▶ 試しに聴く';}
+  function play(){if(playing){stop();return;}playing=true;setBtn();
+    if(S.bgm==='own'){startOwn().then(function(ok){if(!ok){S.bgm='orig';renderS();startOrig();}});}else startOrig();}
+  function stop(){playing=false;stopOrig();stopOwn();setBtn();}
+  $('bgm-btn').addEventListener('click',play);
+  $('bgm-try').addEventListener('click',play);
+  // デュエルを閉じたら止める
+  ['setup-close','rs-save','rs-skip'].forEach(function(id){var e=$(id);if(e)e.addEventListener('click',function(){if(playing)stop();});});
+  /* 設定 */
+  function renderS(){[].forEach.call(document.querySelectorAll('#snd-se button'),function(b){b.setAttribute('aria-checked',String((b.getAttribute('data-v')==='1')===S.se));});
+    [].forEach.call(document.querySelectorAll('#snd-bgm button'),function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-v')===S.bgm));});
+    $('bgm-own').hidden=S.bgm!=='own';var sb=$('snd-btn');sb.textContent=S.se?'🔊':'🔇';sb.classList.toggle('off',!S.se);}
+  [].forEach.call(document.querySelectorAll('#snd-se button'),function(b){b.addEventListener('click',function(){S.se=b.getAttribute('data-v')==='1';saveS();renderS();if(S.se)SE.heal();});});
+  [].forEach.call(document.querySelectorAll('#snd-bgm button'),function(b){b.addEventListener('click',function(){if(playing)stop();S.bgm=b.getAttribute('data-v');saveS();renderS();});});
+  $('snd-btn').addEventListener('click',function(){S.se=!S.se;saveS();renderS();});
+  $('bgm-file').addEventListener('change',function(){var f=this.files&&this.files[0],st=$('bgm-file-st');if(!f)return;
+    if(f.size>30*1024*1024){st.textContent='ファイルが大きすぎます（30MBまで）。';return;}
+    putOwn(f).then(function(){st.textContent='🎵 「'+f.name+'」を勝ち確BGMにしました（このスマホだけに保存）。';},function(){st.textContent='保存できませんでした。ブラウザの設定を確認してください。';});});
+  getOwn().then(function(o){if(o)$('bgm-file-st').textContent='🎵 いまの曲：「'+o.name+'」（このスマホだけに保存）';});
+  renderS();setBtn();
 })();
 </script>
 </body>
