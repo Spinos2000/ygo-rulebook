@@ -12,6 +12,7 @@ service cloud.firestore {
     match /faq/{id}       { allow read: if true; allow write: if isAdmin(); }
     match /changelog/{id} { allow read: if true; allow write: if isAdmin(); }
     match /allowlist/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /limitlist/{id} { allow read: if true; allow write: if isAdmin(); }
 
     // 規制報告ボード：だれでも読める／ログインした人が登録／本人か管理者が削除
     match /reports/{id} {

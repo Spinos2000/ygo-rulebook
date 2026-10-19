@@ -677,6 +677,17 @@ strong,b{letter-spacing:.05em}
 .reg-box{display:flex;flex-direction:column;gap:6px;background:var(--surface2);border-radius:4px;padding:10px 12px}
 .reg-box > b{font-size:14px}
 .su-regs{display:flex;flex-direction:column;gap:8px}
+
+/* 規制リストの追加・変更 */
+.card.dyn{position:relative}
+.card .nw{font-size:10px;font-weight:900;background:var(--osiris);color:#fff;border-radius:4px;padding:0 4px;margin-left:2px}
+.ll-form{display:flex;flex-direction:column;gap:10px;background:var(--info-bg);border:2px solid var(--edge,var(--line));border-radius:4px;padding:14px}
+.ll-form label{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:14px}
+.ll-form input[type=text],.ll-form select{font:inherit;font-size:16px;padding:10px 12px;border-radius:4px;border:1px solid var(--line);background:var(--surface);color:var(--ink);width:100%;box-sizing:border-box}
+.ll-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ll-hist{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px}
+.ll-hist li{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--surface2);border-radius:4px;padding:8px 12px;font-size:14px}
+.ll-note{font-size:13px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -1391,6 +1402,22 @@ strong,b{letter-spacing:.05em}
       <div class="cat"><b>ロック</b><div class="cards"><span class="card tr">王宮のお触れ</span><span class="card tr">スキルドレイン</span></div></div>
     </div>
   </div>
+  <p class="ll-note" id="ll-note" hidden>🆕 ＝あとから追加・変更されたカード</p>
+  <form class="ll-form" id="ll-form" hidden>
+    <b>✏️ 規制リストに追加・変更（ルール管理者のみ）</b>
+    <label for="ll-name">カード名<input type="text" id="ll-name" maxlength="60" placeholder="例：サイクロン" autocomplete="off"></label>
+    <div class="ll-row">
+      <label for="ll-level">規制<select id="ll-level"><option value="lim">☝️ 制限（1枚まで）</option><option value="ban">❌ 禁止</option><option value="out">⛔ 完全使用不可</option><option value="free">🔓 リストから外す（無制限に）</option></select></label>
+      <label for="ll-type">種類<select id="ll-type"><option value="sp">魔法</option><option value="tr">罠</option></select></label>
+    </div>
+    <label for="ll-cat">分類<select id="ll-cat"></select></label>
+    <label for="ll-newcat" id="ll-newcat-wrap" hidden>新しい分類の名前<input type="text" id="ll-newcat" maxlength="20" placeholder="例：手札破壊"></label>
+    <label class="ll-chk" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="ll-after"> GX以降に登場したカード（「後」マークをつける）</label>
+    <p class="note">すでにリストにあるカード名を入れると、その規制に<strong>変更</strong>されます。更新履歴にも自動で載ります。</p>
+    <button class="btn" type="submit" id="ll-btn">リストに反映</button>
+    <p class="status" id="ll-st" role="status"></p>
+    <details class="fold-in"><summary>🗂️ これまでの追加・変更（取り消しできます）</summary><div class="fold-body"><ul class="ll-hist" id="ll-hist"></ul></div></details>
+  </form>
 </section>
 
 <!-- 許可リスト -->
@@ -2282,6 +2309,7 @@ strong,b{letter-spacing:.05em}
     var AUTO_LOG=[
       {id:'auto-2026-10-19-design',createdAt:1792413060000,text:'🎨 デザインを一新：アカデミアの3寮カラー（赤・黄・青）とアメコミ風の見た目に。文字を丸ゴシックにして、行間・余白をゆったり読みやすく'},
       {id:'auto-2026-10-19-features',createdAt:1792414680000,text:'🆕 アカウント連動の機能を追加：相手ごとの成績・テーマ対テーマの成績、デッキの強さ（1〜10の評価とデータの目安）、記録のあとから編集、デュエル準備画面に今の規制を表示、👑ロマン図鑑、📈戦績グラフ。ニックネームの重複もチェックするように'},
+      {id:'auto-2026-10-19-limitlist',createdAt:1792415280000,text:'🚨 汎用魔法・罠 規制リストに、あとからカードを追加・変更できるように（追加されたカードには🆕マーク）'},
       {id:'auto-2026-10-19-autolog',createdAt:1792415100000,text:'🗒️ サイトを更新したときは、更新履歴とお知らせに自動で載るように'}
     ];
     function renderLogs(docs){
@@ -2706,6 +2734,66 @@ strong,b{letter-spacing:.05em}
   $('duel-open').addEventListener('click',function(){setTimeout(renderRegs,0);});
   document.addEventListener('ygo:opp',renderRegs);
 
+})();
+</script>
+<script>
+
+/* ===== 汎用魔法・罠 規制リスト：あとから追加・変更 ===== */
+(function(){
+  function $(id){return document.getElementById(id);}
+  function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
+  function key(t){return String(t||'').normalize('NFKC').replace(/[\s　]+/g,'').replace(/[－−‐-]/g,'-').toLowerCase();}
+  var Y=window.YGO,sec=$('list');if(!sec)return;
+  var TIER={out:sec.querySelector('.t-out'),ban:sec.querySelector('.t-ban'),lim:sec.querySelector('.t-lim')};
+  var LVN={out:'完全使用不可',ban:'禁止',lim:'制限',free:'リストから外す'};
+  function nameOf(c){return (c.firstChild&&c.firstChild.nodeType===3?c.firstChild.nodeValue:c.textContent).replace(/後\s*$/,'').trim();}
+  var statics=[].slice.call(sec.querySelectorAll('.tier .card'));
+  var cats={};Object.keys(TIER).forEach(function(l){[].forEach.call(TIER[l].querySelectorAll('.cat > b'),function(b){cats[b.textContent]=1;});});
+  var heads={};Object.keys(TIER).forEach(function(l){var h3=TIER[l].querySelector('.tier-h h3');heads[l]={el:h3,text:h3.textContent};});
+  function fillCats(){var s=$('ll-cat');s.innerHTML='';Object.keys(cats).forEach(function(c){var o=el('option','',c);o.value=c;s.appendChild(o);});var o=el('option','','＋ 新しい分類');o.value='__new';s.appendChild(o);}
+  fillCats();
+  $('ll-cat').addEventListener('change',function(){$('ll-newcat-wrap').hidden=this.value!=='__new';});
+  function catBox(level,cat){var t=TIER[level],cs=t.querySelector('.cats');var found=null;[].forEach.call(cs.querySelectorAll('.cat'),function(c){if(c.querySelector('b').textContent===cat)found=c;});
+    if(!found){found=el('div','cat dyn-cat');found.appendChild(el('b','',cat));found.appendChild(el('div','cards'));cs.appendChild(found);}return found.querySelector('.cards');}
+  var docs=[],owner=false,col=null;
+  function render(){
+    [].forEach.call(sec.querySelectorAll('.card.dyn,.dyn-cat'),function(e){e.remove();});
+    statics.forEach(function(c){c.hidden=false;});
+    var latest={};docs.slice().sort(function(a,b){return (a.d.addedAt||0)-(b.d.addedAt||0);}).forEach(function(x){latest[key(x.d.name)]=x;});
+    var any=false;
+    Object.keys(latest).forEach(function(k){var x=latest[k],d=x.d;
+      statics.forEach(function(c){if(key(nameOf(c))===k)c.hidden=true;});
+      if(!TIER[d.level])return;any=true;
+      var c=el('span','card '+(d.type==='tr'?'tr':'sp')+' dyn');c.appendChild(document.createTextNode(String(d.name)+' '));
+      if(d.after){c.appendChild(el('span','after','後'));}c.appendChild(el('span','nw','🆕'));
+      catBox(d.level,String(d.cat||'その他')).appendChild(c);});
+    Object.keys(TIER).forEach(function(l){var n=[].filter.call(TIER[l].querySelectorAll('.card'),function(c){return !c.hidden;}).length;heads[l].el.textContent=heads[l].text.replace(/(\d+)枚）\s*$/,n+'枚）');});
+    [].forEach.call(sec.querySelectorAll('.cat'),function(c){c.hidden=![].some.call(c.querySelectorAll('.card'),function(x){return !x.hidden;});});
+    $('ll-note').hidden=!docs.length;
+    var hist=$('ll-hist');hist.innerHTML='';
+    docs.slice().sort(function(a,b){return (b.d.addedAt||0)-(a.d.addedAt||0);}).forEach(function(x){var li=el('li');
+      li.appendChild(el('span','',(LVN[x.d.level]||'')+'：'+x.d.name+(x.d.level!=='free'?'（'+(x.d.cat||'その他')+'）':'')));
+      var b=el('button','del','取り消し');b.type='button';b.addEventListener('click',function(){if(!b.classList.contains('confirm')){b.classList.add('confirm');b.textContent='本当に取り消す';setTimeout(function(){b.classList.remove('confirm');b.textContent='取り消し';},4000);return;}col.doc(x.id).delete();});
+      li.appendChild(b);hist.appendChild(li);});
+    if(!docs.length)hist.appendChild(el('li','','まだありません。'));
+  }
+  Y.ready.then(function(u){if(!Y.db)return;owner=Y.isAdmin;col=Y.db.collection('limitlist');
+    col.onSnapshot(function(s){docs=s.docs.map(function(d){return {id:d.id,d:d.data()||{}};});render();},function(){});
+    if(owner)$('ll-form').hidden=false;});
+  $('ll-name').addEventListener('input',function(){var k=key(this.value),hit=null;statics.forEach(function(c){if(key(nameOf(c))===k)hit=c;});
+    if(hit){$('ll-type').value=hit.classList.contains('tr')?'tr':'sp';$('ll-after').checked=!!hit.querySelector('.after');var cb=hit.closest('.cat');if(cb)$('ll-cat').value=cb.querySelector('b').textContent;}});
+  $('ll-form').addEventListener('submit',function(e){e.preventDefault();var st=$('ll-st'),n=$('ll-name').value.trim(),lv=$('ll-level').value,cat=$('ll-cat').value==='__new'?$('ll-newcat').value.trim():$('ll-cat').value;
+    if(!n){st.className='status err';st.textContent='カード名を入力してください。';return;}
+    if(lv!=='free'&&!cat){st.className='status err';st.textContent='分類を選ぶか、新しい分類の名前を入れてください。';return;}
+    var doc={name:n.slice(0,60),level:lv,type:$('ll-type').value,cat:(cat||'').slice(0,20),after:$('ll-after').checked,addedAt:Date.now()};
+    $('ll-btn').disabled=true;st.className='status';st.textContent='反映しています…';
+    col.add(doc).then(function(){
+      var txt=lv==='free'?'🔓 汎用規制リストから「'+n+'」を外しました（無制限に）':'🚨 汎用規制リストを変更：「'+n+'」を'+LVN[lv]+'に（'+doc.cat+'）';
+      return Y.db.collection('changelog').add({text:txt,createdAt:Date.now()});
+    }).then(function(){st.className='status ok';st.textContent='「'+n+'」を'+LVN[lv]+'にしました。更新履歴にも載せました。';$('ll-name').value='';$('ll-newcat').value='';if(cat&&!cats[cat]){cats[cat]=1;fillCats();}},
+      function(err){st.className='status err';st.textContent='反映できませんでした（'+(err&&err.code||'error')+'）。セキュリティルールの更新が必要かもしれません。';})
+      .then(function(){$('ll-btn').disabled=false;});
+  });
 })();
 </script>
 </body>
