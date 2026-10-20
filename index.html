@@ -3073,7 +3073,8 @@ strong,b{letter-spacing:.05em}
   $('bgm-btn').addEventListener('click',play);
   $('bgm-try').addEventListener('click',play);
   // デュエルを閉じたら止める
-  ['setup-close','rs-save','rs-skip'].forEach(function(id){var e=$(id);if(e)e.addEventListener('click',function(){if(playing)stop();});});
+  // 試し聴きのままデュエルを始めたとき・デュエルを閉じたときは止める
+  ['setup-close','duel-start','rs-save','rs-skip','m-end-yes'].forEach(function(id){var e=$(id);if(e)e.addEventListener('click',function(){if(playing)stop();});});
   /* 設定 */
   function renderS(){[].forEach.call(document.querySelectorAll('#snd-se button'),function(b){b.setAttribute('aria-checked',String((b.getAttribute('data-v')==='1')===S.se));});
     fillSel();
