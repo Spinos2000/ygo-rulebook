@@ -1717,7 +1717,7 @@ strong,b{letter-spacing:.05em}
         <button type="button" class="ghost" id="bgm-try">▶ 試しに聴く</button>
       </div>
       <span class="note">スマホがマナーモード（消音）だと鳴らないことがあります。</span>
-      <span class="note">デュエル開始の音は、楽器の音源「TimGM6mb」（Tim Brechbill 作・GPL）を使って作ったオリジナル曲です。</span>
+      <span class="note">デュエル開始の音：ニコニ・コモンズの素材（nc177763）を使用しています。</span>
     </div>
     <div class="su-block">
       <span class="su-l">📋 いまの規制（規制報告ボードより）</span>
@@ -3032,9 +3032,9 @@ strong,b{letter-spacing:.05em}
       partial(988,fl,3.3,.15,{att:.012,env:FE,trem:26,wet:.35});partial(494,fl,3.3,.085,{att:.012,env:FE,wet:.4});partial(247,fl,3.3,.06,{att:.012,env:FE,wet:.35});
       partial(2436,fl,3.3,.018,{att:.012,env:FE,wet:.2});partial(1976,fl,3.3,.012,{att:.012,env:FE});voice('sine',150,55,fl,.12,.25,{glide:.06});noise(fl,3.3,.035,{f:220,q:.7,wet:.3});}
   };
-  /* デュエル開始：実際の楽器の音（SoundFont「TimGM6mb」）で作ったオーケストラのジングル。音量はダメージ音と同じくらい */
+  /* デュエル開始：ニコニ・コモンズの素材（nc177763）を、音量をダメージ音と同じくらいに整えて鳴らす */
   var startBuf=null,startLoading=null;
-  function loadStart(){if(startBuf||startLoading||!ac)return startLoading;var url=(location.pathname.indexOf('/preview/')>=0?'../':'')+'sounds/duel-start.mp3?v=3';
+  function loadStart(){if(startBuf||startLoading||!ac)return startLoading;var url=(location.pathname.indexOf('/preview/')>=0?'../':'')+'sounds/duel-start.mp3?v=4';
     startLoading=fetch(url).then(function(r){return r.arrayBuffer();}).then(function(b){return new Promise(function(res,rej){ac.decodeAudioData(b,res,rej);});}).then(function(buf){startBuf=buf;return buf;}).catch(function(){startLoading=null;return null;});return startLoading;}
   document.addEventListener('pointerdown',function(){if(ctx())loadStart();},{passive:true,once:true});
   SE.start=function(){var c=ctx();if(!c)return;(startBuf?Promise.resolve(startBuf):loadStart()).then(function(buf){if(!buf)return;var s=c.createBufferSource(),g=c.createGain();g.gain.value=1;s.buffer=buf;s.connect(g);g.connect(c.destination);s.start(c.currentTime+.02);});};
