@@ -765,6 +765,75 @@ strong,b{letter-spacing:.05em}
 .ach-legend i{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid var(--edge,var(--ink))}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:80;background:var(--surface);border:3px solid var(--edge,var(--ink));border-radius:6px;box-shadow:4px 4px 0 var(--ra);padding:12px 16px;font-weight:900;max-width:calc(100vw - 32px);animation:updIn .35s ease-out}
 .ow-ach{font-size:12px;font-weight:900;color:var(--gold)}
+/* ===== 画面の切り替え（タブ）：長いページを「1画面に1つ」に ===== */
+body.rt{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+.rt-off{display:none!important}
+body.rt .grp,body.rt .grp-row,body.rt .grp-note{display:none!important}
+body.rt section.fold > .sec-h{pointer-events:none;cursor:default}
+body.rt section.fold > .sec-h::after{display:none}
+body.rt .totop{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+body.rt.has-sub{padding-bottom:calc(140px + env(safe-area-inset-bottom,0px))}
+body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+/* 下のタブバー */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:3px solid var(--edge);padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
+.tabbar-in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.tabbar button{font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;padding:4px 2px;border:2px solid transparent;border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tabbar button .i{font-size:22px;line-height:1}
+.tabbar button .l{font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.tabbar button[aria-current="page"]{background:var(--ra);color:var(--edge);border-color:var(--edge);box-shadow:2px 2px 0 var(--edge)}
+.tabbar button:focus-visible{outline:3px solid var(--obelisk);outline-offset:2px}
+/* 上のサブメニュー（横スクロール） */
+.subnav{max-width:720px;margin:0 auto 6px;padding:0 0 6px;border-bottom:2px dashed var(--line);display:flex;align-items:center;gap:6px}
+.subnav .toc{position:static;margin:0;padding:4px 2px 6px;border-bottom:0;flex:1;min-width:0;scroll-snap-type:x proximity;scroll-padding:0 24px;overscroll-behavior-x:contain;touch-action:pan-x pan-y}
+.subnav .toc a{scroll-snap-align:start;cursor:pointer;user-select:none;-webkit-user-select:none}
+.subnav.fade-r .toc{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent)}
+.subnav.fade-l .toc{-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px);mask-image:linear-gradient(90deg,transparent,#000 36px)}
+.subnav.fade-l.fade-r .toc{-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent)}
+.hs-b{flex:none;align-self:center;width:32px;height:32px;padding:0;box-shadow:none!important;border-radius:50%;border:2px solid var(--edge);background:var(--surface);color:var(--edge);font:700 18px/1 var(--latin);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:2px 2px 0 var(--edge)}
+.hs-b[hidden]{display:none}
+.sub-count{flex:none;font-family:var(--digit);font-size:12px;color:var(--muted)}
+/* PC（マウス）では横スクロールバーを見せる */
+@media (hover:hover) and (pointer:fine){
+  .toc,.tstats-scroll,.track{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .toc::-webkit-scrollbar,.tstats-scroll::-webkit-scrollbar,.track::-webkit-scrollbar{display:block;height:8px}
+  .toc::-webkit-scrollbar-thumb,.tstats-scroll::-webkit-scrollbar-thumb,.track::-webkit-scrollbar-thumb{background:var(--line);border-radius:999px}
+}
+.hs-drag{cursor:grabbing!important}
+.hs-drag *{pointer-events:none}
+/* ホーム */
+.hub{display:flex;flex-direction:column;gap:14px}
+.hub-h{font-family:var(--display);font-size:18px;margin:4px 0 0}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media (min-width:560px){.tiles{grid-template-columns:repeat(3,1fr)}}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;font:inherit;color:var(--ink);text-decoration:none;background:var(--surface);border:3px solid var(--edge);border-radius:6px;box-shadow:4px 4px 0 var(--edge);padding:12px 12px 14px;min-height:88px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tile:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--edge)}
+.tile .i{font-size:26px;line-height:1}
+.tile b{font-family:var(--display);font-size:16px;font-weight:700}
+.tile small{font-size:12px;color:var(--muted);line-height:1.5}
+.tile.big{grid-column:1/-1;flex-direction:row;align-items:center;gap:12px;background:var(--osiris);color:#fff;min-height:0;padding:16px}
+.tile.big .i{font-size:32px}.tile.big b{font-size:20px}.tile.big small{color:#fff;opacity:.9}
+.tile.rules{background:var(--info-bg)}
+/* 検索 */
+.srch{display:flex;flex-direction:column;gap:8px}
+.srch-box{display:flex;align-items:center;gap:8px;background:var(--surface);border:3px solid var(--edge);border-radius:999px;padding:4px 6px 4px 14px;box-shadow:3px 3px 0 var(--edge)}
+.srch-box input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;color:var(--ink);padding:8px 0;outline:none}
+.srch-box button{flex:none;width:34px;height:34px;border-radius:50%;border:0;background:var(--surface2);color:var(--ink);font-size:14px;cursor:pointer}
+.srch-r{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto;overscroll-behavior:contain}
+.srch-r li button{width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--surface);border:2px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.srch-r li button:hover{border-color:var(--edge)}
+.srch-r .w{font-size:12px;font-weight:700;color:var(--obelisk)}
+.srch-r .t{font-size:14px;line-height:1.6}
+.srch-r mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
+.srch-n{font-size:12px;color:var(--muted)}
+.hit-flash{outline:3px solid var(--ra);outline-offset:3px;border-radius:4px;transition:outline-color 1.6s}
+/* 前へ・次へ */
+.stepnav{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:56px}
+.subnav .toc a{font-size:13px;padding:6px 11px;letter-spacing:.02em}
+.stepnav button{font:inherit;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:2px solid var(--edge);border-radius:6px;background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:3px 3px 0 var(--edge);text-align:left}
+.stepnav button.n{text-align:right;grid-column:2}
+.stepnav button small{font-size:11px;color:var(--muted)}
+.stepnav button b{font-family:var(--display);font-size:14px}
+@media (prefers-reduced-motion: reduce){.hit-flash{transition:none}}
 </style>
 </head>
 <body>
@@ -876,9 +945,27 @@ strong,b{letter-spacing:.05em}
   </div>
 </header>
 
-<nav class="toc" id="toc" aria-label="目次">
-  <a href="#account">⚙️ 設定</a><a href="#life">🧮 デュエル</a><a href="#results">📊 戦績</a><a href="#ach">🏆 実績</a><a href="#owners">👥 テーマ一覧</a><a href="#board">📋 報告ボード</a><a href="#why">🔥 大義</a><a href="#base">📜 基盤</a><a href="#pool">🗃️ カードプール</a><a href="#basic">⚔️ 基本ルール</a><a href="#cmp">🕰️ GXと現行</a><a href="#flow">🔁 対戦の流れ</a><a href="#balance">⚖️ 強さの判定</a><a href="#tune">🔧 調整のしかた</a><a href="#deck">🛠️ デッキ構築</a><a href="#list">🚨 規制リスト</a><a href="#allow">🟢 許可リスト</a><a href="#data">💾 データ</a><a href="#faq">❓ FAQ</a><a href="#log">🗒️ 更新履歴</a>
-</nav>
+<section id="home-hub" class="hub" aria-label="ホーム">
+  <div class="srch" id="srch" role="search">
+    <div class="srch-box"><span aria-hidden="true">🔎</span><input type="search" id="srch-q" placeholder="ルールやカード名で検索（例：サイクロン）" autocomplete="off" aria-label="ルールブック内を検索"><button type="button" id="srch-x" aria-label="検索をクリア" hidden>✕</button></div>
+    <p class="srch-n" id="srch-n" role="status"></p>
+    <ul class="srch-r" id="srch-r"></ul>
+  </div>
+  <div class="tiles">
+    <button type="button" class="tile big" data-go="duel-open"><span class="i">⚔️</span><span><b>デュエルを始める</b><br><small>ライフ計算・リンク対戦</small></span></button>
+    <a class="tile" href="#list" data-go="list"><span class="i">🚨</span><b>規制リスト</b><small>汎用魔法・罠の制限・禁止</small></a>
+    <a class="tile" href="#board" data-go="board"><span class="i">📋</span><b>報告ボード</b><small>デッキごとの規制の記録</small></a>
+    <a class="tile" href="#results" data-go="results"><span class="i">📊</span><b>戦績</b><small>勝率・グラフ・相手別</small></a>
+    <a class="tile" href="#owners" data-go="owners"><span class="i">👥</span><b>テーマ一覧</b><small>だれが何を使ってる？</small></a>
+    <a class="tile" href="#ach" data-go="ach"><span class="i">🏆</span><b>実績</b><small>解除した実績</small></a>
+    <a class="tile" href="#allow" data-go="allow"><span class="i">🟢</span><b>許可リスト</b><small>使える汎用モンスター</small></a>
+    <a class="tile rules" href="#why" data-go="why"><span class="i">📜</span><b>ルールを読む</b><small>大義から順番に</small></a>
+    <a class="tile" href="#faq" data-go="faq"><span class="i">❓</span><b>よくある質問</b><small>メンバーの質問と答え</small></a>
+    <a class="tile" href="#account" data-go="account"><span class="i">⚙️</span><b>設定</b><small>プロフィール・BGM</small></a>
+  </div>
+</section>
+
+
 
 <h2 class="grp" id="g-tools">🎮 ツール</h2>
 
@@ -1668,6 +1755,8 @@ strong,b{letter-spacing:.05em}
 
 </div>
 
+<nav class="tabbar" aria-label="メインメニュー"><div class="subnav rt-off" id="subnav"><button type="button" class="hs-b" id="hs-l" aria-label="左へ" hidden>‹</button><nav class="toc" id="toc" aria-label="この画面のメニュー"></nav><button type="button" class="hs-b" id="hs-r" aria-label="右へ" hidden>›</button><span class="sub-count" id="sub-count"></span></div><div class="tabbar-in" id="tabbar-in"></div></nav>
+
 <div class="duel" id="duel" hidden role="dialog" aria-modal="true" aria-label="デュエル">
 
   <!-- 準備 -->
@@ -2345,7 +2434,7 @@ strong,b{letter-spacing:.05em}
     h.addEventListener('click',function(){setOpen(sec,!sec.classList.contains('open'));});
     h.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();setOpen(sec,!sec.classList.contains('open'));}});});
   function reveal(id){var t=document.getElementById(id);if(!t)return;var sec=t.closest&&t.closest('section.fold');if(sec&&!sec.classList.contains('open'))setOpen(sec,true);var d=t.closest&&t.closest('details');if(d&&!d.open)d.open=true;if(t.tagName==='DETAILS')t.open=true;}
-  document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a)return;var id=a.getAttribute('href').slice(1);if(!id)return;reveal(id);var t=document.getElementById(id);if(t){e.preventDefault();requestAnimationFrame(function(){t.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});});}},true);
+  document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a)return;var id=a.getAttribute('href').slice(1);if(!id)return;if(window.ygoRoute&&window.ygoRoute(id)){e.preventDefault();return;}reveal(id);var t=document.getElementById(id);if(t){e.preventDefault();requestAnimationFrame(function(){t.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});});}},true);
   if(location.hash)reveal(location.hash.slice(1));
   var all=document.getElementById('fold-all'),opened=false;
   all.addEventListener('click',function(){opened=!opened;folds.forEach(function(s){setOpen(s,opened);});all.textContent=opened?'📕 すべて閉じる':'📖 すべて開く';});
@@ -2403,15 +2492,7 @@ strong,b{letter-spacing:.05em}
   start();
 })();
 (function(){
-  var toc=document.getElementById('toc'), top=document.getElementById('totop');
-  var links=[].slice.call(toc.querySelectorAll('a'));
-  var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
-  var cur=null;
-  function setOn(id){ if(cur===id) return; cur=id; links.forEach(function(a){a.classList.remove('on');}); var a=map[id]; if(a){a.classList.add('on'); var l=a.offsetLeft-toc.clientWidth/2+a.offsetWidth/2; toc.scrollTo({left:l,behavior:'smooth'});} }
-  if('IntersectionObserver' in window){
-    var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting) setOn(e.target.id); }); },{rootMargin:'-30% 0px -60% 0px'});
-    Object.keys(map).forEach(function(id){var s=document.getElementById(id); if(s) io.observe(s);});
-  }
+  var top=document.getElementById('totop');
   window.addEventListener('scroll',function(){ top.hidden = window.scrollY < 600; },{passive:true});
   top.addEventListener('click',function(){ var r=window.matchMedia('(prefers-reduced-motion: reduce)').matches; window.scrollTo({top:0,behavior:r?'auto':'smooth'}); });
 })();
@@ -2456,6 +2537,7 @@ strong,b{letter-spacing:.05em}
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-10-21-redesign',createdAt:1792512816880,text:'📱 サイトを一新：下のタブ（ホーム・デュエル・戦績・ルール・設定ほか）で切り替え、1画面に1項目だけ表示。🔎 検索、ルールの「前へ・次へ」を追加し、項目メニューは画面下で横スクロール（パソコンはホイール・ドラッグ・‹ ›でも動きます）'},
       {id:'auto-2026-10-21-card-summary',createdAt:1792511782877,text:'📖 規制リストの全カードに効果の要約を追加。あとから追加・変更するカードも、効果の要約をその場で入れられるように（よく使われるカードは自動で入ります）'},
       {id:'auto-2026-10-21-start-sound',createdAt:1792510863265,text:'🎺 デュエル開始ボタンを押すと開始の音が鳴るように（ニコニ・コモンズの素材 nc177763 を使用）。音の最後は響きながらフェードアウトします'},
       {id:'auto-2026-10-20-account-ach',createdAt:1792506600000,text:'⚙️ アカウント設定を新設（プロフィール・デッキテーマ・勝ち確BGMを5曲まで保存してデュエル前に選べる）。🏆実績30個を追加（みんなに公開）。先攻・後攻はアプリの抽選で決めるように。規制リストのカードを押すと効果の要約と公式データベースへのリンクが見られるように'},
@@ -3234,6 +3316,106 @@ strong,b{letter-spacing:.05em}
   document.addEventListener('ygo:log',function(){setTimeout(render,50);});
   document.addEventListener('ygo:data',function(){setTimeout(render,50);});
   setTimeout(render,500);
+})();
+</script>
+<script>
+/* ===== 画面の切り替え（タブ・サブメニュー・検索・横スクロール） ===== */
+(function(){
+  function $(id){return document.getElementById(id);}
+  function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
+  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var TABS=[
+    {k:'home',i:'🏠',l:'ホーム',subs:[['home-hub','🏠 ホーム']]},
+    {k:'duel',i:'⚔️',l:'デュエル',subs:[['life','🧮 デュエル']]},
+    {k:'rec',i:'📊',l:'戦績',subs:[['results','📊 戦績・リザルト'],['ach','🏆 実績'],['owners','👥 テーマ一覧']]},
+    {k:'rules',i:'📜',l:'ルール',subs:[['list','🚨 規制リスト'],['allow','🟢 許可リスト'],['board','📋 報告ボード'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['deck','🛠️ デッキ構築']]},
+    {k:'more',i:'⚙️',l:'設定ほか',subs:[['account','⚙️ アカウント設定'],['faq','❓ よくある質問'],['log','🗒️ 更新履歴'],['data','💾 データ'],['admin','🛠️ 管理者']]}
+  ];
+  var SEC={},LAST={};
+  TABS.forEach(function(t){t.subs.forEach(function(s){SEC[s[0]]={tab:t,label:s[1]};});});
+  var header=document.querySelector('.wrap > header'),subnav=$('subnav'),toc=$('toc'),srch=$('srch'),bar=$('tabbar-in');
+  if(!header||!toc||!bar)return;
+  document.body.classList.add('rt');
+  function subsOf(t){return t.subs.filter(function(s){var e=$(s[0]);return e&&!(s[0]==='admin'&&e.hidden);});}
+  /* タブバー */
+  TABS.forEach(function(t){var b=el('button');b.type='button';b.dataset.tab=t.k;b.appendChild(el('span','i',t.i));b.appendChild(el('span','l',t.l));
+    b.addEventListener('click',function(){var subs=subsOf(t);var id=LAST[t.k]&&$(LAST[t.k])?LAST[t.k]:subs[0][0];if(cur&&SEC[cur].tab===t&&id===cur){window.scrollTo({top:0,behavior:reduce?'auto':'smooth'});return;}go(id,{push:true});});
+    bar.appendChild(b);});
+  var step=el('div','stepnav'),cur=null;
+  function stepBtn(s,next){var b=el('button',next?'n':'p');b.type='button';b.appendChild(el('small','',next?'次へ →':'← 前へ'));b.appendChild(el('b','',s[1]));b.addEventListener('click',function(){go(s[0],{push:true});});return b;}
+  function go(id,o){o=o||{};var info=SEC[id];if(!info)return false;var t=info.tab,subs=subsOf(t);
+    cur=id;LAST[t.k]=id;
+    Object.keys(SEC).forEach(function(k){var e=$(k);if(e)e.classList.toggle('rt-off',k!==id);});
+    header.classList.toggle('rt-off',t.k!=='home');
+    var e=$(id);if(e&&e.classList.contains('fold')){e.classList.add('open');var h=e.querySelector('.sec-h');if(h)h.setAttribute('aria-expanded','true');}
+    /* サブメニュー */
+    toc.innerHTML='';subnav.classList.toggle('rt-off',subs.length<2);document.body.classList.toggle('has-sub',subs.length>1);
+    subs.forEach(function(s){var a=el('a',s[0]===id?'on':'',s[1]);a.href='#'+s[0];a.draggable=false;if(s[0]===id)a.setAttribute('aria-current','page');toc.appendChild(a);});
+    $('sub-count').textContent=subs.length>4?(subs.map(function(s){return s[0];}).indexOf(id)+1)+'/'+subs.length:'';
+    /* 前へ・次へ（ルールとその他） */
+    var ix=subs.map(function(s){return s[0];}).indexOf(id);
+    if(subs.length>1&&e){step.innerHTML='';if(ix>0)step.appendChild(stepBtn(subs[ix-1],false));if(ix<subs.length-1)step.appendChild(stepBtn(subs[ix+1],true));e.insertAdjacentElement('afterend',step);step.hidden=false;}else step.hidden=true;
+    srch.classList.toggle('rt-off',!(t.k==='home'||t.k==='rules'||t.k==='more'));
+    if(t.k==='home'){var hub=$('home-hub');hub.insertBefore(srch,hub.querySelector('.tiles'));}else{header.insertAdjacentElement('afterend',srch);}
+    [].forEach.call(bar.children,function(b){if(b.dataset.tab===t.k)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+    var hash='#'+id;if(t.k==='home')hash=location.pathname+location.search;
+    try{if(o.push){if(location.hash!=='#'+id&&!(t.k==='home'&&!location.hash))history.pushState({rt:id},'',hash);}else history.replaceState({rt:id},'',hash);}catch(err){}
+    if(!o.noScroll)window.scrollTo(0,0);
+    requestAnimationFrame(function(){var a=toc.querySelector('.on');if(a)toc.scrollLeft=a.offsetLeft-toc.clientWidth/2+a.offsetWidth/2;edges();window.dispatchEvent(new Event('resize'));});
+    return true;}
+  window.ygoRoute=function(id){if(!SEC[id])return false;go(id,{push:true});return true;};
+  /* ページ内のほかの場所へ移動するとき、その画面に切り替える */
+  var siv=Element.prototype.scrollIntoView;
+  Element.prototype.scrollIntoView=function(){try{var s=this.closest&&this.closest('section[id]');if(s&&SEC[s.id]&&s.id!==cur)go(s.id,{push:true,noScroll:true});}catch(err){}return siv.apply(this,arguments);};
+  window.addEventListener('popstate',function(){start(false);});
+  function start(first){var h=decodeURIComponent((location.hash||'').slice(1));
+    if(SEC[h]){go(h);return;}
+    var t=h&&$(h);if(t){var s=t.closest('section[id]');if(s&&SEC[s.id]){go(s.id,{noScroll:true});var d=t.closest('details');if(d)d.open=true;setTimeout(function(){siv.call(t,{block:'start'});},first?300:0);return;}}
+    go('home-hub');}
+  /* ホームのボタン */
+  [].forEach.call(document.querySelectorAll('[data-go]'),function(b){b.addEventListener('click',function(e){e.preventDefault();var id=b.getAttribute('data-go');if(id==='duel-open'){go('life',{push:true});var d=$('duel-open');if(d)d.click();return;}go(id,{push:true});});});
+  /* 管理者メニューが出たらサブメニューを作り直す */
+  var adm=$('admin');if(adm&&window.MutationObserver)new MutationObserver(function(){if(cur&&SEC[cur].tab.k==='more')go(cur,{noScroll:true});}).observe(adm,{attributes:true,attributeFilter:['hidden']});
+
+  /* ---- 横スクロール：マウスホイール・ドラッグ・矢印ボタン ---- */
+  function scroller(n){for(;n&&n!==document.body&&n.nodeType===1;n=n.parentElement){if(n.scrollWidth>n.clientWidth+2){var ox=getComputedStyle(n).overflowX;if(ox==='auto'||ox==='scroll')return n;}}return null;}
+  document.addEventListener('wheel',function(e){if(e.ctrlKey||Math.abs(e.deltaX)>=Math.abs(e.deltaY))return;var s=scroller(e.target);if(!s)return;
+    var max=s.scrollWidth-s.clientWidth,d=e.deltaY*(e.deltaMode===1?32:1);if((d<0&&s.scrollLeft<=0)||(d>0&&s.scrollLeft>=max-1))return;e.preventDefault();s.scrollLeft+=d;},{passive:false});
+  var drag=null;
+  document.addEventListener('pointerdown',function(e){if(e.pointerType!=='mouse'||e.button!==0)return;if(e.target.closest('input,select,textarea'))return;var s=scroller(e.target);if(!s)return;drag={s:s,x:e.clientX,l:s.scrollLeft,moved:false};});
+  document.addEventListener('dragstart',function(e){if(drag)e.preventDefault();});
+  document.addEventListener('pointermove',function(e){if(!drag)return;var dx=e.clientX-drag.x;if(!drag.moved&&Math.abs(dx)<6)return;if(!drag.moved){drag.moved=true;drag.s.classList.add('hs-drag');}drag.s.scrollLeft=drag.l-dx;});
+  document.addEventListener('pointerup',function(){if(!drag)return;var d=drag;drag=null;d.s.classList.remove('hs-drag');if(d.moved){var stop=function(ev){ev.stopPropagation();ev.preventDefault();};document.addEventListener('click',stop,{capture:true,once:true});setTimeout(function(){document.removeEventListener('click',stop,true);},50);}});
+  var bl=$('hs-l'),br=$('hs-r');
+  function edges(){var max=toc.scrollWidth-toc.clientWidth,l=toc.scrollLeft>4,r=toc.scrollLeft<max-4;subnav.classList.toggle('fade-l',l);subnav.classList.toggle('fade-r',r);bl.hidden=!l;br.hidden=!r;}
+  toc.addEventListener('scroll',edges,{passive:true});window.addEventListener('resize',edges);
+  bl.addEventListener('click',function(){toc.scrollBy({left:-toc.clientWidth*.7,behavior:reduce?'auto':'smooth'});});
+  br.addEventListener('click',function(){toc.scrollBy({left:toc.clientWidth*.7,behavior:reduce?'auto':'smooth'});});
+
+  /* ---- 検索：ルール・リスト・FAQ・掲示板の中から探す ---- */
+  var q=$('srch-q'),res=$('srch-r'),num=$('srch-n'),clr=$('srch-x');
+  function norm(s){return String(s||'').normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0x60);}).replace(/\s+/g,' ');}
+  var SEL='p,li,tr,summary,h3,h4,dt,dd,.card,.sec-h h2';
+  function search(){var raw=q.value.trim(),k=norm(raw);res.innerHTML='';num.textContent='';clr.hidden=!raw;if(!k)return;
+    var words=k.split(' ').filter(Boolean),hits=[];
+    Object.keys(SEC).forEach(function(id){if(id==='home-hub')return;var s=$(id);if(!s||(id==='admin'&&s.hidden))return;
+      var cand=[].slice.call(s.querySelectorAll(SEL)).filter(function(n){return !n.closest('form,[hidden]:not(section),.stepnav,script,style')&&!n.querySelector(SEL);});
+      cand.forEach(function(n){var txt=(n.textContent||'').replace(/\s+/g,' ').trim();if(!txt)return;var nt=norm(txt);if(words.every(function(w){return nt.indexOf(w)>=0;}))hits.push({id:id,n:n,txt:txt,nt:nt});});});
+    num.textContent=hits.length?hits.length+'件 見つかりました'+(hits.length>40?'（はじめの40件）':''):'見つかりませんでした。ことばを変えてみてください。';
+    hits.slice(0,40).forEach(function(h){var li=el('li'),b=el('button');b.type='button';b.appendChild(el('span','w',SEC[h.id].label));
+      var t=el('span','t'),p=h.nt.indexOf(words[0]),a=Math.max(0,p-24),z=Math.min(h.txt.length,p+words[0].length+40);
+      if(h.txt.length!==h.nt.length){a=0;z=Math.min(h.txt.length,80);p=-1;}
+      if(a>0)t.appendChild(document.createTextNode('…'));
+      if(p>=0){t.appendChild(document.createTextNode(h.txt.slice(a,p)));t.appendChild(el('mark','',h.txt.slice(p,p+words[0].length)));t.appendChild(document.createTextNode(h.txt.slice(p+words[0].length,z)));}else t.appendChild(document.createTextNode(h.txt.slice(a,z)));
+      if(z<h.txt.length)t.appendChild(document.createTextNode('…'));
+      b.appendChild(t);b.addEventListener('click',function(){go(h.id,{push:true,noScroll:true});var d=h.n.closest('details');if(d)d.open=true;
+        requestAnimationFrame(function(){siv.call(h.n,{block:'center',behavior:reduce?'auto':'smooth'});h.n.classList.add('hit-flash');setTimeout(function(){h.n.classList.remove('hit-flash');},2200);});
+        q.value='';res.innerHTML='';num.textContent='';clr.hidden=true;});
+      li.appendChild(b);res.appendChild(li);});}
+  var tm=null;q.addEventListener('input',function(){clearTimeout(tm);tm=setTimeout(search,150);});
+  q.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();var f=res.querySelector('button');if(f)f.click();}if(e.key==='Escape'){q.value='';search();}});
+  clr.addEventListener('click',function(){q.value='';search();q.focus();});
+  start(true);
 })();
 </script>
 </body>
