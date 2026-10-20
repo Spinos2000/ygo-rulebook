@@ -27,6 +27,11 @@ service cloud.firestore {
       allow write: if isMe(uid);
     }
 
+    // 勝ち確BGM：本人だけが読み書きできる
+    match /users/{uid}/songs/{rest=**} {
+      allow read, write: if isMe(uid);
+    }
+
     // リザルト：ログインした人が読める／本人だけ登録・削除
     match /results/{id} {
       allow read: if signedIn();

@@ -714,6 +714,57 @@ strong,b{letter-spacing:.05em}
 .snd-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .snd-row .su-first{flex:1}
 .bgm-own{display:flex;flex-direction:column;gap:6px}
+
+/* カード詳細 */
+#list .card{cursor:pointer}
+#list .card:hover{filter:brightness(.97)}
+.cpop{position:fixed;inset:0;z-index:70;background:color-mix(in srgb,#1b2235 45%,transparent);display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.cpop-box{width:100%;max-width:480px;background:var(--surface);border:3px solid var(--edge,var(--ink));border-radius:8px;box-shadow:5px 5px 0 var(--edge,var(--ink));padding:16px;display:flex;flex-direction:column;gap:10px;margin-bottom:env(safe-area-inset-bottom,0px)}
+.cpop-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.cpop-h b{font-family:var(--display);font-size:19px;line-height:1.4}
+.cpop-tags{display:flex;flex-wrap:wrap;gap:6px}
+.cpop-sum{background:var(--surface2);border-radius:4px;padding:12px;line-height:1.8}
+.cpop-db{align-self:flex-start;font-weight:900}
+/* アカウント設定 */
+#account .fold-in{background:var(--surface)}
+.bgm-row{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:4px;padding:8px 10px}
+.bgm-row b{flex:1;min-width:0;overflow-wrap:anywhere;font-size:14px}
+.bgm-row small{color:var(--muted);font-size:12px;white-space:nowrap}
+.bgm-row button{flex:none}
+#bgm-list{display:flex;flex-direction:column;gap:6px}
+.bgm-sel{font:inherit;font-size:16px;padding:10px 12px;border-radius:4px;border:1px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
+/* 先攻・後攻の抽選 */
+.first-box{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.first-box b{flex:1;min-width:9em;font-family:var(--display);font-size:20px;padding:8px 12px;border-radius:4px;background:var(--surface2);text-align:center}
+.first-box b.f1{background:var(--info-bg);color:var(--obelisk)}
+.first-box b.f0{background:var(--red-bg);color:var(--osiris)}
+.first-box b.roll{color:var(--muted)}
+.first-roll{font:inherit;font-weight:900;font-size:16px;border:3px solid var(--edge,var(--ink));border-radius:4px;background:var(--ra);color:var(--edge,var(--ink));padding:10px 16px;cursor:pointer;box-shadow:3px 3px 0 var(--edge,var(--ink))}
+.first-roll:disabled{opacity:.5;cursor:default}
+#duel-start:disabled{opacity:.5;cursor:default}
+/* 実績 */
+.ach-sum{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ach-sum b{font-family:var(--digit);font-size:28px}
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.ach{display:flex;flex-direction:column;gap:4px;background:var(--surface);border:2px solid var(--line);border-radius:6px;padding:10px 12px;position:relative}
+.ach .ic{font-size:26px;line-height:1}
+.ach b{font-size:14px;line-height:1.4}
+.ach small{font-size:12px;color:var(--muted);line-height:1.5}
+.ach .tier{position:absolute;top:8px;right:8px;width:12px;height:12px;border-radius:50%;border:2px solid var(--edge,var(--ink))}
+.ach.t1 .tier{background:var(--osiris)} .ach.t2 .tier{background:var(--ra)} .ach.t3 .tier{background:var(--obelisk)}
+.ach.got{border-color:var(--edge,var(--ink));box-shadow:3px 3px 0 var(--ra)}
+.ach.got.t1{box-shadow:3px 3px 0 var(--osiris)} .ach.got.t3{box-shadow:3px 3px 0 var(--obelisk)}
+.ach:not(.got){opacity:.6}
+.ach:not(.got) .ic{filter:grayscale(1)}
+.ach .bar{height:6px;border-radius:999px;background:var(--surface2);overflow:hidden}
+.ach .bar i{display:block;height:100%;background:var(--spell)}
+.ach-rank{display:flex;flex-direction:column;gap:6px}
+.ach-rank div{display:flex;justify-content:space-between;background:var(--surface2);border-radius:4px;padding:8px 12px;font-weight:700}
+.ach-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted)}
+.ach-legend span{display:inline-flex;align-items:center;gap:4px}
+.ach-legend i{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid var(--edge,var(--ink))}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:80;background:var(--surface);border:3px solid var(--edge,var(--ink));border-radius:6px;box-shadow:4px 4px 0 var(--ra);padding:12px 16px;font-weight:900;max-width:calc(100vw - 32px);animation:updIn .35s ease-out}
+.ow-ach{font-size:12px;font-weight:900;color:var(--gold)}
 </style>
 </head>
 <body>
@@ -826,10 +877,50 @@ strong,b{letter-spacing:.05em}
 </header>
 
 <nav class="toc" id="toc" aria-label="目次">
-  <a href="#life">🧮 デュエル</a><a href="#results">📊 戦績</a><a href="#owners">👥 テーマ一覧</a><a href="#board">📋 報告ボード</a><a href="#why">🔥 大義</a><a href="#base">📜 基盤</a><a href="#pool">🗃️ カードプール</a><a href="#basic">⚔️ 基本ルール</a><a href="#cmp">🕰️ GXと現行</a><a href="#flow">🔁 対戦の流れ</a><a href="#balance">⚖️ 強さの判定</a><a href="#tune">🔧 調整のしかた</a><a href="#deck">🛠️ デッキ構築</a><a href="#list">🚨 規制リスト</a><a href="#allow">🟢 許可リスト</a><a href="#data">💾 データ</a><a href="#faq">❓ FAQ</a><a href="#log">🗒️ 更新履歴</a>
+  <a href="#account">⚙️ 設定</a><a href="#life">🧮 デュエル</a><a href="#results">📊 戦績</a><a href="#ach">🏆 実績</a><a href="#owners">👥 テーマ一覧</a><a href="#board">📋 報告ボード</a><a href="#why">🔥 大義</a><a href="#base">📜 基盤</a><a href="#pool">🗃️ カードプール</a><a href="#basic">⚔️ 基本ルール</a><a href="#cmp">🕰️ GXと現行</a><a href="#flow">🔁 対戦の流れ</a><a href="#balance">⚖️ 強さの判定</a><a href="#tune">🔧 調整のしかた</a><a href="#deck">🛠️ デッキ構築</a><a href="#list">🚨 規制リスト</a><a href="#allow">🟢 許可リスト</a><a href="#data">💾 データ</a><a href="#faq">❓ FAQ</a><a href="#log">🗒️ 更新履歴</a>
 </nav>
 
 <h2 class="grp" id="g-tools">🎮 ツール</h2>
+
+<!-- アカウント設定 -->
+<section id="account">
+  <div class="sec-h"><span>ACCOUNT</span><h2>⚙️ アカウント設定</h2><p class="note">プロフィール・デッキテーマ・勝ち確BGM</p></div>
+  <details class="fold-in" id="profile" open>
+    <summary><span>👤 プロフィール（<span id="pf-sum-name">未登録</span>）</span></summary>
+    <div class="fold-body">
+    <div class="pf-guest" id="pf-guest" hidden><span>💡 ログインすると、どの端末でも同じプロフィール・記録が使えて、テーマ一覧にも自動で載ります。</span><button type="button" class="acct-btn" data-login>🔑 Googleでログイン</button></div>
+    <div class="pf-cur"><span>いま使っている人</span><b id="pf-cur-name">未登録</b><button type="button" class="chip" id="pf-switch">🔄 切り替え・追加</button></div>
+    <label class="field" for="pf-name">ニックネーム<span class="note">苗字を<strong>ひらがな</strong>で入れてください（例：やまだ）。みんなの一覧や対戦相手の選択で、だれかすぐわかります</span><input type="text" id="pf-name" maxlength="20" placeholder="例：やまだ" autocomplete="off"></label>
+    <p class="note" id="pf-name-hint" hidden>💡 苗字をひらがなで入れると、ほかのメンバーが見分けやすくなります（例：やまだ）</p>
+    <div class="field">
+      <span>デッキテーマ</span>
+      <div class="theme-list" id="pf-themes"></div>
+      <div class="theme-add">
+        <input type="text" id="pf-theme-in" maxlength="30" placeholder="例：ドラゴン族ビート" aria-label="追加するデッキテーマ">
+        <button type="button" id="pf-theme-add">追加</button>
+      </div>
+      <div class="kind-pick" id="pf-kind" role="radiogroup" aria-label="追加するテーマの種類"><span class="note">追加するテーマは</span><button type="button" role="radio" data-k="std" aria-checked="true">🏫 在校生デッキ</button><button type="button" role="radio" data-k="ryu" aria-checked="false">🌏 留学生デッキ</button></div>
+      <span class="note">登録したテーマの「🏫／🌏」を押すと、あとから切り替えられます。<a href="#ryu">留学生デッキとは？</a></span>
+    </div>
+    <p class="dirty" id="pf-dirty" hidden>✏️ まだ保存されていない変更があります</p>
+    <button type="button" class="start-btn" id="pf-save">💾 プロフィールを保存</button>
+    <p class="status" id="pf-status" role="status"></p>
+    <button type="button" class="ghost" id="pf-delete">このプロフィールを削除</button>
+    <p class="note">保存したデータの場所や、消えてしまう条件は <a href="#data">💾 データとバックアップ</a> にまとめています。</p>
+    </div>
+  </details>
+
+  <details class="fold-in" id="bgm-lib">
+    <summary><span>🎺 勝ち確BGM（<span id="bgm-count">0</span>曲）</span></summary>
+    <div class="fold-body">
+      <p class="note">デュエル前に選べる勝ち確BGMを、アカウントに<strong>5曲まで</strong>保存できます（1曲4MBまで。mp3・m4aなど）。保存した曲は<strong>あなただけ</strong>が聴けます。</p>
+      <div id="bgm-list"></div>
+      <label class="field" for="bgm-up" id="bgm-up-wrap">🎵 曲を追加<input type="file" id="bgm-up" accept="audio/*"></label>
+      <p class="status" id="bgm-up-st" role="status"></p>
+      <p class="note" id="bgm-guest" hidden>🔑 ログインすると、曲をアカウントに保存できます。</p>
+    </div>
+  </details>
+</section>
 
 <!-- デュエル -->
 <section id="life">
@@ -876,30 +967,6 @@ strong,b{letter-spacing:.05em}
     </div>
   </details>
 
-  <details class="fold-in" id="profile">
-    <summary><span>👤 プロフィール（<span id="pf-sum-name">未登録</span>）</span></summary>
-    <div class="fold-body">
-    <div class="pf-guest" id="pf-guest" hidden><span>💡 ログインすると、どの端末でも同じプロフィール・記録が使えて、テーマ一覧にも自動で載ります。</span><button type="button" class="acct-btn" data-login>🔑 Googleでログイン</button></div>
-    <div class="pf-cur"><span>いま使っている人</span><b id="pf-cur-name">未登録</b><button type="button" class="chip" id="pf-switch">🔄 切り替え・追加</button></div>
-    <label class="field" for="pf-name">ニックネーム<span class="note">苗字を<strong>ひらがな</strong>で入れてください（例：やまだ）。みんなの一覧や対戦相手の選択で、だれかすぐわかります</span><input type="text" id="pf-name" maxlength="20" placeholder="例：やまだ" autocomplete="off"></label>
-    <p class="note" id="pf-name-hint" hidden>💡 苗字をひらがなで入れると、ほかのメンバーが見分けやすくなります（例：やまだ）</p>
-    <div class="field">
-      <span>デッキテーマ</span>
-      <div class="theme-list" id="pf-themes"></div>
-      <div class="theme-add">
-        <input type="text" id="pf-theme-in" maxlength="30" placeholder="例：ドラゴン族ビート" aria-label="追加するデッキテーマ">
-        <button type="button" id="pf-theme-add">追加</button>
-      </div>
-      <div class="kind-pick" id="pf-kind" role="radiogroup" aria-label="追加するテーマの種類"><span class="note">追加するテーマは</span><button type="button" role="radio" data-k="std" aria-checked="true">🏫 在校生デッキ</button><button type="button" role="radio" data-k="ryu" aria-checked="false">🌏 留学生デッキ</button></div>
-      <span class="note">登録したテーマの「🏫／🌏」を押すと、あとから切り替えられます。<a href="#ryu">留学生デッキとは？</a></span>
-    </div>
-    <p class="dirty" id="pf-dirty" hidden>✏️ まだ保存されていない変更があります</p>
-    <button type="button" class="start-btn" id="pf-save">💾 プロフィールを保存</button>
-    <p class="status" id="pf-status" role="status"></p>
-    <button type="button" class="ghost" id="pf-delete">このプロフィールを削除</button>
-    <p class="note">保存したデータの場所や、消えてしまう条件は <a href="#data">💾 データとバックアップ</a> にまとめています。</p>
-    </div>
-  </details>
 
   <p class="note">📊 過去のデュエルの記録は <a href="#results">戦績・リザルト</a> で見られます。</p>
 </section>
@@ -940,6 +1007,15 @@ strong,b{letter-spacing:.05em}
       <div id="ar-out"></div>
     </div>
   </details>
+</section>
+
+<!-- 実績 -->
+<section id="ach">
+  <div class="sec-h"><span>ACHIEVEMENTS</span><h2>🏆 実績</h2><p class="note">デュエルを重ねると解除されます。みんなに公開されます</p></div>
+  <div class="ach-sum"><b id="ach-n">0</b><span>/ <span id="ach-total">30</span> 解除</span></div>
+  <div class="ach-legend"><span><i style="background:var(--osiris)"></i>オシリス・レッド級</span><span><i style="background:var(--ra)"></i>ラー・イエロー級</span><span><i style="background:var(--obelisk)"></i>オベリスク・ブルー級</span></div>
+  <div class="ach-grid" id="ach-grid"></div>
+  <details class="fold-in"><summary>👥 みんなの実績</summary><div class="fold-body"><div class="ach-rank" id="ach-rank"></div></div></details>
 </section>
 
 <!-- テーマ一覧 -->
@@ -1603,12 +1679,9 @@ strong,b{letter-spacing:.05em}
         <select id="su-theme"></select>
       </label>
       <p class="note" id="su-theme-hint" hidden>プロフィールでテーマを登録すると、ここで選べます。</p>
-      <div class="field"><span>先攻・後攻</span>
-        <div class="su-first" id="su-first" role="radiogroup" aria-label="先攻・後攻">
-          <button type="button" role="radio" data-f="1">⚡ 先攻</button>
-          <button type="button" role="radio" data-f="0">🛡️ 後攻</button>
-        </div>
-        <span class="note">リンク中は、相手の画面にも自動で反対が選ばれます。</span>
+      <div class="field"><span>先攻・後攻（アプリの抽選で決めます）</span>
+        <div class="first-box"><b id="first-res">まだ決まっていません</b><button type="button" class="first-roll" id="first-roll">🎲 抽選</button></div>
+        <span class="note" id="first-note">リンク中は、どちらか1人が押せばOK。2人の画面とログに同じ結果が入ります。</span>
       </div>
       <div class="field"><span>📊 この対戦を戦績に残す？</span>
         <div class="su-first" id="su-rec" role="radiogroup" aria-label="戦績に残すかどうか">
@@ -1635,7 +1708,8 @@ strong,b{letter-spacing:.05em}
       <div class="field"><span>効果音（ダメージ・回復）</span>
         <div class="su-first" id="snd-se" role="radiogroup" aria-label="効果音"><button type="button" role="radio" data-v="1">🔊 鳴らす</button><button type="button" role="radio" data-v="0">🔇 鳴らさない</button></div></div>
       <div class="field"><span>🎺 勝ち確BGM（対戦中に「BGM」ボタンで再生）</span>
-        <div class="su-first" id="snd-bgm" role="radiogroup" aria-label="勝ち確BGMの曲"><button type="button" role="radio" data-v="orig">🎼 オリジナル曲</button><button type="button" role="radio" data-v="own">📁 自分の曲</button></div>
+        <select class="bgm-sel" id="bgm-sel" aria-label="勝ち確BGMの曲"></select>
+        <span class="note" id="bgm-sel-note">曲は「⚙️ アカウント設定」の「🎺 勝ち確BGM」で追加できます。</span>
         <div class="bgm-own" id="bgm-own" hidden>
           <label class="field" for="bgm-file">スマホの中の音楽ファイルを選ぶ<input type="file" id="bgm-file" accept="audio/*"></label>
           <span class="note" id="bgm-file-st">まだ選ばれていません。曲はこのスマホの中だけに保存され、ほかの人には送られません。</span>
@@ -1938,7 +2012,7 @@ strong,b{letter-spacing:.05em}
     who.hidden=true;pf=normP({id:u.uid});resetDraft();renderLog();
     var firstSnap=true;
     CL.ref.onSnapshot(function(d){var x=d.exists?(d.data()||{}):{};var dirty=!firstSnap&&isDirty();
-      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;pf.kinds=normK(x.kinds);
+      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;pf.kinds=normK(x.kinds);pf.ach=(x.ach&&typeof x.ach==='object')?x.ach:{};
       if(!dirty)resetDraft();else renderCur();
       if(firstSnap&&!pf.name){$('profile').open=true;pfStatus('👋 はじめまして！ニックネームに苗字をひらがなで（例：やまだ）、デッキテーマも入れて「💾 プロフィールを保存」を押してください。','');}
       firstSnap=false;},function(){pfStatus('プロフィールを読み込めませんでした。ページを開き直してください。','err');});
@@ -2089,13 +2163,16 @@ strong,b{letter-spacing:.05em}
         lastOppSeq=opp.seq;lastOppLp=opp.lp;
       }
     }
-    setDot();renderOpp();checkOppZero();document.dispatchEvent(new Event('ygo:opp'));
+    setDot();renderOpp();checkOppZero();if(!D)renderFirst();document.dispatchEvent(new Event('ygo:opp'));
   }
 
   /* ---------- 準備画面 ---------- */
-  function renderFirst(){[].forEach.call(document.querySelectorAll('#su-first button'),function(b){b.setAttribute('aria-checked',String((b.getAttribute('data-f')==='1')===setupFirst));});}
-  [].forEach.call(document.querySelectorAll('#su-first button'),function(b){b.addEventListener('click',function(){setupFirst=b.getAttribute('data-f')==='1';setupFirstAt=Date.now();renderFirst();pushPresence();});});
-  function renderRecSetup(){[].forEach.call(document.querySelectorAll('#su-rec button'),function(b){b.setAttribute('aria-checked',String((b.getAttribute('data-v')==='1')===setupRec));});}
+  var rolling=false;
+  function renderFirst(){if(rolling)return;var r=$('first-res');if(!setupFirstAt){r.textContent='まだ決まっていません';r.className='';}else{r.textContent=setupFirst?'⚡ あなたが先攻':'🛡️ あなたが後攻';r.className=setupFirst?'f1':'f0';}
+    $('duel-start').disabled=!setupFirstAt;var lockd=!!(opp&&opp.phase==='play');$('first-roll').disabled=lockd;$('first-note').textContent=lockd?'相手はもうデュエルを始めています。この結果で開始してください。':'リンク中は、どちらか1人が押せばOK。2人の画面とログに同じ結果が入ります。';}
+  $('first-roll').addEventListener('click',function(){if(rolling||(opp&&opp.phase==='play'))return;var r=$('first-res'),n=0,fin=rnd(2)===1;rolling=true;r.className='roll';
+    var iv=setInterval(function(){r.textContent=n%2?'⚡ 先攻…？':'🛡️ 後攻…？';n++;if(n>9){clearInterval(iv);rolling=false;setupFirst=fin;setupFirstAt=Date.now();renderFirst();pushPresence();}},reduce?1:90);});
+    function renderRecSetup(){[].forEach.call(document.querySelectorAll('#su-rec button'),function(b){b.setAttribute('aria-checked',String((b.getAttribute('data-v')==='1')===setupRec));});}
   [].forEach.call(document.querySelectorAll('#su-rec button'),function(b){b.addEventListener('click',function(){setupRec=b.getAttribute('data-v')==='1';renderRecSetup();});});
   function fillSetup(){
     setupRec=pf.recDefault!==false;renderRecSetup();
@@ -2104,7 +2181,7 @@ strong,b{letter-spacing:.05em}
     var o0=el('option','','テーマを選ばない');o0.value='';sel.appendChild(o0);
     pf.themes.forEach(function(t){var o=el('option','',t+((pf.kinds||{})[t]==='ryu'?'（🌏 留学生）':''));o.value=t;sel.appendChild(o);});
     if(pf.lastTheme!=null&&(pf.lastTheme===''||pf.themes.indexOf(pf.lastTheme)>=0))sel.value=pf.lastTheme;else if(pf.themes.length)sel.value=pf.themes[0];
-    $('su-theme-hint').hidden=pf.themes.length>0;renderFirst();
+    $('su-theme-hint').hidden=pf.themes.length>0;if(!sub){setupFirstAt=0;}renderFirst();
   }
   $('su-theme').addEventListener('change',function(){pushPresence();});
   $('duel-open').addEventListener('click',function(){
@@ -2117,6 +2194,7 @@ strong,b{letter-spacing:.05em}
   $('key-input').addEventListener('input',function(){this.value=this.value.replace(/[^0-9]/g,'').slice(0,4);});
   $('key-join').addEventListener('click',async function(){var k=$('key-input').value;if(!/^\d{4}$/.test(k)){setLinkSt('4けたの数字を入力してください。','err');return;}$('key-show').hidden=true;await link(k);});
   $('duel-start').addEventListener('click',function(){
+    if(!setupFirstAt){$('first-note').textContent='先に「🎲 抽選」で先攻・後攻を決めてください。';return;}
     var th=$('su-theme').value;pf.lastTheme=th;pf.recDefault=setupRec;savePf();
     D={v:2,rec:setupRec,phase:'play',lp:START,T:1,TAt:Date.now(),first:setupFirst,firstAt:setupFirstAt,myTheme:th,myName:pf.name||'あなた',hist:[],aceT:null,linkKey:sub?linkKey:null,startedAt:Date.now(),zeroAsked:false,oppZeroAsked:false,oppSnap:null};
     if(opp){lastOppSeq=opp.seq;lastOppLp=opp.lp;}
@@ -2253,7 +2331,7 @@ strong,b{letter-spacing:.05em}
   function releaseWake(){if(wl){try{wl.release();}catch(e){}wl=null;}}
   document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&!overlay.hidden&&D&&D.phase==='play')acquireWake();});
 
-  YGO.app={pf:function(){return pf;},opp:function(){return opp||null;},D:function(){return D;},
+  YGO.app={saveAch:function(o){if(CL)CL.ref.set({ach:o},{merge:true}).catch(function(){});},cloud:function(){return !!CL;},pf:function(){return pf;},opp:function(){return opp||null;},D:function(){return D;},
     editLog:function(r,patch){Object.assign(r,patch);if(CL&&r._id){CL.results.doc(r._id).set(cleanRec(r)).catch(function(){alert('保存できませんでした。通信状態を確認してください。');});}else savePf();renderLog();}};
   if(D&&D.phase==='result'){D.phase='play';saveD();}
   if(D&&D.phase==='play'){$('duel-open').textContent='⚔️ デュエルを再開する';}
@@ -2290,7 +2368,7 @@ strong,b{letter-spacing:.05em}
       var shown=0;
       rows.forEach(function(r){
         var themes=(r.themes||[]);if(f&&key(r.name).indexOf(f)<0&&!themes.some(function(t){return key(t).indexOf(f)>=0;}))return;shown++;
-        var card=el('div','ow-card');var top=el('div','ow-top');top.appendChild(el('b','','👤 '+r.name));top.appendChild(el('span','note',themes.length+'テーマ'));card.appendChild(top);
+        var card=el('div','ow-card');var top=el('div','ow-top');top.appendChild(el('b','','👤 '+r.name));top.appendChild(el('span','note',themes.length+'テーマ'+(r.ach?'　🏆'+r.ach:'')));card.appendChild(top);
         var box=el('div','ow-themes');themes.forEach(function(t){var dup=count[key(t)]>1;var c=el('span','ow-t'+(dup?' dup':''),t+(dup?' ⚠️':''));if(dup)c.title='他の人も使っています';if(r.kinds&&r.kinds[t]==='ryu'){c.appendChild(document.createTextNode(' '));c.appendChild(el('span','ryu','🌏 留学生'));}box.appendChild(c);});card.appendChild(box);
         if(false){var acts=el('div','ow-acts');var ed=el('button','del','編集');ed.type='button';ed.addEventListener('click',function(){$('ow-name').value=r.name;$('ow-themes').value=themes.join('、');$('ow-form').scrollIntoView({behavior:'smooth',block:'center'});});
           var dl=el('button','del','削除');dl.type='button';dl.addEventListener('click',function(){if(!dl.classList.contains('confirm')){dl.classList.add('confirm');dl.textContent='本当に削除';setTimeout(function(){dl.classList.remove('confirm');dl.textContent='削除';},4000);return;}col.doc(r.id).delete().catch(function(){});});
@@ -2315,7 +2393,7 @@ strong,b{letter-spacing:.05em}
     if(!YGO.db){msg('読み込めませんでした。ページを開き直してください。');return;}
     if(!u){msg('🔑 ログインすると、メンバーのテーマ一覧が見られます。');return;}
     YGO.db.collection('users').onSnapshot(function(s){
-      rows=s.docs.map(function(d){var x=d.data()||{};return {id:d.id,name:String(x.name||'').slice(0,20),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{}};})
+      rows=s.docs.map(function(d){var x=d.data()||{};return {id:d.id,name:String(x.name||'').slice(0,20),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0};})
         .filter(function(r){return r.name;}).sort(function(a,b){return a.name.localeCompare(b.name,'ja');});
       render();
     },function(){msg('読み込めませんでした。ページを開き直してください。');});
@@ -2376,6 +2454,7 @@ strong,b{letter-spacing:.05em}
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-10-20-account-ach',createdAt:1792506600000,text:'⚙️ アカウント設定を新設（プロフィール・デッキテーマ・勝ち確BGMを5曲まで保存してデュエル前に選べる）。🏆実績30個を追加（みんなに公開）。先攻・後攻はアプリの抽選で決めるように。規制リストのカードを押すと効果の要約と公式データベースへのリンクが見られるように'},
       {id:'auto-2026-10-20-sound2',createdAt:1792503000000,text:'🔊 効果音を調整：ダメージ音を少し長く、ライフ0の最後の「ピーーー」を控えめにして、ほかの音と同じ質感に'},
       {id:'auto-2026-10-20-nickname-sound',createdAt:1792423320000,text:'👤 ニックネームは苗字をひらがなで（例：やまだ）入れる案内に。🔊 効果音を一新：ダメージ・回復はカウンター音と「ミョン」、量に合わせて4段階の長さ。ライフ0は「ピーーー」と脈が止まる音に'},
       {id:'auto-2026-10-19-sound',createdAt:1792419000000,text:'🔊 デュエルに効果音と、🎺勝ち確BGMボタンを追加。BGMはオリジナル曲のほか、スマホの中の好きな曲も選べます'},
@@ -2671,7 +2750,7 @@ strong,b{letter-spacing:.05em}
     if(!Y.db)return;
     Y.db.collection('reports').orderBy('createdAt','desc').onSnapshot(function(s){Y.reports=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
     if(!u)return;
-    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{}};});Y.members=m;fillLists();fire('ygo:data');},function(){});
+    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0};});Y.members=m;fillLists();fire('ygo:data');},function(){});
     Y.db.collection('results').where('oppUid','==',u.uid).onSnapshot(function(s){Y.ratedMe=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
   });
 
@@ -2885,7 +2964,7 @@ strong,b{letter-spacing:.05em}
 (function(){
   function $(id){return document.getElementById(id);}
   var K='ygo-sound-v1',S={se:true,bgm:'orig'};
-  try{var s=JSON.parse(localStorage.getItem(K));if(s){S.se=s.se!==false;S.bgm=s.bgm==='own'?'own':'orig';}}catch(e){}
+  try{var s=JSON.parse(localStorage.getItem(K));if(s){S.se=s.se!==false;S.bgm=(s.bgm==='own'||/^acct:/.test(s.bgm||''))?s.bgm:'orig';}}catch(e){}
   function saveS(){try{localStorage.setItem(K,JSON.stringify(S));}catch(e){}}
   var ac=null,master=null,verb=null,shaper=null;
   function ctx(){if(!ac){var C=window.AudioContext||window.webkitAudioContext;if(!C)return null;ac=new C();
@@ -2988,7 +3067,8 @@ strong,b{letter-spacing:.05em}
   function stopOwn(){if(audioEl){audioEl.pause();audioEl.currentTime=0;}}
   function setBtn(){var b=$('bgm-btn');b.classList.toggle('on',playing);b.setAttribute('aria-pressed',String(playing));b.querySelector('span').textContent=playing?'停止':'BGM';$('bgm-try').textContent=playing?'■ 止める':'▶ 試しに聴く';}
   function play(){if(playing){stop();return;}playing=true;setBtn();
-    if(S.bgm==='own'){startOwn().then(function(ok){if(!ok){S.bgm='orig';renderS();startOrig();}});}else startOrig();}
+    if(/^acct:/.test(S.bgm)){$('bgm-sel-note').textContent='🎵 曲を読み込んでいます…';startAcct(S.bgm.slice(5)).then(function(ok){$('bgm-sel-note').textContent=ok?'🎵 再生中':'曲を読み込めませんでした。オリジナル曲を流します。';if(!ok&&playing)startOrig();});}
+    else if(S.bgm==='own'){startOwn().then(function(ok){if(!ok){S.bgm='orig';renderS();startOrig();}});}else startOrig();}
   function stop(){playing=false;stopOrig();stopOwn();setBtn();}
   $('bgm-btn').addEventListener('click',play);
   $('bgm-try').addEventListener('click',play);
@@ -2996,16 +3076,151 @@ strong,b{letter-spacing:.05em}
   ['setup-close','rs-save','rs-skip'].forEach(function(id){var e=$(id);if(e)e.addEventListener('click',function(){if(playing)stop();});});
   /* 設定 */
   function renderS(){[].forEach.call(document.querySelectorAll('#snd-se button'),function(b){b.setAttribute('aria-checked',String((b.getAttribute('data-v')==='1')===S.se));});
-    [].forEach.call(document.querySelectorAll('#snd-bgm button'),function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-v')===S.bgm));});
+    fillSel();
     $('bgm-own').hidden=S.bgm!=='own';var sb=$('snd-btn');sb.textContent=S.se?'🔊':'🔇';sb.classList.toggle('off',!S.se);}
   [].forEach.call(document.querySelectorAll('#snd-se button'),function(b){b.addEventListener('click',function(){S.se=b.getAttribute('data-v')==='1';saveS();renderS();if(S.se)SE.heal(1000);});});
-  [].forEach.call(document.querySelectorAll('#snd-bgm button'),function(b){b.addEventListener('click',function(){if(playing)stop();S.bgm=b.getAttribute('data-v');saveS();renderS();});});
+  $('bgm-sel').addEventListener('change',function(){if(playing)stop();S.bgm=this.value;saveS();renderS();});
   $('snd-btn').addEventListener('click',function(){S.se=!S.se;saveS();renderS();});
   $('bgm-file').addEventListener('change',function(){var f=this.files&&this.files[0],st=$('bgm-file-st');if(!f)return;
     if(f.size>30*1024*1024){st.textContent='ファイルが大きすぎます（30MBまで）。';return;}
     putOwn(f).then(function(){st.textContent='🎵 「'+f.name+'」を勝ち確BGMにしました（このスマホだけに保存）。';},function(){st.textContent='保存できませんでした。ブラウザの設定を確認してください。';});});
   getOwn().then(function(o){if(o)$('bgm-file-st').textContent='🎵 いまの曲：「'+o.name+'」（このスマホだけに保存）';});
+
+  /* --- アカウントに保存した曲（Firestoreに分割して保存・本人だけ読める） --- */
+  var Y=window.YGO,songs=[],CH=600000,MAXS=5,MAXB=4*1024*1024;
+  function songsCol(){return Y.db.collection('users').doc(Y.user.uid).collection('songs');}
+  function fillSel(){var sel=$('bgm-sel');if(!sel)return;var cur=S.bgm;sel.innerHTML='';
+    function opt(v,t){var o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o);}
+    opt('orig','🎼 オリジナル曲');songs.forEach(function(s){opt('acct:'+s.id,'🎵 '+s.name);});if(!Y.user)opt('own','📁 このスマホの曲');
+    if(!sel.querySelector('option[value="'+cur.replace(/"/g,'')+'"]')){cur='orig';S.bgm='orig';}sel.value=cur;
+    $('bgm-own').hidden=S.bgm!=='own';}
+  function cacheGet(id){return idb().then(function(db){return new Promise(function(res){var q=db.transaction('f','readonly').objectStore('f').get('song:'+id);q.onsuccess=function(){res(q.result||null);};q.onerror=function(){res(null);};});}).catch(function(){return null;});}
+  function cachePut(id,blob){return idb().then(function(db){return new Promise(function(res){var tx=db.transaction('f','readwrite');tx.objectStore('f').put(blob,'song:'+id);tx.oncomplete=res;tx.onerror=res;});}).catch(function(){});}
+  function b64(u8){var s='';for(var i=0;i<u8.length;i+=32768)s+=String.fromCharCode.apply(null,u8.subarray(i,i+32768));return btoa(s);}
+  function unb64(s){var b=atob(s),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
+  function songBlob(id){return cacheGet(id).then(function(c){if(c)return c;var m=songs.filter(function(s){return s.id===id;})[0];if(!m||!Y.user)return null;
+    return songsCol().doc(id).collection('chunks').get().then(function(s){var parts=s.docs.map(function(d){return {i:Number(d.id),d:(d.data()||{}).d||''};}).sort(function(a,b){return a.i-b.i;});
+      if(parts.length!==m.chunks)return null;var blob=new Blob(parts.map(function(p){return unb64(p.d);}),{type:m.type||'audio/mpeg'});cachePut(id,blob);return blob;});}).catch(function(){return null;});}
+  function startAcct(id){return songBlob(id).then(function(b){if(!b||!playing)return !!b;if(audioEl){audioEl.pause();URL.revokeObjectURL(audioEl.src);}audioEl=new Audio(URL.createObjectURL(b));audioEl.loop=true;audioEl.volume=.9;return audioEl.play().then(function(){return true;},function(){return false;});});}
+  function fmtMB(n){return (n/1024/1024).toFixed(1)+'MB';}
+  function renderLib(){var box=$('bgm-list');box.innerHTML='';$('bgm-count').textContent=String(songs.length);
+    if(!songs.length){var d=document.createElement('div');d.className='al-empty';d.textContent='まだ曲がありません。';box.appendChild(d);}
+    songs.forEach(function(s){var r=document.createElement('div');r.className='bgm-row';var b=document.createElement('b');b.textContent='🎵 '+s.name;r.appendChild(b);var sm=document.createElement('small');sm.textContent=fmtMB(s.size||0);r.appendChild(sm);
+      var p=document.createElement('button');p.type='button';p.className='del';p.textContent='▶';p.setAttribute('aria-label',s.name+'を試聴');p.addEventListener('click',function(){if(playing){stop();return;}S.bgm='acct:'+s.id;saveS();renderS();play();});r.appendChild(p);
+      var x=document.createElement('button');x.type='button';x.className='del';x.textContent='削除';x.addEventListener('click',function(){if(!x.classList.contains('confirm')){x.classList.add('confirm');x.textContent='本当に削除';setTimeout(function(){x.classList.remove('confirm');x.textContent='削除';},4000);return;}
+        x.disabled=true;var col=songsCol().doc(s.id);col.delete().then(function(){var ps=[];for(var i=0;i<(s.chunks||0);i++)ps.push(col.collection('chunks').doc(String(i)).delete());return Promise.all(ps);}).catch(function(){});});r.appendChild(x);box.appendChild(r);});
+    $('bgm-up-wrap').hidden=songs.length>=MAXS;}
+  $('bgm-up').addEventListener('change',function(){var f=this.files&&this.files[0],st=$('bgm-up-st'),inp=this;if(!f)return;
+    if(!Y.user){st.className='status err';st.textContent='ログインしてください。';return;}
+    if(songs.length>=MAXS){st.className='status err';st.textContent='保存できるのは5曲までです。どれかを削除してから追加してください。';return;}
+    if(f.size>MAXB){st.className='status err';st.textContent='ファイルが大きすぎます（'+fmtMB(f.size)+'）。4MBまでの曲にしてください。';return;}
+    st.className='status';st.textContent='読み込んでいます…';
+    f.arrayBuffer().then(function(buf){var u8=new Uint8Array(buf),n=Math.ceil(u8.length/CH),id=Date.now().toString(36)+Math.random().toString(36).slice(2,7),doc=songsCol().doc(id),k=0;
+      function next(){if(k>=n)return doc.set({name:f.name.replace(/\.[^.]+$/,'').slice(0,40),size:f.size,type:f.type||'audio/mpeg',chunks:n,createdAt:Date.now()});
+        st.textContent='アップロード中… '+Math.round(k/n*100)+'%';var part=b64(u8.subarray(k*CH,(k+1)*CH));return doc.collection('chunks').doc(String(k)).set({d:part}).then(function(){k++;return next();});}
+      return next().then(function(){cachePut(id,new Blob([u8],{type:f.type||'audio/mpeg'}));st.className='status ok';st.textContent='🎵 「'+f.name+'」を保存しました。デュエル前の画面で選べます。';inp.value='';});
+    }).catch(function(e){st.className='status err';st.textContent='保存できませんでした（'+(e&&e.code||'error')+'）。データベースのルールの更新が必要かもしれません。';});});
+  Y.ready.then(function(u){if(!u||!Y.db){$('bgm-guest').hidden=false;$('bgm-up-wrap').hidden=true;renderLib();fillSel();return;}
+    songsCol().orderBy('createdAt','asc').onSnapshot(function(s){songs=s.docs.map(function(d){var x=d.data()||{};x.id=d.id;return x;});renderLib();fillSel();},function(){renderLib();});});
   renderS();setBtn();
+})();
+</script>
+<script>
+
+/* ===== 規制リストのカード：押すと効果の要約と公式データベース ===== */
+(function(){
+  var SUM={"サンダー・ボルト": "相手フィールドのモンスターをすべて破壊する。", "ツインツイスター": "手札を1枚捨てて発動。フィールドの魔法・罠カードを2枚まで破壊する（速攻魔法）。", "コズミック・サイクロン": "1500ライフを払い、フィールドの魔法・罠カード1枚を除外する（速攻魔法）。", "神の通告": "1500ライフを払い、モンスターの効果の発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "天使の施し": "デッキから3枚ドローし、そのあと手札を2枚捨てる。", "血の代償": "500ライフ払うたびに、通常召喚をもう1回できる（永続罠）。", "心変わり": "相手モンスター1体のコントロールを、そのターンのエンドフェイズまで得る。", "強奪": "相手モンスター1体に装備し、そのコントロールを得る。相手のスタンバイフェイズごとに相手は1000ライフ回復する。", "次元融合": "2000ライフを払い、お互いの除外されているモンスターを、できるだけ自分のフィールドに特殊召喚する。", "墓穴の指名者": "相手の墓地のモンスター1体を除外し、次のターンの終わりまで、同じ名前のモンスターの効果を無効にする（速攻魔法）。", "抹殺の指名者": "カード名を1つ言い、デッキからその1枚を除外する。このターン、同じ名前のカードの効果は無効になる（速攻魔法）。", "強欲な壺": "デッキから2枚ドローする。", "ブラック・ホール": "フィールドのモンスターをすべて破壊する。", "ライトニング・ボルテックス": "手札を1枚捨てて、相手フィールドの表側表示モンスターをすべて破壊する。", "激流葬": "モンスターが召喚・反転召喚・特殊召喚されたときに発動し、フィールドのモンスターをすべて破壊する（通常罠）。", "聖なるバリア －ミラーフォース－": "相手モンスターの攻撃宣言時に発動し、相手フィールドの攻撃表示モンスターをすべて破壊する（通常罠）。", "大嵐": "フィールドの魔法・罠カードをすべて破壊する。", "ハーピィの羽根帚": "相手フィールドの魔法・罠カードをすべて破壊する。", "ナイト・ショット": "相手フィールドにセットされた魔法・罠カード1枚を破壊する。対象のカードはこの効果に対して発動できない。", "神の宣告": "ライフを半分払い、魔法・罠カードの発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "神の警告": "2000ライフを払い、モンスターを召喚・特殊召喚する効果の発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "強欲で謙虚な壺": "デッキの上から3枚を見て、1枚を手札に加え、残りをデッキに戻す。使ったターンは特殊召喚できない（1ターンに1枚）。", "増援": "デッキからレベル4以下の戦士族モンスター1体を手札に加える。", "封印の黄金櫃": "デッキからカード1枚を除外する。発動から2回目の自分のスタンバイフェイズに、そのカードを手札に加える。", "死者蘇生": "自分か相手の墓地のモンスター1体を選んで、自分のフィールドに特殊召喚する。", "早すぎた埋葬": "800ライフを払い、自分の墓地のモンスター1体を攻撃表示で特殊召喚して、このカードを装備する。このカードが破壊されると、そのモンスターも破壊される。", "リビングデッドの呼び声": "自分の墓地のモンスター1体を攻撃表示で特殊召喚する。このカードがフィールドから離れると、そのモンスターは破壊される（永続罠）。", "超融合": "手札を1枚捨てて、自分と相手のフィールドのモンスターを素材にして融合召喚する。この発動に対して、魔法・罠・効果は発動できない（速攻魔法）。", "未来融合－フューチャー・フュージョン": "融合モンスター1体を見せ、その素材をデッキから墓地へ送る。発動から2回目の自分のスタンバイフェイズに、その融合モンスターを特殊召喚する（永続魔法）。", "洗脳－ブレインコントロール": "800ライフを払い、相手の表側表示モンスター1体のコントロールを、エンドフェイズまで得る。", "光の護封剣": "相手フィールドのモンスターをすべて表側表示にする。相手のターンで数えて3ターンの間、相手モンスターは攻撃できない。", "王宮のお触れ": "このカード以外のフィールドの罠カードの効果をすべて無効にする（永続罠）。", "スキルドレイン": "1000ライフを払って発動。フィールドの表側表示モンスターの効果をすべて無効にする（永続罠）。"};
+  function key(t){return String(t||'').normalize('NFKC').replace(/[\s　]+/g,'').replace(/[－−‐-]/g,'-').toLowerCase();}
+  var SK={};Object.keys(SUM).forEach(function(n){SK[key(n)]=SUM[n];});
+  var sec=document.getElementById('list');if(!sec)return;
+  var pop=document.createElement('div');pop.className='cpop';pop.hidden=true;pop.setAttribute('role','dialog');pop.setAttribute('aria-modal','true');
+  pop.innerHTML='<div class="cpop-box"><div class="cpop-h"><b id="cp-name"></b><button type="button" class="x" id="cp-x" aria-label="閉じる">✕</button></div><div class="cpop-tags" id="cp-tags"></div><p class="cpop-sum" id="cp-sum"></p><a class="cpop-db" id="cp-db" target="_blank" rel="noopener">🔎 公式カードデータベースで見る</a><p class="note">※効果はわかりやすく短くまとめたものです。正確なテキストやルールは公式カードデータベースで確認してください。</p></div>';
+  document.body.appendChild(pop);
+  function close(){pop.hidden=true;}
+  pop.addEventListener('click',function(e){if(e.target===pop)close();});pop.querySelector('#cp-x').addEventListener('click',close);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+  function nameOf(c){return (c.firstChild&&c.firstChild.nodeType===3?c.firstChild.nodeValue:c.textContent).replace(/後\s*$/,'').trim();}
+  sec.addEventListener('click',function(e){var c=e.target.closest&&e.target.closest('.card');if(!c||!sec.contains(c)||c.closest('.legend'))return;
+    var n=nameOf(c),tier=c.closest('.tier'),lv=tier?(tier.classList.contains('t-out')?'⛔ 完全使用不可':tier.classList.contains('t-ban')?'❌ 禁止':'☝️ 制限（1枚まで）'):'';
+    document.getElementById('cp-name').textContent=n;var tg=document.getElementById('cp-tags');tg.innerHTML='';
+    [[c.classList.contains('tr')?'罠':'魔法','card '+(c.classList.contains('tr')?'tr':'sp')],[lv,'tag lim'],[c.querySelector('.after')?'GX以降のカード':'','tag semi']].forEach(function(t){if(!t[0])return;var s=document.createElement('span');s.className=t[1];s.textContent=t[0];tg.appendChild(s);});
+    var cat=c.closest('.cat');if(cat){var s=document.createElement('span');s.className='tag ok';s.textContent=cat.querySelector('b').textContent;tg.appendChild(s);}
+    document.getElementById('cp-sum').textContent=SK[key(n)]||'このカードの要約はまだありません。下のリンクから公式の説明を見てください。';
+    document.getElementById('cp-db').href='https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sess=1&rp=10&keyword='+encodeURIComponent(n)+'&stype=1&request_locale=ja';
+    pop.hidden=false;});
+})();
+</script>
+<script>
+
+/* ===== 実績（30個・みんなに公開） ===== */
+(function(){
+  function $(id){return document.getElementById(id);}
+  function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
+  var Y=window.YGO;
+  function fmtD(ms){try{return new Date(ms).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric'});}catch(e){return '';}}
+  function stats(log){var s={n:log.length,w:0,streak:0,maxStreak:0,ace:0,roman:0,close:0,nodmg:0,comeback:0,fast:0,long:0,fw:0,sw:0,linked:0,opps:{},themesWon:{},themeN:{},ryu:0,rated:0,aces:{},heal:0};
+    log.slice().sort(function(a,b){return a.at-b.at;}).forEach(function(r){var win=r.result==='win';
+      if(win){s.w++;s.streak++;s.maxStreak=Math.max(s.maxStreak,s.streak);}else s.streak=0;
+      if(r.aceTurn||r.aceT)s.ace++;if((r.why||[]).some(function(w){return /ロマン/.test(w);}))s.roman++;
+      if(win&&r.myLp!=null&&r.myLp<=500)s.close++;if(win&&r.dmg===0)s.nodmg++;if(win&&(r.dmg||0)>=6000)s.comeback++;if(win&&r.myTurns&&r.myTurns<=3)s.fast++;if((r.turn||0)>=20)s.long++;
+      if(win&&r.first===true)s.fw++;if(win&&r.first===false)s.sw++;if(r.linked)s.linked++;
+      var ok=r.oppUid||(r.oppName?'n:'+r.oppName:null);if(ok)s.opps[ok]=(s.opps[ok]||0)+1;
+      var t=r.myTheme||'';if(t){s.themeN[t]=(s.themeN[t]||0)+1;if(win)s.themesWon[t]=1;}
+      if(r.ryu||r.oppRyu)s.ryu++;if(r.oppRate)s.rated++;if(r.aceName)s.aces[r.aceName]=1;if(r.heal)s.heal+=r.heal;});
+    s.nOpp=Object.keys(s.opps).length;s.maxOpp=Math.max(0,Math.max.apply(null,Object.keys(s.opps).map(function(k){return s.opps[k];}).concat([0])));
+    s.nThemeWon=Object.keys(s.themesWon).length;s.maxTheme=Math.max.apply(null,Object.keys(s.themeN).map(function(k){return s.themeN[k];}).concat([0]));s.nAces=Object.keys(s.aces).length;
+    var me=Y.user&&Y.user.uid;s.reports=(Y.reports||[]).filter(function(r){return me&&r.uid===me;}).length;return s;}
+  var A=[
+    ['first','⚔️','初デュエル','デュエルを1回記録する',1,function(s){return s.n;},1],
+    ['egg','🥚','デュエリストの卵','10回デュエルする',10,function(s){return s.n;},1],
+    ['regular','🎒','一人前のデュエリスト','30回デュエルする',30,function(s){return s.n;},2],
+    ['veteran','🎖️','ベテラン','50回デュエルする',50,function(s){return s.n;},2],
+    ['legend','👑','伝説のデュエリスト','100回デュエルする',100,function(s){return s.n;},3],
+    ['win1','🏆','初勝利','1回勝つ',1,function(s){return s.w;},1],
+    ['win10','✨','勝利の味','10回勝つ',10,function(s){return s.w;},2],
+    ['win30','🌟','勝ち星コレクター','30回勝つ',30,function(s){return s.w;},3],
+    ['streak3','🔥','波に乗る','3連勝する',3,function(s){return s.maxStreak;},2],
+    ['streak5','☄️','破竹の勢い','5連勝する',5,function(s){return s.maxStreak;},3],
+    ['ace1','🐉','エース降臨','エースを出す',1,function(s){return s.ace;},1],
+    ['ace20','🦅','エースの使い手','エースを20回出す',20,function(s){return s.ace;},2],
+    ['roman1','🌹','ロマン成就','「ロマンが決まった」で勝つ',1,function(s){return s.roman;},1],
+    ['roman5','💐','ロマンチスト','「ロマンが決まった」で5回勝つ',5,function(s){return s.roman;},2],
+    ['close','😮‍💨','紙一重','ライフ500以下で勝つ',1,function(s){return s.close;},2],
+    ['perfect','🛡️','完全勝利','ダメージを受けずに勝つ',1,function(s){return s.nodmg;},2],
+    ['comeback','💪','不屈の闘志','6000以上ダメージを受けて勝つ',1,function(s){return s.comeback;},3],
+    ['fast','⚡','電光石火','自分のターン3回以内に勝つ',1,function(s){return s.fast;},2],
+    ['long','🐢','長期戦','全体20ターン以上のデュエルをする',1,function(s){return s.long;},1],
+    ['firstw','🗡️','先攻の極意','先攻で10回勝つ',10,function(s){return s.fw;},2],
+    ['secondw','🔄','後攻の逆襲','後攻で10回勝つ',10,function(s){return s.sw;},2],
+    ['link','🔗','つながる絆','リンク対戦を10回する',10,function(s){return s.linked;},1],
+    ['friends','🤝','交友録','5人と対戦する',5,function(s){return s.nOpp;},2],
+    ['rival','⚔️','好敵手','同じ相手と10回対戦する',10,function(s){return s.maxOpp;},3],
+    ['multi','🎴','多才なデュエリスト','3つのテーマで勝つ',3,function(s){return s.nThemeWon;},2],
+    ['devoted','🃏','テーマ一筋','1つのテーマで20回デュエルする',20,function(s){return s.maxTheme;},2],
+    ['intl','🌏','国際交流','留学生デッキが関わるデュエルをする',1,function(s){return s.ryu;},1],
+    ['judge','🔟','審判の目','相手のデッキの強さを10回評価する',10,function(s){return s.rated;},1],
+    ['keeper','📋','規制の番人','規制報告ボードに登録する',1,function(s){return s.reports;},1],
+    ['zukan','📖','ロマン図鑑','5種類のエースを図鑑に登録する',5,function(s){return s.nAces;},2]
+  ];
+  var TN={1:'オシリス・レッド級',2:'ラー・イエロー級',3:'オベリスク・ブルー級'};
+  $('ach-total').textContent=String(A.length);
+  var shown=false;
+  function toast(t){var d=el('div','toast',t);document.body.appendChild(d);setTimeout(function(){d.remove();},3800);}
+  function render(){var app=Y.app;if(!app)return;var pf=app.pf(),log=pf.log||[],s=stats(log),got=pf.ach||{},now=Date.now(),nw={},grid=$('ach-grid');grid.innerHTML='';var n=0;
+    A.forEach(function(a){var v=Math.min(a[4],a[5](s)),done=v>=a[4]||!!got[a[0]];if(done){n++;if(!got[a[0]])nw[a[0]]=now;}
+      var c=el('div','ach t'+a[6]+(done?' got':''));c.title=TN[a[6]];c.appendChild(el('span','tier'));c.appendChild(el('span','ic',a[1]));c.appendChild(el('b','',a[2]));c.appendChild(el('small','',a[3]));
+      if(done)c.appendChild(el('small','','✅ '+(got[a[0]]?fmtD(got[a[0]])+' に解除':'解除！')));else{var bar=el('div','bar'),i=el('i');i.style.width=Math.round(v/a[4]*100)+'%';bar.appendChild(i);c.appendChild(bar);c.appendChild(el('small','',v+' / '+a[4]));}
+      grid.appendChild(c);});
+    $('ach-n').textContent=String(n);
+    var ks=Object.keys(nw);if(ks.length&&app.cloud()){pf.ach=Object.assign({},got,nw);app.saveAch(nw);
+      if(shown)ks.forEach(function(k,i){var a=A.filter(function(x){return x[0]===k;})[0];setTimeout(function(){toast('🏆 実績解除！「'+a[2]+'」');},i*1200);});}
+    shown=true;renderRank();}
+  function renderRank(){var box=$('ach-rank');box.innerHTML='';var m=Y.members||{},rows=Object.keys(m).map(function(u){return {n:m[u].name,c:m[u].ach||0};}).sort(function(a,b){return b.c-a.c;});
+    if(!rows.length){box.appendChild(el('div','al-empty','ログインすると、みんなの実績が見られます。'));return;}
+    rows.forEach(function(r,i){var d=el('div');d.appendChild(el('span','',(i<3&&r.c?['🥇','🥈','🥉'][i]+' ':'')+r.n));d.appendChild(el('span','','🏆 '+r.c+' / '+A.length));box.appendChild(d);});}
+  document.addEventListener('ygo:log',function(){setTimeout(render,50);});
+  document.addEventListener('ygo:data',function(){setTimeout(render,50);});
+  setTimeout(render,500);
 })();
 </script>
 </body>
