@@ -3034,7 +3034,7 @@ strong,b{letter-spacing:.05em}
   };
   /* デュエル開始：実際の楽器の音（SoundFont「TimGM6mb」）で作ったオーケストラのジングル。音量はダメージ音と同じくらい */
   var startBuf=null,startLoading=null;
-  function loadStart(){if(startBuf||startLoading||!ac)return startLoading;var url=(location.pathname.indexOf('/preview/')>=0?'../':'')+'sounds/duel-start.mp3';
+  function loadStart(){if(startBuf||startLoading||!ac)return startLoading;var url=(location.pathname.indexOf('/preview/')>=0?'../':'')+'sounds/duel-start.mp3?v=2';
     startLoading=fetch(url).then(function(r){return r.arrayBuffer();}).then(function(b){return new Promise(function(res,rej){ac.decodeAudioData(b,res,rej);});}).then(function(buf){startBuf=buf;return buf;}).catch(function(){startLoading=null;return null;});return startLoading;}
   document.addEventListener('pointerdown',function(){if(ctx())loadStart();},{passive:true,once:true});
   SE.start=function(){var c=ctx();if(!c)return;(startBuf?Promise.resolve(startBuf):loadStart()).then(function(buf){if(!buf)return;var s=c.createBufferSource(),g=c.createGain();g.gain.value=1;s.buffer=buf;s.connect(g);g.connect(c.destination);s.start(c.currentTime+.02);});};
