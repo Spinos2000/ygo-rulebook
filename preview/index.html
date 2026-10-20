@@ -683,7 +683,7 @@ strong,b{letter-spacing:.05em}
 .card .nw{font-size:10px;font-weight:900;background:var(--osiris);color:#fff;border-radius:4px;padding:0 4px;margin-left:2px}
 .ll-form{display:flex;flex-direction:column;gap:10px;background:var(--info-bg);border:2px solid var(--edge,var(--line));border-radius:4px;padding:14px}
 .ll-form label{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:14px}
-.ll-form input[type=text],.ll-form select{font:inherit;font-size:16px;padding:10px 12px;border-radius:4px;border:1px solid var(--line);background:var(--surface);color:var(--ink);width:100%;box-sizing:border-box}
+.ll-form input[type=text],.ll-form select,.ll-form textarea{font:inherit;font-size:16px;padding:10px 12px;border-radius:4px;border:1px solid var(--line);background:var(--surface);color:var(--ink);width:100%;box-sizing:border-box}
 .ll-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .ll-hist{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px}
 .ll-hist li{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--surface2);border-radius:4px;padding:8px 12px;font-size:14px}
@@ -1535,6 +1535,7 @@ strong,b{letter-spacing:.05em}
     </div>
     <label for="ll-cat">分類<select id="ll-cat"></select></label>
     <label for="ll-newcat" id="ll-newcat-wrap" hidden>新しい分類の名前<input type="text" id="ll-newcat" maxlength="20" placeholder="例：手札破壊"></label>
+    <label for="ll-sum">効果の要約（カードを押したときに出る説明）<textarea id="ll-sum" rows="3" maxlength="200" placeholder="例：フィールドの魔法・罠カード1枚を破壊する。"></textarea></label>
     <label class="ll-chk" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="ll-after"> GX以降に登場したカード（「後」マークをつける）</label>
     <p class="note">すでにリストにあるカード名を入れると、その規制に<strong>変更</strong>されます。更新履歴にも自動で載ります。</p>
     <button class="btn" type="submit" id="ll-btn">リストに反映</button>
@@ -2455,6 +2456,7 @@ strong,b{letter-spacing:.05em}
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-10-21-card-summary',createdAt:1792511782877,text:'📖 規制リストの全カードに効果の要約を追加。あとから追加・変更するカードも、効果の要約をその場で入れられるように（よく使われるカードは自動で入ります）'},
       {id:'auto-2026-10-21-start-sound',createdAt:1792510863265,text:'🎺 デュエル開始ボタンを押すと開始の音が鳴るように（ニコニ・コモンズの素材 nc177763 を使用）。音の最後は響きながらフェードアウトします'},
       {id:'auto-2026-10-20-account-ach',createdAt:1792506600000,text:'⚙️ アカウント設定を新設（プロフィール・デッキテーマ・勝ち確BGMを5曲まで保存してデュエル前に選べる）。🏆実績30個を追加（みんなに公開）。先攻・後攻はアプリの抽選で決めるように。規制リストのカードを押すと効果の要約と公式データベースへのリンクが見られるように'},
       {id:'auto-2026-10-20-sound2',createdAt:1792503000000,text:'🔊 効果音を調整：ダメージ音を少し長く、ライフ0の最後の「ピーーー」を控えめにして、ほかの音と同じ質感に'},
@@ -2920,7 +2922,7 @@ strong,b{letter-spacing:.05em}
     [].forEach.call(sec.querySelectorAll('.card.dyn,.dyn-cat'),function(e){e.remove();});
     statics.forEach(function(c){c.hidden=false;});
     var latest={};docs.slice().sort(function(a,b){return (a.d.addedAt||0)-(b.d.addedAt||0);}).forEach(function(x){latest[key(x.d.name)]=x;});
-    var any=false;
+    var any=false,dsum={};Object.keys(latest).forEach(function(k){var t=latest[k].d.sum;if(t)dsum[k]=String(t).slice(0,200);});window.YGO_DYNSUM=dsum;
     Object.keys(latest).forEach(function(k){var x=latest[k],d=x.d;
       statics.forEach(function(c){if(key(nameOf(c))===k)c.hidden=true;});
       if(!TIER[d.level])return;any=true;
@@ -2942,19 +2944,20 @@ strong,b{letter-spacing:.05em}
     if(owner)$('ll-form').hidden=false;});
   function setCat(c){if(!cats[c]){cats[c]=1;fillCats();}$('ll-cat').value=c;$('ll-newcat-wrap').hidden=true;}
   $('ll-name').addEventListener('input',function(){var k=key(this.value),hit=null,hint=$('ll-hint');statics.concat([].slice.call(sec.querySelectorAll('.card.dyn'))).forEach(function(c){if(key(nameOf(c))===k)hit=c;});
+    var sv=(window.YGO_DYNSUM||{})[k]||(function(){var S=window.YGO_SUM||{},r='';Object.keys(S).forEach(function(n){if(key(n)===k)r=S[n];});return r;})();$('ll-sum').value=sv;
     if(!k){hint.textContent='';return;}
-    if(hit){$('ll-type').value=hit.classList.contains('tr')?'tr':'sp';$('ll-after').checked=!!hit.querySelector('.after');var cb=hit.closest('.cat');if(cb)setCat(cb.querySelector('b').textContent);hint.textContent='📋 リストにあるカードです。規制を選ぶと変更になります。';return;}
+    if(hit){var tr=hit.closest('.tier');if(tr)$('ll-level').value=tr.classList.contains('t-out')?'out':tr.classList.contains('t-ban')?'ban':'lim';$('ll-type').value=hit.classList.contains('tr')?'tr':'sp';$('ll-after').checked=!!hit.querySelector('.after');var cb=hit.closest('.cat');if(cb)setCat(cb.querySelector('b').textContent);hint.textContent='📋 リストにあるカードです。規制や効果の要約を直して反映すると変更になります。';return;}
     var d=DK[k];if(d){$('ll-type').value=d[0];setCat(d[1]);hint.textContent='📖 '+(d[0]==='tr'?'罠':'魔法')+'・「'+d[1]+'」を自動で選びました。違っていたら直してください。';}
-    else hint.textContent='❔ 辞書にないカードです。種類と分類を選んでください。';});
+    else hint.textContent='❔ 辞書にないカードです。種類・分類と、効果の要約を入れてください。';});
   $('ll-form').addEventListener('submit',function(e){e.preventDefault();var st=$('ll-st'),n=$('ll-name').value.trim(),lv=$('ll-level').value,cat=$('ll-cat').value==='__new'?$('ll-newcat').value.trim():$('ll-cat').value;
     if(!n){st.className='status err';st.textContent='カード名を入力してください。';return;}
     if(lv!=='free'&&!cat){st.className='status err';st.textContent='分類を選ぶか、新しい分類の名前を入れてください。';return;}
-    var doc={name:n.slice(0,60),level:lv,type:$('ll-type').value,cat:(cat||'').slice(0,20),after:$('ll-after').checked,addedAt:Date.now()};
+    var doc={name:n.slice(0,60),level:lv,type:$('ll-type').value,cat:(cat||'').slice(0,20),after:$('ll-after').checked,sum:$('ll-sum').value.trim().slice(0,200),addedAt:Date.now()};
     $('ll-btn').disabled=true;st.className='status';st.textContent='反映しています…';
     col.add(doc).then(function(){
       var txt=lv==='free'?'🔓 汎用規制リストから「'+n+'」を外しました（無制限に）':'🚨 汎用規制リストを変更：「'+n+'」を'+LVN[lv]+'に（'+doc.cat+'）';
       return Y.db.collection('changelog').add({text:txt,createdAt:Date.now()});
-    }).then(function(){st.className='status ok';st.textContent='「'+n+'」を'+LVN[lv]+'にしました。更新履歴にも載せました。';$('ll-name').value='';$('ll-newcat').value='';if(cat&&!cats[cat]){cats[cat]=1;fillCats();}},
+    }).then(function(){st.className='status ok';st.textContent='「'+n+'」を'+LVN[lv]+'にしました。更新履歴にも載せました。';$('ll-name').value='';$('ll-newcat').value='';$('ll-sum').value='';if(cat&&!cats[cat]){cats[cat]=1;fillCats();}},
       function(err){st.className='status err';st.textContent='反映できませんでした（'+(err&&err.code||'error')+'）。セキュリティルールの更新が必要かもしれません。';})
       .then(function(){$('ll-btn').disabled=false;});
   });
@@ -3139,7 +3142,7 @@ strong,b{letter-spacing:.05em}
 
 /* ===== 規制リストのカード：押すと効果の要約と公式データベース ===== */
 (function(){
-  var SUM={"サンダー・ボルト": "相手フィールドのモンスターをすべて破壊する。", "ツインツイスター": "手札を1枚捨てて発動。フィールドの魔法・罠カードを2枚まで破壊する（速攻魔法）。", "コズミック・サイクロン": "1500ライフを払い、フィールドの魔法・罠カード1枚を除外する（速攻魔法）。", "神の通告": "1500ライフを払い、モンスターの効果の発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "天使の施し": "デッキから3枚ドローし、そのあと手札を2枚捨てる。", "血の代償": "500ライフ払うたびに、通常召喚をもう1回できる（永続罠）。", "心変わり": "相手モンスター1体のコントロールを、そのターンのエンドフェイズまで得る。", "強奪": "相手モンスター1体に装備し、そのコントロールを得る。相手のスタンバイフェイズごとに相手は1000ライフ回復する。", "次元融合": "2000ライフを払い、お互いの除外されているモンスターを、できるだけ自分のフィールドに特殊召喚する。", "墓穴の指名者": "相手の墓地のモンスター1体を除外し、次のターンの終わりまで、同じ名前のモンスターの効果を無効にする（速攻魔法）。", "抹殺の指名者": "カード名を1つ言い、デッキからその1枚を除外する。このターン、同じ名前のカードの効果は無効になる（速攻魔法）。", "強欲な壺": "デッキから2枚ドローする。", "ブラック・ホール": "フィールドのモンスターをすべて破壊する。", "ライトニング・ボルテックス": "手札を1枚捨てて、相手フィールドの表側表示モンスターをすべて破壊する。", "激流葬": "モンスターが召喚・反転召喚・特殊召喚されたときに発動し、フィールドのモンスターをすべて破壊する（通常罠）。", "聖なるバリア －ミラーフォース－": "相手モンスターの攻撃宣言時に発動し、相手フィールドの攻撃表示モンスターをすべて破壊する（通常罠）。", "大嵐": "フィールドの魔法・罠カードをすべて破壊する。", "ハーピィの羽根帚": "相手フィールドの魔法・罠カードをすべて破壊する。", "ナイト・ショット": "相手フィールドにセットされた魔法・罠カード1枚を破壊する。対象のカードはこの効果に対して発動できない。", "神の宣告": "ライフを半分払い、魔法・罠カードの発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "神の警告": "2000ライフを払い、モンスターを召喚・特殊召喚する効果の発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "強欲で謙虚な壺": "デッキの上から3枚を見て、1枚を手札に加え、残りをデッキに戻す。使ったターンは特殊召喚できない（1ターンに1枚）。", "増援": "デッキからレベル4以下の戦士族モンスター1体を手札に加える。", "封印の黄金櫃": "デッキからカード1枚を除外する。発動から2回目の自分のスタンバイフェイズに、そのカードを手札に加える。", "死者蘇生": "自分か相手の墓地のモンスター1体を選んで、自分のフィールドに特殊召喚する。", "早すぎた埋葬": "800ライフを払い、自分の墓地のモンスター1体を攻撃表示で特殊召喚して、このカードを装備する。このカードが破壊されると、そのモンスターも破壊される。", "リビングデッドの呼び声": "自分の墓地のモンスター1体を攻撃表示で特殊召喚する。このカードがフィールドから離れると、そのモンスターは破壊される（永続罠）。", "超融合": "手札を1枚捨てて、自分と相手のフィールドのモンスターを素材にして融合召喚する。この発動に対して、魔法・罠・効果は発動できない（速攻魔法）。", "未来融合－フューチャー・フュージョン": "融合モンスター1体を見せ、その素材をデッキから墓地へ送る。発動から2回目の自分のスタンバイフェイズに、その融合モンスターを特殊召喚する（永続魔法）。", "洗脳－ブレインコントロール": "800ライフを払い、相手の表側表示モンスター1体のコントロールを、エンドフェイズまで得る。", "光の護封剣": "相手フィールドのモンスターをすべて表側表示にする。相手のターンで数えて3ターンの間、相手モンスターは攻撃できない。", "王宮のお触れ": "このカード以外のフィールドの罠カードの効果をすべて無効にする（永続罠）。", "スキルドレイン": "1000ライフを払って発動。フィールドの表側表示モンスターの効果をすべて無効にする（永続罠）。"};
+  var SUM=window.YGO_SUM={"サンダー・ボルト": "相手フィールドのモンスターをすべて破壊する。", "ツインツイスター": "手札を1枚捨てて発動。フィールドの魔法・罠カードを2枚まで破壊する（速攻魔法）。", "コズミック・サイクロン": "1500ライフを払い、フィールドの魔法・罠カード1枚を除外する（速攻魔法）。", "神の通告": "1500ライフを払い、モンスターの効果の発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "天使の施し": "デッキから3枚ドローし、そのあと手札を2枚捨てる。", "血の代償": "500ライフ払うたびに、通常召喚をもう1回できる（永続罠）。", "心変わり": "相手モンスター1体のコントロールを、そのターンのエンドフェイズまで得る。", "強奪": "相手モンスター1体に装備し、そのコントロールを得る。相手のスタンバイフェイズごとに相手は1000ライフ回復する。", "次元融合": "2000ライフを払い、お互いの除外されているモンスターを、できるだけ自分のフィールドに特殊召喚する。", "墓穴の指名者": "相手の墓地のモンスター1体を除外し、次のターンの終わりまで、同じ名前のモンスターの効果を無効にする（速攻魔法）。", "抹殺の指名者": "カード名を1つ言い、デッキからその1枚を除外する。このターン、同じ名前のカードの効果は無効になる（速攻魔法）。", "強欲な壺": "デッキから2枚ドローする。", "ブラック・ホール": "フィールドのモンスターをすべて破壊する。", "ライトニング・ボルテックス": "手札を1枚捨てて、相手フィールドの表側表示モンスターをすべて破壊する。", "激流葬": "モンスターが召喚・反転召喚・特殊召喚されたときに発動し、フィールドのモンスターをすべて破壊する（通常罠）。", "聖なるバリア －ミラーフォース－": "相手モンスターの攻撃宣言時に発動し、相手フィールドの攻撃表示モンスターをすべて破壊する（通常罠）。", "大嵐": "フィールドの魔法・罠カードをすべて破壊する。", "ハーピィの羽根帚": "相手フィールドの魔法・罠カードをすべて破壊する。", "ナイト・ショット": "相手フィールドにセットされた魔法・罠カード1枚を破壊する。対象のカードはこの効果に対して発動できない。", "神の宣告": "ライフを半分払い、魔法・罠カードの発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "神の警告": "2000ライフを払い、モンスターを召喚・特殊召喚する効果の発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "強欲で謙虚な壺": "デッキの上から3枚を見て、1枚を手札に加え、残りをデッキに戻す。使ったターンは特殊召喚できない（1ターンに1枚）。", "増援": "デッキからレベル4以下の戦士族モンスター1体を手札に加える。", "封印の黄金櫃": "デッキからカード1枚を除外する。発動から2回目の自分のスタンバイフェイズに、そのカードを手札に加える。", "死者蘇生": "自分か相手の墓地のモンスター1体を選んで、自分のフィールドに特殊召喚する。", "早すぎた埋葬": "800ライフを払い、自分の墓地のモンスター1体を攻撃表示で特殊召喚して、このカードを装備する。このカードが破壊されると、そのモンスターも破壊される。", "リビングデッドの呼び声": "自分の墓地のモンスター1体を攻撃表示で特殊召喚する。このカードがフィールドから離れると、そのモンスターは破壊される（永続罠）。", "超融合": "手札を1枚捨てて、自分と相手のフィールドのモンスターを素材にして融合召喚する。この発動に対して、魔法・罠・効果は発動できない（速攻魔法）。", "未来融合－フューチャー・フュージョン": "融合モンスター1体を見せ、その素材をデッキから墓地へ送る。発動から2回目の自分のスタンバイフェイズに、その融合モンスターを特殊召喚する（永続魔法）。", "洗脳－ブレインコントロール": "800ライフを払い、相手の表側表示モンスター1体のコントロールを、エンドフェイズまで得る。", "光の護封剣": "相手フィールドのモンスターをすべて表側表示にする。相手のターンで数えて3ターンの間、相手モンスターは攻撃できない。", "王宮のお触れ": "このカード以外のフィールドの罠カードの効果をすべて無効にする（永続罠）。", "スキルドレイン": "1000ライフを払って発動。フィールドの表側表示モンスターの効果をすべて無効にする（永続罠）。", "地砕き": "相手フィールドで守備力がいちばん高いモンスター1体を破壊する。", "地割れ": "相手フィールドで攻撃力がいちばん低いモンスター1体を破壊する。", "シールドクラッシュ": "フィールドの守備表示モンスター1体を破壊する。", "抹殺の使徒": "裏側表示のモンスター1体を破壊して除外する。それがリバースモンスターなら、お互いのデッキの同名カードも除外する。", "死者への手向け": "手札を1枚捨てて発動。フィールドのモンスター1体を破壊する。", "奈落の落とし穴": "相手が攻撃力1500以上のモンスターを召喚・反転召喚・特殊召喚したとき、そのモンスターを破壊して除外する。", "落とし穴": "相手が攻撃力1000以上のモンスターを召喚・反転召喚したとき、そのモンスターを破壊する。", "炸裂装甲": "相手モンスターが攻撃してきたとき、その攻撃モンスターを破壊する。", "次元幽閉": "相手モンスターが攻撃してきたとき、その攻撃モンスターを除外する。", "万能地雷グレイモヤ": "相手モンスターが攻撃してきたとき、相手の攻撃表示モンスターのうち攻撃力がいちばん高い1体を破壊する。", "破壊輪": "表側表示のモンスター1体を破壊し、その攻撃力分のダメージをお互いが受ける。", "底なし落とし穴": "相手が攻撃力1500以上のモンスターを召喚・反転召喚・特殊召喚したとき、そのモンスターを裏側守備表示にする。そのモンスターは表示形式を変更できない。", "強制脱出装置": "フィールドのモンスター1体を持ち主の手札に戻す。", "サイクロン": "フィールドの魔法・罠カード1枚を破壊する（速攻魔法）。", "砂塵の大竜巻": "相手フィールドの魔法・罠カード1枚を破壊する。そのあと、手札の魔法・罠カード1枚をセットできる。", "撲滅の使徒": "セットされた魔法・罠カード1枚を破壊して除外する。それが罠カードなら、お互いのデッキの同名カードも除外する。", "魔法除去": "フィールドの魔法カード1枚を破壊する。", "ハリケーン": "フィールドの魔法・罠カードをすべて持ち主の手札に戻す。", "魔宮の賄賂": "相手の魔法・罠カードの発動を無効にして破壊する。そのあと相手はカードを1枚ドローする（カウンター罠）。", "天罰": "手札を1枚捨てて発動。モンスター効果の発動を無効にして破壊する（カウンター罠）。", "盗賊の七つ道具": "1000ライフを払って発動。罠カードの発動を無効にして破壊する（カウンター罠）。", "成金ゴブリン": "カードを1枚ドローする。相手は1000ライフ回復する（速攻魔法）。", "打ち出の小槌": "手札を好きな枚数デッキに戻してシャッフルし、戻した枚数だけドローする。", "手札抹殺": "お互いに手札をすべて捨て、捨てた枚数だけドローする。", "貪欲な壺": "自分の墓地のモンスター5体をデッキに戻してシャッフルし、2枚ドローする。", "一時休戦": "お互いに1枚ドローする。次の相手ターンの終わりまで、お互いが受けるダメージは0になる。", "凡骨の意地": "ドローフェイズに通常モンスターを引いたとき、それを見せればもう1枚ドローできる（永続魔法）。", "無謀な欲張り": "カードを2枚ドローする。そのあと自分のドローフェイズを2回とばす。", "八汰烏の骸": "カードを1枚ドローする。相手フィールドに表側表示のスピリットモンスターがいれば、かわりに2枚ドローできる。", "ゴブリンのやりくり上手": "自分の墓地にある「ゴブリンのやりくり上手」の数＋1枚ドローし、そのあと手札1枚をデッキの一番下に戻す。", "苦渋の選択": "デッキからカードを5枚選んで相手に見せる。相手が選んだ1枚を手札に加え、残りは墓地へ送る。", "テラ・フォーミング": "デッキからフィールド魔法1枚を手札に加える。", "光の援軍": "デッキの上から3枚を墓地へ送って発動。デッキからレベル4以下の「ライトロード」モンスター1体を手札に加える。", "おろかな埋葬": "デッキからモンスター1体を選んで墓地へ送る。", "精神操作": "相手フィールドのモンスター1体のコントロールを、そのターンの終わりまで得る。そのモンスターは攻撃できず、リリースにも使えない。", "闇の護封剣": "相手フィールドのモンスターをすべて裏側守備表示にする。このカードがある間、相手モンスターは表示形式を変えられない。相手のターンで数えて2ターン目の終わりに破壊される。", "威嚇する咆哮": "このターン、相手は攻撃宣言できない。", "和睦の使者": "このターン、自分のモンスターは戦闘で破壊されず、自分が受ける戦闘ダメージは0になる。", "攻撃の無力化": "相手モンスターが攻撃してきたとき、その攻撃を無効にしてバトルフェイズを終わらせる（カウンター罠）。", "魔法の筒": "相手モンスターが攻撃してきたとき、その攻撃を無効にし、そのモンスターの攻撃力分のダメージを相手に与える。", "平和の使者": "攻撃力1500以上のモンスターは攻撃宣言できない。自分のスタンバイフェイズごとに100ライフ払わないと破壊される（永続魔法）。", "グラヴィティ・バインド－超重力の網－": "レベル4以上のモンスターは攻撃宣言できない（永続罠）。", "レベル制限B地区": "フィールドのレベル4以上のモンスターはすべて守備表示になる（永続魔法）。", "生贄封じの仮面": "このカードがある間、お互いにカードをリリースできない（永続罠）。", "魔封じの芳香": "魔法カードは発動する前にセットしなければならず、セットした次の自分のターンが来るまで発動できない（永続魔法）。", "禁じられた聖杯": "フィールドの表側表示モンスター1体の攻撃力を400上げ、ターンの終わりまで効果を無効にする（速攻魔法）。", "我が身を盾に": "1500ライフを払って発動。「フィールドのモンスターを破壊する効果」を持つカードの発動を無効にして破壊する。", "月の書": "フィールドの表側表示モンスター1体を裏側守備表示にする（速攻魔法）。", "収縮": "フィールドの表側表示モンスター1体の元々の攻撃力を、ターンの終わりまで半分にする（速攻魔法）。", "突進": "フィールドの表側表示モンスター1体の攻撃力を、ターンの終わりまで700上げる（速攻魔法）。", "団結の力": "装備したモンスターの攻撃力・守備力が、自分フィールドの表側表示モンスター1体につき800上がる（装備魔法）。", "魔導師の力": "装備したモンスターの攻撃力・守備力が、自分フィールドの魔法・罠カード1枚につき500上がる（装備魔法）。", "リミッター解除": "自分フィールドの機械族モンスターの攻撃力をすべて2倍にする。ターンの終わりにそれらは破壊される（速攻魔法）。"};
   function key(t){return String(t||'').normalize('NFKC').replace(/[\s　]+/g,'').replace(/[－−‐-]/g,'-').toLowerCase();}
   var SK={};Object.keys(SUM).forEach(function(n){SK[key(n)]=SUM[n];});
   var sec=document.getElementById('list');if(!sec)return;
@@ -3155,7 +3158,7 @@ strong,b{letter-spacing:.05em}
     document.getElementById('cp-name').textContent=n;var tg=document.getElementById('cp-tags');tg.innerHTML='';
     [[c.classList.contains('tr')?'罠':'魔法','card '+(c.classList.contains('tr')?'tr':'sp')],[lv,'tag lim'],[c.querySelector('.after')?'GX以降のカード':'','tag semi']].forEach(function(t){if(!t[0])return;var s=document.createElement('span');s.className=t[1];s.textContent=t[0];tg.appendChild(s);});
     var cat=c.closest('.cat');if(cat){var s=document.createElement('span');s.className='tag ok';s.textContent=cat.querySelector('b').textContent;tg.appendChild(s);}
-    document.getElementById('cp-sum').textContent=SK[key(n)]||'このカードの要約はまだありません。下のリンクから公式の説明を見てください。';
+    var dyn=window.YGO_DYNSUM||{};document.getElementById('cp-sum').textContent=dyn[key(n)]||SK[key(n)]||'このカードの要約はまだありません。下のリンクから公式の説明を見てください。';
     document.getElementById('cp-db').href='https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sess=1&rp=10&keyword='+encodeURIComponent(n)+'&stype=1&request_locale=ja';
     pop.hidden=false;});
 })();
