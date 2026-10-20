@@ -3035,7 +3035,7 @@ strong,b{letter-spacing:.05em}
   /* デュエル開始：ニコニ・コモンズの素材（nc177763）を、音量をダメージ音と同じくらいに整えて鳴らす */
   var startBuf=null,startLoading=null;
   function loadStart(){if(startBuf||startLoading||!ac)return startLoading;var url=(location.pathname.indexOf('/preview/')>=0?'../':'')+'sounds/duel-start.mp3?v=4';
-    startLoading=fetch(url).then(function(r){return r.arrayBuffer();}).then(function(b){return new Promise(function(res,rej){ac.decodeAudioData(b,res,rej);});}).then(function(buf){startBuf=buf;return buf;}).catch(function(){startLoading=null;return null;});return startLoading;}
+    startLoading=fetch(url).then(function(r){return r.arrayBuffer();}).then(function(b){return new Promise(function(res,rej){var p=ac.decodeAudioData(b,res,rej);if(p&&p.catch)p.catch(function(){});});}).then(function(buf){startBuf=buf;return buf;}).catch(function(){startLoading=null;return null;});return startLoading;}
   document.addEventListener('pointerdown',function(){if(ctx())loadStart();},{passive:true,once:true});
   SE.start=function(){var c=ctx();if(!c)return;(startBuf?Promise.resolve(startBuf):loadStart()).then(function(buf){if(!buf)return;var s=c.createBufferSource(),g=c.createGain();g.gain.value=1;s.buffer=buf;s.connect(g);g.connect(c.destination);s.start(c.currentTime+.02);});};
   document.addEventListener('ygo:start',function(){if(S.se)SE.start();});
