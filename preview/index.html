@@ -1717,6 +1717,7 @@ strong,b{letter-spacing:.05em}
         <button type="button" class="ghost" id="bgm-try">▶ 試しに聴く</button>
       </div>
       <span class="note">スマホがマナーモード（消音）だと鳴らないことがあります。</span>
+      <span class="note">デュエル開始の音は、楽器の音源「TimGM6mb」（Tim Brechbill 作・GPL）を使って作ったオリジナル曲です。</span>
     </div>
     <div class="su-block">
       <span class="su-l">📋 いまの規制（規制報告ボードより）</span>
@@ -3031,43 +3032,12 @@ strong,b{letter-spacing:.05em}
       partial(988,fl,3.3,.15,{att:.012,env:FE,trem:26,wet:.35});partial(494,fl,3.3,.085,{att:.012,env:FE,wet:.4});partial(247,fl,3.3,.06,{att:.012,env:FE,wet:.35});
       partial(2436,fl,3.3,.018,{att:.012,env:FE,wet:.2});partial(1976,fl,3.3,.012,{att:.012,env:FE});voice('sine',150,55,fl,.12,.25,{glide:.06});noise(fl,3.3,.035,{f:220,q:.7,wet:.3});}
   };
-  /* デュエル開始：参考音と同じリズムの、オーケストラ風ジングル（オリジナルの旋律・ニ長調） */
-  function mfq(m){return 440*Math.pow(2,(m-69)/12);}
-  // 弦楽器：たくさんの少しずれた音＋ビブラート＋やわらかい立ち上がり
-  var OK=1.65;
-  function strings(t,notes,dur,vol,att){var c=ac;att=att||.06;vol*=OK;notes.forEach(function(m){var f=mfq(m);[-12,-5,0,5,12].forEach(function(dt,i){
-    var o=c.createOscillator(),lf=c.createOscillator(),lg=c.createGain(),fl=c.createBiquadFilter(),g=c.createGain();o.type='sawtooth';o.frequency.value=f;o.detune.value=dt;
-    lf.frequency.value=5+i*.3;lg.gain.value=7;lf.connect(lg);lg.connect(o.detune);fl.type='lowpass';fl.frequency.value=Math.min(5200,f*7);fl.Q.value=.5;
-    g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(vol,t+att);g.gain.setValueAtTime(vol,t+Math.max(att,dur-.12));g.gain.exponentialRampToValueAtTime(0.0001,t+dur+.25);
-    o.connect(fl);fl.connect(g);out(g,null,.6);[o,lf].forEach(function(x){x.start(t);x.stop(t+dur+.3);});});});}
-  // 金管：フィルターが開いていく「パァッ」
-  function brass(t,notes,dur,vol){var c=ac;vol*=OK;notes.forEach(function(m){var f=mfq(m);[-6,6].forEach(function(dt){var o=c.createOscillator(),fl=c.createBiquadFilter(),g=c.createGain();o.type='sawtooth';o.frequency.value=f;o.detune.value=dt;
-    fl.type='lowpass';fl.Q.value=1.2;fl.frequency.setValueAtTime(f*1.5,t);fl.frequency.exponentialRampToValueAtTime(Math.min(6000,f*9),t+.07);fl.frequency.exponentialRampToValueAtTime(f*3,t+dur);
-    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.035);g.gain.setValueAtTime(vol*.8,t+Math.max(.05,dur-.08));g.gain.exponentialRampToValueAtTime(0.0001,t+dur+.18);
-    o.connect(fl);fl.connect(g);out(g,null,.5);o.start(t);o.stop(t+dur+.25);});});}
-  // ティンパニ
-  function timp(t,m,vol){vol*=OK;var f=mfq(m);voice('sine',f*1.5,f,t,1.1,vol,{glide:.05,wet:.45});voice('sine',f*2.4,f*2,t,.5,vol*.3,{glide:.05,wet:.4});noise(t,.12,vol*.4,{f:500,wet:.4});}
-  // シンバル
-  function crash(t,vol,len){vol*=OK;noise(t,len||1.8,vol,{type:'highpass',f:4500,wet:.6});noise(t,.4,vol*.6,{type:'bandpass',f:7000,q:.6,wet:.4});}
-  // 木管（フルート風）：澄んだ音＋息の音
-  function flute(t,m,dur,vol){vol*=OK;var f=mfq(m);voice('sine',f,0,t,dur,vol,{att:.02,hold:dur*.5,wet:.5});voice('triangle',f*2,0,t,dur,vol*.15,{att:.02,wet:.4});noise(t,dur*.6,vol*.25,{type:'bandpass',f:f*2,q:3});}
-  // オーケストラヒット（全員でジャン）
-  function tutti(t,notes,dur,vol){brass(t,notes,dur,vol*.55);strings(t,notes.concat(notes.map(function(m){return m+12;})),dur,vol*.16,.015);timp(t,38,vol*1.6);}
-  SE.start=function(){var c=ctx();if(!c)return;var t=c.currentTime+.03;
-    strings(t,[38,45],4.3,.025,.3);                                                          // 低弦がずっと支える
-    tutti(t,[62,66,69],.36,.12);crash(t,.22);                                                // 0.0 ジャーン
-    strings(t+.34,[50,57],.4,.03);
-    flute(t+.72,78,.16,.08);                                                                  // 0.72 木管がちいさく
-    tutti(t+.88,[62,66,69,74],.2,.15);crash(t+.88,.16,1.2);                                  // 0.88 いちばん強いアクセント
-    [62,64,66,67,69,71,73,74].forEach(function(m,i){flute(t+1.08+i*.085,m+12,.13,.12);strings(t+1.08+i*.085,[m],.12,.032,.01);brass(t+1.08+i*.085,[m],.1,.03);}); // 1.08〜 駆け上がり
-    strings(t+1.78,[55,59,62],.3,.035);
-    brass(t+2.0,[67,71,74],1.0,.07);strings(t+2.0,[55,62,67,71],1.1,.03,.12);timp(t+2.0,43,.35);   // 2.0 のばし
-    var o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(5500,t+2.3);o.frequency.exponentialRampToValueAtTime(3700,t+3.6); // 2.3〜3.6 高い音が下がる（グロッケン風のきらめき）
-    g.gain.setValueAtTime(0.0001,t+2.3);g.gain.exponentialRampToValueAtTime(.018,t+2.4);g.gain.setValueAtTime(.018,t+3.4);g.gain.exponentialRampToValueAtTime(0.0001,t+3.65);o.connect(g);out(g,null,.6);o.start(t+2.3);o.stop(t+3.7);
-    [[2.9,[69],.13,.08],[3.16,[71],.16,.09],[3.43,[73],.14,.09]].forEach(function(s){brass(t+s[0],s[1],s[2],s[3]);strings(t+s[0],s[1],s[2],.02,.01);timp(t+s[0],45,.3);}); // 刻み
-    tutti(t+3.68,[66,69,74],.16,.14);tutti(t+3.96,[62,66,69,74],.3,.16);crash(t+3.96,.2,2);   // 最後の2発
-    strings(t+4.1,[50,57,62,66,69,74],.5,.022,.04);brass(t+4.1,[62,69],.4,.05);              // 余韻の和音
-  };
+  /* デュエル開始：実際の楽器の音（SoundFont「TimGM6mb」）で作ったオーケストラのジングル。音量はダメージ音と同じくらい */
+  var startBuf=null,startLoading=null;
+  function loadStart(){if(startBuf||startLoading||!ac)return startLoading;var url=(location.pathname.indexOf('/preview/')>=0?'../':'')+'sounds/duel-start.mp3';
+    startLoading=fetch(url).then(function(r){return r.arrayBuffer();}).then(function(b){return new Promise(function(res,rej){ac.decodeAudioData(b,res,rej);});}).then(function(buf){startBuf=buf;return buf;}).catch(function(){startLoading=null;return null;});return startLoading;}
+  document.addEventListener('pointerdown',function(){if(ctx())loadStart();},{passive:true,once:true});
+  SE.start=function(){var c=ctx();if(!c)return;(startBuf?Promise.resolve(startBuf):loadStart()).then(function(buf){if(!buf)return;var s=c.createBufferSource(),g=c.createGain();g.gain.value=1;s.buffer=buf;s.connect(g);g.connect(c.destination);s.start(c.currentTime+.02);});};
   document.addEventListener('ygo:start',function(){if(S.se)SE.start();});
   document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};var a=d.amt||0;if(d.zero)SE.zero(a);else if(d.kind==='heal')SE.heal(a);else if(d.kind==='cost')SE.cost(a);else SE.dmg(a);});
 

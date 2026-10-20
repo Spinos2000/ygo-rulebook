@@ -5,3 +5,7 @@ GX時代の遊戯王をもう一度遊ぶためのルールブックとデュエ
 - サイト：https://spinos2000.github.io/ygo-rulebook/
 - `index.html` … サイト本体（Firebase Auth / Firestore を使用）
 - `firestore.rules` … Firestore のセキュリティルール（Firebaseコンソールに貼り付けて公開）
+
+## 音について
+- 効果音・勝ち確BGM（オリジナル曲）はページ内で合成したオリジナルです。
+- `sounds/duel-start.mp3`（デュエル開始のジングル）はオリジナル曲を、SoundFont「TimGM6mb」（Tim Brechbill、GPL-2）の楽器音で書き出したものです。
