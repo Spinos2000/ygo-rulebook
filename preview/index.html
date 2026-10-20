@@ -2150,7 +2150,7 @@ strong,b{letter-spacing:.05em}
     $('me-name').textContent=myName();$('me-theme').textContent=D.myTheme||'';$('me-ace').textContent=D.aceT?'👑'+turnLabel(D.aceT,D.first).replace('あなたの','自分').replace('ターン目','T'):'';
     lpEl.classList.toggle('zero',to<=0);meter('me-meter',to);
     if(from==null||reduce){lpEl.textContent=String(to);return;}
-    var df=Math.abs(to-from),t0=null,DUR=(df>=4000?11:df>2000?8:df>1000?6:4)*85+120;function step(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/DUR);lpEl.textContent=String(Math.round(from+(to-from)*k));if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step);
+    var df=Math.abs(to-from),t0=null,DUR=((df>=4000?11:df>2000?8:df>1000?6:4)+(window.__lpKind==='dmg'?3:0))*85+120;function step(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/DUR);lpEl.textContent=String(Math.round(from+(to-from)*k));if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step);
   }
   function renderOpp(){
     if(opp){$('opp-name').textContent=opp.name;$('opp-theme').textContent=opp.theme||'テーマ未選択';$('opp-lp').textContent=opp.lp==null?'----':String(opp.lp);$('opp-ace').textContent=opp.aceT?'👑':'';meter('opp-meter',opp.lp==null?START:opp.lp);
@@ -2164,7 +2164,7 @@ strong,b{letter-spacing:.05em}
   function renderAll(){renderRec();renderTurn();renderMe();renderOpp();renderAmt();renderMode();setDot();}
   function flash(cls){var e=$('me-lp');e.classList.remove('hit','heal');void e.offsetWidth;e.classList.add(cls);setTimeout(function(){e.classList.remove(cls);},450);}
   function change(d,kind){
-    if(!D||locked||d===0)return;var b=D.lp;D.lp=Math.max(0,Math.min(99999,b+d));
+    if(!D||locked||d===0)return;window.__lpKind=kind;var b=D.lp;D.lp=Math.max(0,Math.min(99999,b+d));
     D.hist.push({k:'lp',who:'me',kind:kind,amt:Math.abs(D.lp-b),b:b,a:D.lp,T:D.T});if(D.hist.length>400)D.hist.shift();
     if(D.lp>0)D.zeroAsked=false;
     if(kind!=='heal'){mode='dmg';renderMode();}
@@ -2914,7 +2914,7 @@ strong,b{letter-spacing:.05em}
   // 量で4段階：〜1000＝4回、〜2000＝6回、〜3999＝8回、4000〜＝11回
   function nBeeps(amt){return amt>=4000?11:amt>2000?8:amt>1000?6:4;}
   var IV=0.085;
-  function cdur(amt){return nBeeps(amt)*IV;}
+  function cdur(amt,extra){return (nBeeps(amt)+(extra||0))*IV;}
   function partial(f,t,dur,vol,o){o=o||{};var c=ac,os=c.createOscillator(),g=c.createGain();os.type='sine';os.frequency.setValueAtTime(o.f0||f,t);if(o.f0)os.frequency.exponentialRampToValueAtTime(f,t+(o.glide||.015));if(o.f1)os.frequency.linearRampToValueAtTime(o.f1,t+dur);
     var at=o.att||.004;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+at);
     if(o.env){o.env.forEach(function(p){g.gain.linearRampToValueAtTime(vol*p[1],t+p[0]);});}else g.gain.setValueAtTime(vol,t+dur-.012);
@@ -2929,10 +2929,10 @@ strong,b{letter-spacing:.05em}
   function burst(t,vol){var c=ac,os=c.createOscillator(),f=c.createBiquadFilter(),g=c.createGain();os.type='sawtooth';os.frequency.value=470;f.type='lowpass';f.frequency.value=1700;
     g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.006);g.gain.exponentialRampToValueAtTime(0.0001,t+.13);os.connect(f);f.connect(g);out(g);os.start(t);os.stop(t+.15);
     noise(t,.13,vol*.9,{type:'highpass',f:8500});voice('sine',120,38,t,.6,vol*2.4,{glide:.3,wet:.3});noise(t,.35,vol*1.2,{f:1200,f1:80,dest:shaper,wet:.4});}
-  function myon(t,vol,k){k=k||1;var env=[[.012,1],[.05,.55],[.17,.5],[.2,.3],[.6,.12]];
-    partial(1756*k,t,.95,vol,{f0:1803*k,glide:.015,f1:1772*k,env:env,wet:.2});
-    partial(2496*k,t,.6,vol*.09,{env:env});partial(6009*k,t,.5,vol*.16,{env:env,wet:.1});
-    partial(878*k,t,1.1,vol*.6,{f0:901*k,glide:.015,f1:886*k,env:env,wet:.35});partial(439*k,t,1.2,vol*.5,{f0:451*k,glide:.015,env:env,wet:.35});partial(219.5*k,t,1.2,vol*.35,{env:env,wet:.3});}
+  function myon(t,vol,k,L){k=k||1;L=L||1;var env=[[.012,1],[.05*L,.55],[.17*L,.5],[.2*L,.3],[.6*L,.12]];
+    partial(1756*k,t,.95*L,vol,{f0:1803*k,glide:.015,f1:1772*k,env:env,wet:.2});
+    partial(2496*k,t,.6*L,vol*.09,{env:env});partial(6009*k,t,.5*L,vol*.16,{env:env,wet:.1});
+    partial(878*k,t,1.1*L,vol*.6,{f0:901*k,glide:.015,f1:886*k,env:env,wet:.35});partial(439*k,t,1.2*L,vol*.5,{f0:451*k,glide:.015,env:env,wet:.35});partial(219.5*k,t,1.2*L,vol*.35,{env:env,wet:.3});}
   function impact(t,big){var k=big?1.2:1;
     voice('sine',80,26,t,big?1.3:1,.9*k,{glide:.5,wet:.35});
     noise(t,big?.8:.55,.7*k,{f:1800,f1:70,dest:shaper,wet:.45});
@@ -2940,14 +2940,16 @@ strong,b{letter-spacing:.05em}
     if(big)voice('sine',50,22,t+.12,1.3,.6,{glide:.7,wet:.35});}
   // 爆発：低いドカン＋砕ける轟音＋パチパチ＋長い地鳴り
   var SE={
-    dmg:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;impact(t,amt>2000);t+=.14;var e=ticks(t,cdur(amt),0,.2);burst(e+.01,.3);myon(e+.1,.5);},
+    dmg:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;impact(t,amt>2000);t+=.18;var e=ticks(t,cdur(amt,3),0,.2);burst(e+.02,.3);myon(e+.14,.5,1,1.45);},
     cost:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;var e=ticks(t,cdur(amt),0,.19);burst(e+.01,.26);myon(e+.1,.45);},
     heal:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;
       [440,554.4,659.3].forEach(function(f){voice('sine',f,0,t,1.6,.05,{att:.3,hold:.6,wet:.55});});
       var e=ticks(t,cdur(amt),0,.18,1.122);myon(e+.04,.45,1.122);},
-    zero:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;impact(t,true);t+=.14;var e=ticks(t,cdur(amt),0,.2);
+    zero:function(amt){var c=ctx();if(!c)return;var t=c.currentTime+.02;impact(t,true);t+=.18;var e=ticks(t,cdur(amt,3),0,.2);
       // 脈がなくなる：ピーーーー（約3秒続いて、静かに消える）
-      var fl=e+.15;partial(988,fl,3.3,.26,{att:.02,env:[[2.2,1],[3.1,.15]],wet:.3});partial(1976,fl,3.3,.03,{att:.02,env:[[2.2,1],[3.1,.15]]});}
+      var fl=e+.15,FE=[[.05,1],[.3,.82],[2.2,.78],[3.1,.12]];
+      partial(988,fl,3.3,.15,{att:.012,env:FE,trem:26,wet:.35});partial(494,fl,3.3,.085,{att:.012,env:FE,wet:.4});partial(247,fl,3.3,.06,{att:.012,env:FE,wet:.35});
+      partial(2436,fl,3.3,.018,{att:.012,env:FE,wet:.2});partial(1976,fl,3.3,.012,{att:.012,env:FE});voice('sine',150,55,fl,.12,.25,{glide:.06});noise(fl,3.3,.035,{f:220,q:.7,wet:.3});}
   };
   document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};var a=d.amt||0;if(d.zero)SE.zero(a);else if(d.kind==='heal')SE.heal(a);else if(d.kind==='cost')SE.cost(a);else SE.dmg(a);});
 
