@@ -772,6 +772,8 @@ body.rt .grp,body.rt .grp-row,body.rt .grp-note{display:none!important}
 body.rt section.fold > .sec-h{pointer-events:none;cursor:default}
 body.rt section.fold > .sec-h::after{display:none}
 body.rt .totop{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+body.rt.has-sub{padding-bottom:calc(140px + env(safe-area-inset-bottom,0px))}
+body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 /* 下のタブバー */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:3px solid var(--edge);padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
 .tabbar-in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
@@ -781,13 +783,13 @@ body.rt .totop{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
 .tabbar button[aria-current="page"]{background:var(--ra);color:var(--edge);border-color:var(--edge);box-shadow:2px 2px 0 var(--edge)}
 .tabbar button:focus-visible{outline:3px solid var(--obelisk);outline-offset:2px}
 /* 上のサブメニュー（横スクロール） */
-.subnav{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--bg);margin:0 calc(-1 * max(16px, env(safe-area-inset-left,0px)));padding:0 max(16px, env(safe-area-inset-left,0px));border-bottom:3px solid var(--edge);display:flex;align-items:center;gap:6px}
-.subnav .toc{position:static;margin:0;padding:12px 2px;border-bottom:0;flex:1;min-width:0;scroll-snap-type:x proximity;scroll-padding:0 24px;overscroll-behavior-x:contain;touch-action:pan-x pan-y}
+.subnav{max-width:720px;margin:0 auto 6px;padding:0 0 6px;border-bottom:2px dashed var(--line);display:flex;align-items:center;gap:6px}
+.subnav .toc{position:static;margin:0;padding:4px 2px 6px;border-bottom:0;flex:1;min-width:0;scroll-snap-type:x proximity;scroll-padding:0 24px;overscroll-behavior-x:contain;touch-action:pan-x pan-y}
 .subnav .toc a{scroll-snap-align:start;cursor:pointer;user-select:none;-webkit-user-select:none}
 .subnav.fade-r .toc{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent)}
 .subnav.fade-l .toc{-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px);mask-image:linear-gradient(90deg,transparent,#000 36px)}
 .subnav.fade-l.fade-r .toc{-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent)}
-.hs-b{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--edge);background:var(--surface);color:var(--edge);font:700 18px/1 var(--latin);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:2px 2px 0 var(--edge)}
+.hs-b{flex:none;align-self:center;width:32px;height:32px;padding:0;box-shadow:none!important;border-radius:50%;border:2px solid var(--edge);background:var(--surface);color:var(--edge);font:700 18px/1 var(--latin);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:2px 2px 0 var(--edge)}
 .hs-b[hidden]{display:none}
 .sub-count{flex:none;font-family:var(--digit);font-size:12px;color:var(--muted)}
 /* PC（マウス）では横スクロールバーを見せる */
@@ -963,7 +965,7 @@ body.rt .totop{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
   </div>
 </section>
 
-<div class="subnav rt-off" id="subnav"><button type="button" class="hs-b" id="hs-l" aria-label="左へ" hidden>‹</button><nav class="toc" id="toc" aria-label="この画面のメニュー"></nav><button type="button" class="hs-b" id="hs-r" aria-label="右へ" hidden>›</button><span class="sub-count" id="sub-count"></span></div>
+
 
 <h2 class="grp" id="g-tools">🎮 ツール</h2>
 
@@ -1753,7 +1755,7 @@ body.rt .totop{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
 
 </div>
 
-<nav class="tabbar" aria-label="メインメニュー"><div class="tabbar-in" id="tabbar-in"></div></nav>
+<nav class="tabbar" aria-label="メインメニュー"><div class="subnav rt-off" id="subnav"><button type="button" class="hs-b" id="hs-l" aria-label="左へ" hidden>‹</button><nav class="toc" id="toc" aria-label="この画面のメニュー"></nav><button type="button" class="hs-b" id="hs-r" aria-label="右へ" hidden>›</button><span class="sub-count" id="sub-count"></span></div><div class="tabbar-in" id="tabbar-in"></div></nav>
 
 <div class="duel" id="duel" hidden role="dialog" aria-modal="true" aria-label="デュエル">
 
@@ -3346,14 +3348,14 @@ body.rt .totop{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
     header.classList.toggle('rt-off',t.k!=='home');
     var e=$(id);if(e&&e.classList.contains('fold')){e.classList.add('open');var h=e.querySelector('.sec-h');if(h)h.setAttribute('aria-expanded','true');}
     /* サブメニュー */
-    toc.innerHTML='';subnav.classList.toggle('rt-off',subs.length<2);
+    toc.innerHTML='';subnav.classList.toggle('rt-off',subs.length<2);document.body.classList.toggle('has-sub',subs.length>1);
     subs.forEach(function(s){var a=el('a',s[0]===id?'on':'',s[1]);a.href='#'+s[0];a.draggable=false;if(s[0]===id)a.setAttribute('aria-current','page');toc.appendChild(a);});
     $('sub-count').textContent=subs.length>4?(subs.map(function(s){return s[0];}).indexOf(id)+1)+'/'+subs.length:'';
     /* 前へ・次へ（ルールとその他） */
     var ix=subs.map(function(s){return s[0];}).indexOf(id);
     if(subs.length>1&&e){step.innerHTML='';if(ix>0)step.appendChild(stepBtn(subs[ix-1],false));if(ix<subs.length-1)step.appendChild(stepBtn(subs[ix+1],true));e.insertAdjacentElement('afterend',step);step.hidden=false;}else step.hidden=true;
     srch.classList.toggle('rt-off',!(t.k==='home'||t.k==='rules'||t.k==='more'));
-    if(t.k==='home'){var hub=$('home-hub');hub.insertBefore(srch,hub.querySelector('.tiles'));}else{subnav.insertAdjacentElement('afterend',srch);}
+    if(t.k==='home'){var hub=$('home-hub');hub.insertBefore(srch,hub.querySelector('.tiles'));}else{header.insertAdjacentElement('afterend',srch);}
     [].forEach.call(bar.children,function(b){if(b.dataset.tab===t.k)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     var hash='#'+id;if(t.k==='home')hash=location.pathname+location.search;
     try{if(o.push){if(location.hash!=='#'+id&&!(t.k==='home'&&!location.hash))history.pushState({rt:id},'',hash);}else history.replaceState({rt:id},'',hash);}catch(err){}
