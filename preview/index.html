@@ -2198,7 +2198,7 @@ strong,b{letter-spacing:.05em}
     var th=$('su-theme').value;pf.lastTheme=th;pf.recDefault=setupRec;savePf();
     D={v:2,rec:setupRec,phase:'play',lp:START,T:1,TAt:Date.now(),first:setupFirst,firstAt:setupFirstAt,myTheme:th,myName:pf.name||'あなた',hist:[],aceT:null,linkKey:sub?linkKey:null,startedAt:Date.now(),zeroAsked:false,oppZeroAsked:false,oppSnap:null};
     if(opp){lastOppSeq=opp.seq;lastOppLp=opp.lp;}
-    saveD();amount=0;mode='dmg';show('play');renderAll();pushPresence();acquireWake();
+    saveD();amount=0;mode='dmg';show('play');renderAll();pushPresence();acquireWake();document.dispatchEvent(new Event('ygo:start'));
   });
   function myName(){return (D&&D.myName)||pf.name||'あなた';}
 
@@ -3031,6 +3031,18 @@ strong,b{letter-spacing:.05em}
       partial(988,fl,3.3,.15,{att:.012,env:FE,trem:26,wet:.35});partial(494,fl,3.3,.085,{att:.012,env:FE,wet:.4});partial(247,fl,3.3,.06,{att:.012,env:FE,wet:.35});
       partial(2436,fl,3.3,.018,{att:.012,env:FE,wet:.2});partial(1976,fl,3.3,.012,{att:.012,env:FE});voice('sine',150,55,fl,.12,.25,{glide:.06});noise(fl,3.3,.035,{f:220,q:.7,wet:.3});}
   };
+  /* デュエル開始：デュエルディスクが起動して、ガシャンと構える音（オリジナル） */
+  SE.start=function(){var c=ctx();if(!c)return;var t=c.currentTime+.03;
+    impact(t,false);noise(t,.18,.35,{type:'bandpass',f:2600,q:2,wet:.3});                       // 起動のガコン
+    var o=c.createOscillator(),bp=c.createBiquadFilter(),g=c.createGain();o.type='sawtooth';o.frequency.setValueAtTime(70,t+.15);o.frequency.exponentialRampToValueAtTime(220,t+1.5);
+    bp.type='bandpass';bp.Q.value=4;bp.frequency.setValueAtTime(300,t+.15);bp.frequency.exponentialRampToValueAtTime(1400,t+1.5);
+    g.gain.setValueAtTime(0.0001,t+.15);g.gain.exponentialRampToValueAtTime(.22,t+.4);g.gain.setValueAtTime(.22,t+1.3);g.gain.exponentialRampToValueAtTime(0.0001,t+1.7);o.connect(bp);bp.connect(g);out(g,null,.3);o.start(t+.15);o.stop(t+1.8); // モーターのうなり
+    noise(t+.15,1.5,.12,{type:'bandpass',f:500,f1:2200,q:1.5,wet:.3});voice('sine',60,0,t+.15,1.6,.35,{att:.2,hold:1});           // 低い駆動音
+    for(var i=0;i<8;i++){var tc=t+1.0+i*.12;noise(tc,.03,.28,{type:'bandpass',f:3200+i*180,q:3,wet:.2});voice('sine',140,60,tc,.08,.25,{glide:.05});} // カチカチ
+    noise(t+2.0,1.4,.16,{type:'highpass',f:3500,f1:9000,wet:.6});[3322,3952,4977].forEach(function(f,i){fm(f,1.5,.8,t+2.2+i*.12,1.2,.05,{wet:.7});}); // エネルギー充填
+    var L=t+3.55;impact(L,true);noise(L,.45,.55,{type:'bandpass',f:1800,q:.9,dest:shaper,wet:.4});fm(392,1.41,3,L,1.4,.18,{wet:.5}); // ガシャン
+    [785,1177,1573].forEach(function(f){partial(f,L+.05,1.1,.07,{env:[[.05,1],[.4,.5]],wet:.5});});};
+  document.addEventListener('ygo:start',function(){if(S.se)SE.start();});
   document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};var a=d.amt||0;if(d.zero)SE.zero(a);else if(d.kind==='heal')SE.heal(a);else if(d.kind==='cost')SE.cost(a);else SE.dmg(a);});
 
   /* --- オリジナルの勝ち確BGM（ニ長調・132BPM・8小節ループ。ストリングスとブラス風の重ね） --- */
