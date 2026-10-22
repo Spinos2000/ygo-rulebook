@@ -892,6 +892,87 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .fx-first.spin .fx-stage::after{content:"";position:absolute;inset:-18%;border-radius:50%;background:radial-gradient(circle,rgba(246,215,124,.35),transparent 65%);animation:fxglow .5s ease-in-out infinite alternate;z-index:-1}
 @keyframes fxglow{to{transform:scale(1.15);opacity:.6}}
 @media (prefers-reduced-motion: reduce){.fx-dots,.fx-first.spin .fx-stage::after{animation:none}.fx-first.reveal .fx-stage{animation:none}.fx-first.reveal .fx-stars i{animation:none}}
+
+/* ===== ホーム：1画面に収める ===== */
+header.hd{padding:10px 12px 14px;display:flex;flex-direction:column;gap:4px}
+header.hd::after{height:8px}
+.hd-h1{margin:0;line-height:0}
+.hd-svg{display:block;width:100%;height:auto;overflow:visible}
+.hd-svg text{font-family:var(--title);font-size:100px;font-weight:900;fill:#f6d77c;stroke:var(--edge);stroke-width:9px;stroke-linejoin:round;paint-order:stroke fill;filter:drop-shadow(5px 5px 0 var(--osiris))}
+.hd-sub{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;flex-wrap:wrap}
+.hd-chip{font-family:var(--title);font-size:15px;color:#fff;background:var(--osiris);border:2px solid var(--edge);padding:1px 10px;box-shadow:3px 3px 0 var(--edge);transform:skewX(-10deg)}
+.hd-upd{font-size:12px;color:#eef3fb}
+body.rt .wrap{gap:14px}
+#home-hub.hub{background:transparent;border:0;box-shadow:none;padding:0;gap:12px}
+.me-card{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:3px solid var(--edge);border-radius:6px;box-shadow:4px 4px 0 var(--edge);padding:10px 12px}
+.me-card .acct{border:0;box-shadow:none;padding:0;background:transparent;gap:6px}
+.me-card .acct-l{font-size:13px}
+.me-stats{margin:0;font-size:12px;color:var(--muted);font-family:var(--digit)}
+.me-stats:empty{display:none}
+.me-links{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.me-links a,.tiles4 a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-decoration:none;color:var(--ink);background:var(--surface2);border:2px solid var(--line);border-radius:6px;padding:7px 2px;min-height:54px;-webkit-tap-highlight-color:transparent}
+.me-links a span,.tiles4 a span{font-size:20px;line-height:1}
+.me-links a b,.tiles4 a b{font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:0;white-space:nowrap}
+.me-links a:active,.tiles4 a:active{transform:translate(1px,1px)}
+#home-hub .tile.big{padding:12px 14px;min-height:0}
+#home-hub .tile.big b{font-size:19px}
+.tiles4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tiles4 a{background:var(--surface);border:2px solid var(--edge);box-shadow:2px 2px 0 var(--edge);min-height:62px}
+.why-sum{margin:0;border:3px solid var(--edge)!important;border-radius:4px!important;box-shadow:4px 4px 0 var(--edge)!important}
+.why-sum b{color:var(--obelisk)}
+/* 各ページもスクロールを少なく：見出しをコンパクトに */
+body.rt section:not(#home-hub){padding:14px 14px 18px;gap:14px}
+body.rt section.fold.open{gap:14px;padding-bottom:18px}
+body.rt section > .sec-h{padding-top:0!important;padding-bottom:8px;gap:2px}
+body.rt section > .sec-h > span:first-child{display:none}
+body.rt section > .sec-h h2{font-size:21px}
+body.rt section > .sec-h::before{top:2px;bottom:10px}
+
+.hd-svg{max-height:96px;margin:0 auto}
+@media (min-width:600px){.tiles4{grid-template-columns:repeat(8,1fr)}.tiles4 a b{font-size:10.5px}}
+@media (max-height:760px){
+  body.rt .wrap{gap:10px}
+  header.hd{padding:6px 10px 12px}
+  .hd-svg{max-height:64px}
+  .hd-chip{font-size:13px}
+  .srch-box input{padding:5px 0}
+  .me-card{padding:8px 10px;gap:6px}
+  .me-links a{min-height:44px;padding:5px 2px}
+  .me-links a span,.tiles4 a span{font-size:18px}
+  #home-hub{gap:10px!important}
+  #home-hub .tile.big{padding:9px 12px}
+  #home-hub .tile.big small{display:none}
+  #home-hub .tile.big br{display:none}
+  .tiles4{gap:6px}
+  .tiles4 a{min-height:48px;padding:5px 2px}
+}
+@media (max-height:700px){.me-links a{min-height:40px}.tiles4 a{min-height:44px}.me-card .acct-l{font-size:12px}.hd-svg{max-height:56px}}
+
+/* ===== 見直し候補 ===== */
+.wl-group{display:flex;flex-direction:column;gap:8px}
+.wl-group h3{font-size:17px;display:flex;align-items:center;gap:6px}
+.wl-n{font-family:var(--digit);font-size:12px;color:var(--muted);background:var(--surface2);border-radius:999px;padding:1px 8px}
+.wl-n:empty{display:none}
+.wl-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.wl-items li{display:flex;align-items:flex-start;gap:10px;justify-content:space-between;background:var(--surface2);border-left:6px solid var(--line);border-radius:4px;padding:10px 12px}
+.wl-group.up .wl-items li{border-left-color:var(--spell)}
+.wl-group.down .wl-items li{border-left-color:var(--red)}
+.wl-items li > div{min-width:0;display:flex;flex-direction:column;gap:4px}
+.wl-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.wl-row .nm{font-weight:900;font-size:16px}
+.wl-now{font-size:12px;font-weight:700;color:var(--muted)}
+.wl-chg{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.wl-from,.wl-to{font-size:13px;font-weight:900;border-radius:999px;padding:2px 10px;border:2px solid var(--line);background:var(--surface)}
+.wl-to.up{border-color:var(--spell);color:var(--spell);background:var(--spell-bg)}
+.wl-to.down{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+.wl-arrow{font-family:var(--latin);font-weight:700;color:var(--muted)}
+.wl-items .note{font-size:13px}
+.wl-items .al-empty{background:transparent;border:0;padding:0}
+.card[data-wl]::after{font-size:12px;margin-left:2px}
+.card[data-wl="up"]::after{content:"🔓"}
+.card[data-wl="down"]::after{content:"🔒"}
+.tag.wl-up{background:var(--spell-bg);color:var(--spell)}
+.tag.wl-down{background:var(--red-bg);color:var(--red)}
 </style>
 </head>
 <body>
@@ -985,45 +1066,41 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 
 <div class="wrap">
 
-<header>
-  <span class="eyebrow">GX ERA ORIGINAL FORMAT</span>
-  <h1 class="gx-title"><span class="t-pre">あのころ</span><span class="t-main">遊戯王</span><span class="t-sub">独自環境ルール</span></h1>
-  <div class="gx-stars" aria-hidden="true">★★★★★★★★</div>
-  <p class="lead">GX時代の遊戯王を<br>もう一度遊ぶためのルールブック</p>
-  <p class="updated">📅 最終更新：<span id="last-upd">2026年10月19日</span>　<a href="#log">🗒️ 更新履歴を見る</a></p>
-  <div class="acct" id="acct"><span class="acct-l" id="acct-l">🔄 ログイン状態を確認中…</span><button type="button" class="acct-btn" id="acct-in" hidden>🔑 Googleでログイン</button><button type="button" class="acct-out" id="acct-out" hidden>ログアウト</button><p class="acct-err" id="acct-err" role="status"></p></div>
-  <a class="life-jump" href="#life">⚔️ デュエル・ライフ計算へ</a>
-  <div class="summary">
-    <b>⚡ この環境を3行で</b>
-    <ol>
-      <li><span>🃏</span><span>使えるのは<strong>2008年3月までに初登場したカード</strong>（GX時代）</span></li>
-      <li><span>🎯</span><span>どのデッキも<strong>自分の3ターン目ごろにエースが出る</strong>強さにそろえる</span></li>
-      <li><span>📋</span><span>強すぎ・弱すぎは<strong>対戦後に話し合って</strong>デッキごとに規制し、ボードに記録</span></li>
-    </ol>
-  </div>
+<header class="hd">
+  <h1 class="hd-h1"><svg class="hd-svg" viewBox="0 0 720 132" role="img" aria-label="あのころ遊戯王"><text x="360" y="104" text-anchor="middle" textLength="700" lengthAdjust="spacingAndGlyphs">あのころ遊戯王</text></svg></h1>
+  <p class="hd-sub"><span class="hd-chip">独自環境ルール</span><span class="hd-upd">📅 <span id="last-upd">2026年10月19日</span> 更新</span></p>
 </header>
 
 <section id="home-hub" class="hub" aria-label="ホーム">
   <div class="srch" id="srch" role="search">
-    <div class="srch-box"><span aria-hidden="true">🔎</span><input type="search" id="srch-q" placeholder="サイト内を検索（カード・ルール・機能）" autocomplete="off" aria-label="ルールブック内を検索"><button type="button" id="srch-x" aria-label="検索をクリア" hidden>✕</button></div>
+    <div class="srch-box"><span aria-hidden="true">🔎</span><input type="search" id="srch-q" placeholder="カード・ルール・機能を検索" autocomplete="off" aria-label="ルールブック内を検索"><button type="button" id="srch-x" aria-label="検索をクリア" hidden>✕</button></div>
     <div class="srch-pop" id="srch-pop" hidden>
       <p class="srch-n" id="srch-n" role="status"></p>
       <div class="srch-r" id="srch-r"></div>
     </div>
   </div>
-  <div class="tiles">
-    <button type="button" class="tile big" data-go="duel-open"><span class="i">⚔️</span><span><b>デュエルを始める</b><br><small>ライフ計算・リンク対戦</small></span></button>
-    <a class="tile" href="#list" data-go="list"><span class="i">🚨</span><b>規制リスト</b><small>汎用魔法・罠の制限・禁止</small></a>
-    <a class="tile" href="#board" data-go="board"><span class="i">📋</span><b>報告ボード</b><small>デッキごとの規制の記録</small></a>
-    <a class="tile" href="#results" data-go="results"><span class="i">📊</span><b>戦績</b><small>勝率・グラフ・相手別</small></a>
-    <a class="tile" href="#owners" data-go="owners"><span class="i">👥</span><b>テーマ一覧</b><small>だれが何を使ってる？</small></a>
-    <a class="tile" href="#ach" data-go="ach"><span class="i">🏆</span><b>実績</b><small>解除した実績</small></a>
-    <a class="tile" href="#mlist" data-go="mlist"><span class="i">🟣</span><b>モンスター規制</b><small>GX以前の汎用モンスター</small></a>
-    <a class="tile" href="#allow" data-go="allow"><span class="i">🟢</span><b>許可リスト</b><small>使えるGX以降の汎用カード</small></a>
-    <a class="tile rules" href="#why" data-go="why"><span class="i">📜</span><b>ルールを読む</b><small>大義から順番に</small></a>
-    <a class="tile" href="#faq" data-go="faq"><span class="i">❓</span><b>よくある質問</b><small>メンバーの質問と答え</small></a>
-    <a class="tile" href="#account" data-go="account"><span class="i">⚙️</span><b>設定</b><small>プロフィール・BGM</small></a>
+  <div class="me-card">
+    <div class="acct" id="acct"><span class="acct-l" id="acct-l">🔄 ログイン状態を確認中…</span><button type="button" class="acct-btn" id="acct-in" hidden>🔑 Googleでログイン</button><button type="button" class="acct-out" id="acct-out" hidden>ログアウト</button><p class="acct-err" id="acct-err" role="status"></p></div>
+    <p class="me-stats" id="me-stats" aria-live="polite"></p>
+    <nav class="me-links" aria-label="アカウントに紐づく情報">
+      <a href="#account" data-go="account"><span>👤</span><b>プロフィール</b></a>
+      <a href="#results" data-go="results"><span>📊</span><b>戦績</b></a>
+      <a href="#ach" data-go="ach"><span>🏆</span><b>実績</b></a>
+      <a href="#bgm-lib" data-go="bgm-lib"><span>🎺</span><b>BGM</b></a>
+      <a href="#data" data-go="data"><span>💾</span><b>データ</b></a>
+    </nav>
   </div>
+  <button type="button" class="tile big" data-go="duel-open"><span class="i">⚔️</span><span><b>デュエルを始める</b><br><small>ライフ計算・リンク対戦・先攻後攻の抽選</small></span></button>
+  <nav class="tiles4" aria-label="よく使うページ">
+    <a href="#list" data-go="list"><span>🚨</span><b>規制リスト</b></a>
+    <a href="#mlist" data-go="mlist"><span>🟣</span><b>モンスター規制</b></a>
+    <a href="#allow" data-go="allow"><span>🟢</span><b>許可リスト</b></a>
+    <a href="#board" data-go="board"><span>📋</span><b>報告ボード</b></a>
+    <a href="#deck" data-go="deck"><span>🛠️</span><b>デッキ構築</b></a>
+    <a href="#owners" data-go="owners"><span>👥</span><b>テーマ一覧</b></a>
+    <a href="#why" data-go="why"><span>📜</span><b>ルールを読む</b></a>
+    <a href="#faq" data-go="faq"><span>❓</span><b>よくある質問</b></a>
+  </nav>
 </section>
 
 
@@ -1214,6 +1291,15 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 <!-- 大義 -->
 <section class="fold" id="why">
   <div class="sec-h"><span>WHY</span><h2>🔥 大義</h2><p class="note">このルールを作った理由と、遊ぶときの心構え</p></div>
+  <div class="summary why-sum">
+    <b>⚡ この環境を3行で</b>
+    <ol>
+      <li><span>🃏</span><span>使えるのは<strong>2008年3月までに初登場したカード</strong>（GX時代）</span></li>
+      <li><span>🎯</span><span>どのデッキも<strong>自分の3ターン目ごろにエースが出る</strong>強さにそろえる</span></li>
+      <li><span>📋</span><span>強すぎ・弱すぎは<strong>対戦後に話し合って</strong>デッキごとに規制し、ボードに記録</span></li>
+    </ol>
+  </div>
+
   <ul class="reasons">
     <li><b>🧱 環境デッキのない環境へ</b><span>固定化された環境デッキにはうんざり。</span><span class="hlw"><span class="hl">好きなテーマのデッキで戦いたい。</span></span></li>
     <li><b>🐢 ゆっくり盛り上がるデュエルへ</b><span>2ターンほどで勝敗が決まる展開や、ソリティアにはうんざり。</span><span class="hlw"><span class="hl">1ターンにできることを制限し、じわじわ盛り上がる展開にしたい。</span></span></li>
@@ -1689,6 +1775,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 <section class="fold" id="list">
   <div class="sec-h"><span>LIMITED LIST</span><h2>🚨 汎用魔法・罠 規制リスト</h2><p class="note">全デッキ共通</p></div>
   <p><strong>リストにない汎用魔法・罠</strong>は、GX以前（2008年3月まで）のカードなら<strong>無制限</strong>です。GX以降のカードは、<a href="#allow">許可リスト</a>にあるものだけ使えます。</p>
+  <p class="note">👀 今後の緩和・強化の候補は <a href="#watch">見直し候補</a> にまとめています。</p>
   <p class="note">GX時代の公式リスト（2008年3月1日）で禁止だったカードは「完全使用不可」、制限・準制限だったカードは「制限」として載せています（一部はこの環境に合わせて変えています）。</p>
   <div class="legend"><span class="card sp">魔法</span><span class="card tr">罠</span><span><span class="after">後</span> ＝GX以降のカード</span></div>
 
@@ -1766,6 +1853,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 <section class="fold" id="mlist">
   <div class="sec-h"><span>MONSTER LIST</span><h2>🟣 汎用モンスター 規制リスト</h2><p class="note">GX以前（2008年3月まで）の汎用モンスター・全デッキ共通</p></div>
   <p><strong>リストにないGX以前の汎用モンスターは無制限</strong>です。GX以降の汎用モンスターは<a href="#allow">許可リスト</a>を見てください。</p>
+  <p class="note">👀 今後の緩和・強化の候補は <a href="#watch">見直し候補</a> にまとめています。</p>
   <p class="note">GX時代の公式リスト（2008年3月1日）のうち、汎用モンスターを採用しています（この環境に合わせて、開闢・カオス・ソーサラー・ブレイカー・聖なる魔術師は禁止から制限に、黒き森のウィッチは準制限にしています）。E・HEROやエクゾディアなど、テーマのカードは<a href="#tune">デッキごとの規制</a>で扱います。</p>
   <div class="legend"><span class="card mo">モンスター</span><span class="note">カードを押すと効果の要約が見られます</span></div>
   <div class="tier t-out">
@@ -1842,6 +1930,35 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     <p class="status" id="f-status" role="status"></p>
   </form>
   <p class="note" id="al-hint"></p>
+</section>
+
+<!-- 見直し候補 -->
+<section class="fold" id="watch">
+  <div class="sec-h"><span>WATCH LIST</span><h2>👀 規制の見直し候補</h2><p class="note">今後、緩和・強化するかもしれないカード（まだ決定ではありません）</p></div>
+  <p>ここにあるのは<strong>検討中</strong>のカードです。決まるまでは<strong>今の規制のまま</strong>使ってください。</p>
+  <p class="note">意見があれば、ルール管理者に伝えてください。決まったら規制リストに反映し、更新履歴に載せます。規制リストのカードにも🔓・🔒の印がつきます。</p>
+  <div class="wl-group up">
+    <h3>🔓 緩和するかも <span class="wl-n" id="wl-n-up"></span></h3>
+    <ul class="wl-items" id="wl-up"></ul>
+  </div>
+  <div class="wl-group down">
+    <h3>🔒 強化するかも <span class="wl-n" id="wl-n-down"></span></h3>
+    <ul class="wl-items" id="wl-down"></ul>
+  </div>
+  <form class="ll-form" id="wl-form" hidden>
+    <b>✏️ 見直し候補に追加（ルール管理者のみ）</b>
+    <label for="wl-name">カード名<input type="text" id="wl-name" maxlength="60" placeholder="例：カオス・ソルジャー －開闢の使者－" autocomplete="off" list="wl-cards"></label>
+    <datalist id="wl-cards"></datalist>
+    <p class="note" id="wl-cur" role="status"></p>
+    <label for="wl-to">変更後（予定）<select id="wl-to"><option value="">まだ決めていない</option><option value="free">🔓 無制限（リストから外す）</option><option value="semi">✌️ 準制限（2枚まで）</option><option value="lim">☝️ 制限（1枚まで）</option><option value="ban">❌ 禁止</option><option value="out">⛔ 完全使用不可</option></select></label>
+    <div class="seg" role="radiogroup" aria-label="方向">
+      <label><input type="radio" name="wl-dir" id="wl-d-up" value="up" checked> 🔓 緩和するかも</label>
+      <label><input type="radio" name="wl-dir" id="wl-d-down" value="down"> 🔒 強化するかも</label>
+    </div>
+    <label for="wl-why">理由・メモ<input type="text" id="wl-why" maxlength="120" placeholder="例：制限にしてから使われていないので様子見"></label>
+    <button class="btn" type="submit" id="wl-btn">候補に追加</button>
+    <p class="status" id="wl-st" role="status"></p>
+  </form>
 </section>
 
 <h2 class="grp" id="g-other">ℹ️ その他</h2>
@@ -2745,6 +2862,8 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-10-22-home',createdAt:1792674717640,text:'🏠 ホームを1画面に：タイトル・検索・アカウント欄（プロフィール・戦績・実績・BGM・データへ1タップ）・デュエル開始・よく使うページを、スクロールなしで。各ページの見出しもコンパクトに'},
+      {id:'auto-2026-10-22-watch',createdAt:1792674716640,text:'👀「規制の見直し候補」を新設：緩和・強化するかもしれないカードを「制限 → 準制限（予定）」のように一覧で。規制リストのカードにも🔓・🔒の印がつきます'},
       {id:'auto-2026-10-22-search',createdAt:1792662220677,text:'🔎 サイト内のすべてを検索できるように：どの画面でも一番上に検索欄。候補は「ページ・機能・見出し」「カード（種類・規制つき）」「ルール・本文」に分けて表示。ひらがなでも探せて、最近の検索・よく探されるものも出ます'},
       {id:'auto-2026-10-22-proxy',createdAt:1792662219677,text:'🖨️ プロキシは「自分で購入済みのカード」の代わりだけ使用可（手元にない・ほかのデッキに入っていて入れ替えが手間なとき）。未購入のカードは不可'},
       {id:'auto-2026-10-22-rules-fix',createdAt:1792660338054,text:'📜 ルールを見直し：GX以降の汎用魔法・罠は許可リストにあるものだけ使用可に。🟣汎用モンスター規制リストを新設（当時の公式リストを元に）、魔法・罠の規制リストにGX時代の規制カードを追加。ターンは「自分のターン」で数える、規制のゆるめ方、手順を使い切ったとき、意見がまとまらないときの決め方、基本の数字（ライフ8000など）を追加'},
@@ -3465,6 +3584,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     document.getElementById('cp-name').textContent=n;var tg=document.getElementById('cp-tags');tg.innerHTML='';
     [[c.classList.contains('tr')?'罠':c.classList.contains('mo')?'モンスター':'魔法','card '+(c.classList.contains('tr')?'tr':c.classList.contains('mo')?'mo':'sp')],[lv,'tag lim'],[c.querySelector('.after')?'GX以降のカード':'','tag semi']].forEach(function(t){if(!t[0])return;var s=document.createElement('span');s.className=t[1];s.textContent=t[0];tg.appendChild(s);});
     var cat=c.closest('.cat');if(cat){var s=document.createElement('span');s.className='tag ok';s.textContent=cat.querySelector('b').textContent;tg.appendChild(s);}
+    var wi=(window.YGO_WATCH||{})[key(n)];if(wi){var w=document.createElement('span');w.className='tag wl-'+wi.dir;w.textContent=(wi.dir==='up'?'🔓 緩和するかも':'🔒 強化するかも')+(wi.to?'（→ '+wi.to+'）':'')+(wi.why?'：'+wi.why:'');tg.appendChild(w);}
     var dyn=window.YGO_DYNSUM||{};document.getElementById('cp-sum').textContent=dyn[key(n)]||SK[key(n)]||'このカードの要約はまだありません。下のリンクから公式の説明を見てください。';
     document.getElementById('cp-db').href='https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sess=1&rp=10&keyword='+encodeURIComponent(n)+'&stype=1&request_locale=ja';
     pop.hidden=false;});}
@@ -3554,7 +3674,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     {k:'home',i:'🏠',l:'ホーム',subs:[['home-hub','🏠 ホーム']]},
     {k:'duel',i:'⚔️',l:'デュエル',subs:[['life','🧮 デュエル']]},
     {k:'rec',i:'📊',l:'戦績',subs:[['results','📊 戦績・リザルト'],['ach','🏆 実績'],['owners','👥 テーマ一覧']]},
-    {k:'rules',i:'📜',l:'ルール',subs:[['list','🚨 規制リスト'],['mlist','🟣 モンスター規制'],['allow','🟢 許可リスト'],['board','📋 報告ボード'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['deck','🛠️ デッキ構築']]},
+    {k:'rules',i:'📜',l:'ルール',subs:[['list','🚨 規制リスト'],['mlist','🟣 モンスター規制'],['allow','🟢 許可リスト'],['watch','👀 見直し候補'],['board','📋 報告ボード'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['deck','🛠️ デッキ構築']]},
     {k:'more',i:'⚙️',l:'設定ほか',subs:[['account','⚙️ アカウント設定'],['faq','❓ よくある質問'],['log','🗒️ 更新履歴'],['data','💾 データ'],['admin','🛠️ 管理者']]}
   ];
   var SEC={},LAST={};
@@ -3581,7 +3701,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     /* 前へ・次へ（ルールとその他） */
     var ix=subs.map(function(s){return s[0];}).indexOf(id);
     if(subs.length>1&&e){step.innerHTML='';if(ix>0)step.appendChild(stepBtn(subs[ix-1],false));if(ix<subs.length-1)step.appendChild(stepBtn(subs[ix+1],true));e.insertAdjacentElement('afterend',step);step.hidden=false;}else step.hidden=true;
-    if(srch.parentNode!==header.parentNode||srch.nextElementSibling!==header)header.insertAdjacentElement('beforebegin',srch);
+    if(header.nextElementSibling!==srch)header.insertAdjacentElement('afterend',srch);
     [].forEach.call(bar.children,function(b){if(b.dataset.tab===t.k)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     var hash='#'+id;if(t.k==='home')hash=location.pathname+location.search;
     try{if(o.push){if(location.hash!=='#'+id&&!(t.k==='home'&&!location.hash))history.pushState({rt:id},'',hash);}else history.replaceState({rt:id},'',hash);}catch(err){}
@@ -3598,7 +3718,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     var t=h&&$(h);if(t){var s=t.closest('section[id]');if(s&&SEC[s.id]){go(s.id,{noScroll:true});var d=t.closest('details');if(d)d.open=true;setTimeout(function(){siv.call(t,{block:'start'});},first?300:0);return;}}
     go('home-hub');}
   /* ホームのボタン */
-  [].forEach.call(document.querySelectorAll('[data-go]'),function(b){b.addEventListener('click',function(e){e.preventDefault();var id=b.getAttribute('data-go');if(id==='duel-open'){go('life',{push:true});var d=$('duel-open');if(d)d.click();return;}go(id,{push:true});});});
+  [].forEach.call(document.querySelectorAll('[data-go]'),function(b){b.addEventListener('click',function(e){e.preventDefault();var id=b.getAttribute('data-go');if(id==='duel-open'){go('life',{push:true});var d=$('duel-open');if(d)d.click();return;}if(!SEC[id]){var t=$(id);if(t){if(t.tagName==='DETAILS')t.open=true;t.scrollIntoView({block:'start'});}return;}go(id,{push:true});});});
   /* 管理者メニューが出たらサブメニューを作り直す */
   var adm=$('admin');if(adm&&window.MutationObserver)new MutationObserver(function(){if(cur&&SEC[cur].tab.k==='more')go(cur,{noScroll:true});}).observe(adm,{attributes:true,attributeFilter:['hidden']});
 
@@ -3689,7 +3809,61 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     else if(e.key==='Enter'){e.preventDefault();var b=items[act>=0?act:0];if(b)b.click();}else if(e.key==='Escape'){closePop();q.blur();}});
   clr.addEventListener('click',function(){q.value='';render();q.focus();});
   document.addEventListener('pointerdown',function(e){if(!pop.hidden&&!srch.contains(e.target))closePop();});
+  /* ホームのアカウント欄：戦績と実績の要約 */
+  (function(){var ms=$('me-stats'),rs=$('rl-stats'),an=$('ach-n'),at=$('ach-total');if(!ms)return;
+    function upd(){var parts=[];if(rs){var t=[].map.call(rs.children,function(c){return (c.textContent||'').replace(/\s+/g,'');}).filter(Boolean).slice(0,3);if(t.length)parts.push('📊 '+t.join(' '));}
+      if(an)parts.push('🏆 実績 '+an.textContent+'/'+(at?at.textContent:'30'));ms.textContent=parts.join('　');}
+    upd();if(window.MutationObserver){var mo=new MutationObserver(upd);if(rs)mo.observe(rs,{childList:true,subtree:true,characterData:true});if(an)mo.observe(an,{childList:true,subtree:true,characterData:true});}})();
   start(true);
+})();
+</script>
+<script>
+/* ===== 見直し候補（緩和・強化するかも） ===== */
+(function(){
+  function $(id){return document.getElementById(id);}
+  function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
+  function key(t){return String(t||'').normalize('NFKC').replace(/[\s　]+/g,'').replace(/[－−‐-]/g,'-').toLowerCase();}
+  function nameOf(c){return (c.firstChild&&c.firstChild.nodeType===3?c.firstChild.nodeValue:c.textContent).replace(/後\s*$/,'').trim();}
+  var Y=window.YGO,up=$('wl-up'),down=$('wl-down'),form=$('wl-form');if(!up||!Y)return;
+  var docs=[],col=null,owner=false;
+  function cards(){return [].slice.call(document.querySelectorAll('#list .tier .card,#mlist .tier .card')).filter(function(c){return !c.hidden;});}
+  var LV={free:'🔓 無制限',semi:'✌️ 準制限',lim:'☝️ 制限',ban:'❌ 禁止',out:'⛔ 完全使用不可'},RANK={free:0,semi:1,lim:2,ban:3,out:4};
+  function lvKey(label){for(var k in LV)if(label.indexOf(LV[k].slice(3))>=0&&k!=='free')return k;return label==='規制なし'?'free':'';}
+  function nowOf(name){var k=key(name),hit=null;cards().forEach(function(c){if(key(nameOf(c))===k)hit=c;});
+    if(!hit){var al=null;[].forEach.call(document.querySelectorAll('#allow .al-items li'),function(li){var nm=li.querySelector('.nm');if(nm&&key(nm.textContent)===k)al=li;});
+      if(al)return {lv:al.closest('ul').id.indexOf('ng')>=0?'許可リスト：不許可':'許可リスト：許可',ty:/st$/.test(al.closest('ul').id)?'sp':'mo'};return {lv:'規制なし',ty:''};}
+    var t=hit.closest('.tier');return {lv:t.classList.contains('t-out')?'⛔ 完全使用不可':t.classList.contains('t-ban')?'❌ 禁止':t.classList.contains('t-semi')?'✌️ 準制限':'☝️ 制限',ty:hit.classList.contains('tr')?'tr':hit.classList.contains('mo')?'mo':'sp'};}
+  var marking=false;
+  function mark(){marking=true;var W=window.YGO_WATCH||{};cards().forEach(function(c){var w=W[key(nameOf(c))];if(w)c.setAttribute('data-wl',w.dir);else c.removeAttribute('data-wl');});marking=false;}
+  function row(x){var d=x.d,li=el('li'),box=el('div'),r=el('div','wl-row'),now=nowOf(d.name);
+    if(now.ty){var b=el('span','card '+now.ty,now.ty==='tr'?'罠':now.ty==='mo'?'モンスター':'魔法');b.style.fontSize='11px';b.style.padding='0 6px';r.appendChild(b);}
+    r.appendChild(el('span','nm',String(d.name||'')));box.appendChild(r);
+    var ch=el('div','wl-chg');ch.appendChild(el('span','wl-from',now.lv));ch.appendChild(el('span','wl-arrow','→'));ch.appendChild(el('span','wl-to '+(d.dir==='down'?'down':'up'),d.to&&LV[d.to]?LV[d.to]+'（予定）':(d.dir==='up'?'🔓 ゆるめるかも（未定）':'🔒 きびしくするかも（未定）')));box.appendChild(ch);
+    if(d.why)box.appendChild(el('span','note',String(d.why)));
+    if(d.addedAt)box.appendChild(el('span','wl-now','📅 '+new Date(d.addedAt).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo'})+' 追加'));
+    li.appendChild(box);
+    if(owner){var del=el('button','del','外す');del.type='button';del.addEventListener('click',function(){if(!del.classList.contains('confirm')){del.classList.add('confirm');del.textContent='本当に外す';setTimeout(function(){del.classList.remove('confirm');del.textContent='外す';},4000);return;}del.disabled=true;col.doc(x.id).delete().catch(function(){del.disabled=false;});});li.appendChild(del);}
+    return li;}
+  function render(){var W={};docs.forEach(function(x){W[key(x.d.name)]={dir:x.d.dir==='down'?'down':'up',why:String(x.d.why||''),to:x.d.to&&LV[x.d.to]?LV[x.d.to]:''};});window.YGO_WATCH=W;
+    [['up',up],['down',down]].forEach(function(a){var arr=docs.filter(function(x){return (x.d.dir==='down'?'down':'up')===a[0];}).sort(function(p,q){return (q.d.addedAt||0)-(p.d.addedAt||0);});
+      a[1].innerHTML='';$('wl-n-'+a[0]).textContent=arr.length?arr.length+'枚':'';
+      if(!arr.length)a[1].appendChild(el('li','al-empty','いまはありません。'));else arr.forEach(function(x){a[1].appendChild(row(x));});});
+    mark();}
+  render();
+  if(window.MutationObserver){var t=null,mo=new MutationObserver(function(){if(marking)return;clearTimeout(t);t=setTimeout(mark,50);});['list','mlist'].forEach(function(id){var e=$(id);if(e)mo.observe(e,{childList:true,subtree:true});});}
+  Y.ready.then(function(){if(!Y.db)return;owner=!!Y.isAdmin;col=Y.db.collection('watchlist');
+    col.onSnapshot(function(s){docs=s.docs.map(function(d){return {id:d.id,d:d.data()||{}};});render();},function(){});
+    if(owner){form.hidden=false;var dl=$('wl-cards');var seen={};cards().forEach(function(c){var n=nameOf(c);if(seen[n])return;seen[n]=1;var o=document.createElement('option');o.value=n;dl.appendChild(o);});}});
+  function autoDir(){var v=$('wl-name').value.trim(),to=$('wl-to').value;if(!v||!to)return;var cur=lvKey(nowOf(v).lv);if(cur===''||!(cur in RANK))return;if(RANK[to]<RANK[cur])$('wl-d-up').checked=true;else if(RANK[to]>RANK[cur])$('wl-d-down').checked=true;}
+  $('wl-name').addEventListener('input',function(){var v=this.value.trim();$('wl-cur').textContent=v?'いまの規制：'+nowOf(v).lv:'';autoDir();});
+  $('wl-to').addEventListener('change',autoDir);
+  form.addEventListener('submit',function(e){e.preventDefault();var st=$('wl-st'),n=$('wl-name').value.trim(),dir=$('wl-d-down').checked?'down':'up';
+    if(!n){st.className='status err';st.textContent='カード名を入力してください。';return;}
+    var ex=docs.filter(function(x){return key(x.d.name)===key(n);})[0];
+    $('wl-btn').disabled=true;st.className='status';st.textContent='追加しています…';
+    var data={name:n.slice(0,60),dir:dir,to:$('wl-to').value,why:$('wl-why').value.trim().slice(0,120),addedAt:Date.now()};
+    (ex?col.doc(ex.id).set(data):col.add(data)).then(function(){st.className='status ok';st.textContent='「'+n+'」を見直し候補（'+(dir==='up'?'緩和':'強化')+'するかも）にしました。';$('wl-name').value='';$('wl-why').value='';$('wl-to').value='';$('wl-cur').textContent='';},
+      function(err){st.className='status err';st.textContent='追加できませんでした（'+(err&&err.code||'error')+'）。セキュリティルールの公開が必要かもしれません。';}).then(function(){$('wl-btn').disabled=false;});});
 })();
 </script>
 </body>
