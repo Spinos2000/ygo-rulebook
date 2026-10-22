@@ -2544,7 +2544,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
           <label class="field" for="ctr-pre">カード・種類<select id="ctr-pre"></select></label>
           <label class="field" for="ctr-name">カード名<input type="text" id="ctr-name" maxlength="30" autocomplete="off" placeholder="例：魔導戦士 ブレイカー"></label>
           <label class="field" for="ctr-val">はじめの数<input type="number" id="ctr-val" min="0" max="99" inputmode="numeric" value="0"></label>
-          <div id="ctr-mag-opt" class="ctr-opt"><label class="ctr-chk"><input type="checkbox" id="ctr-auto"> 魔法が発動するたびに＋1（自分・相手どちらでも）</label><label class="field" for="ctr-max">上限（なしは空欄）<input type="number" id="ctr-max" min="0" max="99" inputmode="numeric"></label></div>
+          <div id="ctr-mag-opt" class="ctr-opt"><label class="ctr-chk"><input type="checkbox" id="ctr-auto"> 魔法が発動するたびに＋1（自分・相手どちらでも）</label><label class="ctr-chk"><input type="checkbox" id="ctr-odraw"> 相手がドローするたびに＋1（相手のドローフェイズは自動）</label><label class="field" for="ctr-max">上限（なしは空欄）<input type="number" id="ctr-max" min="0" max="99" inputmode="numeric"></label></div>
           <div id="ctr-turn-opt" class="ctr-opt" hidden><label class="field" for="ctr-when">いつ減る？<select id="ctr-when"><option value="oppEnd">相手のターンが終わるたびに −1</option><option value="myStart">自分のターンが来るたびに −1（スタンバイ）</option><option value="myEnd">自分のターンが終わるたびに −1</option><option value="anyEnd">ターンが終わるたびに −1（どちらでも）</option></select></label></div>
           <label class="ctr-chk"><input type="checkbox" id="ctr-own-op"> 相手のカード（リンクしていないとき用）</label>
           <button type="button" class="btn" id="ctr-add">追加する</button>
@@ -2699,7 +2699,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     renderCtrEdit();
   }
   /* テーマ登録のとき：カウンターやターンを数えるカードを使うか聞く */
-  var CTRS=[['mag','🔮 魔力カウンター'],['光の護封剣','⏳ 光の護封剣'],['闇の護封剣','⏳ 闇の護封剣'],['封印の黄金櫃','⏳ 封印の黄金櫃'],['Aカウンター','👽 Aカウンター（エーリアン）'],['時計カウンター','🕰️ 時計カウンター（幽獄の時計塔）'],['ヴェノムカウンター','🐍 ヴェノムカウンター']];
+  var CTRS=[['mag','🔮 魔力カウンター'],['光の護封剣','⏳ 光の護封剣'],['闇の護封剣','⏳ 闇の護封剣'],['封印の黄金櫃','⏳ 封印の黄金櫃'],['Aカウンター','👽 Aカウンター（エーリアン）'],['時計カウンター','🕰️ 時計カウンター（幽獄の時計塔）'],['ヴェノムカウンター','🐍 ヴェノムカウンター'],['サイレント・マジシャン LV4','🔮 サイレント・マジシャン LV4']];
   var ctrFor=null;
   function openCtr(t){ctrFor=t;renderCtrEdit();var e=$('pf-ctr');if(e)e.scrollIntoView({block:'nearest',behavior:'smooth'});}
   function renderCtrEdit(){var e=$('pf-ctr');if(!e)return;e.innerHTML='';if(!ctrFor||draft.themes.indexOf(ctrFor)<0){e.hidden=true;return;}e.hidden=false;
@@ -4335,7 +4335,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 (function(){
   function $(id){return document.getElementById(id);}
   function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
-  var YOMI=window.YGO_YOMI={"魔法の筒": "マジック・シリンダー／まほうのつつ", "聖なるバリア －ミラーフォース－": "せいなるばりあ みらーふぉーす", "激流葬": "げきりゅうそう", "神の宣告": "かみのせんこく", "神の警告": "かみのけいこく", "神の通告": "かみのつうこく", "王宮のお触れ": "おうきゅうのおふれ", "増援": "ぞうえん", "封印の黄金櫃": "ふういんのおうごんひつ", "死者蘇生": "ししゃそせい", "早すぎた埋葬": "はやすぎたまいそう", "リビングデッドの呼び声": "りびんぐでっどのよびごえ", "未来融合－フューチャー・フュージョン": "みらいゆうごう ふゅーちゃーふゅーじょん", "超融合": "ちょうゆうごう", "洗脳－ブレインコントロール": "せんのう ぶれいんこんとろーる", "光の護封剣": "ひかりのごふうけん", "闇の護封剣": "やみのごふうけん", "強欲な壺": "ごうよくなつぼ", "強欲で謙虚な壺": "ごうよくでけんきょなつぼ", "天使の施し": "てんしのほどこし", "血の代償": "ちのだいしょう", "心変わり": "こころがわり", "強奪": "ごうだつ", "次元融合": "じげんゆうごう", "墓穴の指名者": "はかあなのしめいしゃ", "抹殺の指名者": "まっさつのしめいしゃ", "大嵐": "おおあらし", "ハーピィの羽根帚": "はーぴぃのはねぼうき", "悪夢の蜃気楼": "あくむのしんきろう", "第六感": "だいろっかん", "苦渋の選択": "くじゅうのせんたく", "押収": "おうしゅう", "強引な番兵": "ごういんなばんぺい", "いたずら好きな双子悪魔": "いたずらずきなツイン・デーモン／ふたごあくま", "突然変異": "メタモルフォーゼ／とつぜんへんい", "遺言状": "ゆいごんじょう", "現世と冥界の逆転": "げんせとめいかいのぎゃくてん", "王宮の勅命": "おうきゅうのちょくめい", "刻の封印": "ときのふういん", "王家の神殿": "おうけのしんでん", "蝶の短剣－エルマ": "ちょうのたんけん えるま", "破壊輪": "はかいりん", "地砕き": "じくだき", "地割れ": "じわれ", "抹殺の使徒": "まっさつのしと", "撲滅の使徒": "ぼくめつのしと", "手札抹殺": "てふだまっさつ", "高等儀式術": "こうとうぎしきじゅつ", "おろかな埋葬": "おろかなまいそう", "魔法石の採掘": "まほうせきのさいくつ", "転生の予言": "てんせいのよげん", "光の護封壁": "ひかりのごふうへき", "レベル制限Ｂ地区": "れべるせいげんびーちく", "グラヴィティ・バインド－超重力の網－": "ぐらゔぃてぃばいんど ちょうじゅうりょくのあみ／ぐらびてぃばいんど", "月の書": "つきのしょ", "巨大化": "きょだいか", "団結の力": "だんけつのちから", "魔導師の力": "まどうしのちから", "リミッター解除": "りみったーかいじょ", "死のデッキ破壊ウイルス": "しのでっきはかいういるす", "連鎖爆撃": "チェーン・ブラスト／れんさばくげき", "停戦協定": "ていせんきょうてい", "奈落の落とし穴": "ならくのおとしあな", "落とし穴": "おとしあな", "炸裂装甲": "リアクティブアーマー／さくれつそうこう", "次元幽閉": "じげんゆうへい", "万能地雷グレイモヤ": "ばんのうじらいぐれいもや", "底なし落とし穴": "そこなしおとしあな", "強制脱出装置": "きょうせいだっしゅつそうち", "死者への手向け": "ししゃへのたむけ", "砂塵の大竜巻": "さじんのおおたつまき", "魔法除去": "まほうじょきょ", "魔宮の賄賂": "まきゅうのわいろ", "天罰": "てんばつ", "盗賊の七つ道具": "とうぞくのななつどうぐ", "成金ゴブリン": "なりきんごぶりん", "打ち出の小槌": "うちでのこづち", "貪欲な壺": "どんよくなつぼ", "一時休戦": "いちじきゅうせん", "凡骨の意地": "ぼんこつのいじ", "無謀な欲張り": "むぼうなよくばり", "八汰烏の骸": "やたがらすのむくろ", "ゴブリンのやりくり上手": "ごぶりんのやりくりじょうず", "光の援軍": "ひかりのえんぐん", "精神操作": "せいしんそうさ", "威嚇する咆哮": "いかくするほうこう", "和睦の使者": "わぼくのししゃ", "攻撃の無力化": "こうげきのむりょくか", "平和の使者": "へいわのししゃ", "生贄封じの仮面": "いけにえふうじのかめん", "魔封じの芳香": "まふうじのほうこう", "禁じられた聖杯": "きんじられたせいはい", "我が身を盾に": "わがみをたてに", "収縮": "しゅうしゅく", "突進": "とっしん", "カオス・ソルジャー －開闢の使者－": "かおすそるじゃー かいびゃくのししゃ／かいびゃく", "混沌帝龍 －終焉の使者－": "カオス・エンペラー・ドラゴン しゅうえんのししゃ／こんとんていりゅう", "魔導戦士 ブレイカー": "まどうせんし ぶれいかー", "同族感染ウィルス": "どうぞくかんせんうぃるす", "黒き森のウィッチ": "くろきもりのうぃっち", "聖なる魔術師": "せいなるまじゅつし", "魔導サイエンティスト": "まどうさいえんてぃすと", "処刑人-マキュラ": "しょけいにん まきゅら", "八汰烏": "ヤタガラス", "月読命": "ツクヨミ／つくよみのみこと", "黄泉ガエル": "よみがえる", "冥府の使者ゴーズ": "めいふのししゃごーず", "森の番人グリーン・バブーン": "もりのばんにんぐりーんばぶーん", "異次元の女戦士": "いじげんのおんなせんし", "深淵の暗殺者": "しんえんのあんさつしゃ", "風帝ライザー": "ふうていらいざー", "魂を削る死霊": "たましいをけずるしりょう", "混沌の黒魔術師": "カオス・マジシャン／こんとんのくろまじゅつし", "暗黒のマンティコア": "あんこくのまんてぃこあ", "光と闇の竜": "ライトアンドダークネス・ドラゴン／ひかりとやみのりゅう", "巨大ネズミ": "きょだいねずみ", "灰流うらら": "はるうらら", "無限泡影": "むげんほうよう", "ヴィクトリー・ドラゴン": "びくとりーどらごん"};
+  var YOMI=window.YGO_YOMI={"魔法の筒": "マジック・シリンダー／まほうのつつ", "聖なるバリア －ミラーフォース－": "せいなるばりあ みらーふぉーす", "激流葬": "げきりゅうそう", "神の宣告": "かみのせんこく", "神の警告": "かみのけいこく", "神の通告": "かみのつうこく", "王宮のお触れ": "おうきゅうのおふれ", "増援": "ぞうえん", "封印の黄金櫃": "ふういんのおうごんひつ", "死者蘇生": "ししゃそせい", "早すぎた埋葬": "はやすぎたまいそう", "リビングデッドの呼び声": "りびんぐでっどのよびごえ", "未来融合－フューチャー・フュージョン": "みらいゆうごう ふゅーちゃーふゅーじょん", "超融合": "ちょうゆうごう", "洗脳－ブレインコントロール": "せんのう ぶれいんこんとろーる", "光の護封剣": "ひかりのごふうけん", "闇の護封剣": "やみのごふうけん", "強欲な壺": "ごうよくなつぼ", "強欲で謙虚な壺": "ごうよくでけんきょなつぼ", "天使の施し": "てんしのほどこし", "血の代償": "ちのだいしょう", "心変わり": "こころがわり", "強奪": "ごうだつ", "次元融合": "じげんゆうごう", "墓穴の指名者": "はかあなのしめいしゃ", "抹殺の指名者": "まっさつのしめいしゃ", "大嵐": "おおあらし", "ハーピィの羽根帚": "はーぴぃのはねぼうき", "悪夢の蜃気楼": "あくむのしんきろう", "第六感": "だいろっかん", "苦渋の選択": "くじゅうのせんたく", "押収": "おうしゅう", "強引な番兵": "ごういんなばんぺい", "いたずら好きな双子悪魔": "いたずらずきなツイン・デーモン／ふたごあくま", "突然変異": "メタモルフォーゼ／とつぜんへんい", "遺言状": "ゆいごんじょう", "現世と冥界の逆転": "げんせとめいかいのぎゃくてん", "王宮の勅命": "おうきゅうのちょくめい", "刻の封印": "ときのふういん", "王家の神殿": "おうけのしんでん", "蝶の短剣－エルマ": "ちょうのたんけん えるま", "破壊輪": "はかいりん", "地砕き": "じくだき", "地割れ": "じわれ", "抹殺の使徒": "まっさつのしと", "撲滅の使徒": "ぼくめつのしと", "手札抹殺": "てふだまっさつ", "高等儀式術": "こうとうぎしきじゅつ", "おろかな埋葬": "おろかなまいそう", "魔法石の採掘": "まほうせきのさいくつ", "転生の予言": "てんせいのよげん", "光の護封壁": "ひかりのごふうへき", "レベル制限Ｂ地区": "れべるせいげんびーちく", "グラヴィティ・バインド－超重力の網－": "ぐらゔぃてぃばいんど ちょうじゅうりょくのあみ／ぐらびてぃばいんど", "月の書": "つきのしょ", "巨大化": "きょだいか", "団結の力": "だんけつのちから", "魔導師の力": "まどうしのちから", "リミッター解除": "りみったーかいじょ", "死のデッキ破壊ウイルス": "しのでっきはかいういるす", "連鎖爆撃": "チェーン・ブラスト／れんさばくげき", "停戦協定": "ていせんきょうてい", "奈落の落とし穴": "ならくのおとしあな", "落とし穴": "おとしあな", "炸裂装甲": "リアクティブアーマー／さくれつそうこう", "次元幽閉": "じげんゆうへい", "万能地雷グレイモヤ": "ばんのうじらいぐれいもや", "底なし落とし穴": "そこなしおとしあな", "強制脱出装置": "きょうせいだっしゅつそうち", "死者への手向け": "ししゃへのたむけ", "砂塵の大竜巻": "さじんのおおたつまき", "魔法除去": "まほうじょきょ", "魔宮の賄賂": "まきゅうのわいろ", "天罰": "てんばつ", "盗賊の七つ道具": "とうぞくのななつどうぐ", "成金ゴブリン": "なりきんごぶりん", "打ち出の小槌": "うちでのこづち", "貪欲な壺": "どんよくなつぼ", "一時休戦": "いちじきゅうせん", "凡骨の意地": "ぼんこつのいじ", "無謀な欲張り": "むぼうなよくばり", "八汰烏の骸": "やたがらすのむくろ", "ゴブリンのやりくり上手": "ごぶりんのやりくりじょうず", "光の援軍": "ひかりのえんぐん", "精神操作": "せいしんそうさ", "威嚇する咆哮": "いかくするほうこう", "和睦の使者": "わぼくのししゃ", "攻撃の無力化": "こうげきのむりょくか", "平和の使者": "へいわのししゃ", "生贄封じの仮面": "いけにえふうじのかめん", "魔封じの芳香": "まふうじのほうこう", "禁じられた聖杯": "きんじられたせいはい", "我が身を盾に": "わがみをたてに", "収縮": "しゅうしゅく", "突進": "とっしん", "カオス・ソルジャー －開闢の使者－": "かおすそるじゃー かいびゃくのししゃ／かいびゃく", "混沌帝龍 －終焉の使者－": "カオス・エンペラー・ドラゴン しゅうえんのししゃ／こんとんていりゅう", "魔導戦士 ブレイカー": "まどうせんし ぶれいかー", "同族感染ウィルス": "どうぞくかんせんうぃるす", "黒き森のウィッチ": "くろきもりのうぃっち", "聖なる魔術師": "せいなるまじゅつし", "魔導サイエンティスト": "まどうさいえんてぃすと", "処刑人-マキュラ": "しょけいにん まきゅら", "八汰烏": "ヤタガラス", "月読命": "ツクヨミ／つくよみのみこと", "黄泉ガエル": "よみがえる", "冥府の使者ゴーズ": "めいふのししゃごーず", "森の番人グリーン・バブーン": "もりのばんにんぐりーんばぶーん", "異次元の女戦士": "いじげんのおんなせんし", "深淵の暗殺者": "しんえんのあんさつしゃ", "風帝ライザー": "ふうていらいざー", "魂を削る死霊": "たましいをけずるしりょう", "混沌の黒魔術師": "カオス・マジシャン／こんとんのくろまじゅつし", "暗黒のマンティコア": "あんこくのまんてぃこあ", "光と闇の竜": "ライトアンドダークネス・ドラゴン／ひかりとやみのりゅう", "巨大ネズミ": "きょだいねずみ", "灰流うらら": "はるうらら", "無限泡影": "むげんほうよう", "サイレント・マジシャン LV4": "さいれんとまじしゃん", "ヴィクトリー・ドラゴン": "びくとりーどらごん"};
   var SKIP=/[\s・･\-－−‐―「」『』（）()【】［］\[\]、。,.!！?？:：\/／~〜＆&]/;
   function nm(str){str=String(str||'');var out='';for(var i=0;i<str.length;i++){var c=str[i].normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g,function(x){return String.fromCharCode(x.charCodeAt(0)-0x60);});for(var j=0;j<c.length;j++)if(!SKIP.test(c[j]))out+=c[j];}return out;}
   window.ygoNorm=nm;
@@ -4494,6 +4494,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     {g:'🔮 魔力カウンター',n:'熟練の黒魔術師',k:'mag',v:0,max:3,auto:true},
     {g:'🔮 魔力カウンター',n:'熟練の白魔導師',k:'mag',v:0,max:3,auto:true},
     {g:'🔮 魔力カウンター',n:'魔法都市エンディミオン',k:'mag',v:0,max:0,auto:true},
+    {g:'🔮 魔力カウンター',n:'サイレント・マジシャン LV4',k:'mag',v:0,max:5,auto:false,oppDraw:true,full:'サイレント・マジシャン LV4：魔力カウンターが5つ！このスタンバイフェイズに墓地へ送って、LV8を特殊召喚できます'},
     {g:'⏳ ターンで減る',n:'光の護封剣',k:'turn',v:3,when:'oppEnd',msg:'光の護封剣が破壊されます（墓地へ）'},
     {g:'⏳ ターンで減る',n:'闇の護封剣',k:'turn',v:2,when:'oppEnd',msg:'闇の護封剣が破壊されます（墓地へ）'},
     {g:'⏳ ターンで減る',n:'封印の黄金櫃',k:'turn',v:2,when:'myStart',msg:'封印の黄金櫃：除外したカードを手札に加えます'}
@@ -4509,7 +4510,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   function addFrom(key){var d=D();if(!d)return;if(d.ctrT==null)d.ctrT=d.T;
     if(key==='mag'){openSheet(-1);var o=[].filter.call($('ctr-pre').options,function(x){return x.value==='new:mag';})[0];if(o){$('ctr-pre').value=o.value;$('ctr-pre').dispatchEvent(new Event('change'));}$('ctr-name').focus();return;}
     var pi=-1;PRE.forEach(function(p,i){if(p.n===key)pi=i;});var c;
-    if(pi>=0){var p=PRE[pi];c={id:Date.now().toString(36),k:p.k,n:p.n,v:p.v,own:'me'};if(p.k==='mag'){c.auto=!!p.auto;c.max=p.max||0;}if(p.k==='turn'){c.when=p.when;c.msg=p.msg;}}
+    if(pi>=0){var p=PRE[pi];c={id:Date.now().toString(36),k:p.k,n:p.n,v:p.v,own:'me'};if(p.k==='mag'){c.auto=!!p.auto;c.max=p.max||0;if(p.oppDraw){c.oppDraw=true;c.full=p.full;}}if(p.k==='turn'){c.when=p.when;c.msg=p.msg;}}
     else c={id:Date.now().toString(36),k:'free',n:key,v:0,own:'me'};
     list().push(c);save();toast((IC[c.k]||'🔢')+' 「'+c.n+'」を追加しました');}
   function render(){var bar=$('ctr-bar'),d=D(),mine=list(),op=(A()&&A().opp()&&A().opp().ctr)||[],tc=themeCtr();bar.innerHTML='';
@@ -4522,7 +4523,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       var g=el('button','ctr-ghost',k==='mag'?'＋🔮 魔力カウンター':isT?'＋⏳ '+k+'（発動したら）':'＋'+(NAMES[k]||'🔢')+' '+k);g.type='button';g.addEventListener('click',function(){addFrom(k);});bar.appendChild(g);});}
     renderSheet();}
   function chip(c,i,isOpp){var b=el('button','ctr-chip '+c.k+(isOpp?' opp':'')+(c.k==='turn'&&c.v<=0?' done':''));b.type='button';
-    b.appendChild(el('span','ic',IC[c.k]||'🔢'));b.appendChild(el('span','nm',(isOpp?'相手：':c.own==='op'?'相手の':'')+String(c.n||'カウンター').slice(0,14)));
+    b.appendChild(el('span','ic',IC[c.k]||'🔢'));b.appendChild(el('span','nm',(isOpp?'相手：':c.own==='op'?'相手の':'')+String(c.n||'カウンター').slice(0,18)));
     b.appendChild(el('b','v',c.k==='turn'?(c.v<=0?'終了':'残り'+c.v):String(c.v)+(c.max?'/'+c.max:'')));
     b.addEventListener('click',function(){openSheet(isOpp?-1:i);});return b;}
   /* ---- 魔法発動：自動で増える魔力カウンターすべてに＋1 ---- */
@@ -4535,10 +4536,12 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       d.ctr.forEach(function(c){if(c.k!=='turn'||c.v<=0)return;var own=c.own==='op'?'op':'me',endOwner=ownerOf(endT,d.first),startOwner=ownerOf(startT,d.first),hit=false;
         if(c.when==='oppEnd'&&endOwner!==own)hit=true;if(c.when==='myEnd'&&endOwner===own)hit=true;if(c.when==='anyEnd')hit=true;if(c.when==='myStart'&&startOwner===own)hit=true;
         if(hit){c.v--;if(c.v<=0)fired.push(c);}});
+      d.ctr.forEach(function(c){if(c.k!=='mag'||!c.oppDraw)return;var own=c.own==='op'?'op':'me';if(ownerOf(startT,d.first)!==own&&startT>1&&(!c.max||c.v<c.max)){c.v++;}
+        if(ownerOf(startT,d.first)===own&&c.max&&c.v>=c.max&&c.full)fired.push({msg:c.full});});
       if(ownerOf(startT,d.first)==='me'&&d.ctr.some(function(c){return c.k==='mag';}))remind=true;
       d.ctrT++;}
     save();
-    if(fired.length)alertBox(fired.map(function(c){return '⏳ '+(c.msg||(c.n+' のカウンターが0になりました'));}));
+    if(fired.length)alertBox(fired.map(function(c){return (c.k==='turn'?'⏳ ':'🔮 ')+(c.msg||(c.n+' のカウンターが0になりました'));}),fired.some(function(c){return c.k==='turn';})?null:'🔮 魔力カウンターがたまりました');
     else if(remind){var m=d.ctr.filter(function(c){return c.k==='mag';}).map(function(c){return c.n+' '+c.v+(c.max?'/'+c.max:'');});toast('🔮 魔力カウンターの確認：'+m.join('、'));}});
   function toast(t){var x=el('div','ctr-toast',t);$('dv-play').appendChild(x);setTimeout(function(){x.classList.add('out');},2600);setTimeout(function(){x.remove();},3100);}
   function alertBox(lines,title){var box=$('ctr-alert');$('ctr-alert-h').textContent=title||'⏰ カウンターが0になりました';$('ctr-alert-t').innerHTML='';lines.forEach(function(l){$('ctr-alert-t').appendChild(el('p','',l));});box.hidden=false;
@@ -4553,7 +4556,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     if(!mine.length)box.appendChild(el('p','note','まだカウンターはありません。下から追加してください。'));
     mine.forEach(function(c,i){var r=el('div','ctr-row '+c.k+(i===focus?' focus':'')+(c.k==='turn'&&c.v<=0?' done':''));
       var info=el('div','ctr-info');info.appendChild(el('b','',(IC[c.k]||'🔢')+' '+(c.own==='op'?'（相手のカード）':'')+c.n));
-      info.appendChild(el('small','',c.k==='mag'?(c.auto?'魔法が発動するたびに＋1':'手動で数える')+(c.max?'・上限'+c.max:''):c.k==='turn'?(c.v<=0?'✅ 0になりました':WHEN[c.when]||''):'手動で数える'));r.appendChild(info);
+      info.appendChild(el('small','',c.k==='mag'?(c.auto?'魔法が発動するたびに＋1':c.oppDraw?'相手のドローフェイズで自動＋1（効果でのドローは＋で）':'手動で数える')+(c.max?'・上限'+c.max:''):c.k==='turn'?(c.v<=0?'✅ 0になりました':WHEN[c.when]||''):'手動で数える'));r.appendChild(info);
       var mi=el('button','ctr-pm','−');mi.type='button';mi.addEventListener('click',function(){c.v=Math.max(0,c.v-1);save();});
       var v=el('b','ctr-v',String(c.v));
       var pl=el('button','ctr-pm','＋');pl.type='button';pl.addEventListener('click',function(){if(c.max&&c.v>=c.max){toast('上限（'+c.max+'）です');return;}c.v++;save();});
@@ -4565,13 +4568,13 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   var sel=$('ctr-pre');var gs={};PRE.forEach(function(p,i){var og=gs[p.g];if(!og){og=document.createElement('optgroup');og.label=p.g;gs[p.g]=og;sel.appendChild(og);}var o=document.createElement('option');o.value=String(i);o.textContent=p.n;og.appendChild(o);});
   ['🔮 魔力カウンター（ほかのカード）|mag','⏳ ターンで減る（ほかのカード）|turn','🔢 自由なカウンター|free'].forEach(function(t){var a=t.split('|'),o=document.createElement('option');o.value='new:'+a[1];o.textContent=a[0];sel.appendChild(o);});
   function kindUI(k){$('ctr-mag-opt').hidden=k!=='mag';$('ctr-turn-opt').hidden=k!=='turn';}
-  sel.addEventListener('change',function(){var v=sel.value;if(v.indexOf('new:')===0){var k=v.slice(4);$('ctr-name').value='';$('ctr-val').value=k==='turn'?'2':k==='mag'?'0':'0';$('ctr-auto').checked=k==='mag';$('ctr-max').value='';$('ctr-when').value='oppEnd';sel.dataset.k=k;kindUI(k);return;}
-    var p=PRE[+v];$('ctr-name').value=p.n;$('ctr-val').value=String(p.v);sel.dataset.k=p.k;if(p.k==='mag'){$('ctr-auto').checked=!!p.auto;$('ctr-max').value=p.max?String(p.max):'';}if(p.k==='turn')$('ctr-when').value=p.when;kindUI(p.k);});
+  sel.addEventListener('change',function(){var v=sel.value;if(v.indexOf('new:')===0){var k=v.slice(4);$('ctr-name').value='';$('ctr-val').value=k==='turn'?'2':k==='mag'?'0':'0';$('ctr-auto').checked=k==='mag';$('ctr-odraw').checked=false;$('ctr-max').value='';$('ctr-when').value='oppEnd';sel.dataset.k=k;kindUI(k);return;}
+    var p=PRE[+v];$('ctr-name').value=p.n;$('ctr-val').value=String(p.v);sel.dataset.k=p.k;if(p.k==='mag'){$('ctr-auto').checked=!!p.auto;$('ctr-odraw').checked=!!p.oppDraw;$('ctr-max').value=p.max?String(p.max):'';}if(p.k==='turn')$('ctr-when').value=p.when;kindUI(p.k);});
   sel.dispatchEvent(new Event('change'));
   $('ctr-add').addEventListener('click',function(){var d=D();if(!d){toast('デュエル中に使えます');return;}var k=sel.dataset.k||'free',n=$('ctr-name').value.trim()||(k==='mag'?'魔力カウンター':k==='turn'?'ターンカウンター':'カウンター');
     var p=sel.value.indexOf('new:')===0?null:PRE[+sel.value];var pm=PRE.filter(function(x){return x.n===n;})[0];if(!p&&pm){addFrom(pm.n);$('ctr-name').value='';return;}
     var c={id:Date.now().toString(36),k:k,n:n.slice(0,30),v:Math.max(0,parseInt($('ctr-val').value,10)||0),own:$('ctr-own-op').checked?'op':'me'};
-    if(k==='mag'){c.auto=$('ctr-auto').checked;c.max=Math.max(0,parseInt($('ctr-max').value,10)||0);if(c.max&&c.v>c.max)c.v=c.max;}
+    if(k==='mag'){c.auto=$('ctr-auto').checked;c.max=Math.max(0,parseInt($('ctr-max').value,10)||0);if(c.max&&c.v>c.max)c.v=c.max;c.oppDraw=$('ctr-odraw').checked;if(p&&p.full)c.full=p.full;}
     if(k==='turn'){c.when=$('ctr-when').value;c.msg=(p&&p.n===c.n&&p.msg)||(c.n+' のカウンターが0になりました（効果を処理してください）');if(c.v<1)c.v=1;}
     if(d.ctrT==null)d.ctrT=d.T;list().push(c);focus=list().length-1;save();toast((IC[k]||'🔢')+' 「'+c.n+'」を追加しました');});
   /* デュエル開始：このデッキがカウンターを使うなら注意を出す */
