@@ -146,6 +146,7 @@ section{display:flex;flex-direction:column;gap:18px;background:var(--surface);bo
 .t-out{border-color:var(--ban)} .t-out .tier-h{background:var(--ban);color:var(--ban-fg)}
 .t-ban{border-color:var(--red)} .t-ban .tier-h{background:var(--red);color:#fff}
 .t-lim{border-color:var(--gold)} .t-lim .tier-h{background:var(--gold);color:#1d1b26}
+.t-semi{border-color:var(--info)} .t-semi .tier-h{background:var(--info);color:#fff}
 .cats{display:flex;flex-direction:column;padding:4px 14px 10px}
 .cat{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
 .cat:last-child{border-bottom:0}
@@ -457,12 +458,15 @@ section.fold.open > .sec-h{border-bottom:3px double var(--line);padding-bottom:1
 .pending{background:var(--gold-bg);border:2px dashed var(--gold);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px}
 .pending b{font-weight:900}
 
+.al-kind{font-family:var(--display);font-size:18px;margin-top:6px}
 .al-group{display:flex;flex-direction:column;gap:8px}
 .al-group h3{font-size:17px}
 .al-items{list-style:none;padding:0;gap:8px}
 .al-items li{display:flex;align-items:flex-start;gap:10px;justify-content:space-between;background:var(--surface2);border-radius:10px;padding:10px 12px}
 .al-items li > div{min-width:0;display:flex;flex-direction:column;gap:2px}
 .al-items .nm{font-weight:900;font-size:16px}
+.al-acts{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:none}
+.kind-sw{white-space:nowrap}
 .al-empty{color:var(--muted);font-size:14px;background:var(--surface2);border-radius:10px;padding:12px}
 .del{flex:none;background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:4px 10px;font:inherit;font-size:13px;cursor:pointer}
 .del:hover{color:var(--red);border-color:var(--red)}
@@ -834,6 +838,44 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .stepnav button small{font-size:11px;color:var(--muted)}
 .stepnav button b{font-family:var(--display);font-size:14px}
 @media (prefers-reduced-motion: reduce){.hit-flash{transition:none}}
+
+/* ===== 先攻・後攻の抽選（全画面の演出） ===== */
+.fx-first{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px 16px calc(24px + env(safe-area-inset-bottom,0px));overflow:hidden;color:#fff;text-align:center;
+  background:radial-gradient(circle at 50% 42%,#4a7fcc 0%,#2f4f8f 45%,#1b2440 100%);perspective:1100px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.fx-first[hidden]{display:none}
+.fx-dots{position:absolute;inset:-20%;background:radial-gradient(circle,rgba(255,255,255,.14) 2px,transparent 2.6px) 0 0/18px 18px;animation:fxdrift 8s linear infinite}
+@keyframes fxdrift{to{transform:translate(18px,18px)}}
+.fx-top{position:relative;font-family:var(--display);font-size:clamp(20px,6vw,28px);letter-spacing:.1em;background:var(--osiris);border:3px solid var(--edge);padding:4px 18px;box-shadow:4px 4px 0 var(--edge);transform:skewX(-10deg);animation:fxin .4s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes fxin{from{transform:skewX(-10deg) scale(.3);opacity:0}}
+.fx-stage{position:relative;width:min(62vw,240px);aspect-ratio:3/4;transform-style:preserve-3d}
+.fx-card{position:absolute;inset:0;transform-style:preserve-3d}
+.fx-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:5px solid var(--edge);border-radius:14px;box-shadow:8px 8px 0 var(--edge)}
+.fx-face span{font-size:clamp(48px,16vw,72px);line-height:1}
+.fx-face b{font-family:var(--display);font-size:clamp(46px,15vw,70px);letter-spacing:.06em;-webkit-text-stroke:3px var(--edge);paint-order:stroke fill}
+.fx-face.f1{background:radial-gradient(circle,rgba(255,255,255,.22) 2px,transparent 2.6px) 0 0/14px 14px,linear-gradient(160deg,#e57f83,#d65c60);color:#f6d77c}
+.fx-face.f0{transform:rotateY(180deg);background:radial-gradient(circle,rgba(255,255,255,.2) 2px,transparent 2.6px) 0 0/14px 14px,linear-gradient(160deg,#7aa6e6,#4a7fcc);color:#fff}
+.fx-res,.fx-sub,.fx-tap{position:relative;opacity:0}
+.fx-res{font-family:var(--display);font-size:clamp(30px,9vw,46px);color:#f6d77c;-webkit-text-stroke:2px var(--edge);paint-order:stroke fill;filter:drop-shadow(4px 4px 0 var(--edge))}
+.fx-sub{font-size:15px;line-height:1.7;color:#eef3fb;max-width:22em}
+.fx-tap{font-size:12px;color:rgba(255,255,255,.75)}
+.fx-first.reveal .fx-res{animation:fxpop .55s cubic-bezier(.2,1.8,.4,1) both}
+.fx-first.reveal .fx-sub{animation:fxup .4s .25s ease-out both}
+.fx-first.reveal .fx-tap{animation:fxup .4s .8s ease-out both}
+.fx-first.reveal .fx-stage{animation:fxshake .45s ease-out}
+.fx-first.is-second .fx-res{color:#fff}
+@keyframes fxpop{from{opacity:0;transform:scale(2.6)}to{opacity:1;transform:scale(1)}}
+@keyframes fxup{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes fxshake{0%,100%{transform:none}20%{transform:translate(-8px,4px) rotate(-2deg)}40%{transform:translate(7px,-5px) rotate(2deg)}60%{transform:translate(-5px,3px)}80%{transform:translate(3px,-2px)}}
+.fx-flash{position:absolute;inset:0;background:#fffbea;opacity:0;pointer-events:none}
+.fx-first.reveal .fx-flash{animation:fxflash .5s ease-out}
+@keyframes fxflash{0%{opacity:.85}100%{opacity:0}}
+.fx-stars{position:absolute;left:50%;top:44%;width:0;height:0;pointer-events:none}
+.fx-stars i{position:absolute;left:0;top:0;font-style:normal;font-size:var(--sz,22px);opacity:0}
+.fx-first.reveal .fx-stars i{animation:fxstar 1.1s cubic-bezier(.15,.7,.3,1) forwards;animation-delay:var(--d,0s)}
+@keyframes fxstar{0%{opacity:1;transform:translate(-50%,-50%) scale(.4)}70%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1.1) rotate(var(--r))}}
+.fx-first.spin .fx-stage::after{content:"";position:absolute;inset:-18%;border-radius:50%;background:radial-gradient(circle,rgba(246,215,124,.35),transparent 65%);animation:fxglow .5s ease-in-out infinite alternate;z-index:-1}
+@keyframes fxglow{to{transform:scale(1.15);opacity:.6}}
+@media (prefers-reduced-motion: reduce){.fx-dots,.fx-first.spin .fx-stage::after{animation:none}.fx-first.reveal .fx-stage{animation:none}.fx-first.reveal .fx-stars i{animation:none}}
 </style>
 </head>
 <body>
@@ -939,7 +981,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     <b>⚡ この環境を3行で</b>
     <ol>
       <li><span>🃏</span><span>使えるのは<strong>2008年3月までに初登場したカード</strong>（GX時代）</span></li>
-      <li><span>🎯</span><span>どのデッキも<strong>3ターンほどでエースが出る</strong>強さにそろえる</span></li>
+      <li><span>🎯</span><span>どのデッキも<strong>自分の3ターン目ごろにエースが出る</strong>強さにそろえる</span></li>
       <li><span>📋</span><span>強すぎ・弱すぎは<strong>対戦後に話し合って</strong>デッキごとに規制し、ボードに記録</span></li>
     </ol>
   </div>
@@ -958,7 +1000,8 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     <a class="tile" href="#results" data-go="results"><span class="i">📊</span><b>戦績</b><small>勝率・グラフ・相手別</small></a>
     <a class="tile" href="#owners" data-go="owners"><span class="i">👥</span><b>テーマ一覧</b><small>だれが何を使ってる？</small></a>
     <a class="tile" href="#ach" data-go="ach"><span class="i">🏆</span><b>実績</b><small>解除した実績</small></a>
-    <a class="tile" href="#allow" data-go="allow"><span class="i">🟢</span><b>許可リスト</b><small>使える汎用モンスター</small></a>
+    <a class="tile" href="#mlist" data-go="mlist"><span class="i">🟣</span><b>モンスター規制</b><small>GX以前の汎用モンスター</small></a>
+    <a class="tile" href="#allow" data-go="allow"><span class="i">🟢</span><b>許可リスト</b><small>使えるGX以降の汎用カード</small></a>
     <a class="tile rules" href="#why" data-go="why"><span class="i">📜</span><b>ルールを読む</b><small>大義から順番に</small></a>
     <a class="tile" href="#faq" data-go="faq"><span class="i">❓</span><b>よくある質問</b><small>メンバーの質問と答え</small></a>
     <a class="tile" href="#account" data-go="account"><span class="i">⚙️</span><b>設定</b><small>プロフィール・BGM</small></a>
@@ -1186,25 +1229,33 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     <div class="pool-row yes"><b>✅ 使える</b><span><span class="hlw"><span class="hl">2008年3月までに初登場したカード</span></span></span><span class="note">後から再録されたカードも、初登場が2008年3月までならOK。</span></div>
     <div class="pool-row no"><b>⛔ 使えない</b><span>2008年4月以降に初登場したカード</span><span class="note">GX以降に登場したテーマも、GX以前のテーマに後から追加されたモンスターも、すべて使用不可。</span></div>
     <div class="pool-row ex"><b>🔑 例外（新しくても使える）</b>
-      <span>① <strong>汎用魔法・罠</strong><br><span class="note">→ 汎用規制リストに従う</span></span>
-      <span>② <strong>汎用モンスター</strong><br><span class="note">→ 許可リストのカードのみ。弱いデッキが1枚まで</span></span>
+      <span>① <strong>汎用魔法・罠</strong><br><span class="note">→ <a href="#allow">許可リスト</a>にあるカードだけ。どのデッキも使える（枚数は<a href="#list">汎用規制リスト</a>に従う）</span></span>
+      <span>② <strong>汎用モンスター</strong><br><span class="note">→ <a href="#allow">許可リスト</a>にあるカードだけ。弱いデッキが1枚まで</span></span>
       <span>③ <strong>弱いデッキの救済</strong><br><span class="note">→ 専用の魔法・罠強化カードを1種類だけ（最大2枚）</span></span>
     </div>
   </div>
   <div class="principles stack">
     <b>🔎 初登場日の調べ方</b>
     <span>遊戯王OCGの<strong>公式カードデータベース</strong>でカード名を検索し、収録パックのうち<strong>いちばん古い発売日</strong>を確認してください。</span>
+    <span class="note">初登場は<strong>日本で発売された遊戯王OCG</strong>で数えます。海外版で先に出たカードも、日本で初めて発売された日で判断します。雑誌の付録・プロモーションカードも同じく、日本で最初に手に入るようになった日で数えます。</span>
   </div>
   <p>そのため<strong>シンクロ・エクシーズ・リンク・ペンデュラム</strong>のモンスターは存在せず、<span class="red">使用できません。</span></p>
   <div class="principles stack">
     <b>📖「汎用」と「専用」の見分け方</b>
     <span><span class="hlw"><span class="hl">テーマ名を含む</span></span>カード、または<span class="hlw"><span class="hl">テーマを参照する</span></span>カードは「専用」。</span>
     <span>それ以外は「汎用」。</span>
+    <span class="note">・<strong>種族・属性・カードの種類だけ</strong>を参照するカード（例：「ドラゴン族」「炎属性」「融合モンスター」）は<strong>「汎用」</strong>。<br>・<strong>特定のカード名</strong>が書かれているカード（例：「青眼の白龍」を指定するカード）は、そのカードのテーマの<strong>「専用」</strong>。</span>
   </div>
   <div class="principles stack">
-    <b>🟢 GX以降の汎用モンスターは「許可リスト方式」</b>
-    <span><span class="red">原則使用不可。</span></span>
-    <span><a href="#allow">許可リスト</a>に載っているカードだけ、<strong>弱いデッキが強化手順1で1枚</strong>投入できます。</span>
+    <b>🟢 GX以降の汎用カードは「許可リスト方式」</b>
+    <span>2008年4月以降の汎用カードは<span class="red">原則使用不可。</span><a href="#allow">許可リスト</a>に載っているカードだけ使えます。</span>
+    <span>・<strong>汎用魔法・罠</strong>：許可されたものは<strong>どのデッキも</strong>使えます。枚数は汎用規制リストに従います（載っていなければ3枚まで）。</span>
+    <span>・<strong>汎用モンスター</strong>：許可されたものを、<strong>弱いデッキが強化手順1で1枚</strong>投入できます。</span>
+    <span class="note">汎用規制リストに「後」マークつきで載っているカードは、許可済みとしてリストの枚数まで使えます。</span>
+  </div>
+  <div class="principles stack">
+    <b>🟣 GX以前の汎用モンスターにも規制があります</b>
+    <span>カオス・ソルジャー －開闢の使者－などの強い汎用モンスターは、<a href="#mlist">汎用モンスター規制リスト</a>に従います。</span>
   </div>
   <p class="note">🌏 このルールでは組めないデッキを使いたいときは、<a href="#ryu">留学生デッキ</a>として遊べます。</p>
 </section>
@@ -1239,6 +1290,14 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   </div>
 
   <div class="block">
+    <h3>🔢 基本の数字</h3>
+    <p>初期ライフ<br><span class="big">8000</span></p>
+    <p>最初の手札<br><span class="big">5枚</span></p>
+    <p>手札の上限<br><span class="big">6枚</span></p>
+    <p class="note">エンドフェイズに7枚以上あれば、6枚になるように捨てます。ここに書いていない基本ルールは、<strong>現行のOCG公式ルール</strong>に従います。</p>
+  </div>
+
+  <div class="block">
     <h3>🗂️ デッキ枚数</h3>
     <p>メインデッキ<br><span class="big">40〜60枚</span></p>
     <p>エクストラデッキ（融合デッキ）<br><span class="big">上限なし</span></p>
@@ -1246,7 +1305,8 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 
   <div class="block">
     <h3>✊ 先攻・後攻</h3>
-    <p>ジャンケンで決める。</p>
+    <p><strong>必ず</strong>サイトのデュエル画面の<strong>抽選</strong>で決める。</p>
+    <p class="note">リンク対戦なら、どちらか1人が抽選すれば2人の画面に同じ結果が出ます。</p>
     <p class="red">先攻1ターン目は<br>ドローなし・攻撃なし。</p>
   </div>
 
@@ -1283,7 +1343,8 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
       <li><b>規制</b><span>汎用規制リスト＋デッキごとの規制</span></li>
       <li><b>バランス調整</b><span>強いデッキの弱化・弱いデッキの強化</span></li>
       <li><b>サイドデッキ</b><span>相手対策ではなく、自分のデッキの強さ調整用</span></li>
-      <li><b>新規カード</b><span>汎用魔法・罠、許可リストの汎用モンスター、弱いデッキの救済カードのみ</span></li>
+      <li><b>先攻・後攻</b><span>必ずサイトの抽選で決める</span></li>
+      <li><b>新規カード</b><span>許可リストの汎用魔法・罠と汎用モンスター、弱いデッキの救済カードのみ</span></li>
       <li><b>規制の共有</b><span>デッキごとの規制を規制報告ボードで管理する</span></li>
     </ul></div>
   </div>
@@ -1335,7 +1396,12 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
       <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div class="t">6</div><div class="t">7</div><div>8</div><div>9</div><div>10</div>
     </div>
     <div class="scale-l"><span>最下位</span><span>環境トップ</span></div>
-    <p><strong>理由：</strong>どのデッキも<span class="hlw"><span class="hl">3ターンほどかけてエース級モンスターが出せる</span></span>強さが、最も妥当だと考えたため。</p>
+    <p><strong>理由：</strong>どのデッキも<span class="hlw"><span class="hl">自分の3ターン目ごろにエース級モンスターが出せる</span></span>強さが、最も妥当だと考えたため。</p>
+    <div class="principles stack">
+      <b>🔢 ターンの数え方</b>
+      <span>このルールのターン数は、すべて<strong>自分のターン</strong>で数えます。</span>
+      <span class="note">例：先攻なら、試合全体の1・3・5ターン目が「自分の1・2・3ターン目」。後攻なら2・4・6ターン目です。</span>
+    </div>
     <p class="note">※数値化が難しいため、感覚的な基準とします。</p>
   </div>
 
@@ -1385,7 +1451,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     <h3>🧊 弱い判定の例</h3>
     <p class="note">当てはまれば、強化手順の対象</p>
     <ul class="ex weak">
-      <li><strong>エースが遅すぎる</strong><span>4ターン以上たっても、エース級モンスターがほぼ毎回出せない。</span></li>
+      <li><strong>エースが遅すぎる</strong><span>自分の4ターン目になっても、エース級モンスターがほぼ毎回出せない。</span></li>
       <li><strong>1ターンの展開が少なすぎる</strong><span>1ターンに1体ずつしか出せず、毎ターン手札が減る一方になる。</span></li>
       <li><strong>動けるかが運しだい</strong><span>初動になるカードが少なく、サーチ手段もないため、手札が揃わないと何もできない。</span></li>
       <li><strong>一度崩されると立て直せない</strong><span>エースを1回除去されると、もう勝ち筋がなくなる。</span></li>
@@ -1398,7 +1464,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
       <b>⚠️ 「強い」と「弱い」を両方持つデッキは、勝率が50%でも調整の対象です</b>
       <span>例：エースを1枚で一発で出せるが、そのカードを引かないと何もできない。引けば圧勝、引かなければ完敗で、平均すると勝率が50%になるデッキ。</span>
       <span>これは「バランスが取れている」のではなく、<span class="red">強すぎる試合と弱すぎる試合が混ざっているだけ</span>です。どちらの試合も、ゆっくり盛り上がるデュエルにはなりません。</span>
-      <span class="hlw"><span class="big hl">全員、自分のエース級モンスターが3ターンほどで安定して出せる構築を目指してください。</span></span>
+      <span class="hlw"><span class="big hl">全員、自分のエース級モンスターが自分の3ターン目ごろに安定して出せる構築を目指してください。</span></span>
       <span class="note">こうしたデッキは、一発で出せるカードを弱化手順で規制しつつ、引かなくても動けるようにデッキを組み直してください。</span>
     </div>
   </div>
@@ -1439,7 +1505,12 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
       <li><span class="n">3</span><div><strong>サイドデッキ</strong>と入れ替えて、弱化・強化する</div></li>
       <li><span class="n">4</span><div>決まった規制を<strong>自分で<a href="#board">📋 規制報告ボード</a>に登録する</strong><span class="note">ログインが必要です</span></div></li>
     </ol>
-    <p class="note">対戦形式（1本勝負・3本勝負）は当人同士で決めてください。</p>
+    <p class="note">対戦形式（1本勝負・3本勝負）は当人同士で決めてください。3本勝負の途中でも、相手を見てサイドデッキと入れ替えることはできません。</p>
+    <div class="principles stack">
+      <b>🧑‍⚖️ 意見がまとまらないとき</b>
+      <span>2人で話しても決まらないときは、<strong>ルール管理者に相談</strong>してください。最後はルール管理者が決めます。</span>
+      <span class="note">※留学生デッキの調整は本人におまかせなので、この対象外です。</span>
+    </div>
   </div>
 
   <div class="block">
@@ -1454,7 +1525,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   <div class="block">
     <h3>📉 強いデッキの弱化手順</h3>
     <ol class="steps down">
-      <li><span class="n">0</span><div><span>誘発効果でサーチ・特殊召喚する<strong>汎用モンスター</strong></span><span class="note">キラー・トマト、黒き森のウィッチ、クリッターなど</span><span class="tag lim">制限</span></div></li>
+      <li><span class="n">0</span><div><span>誘発効果でサーチ・特殊召喚する<strong>汎用モンスター</strong></span><span class="note">キラー・トマト、黒き森のウィッチ、巨大ネズミなど（<a href="#mlist">汎用モンスター規制リスト</a>ですでに制限以上のカードは除く）</span><span class="tag lim">制限</span></div></li>
       <li><span class="n">1</span><div><span>起点となる<strong>専用モンスター</strong></span><span class="tag semi">準制限</span></div></li>
       <li><span class="n">2</span><div><span><strong>専用サーチカード</strong></span><span class="tag semi">準制限</span></div></li>
       <li><span class="n">3</span><div><span><strong>専用ドローソース</strong></span><span class="tag semi">準制限</span></div></li>
@@ -1467,6 +1538,11 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
       <li>🎲 必要なカードが<strong>運よく手札に揃った</strong>ケースは対象外。</li>
       <li>⚙️ サーチ・ドロー・墓地肥やしなど、<span class="hlw"><span class="hl">カード効果で展開する部分</span></span>を弱化して、進行スピードを調整する。</li>
     </ul></div>
+    <div class="principles stack">
+      <b>🚪 手順6まで進めても、まだ強いとき</b>
+      <span>対戦した<strong>2人で自由に方法を決めて</strong>弱化してかまいません（例：エースや汎用カードの枚数を減らす）。</span>
+      <span class="note">決めた内容は、規制報告ボードの理由欄に書いてください。汎用規制リストのルールは守ります。</span>
+    </div>
   </div>
 
   <div class="block">
@@ -1483,6 +1559,22 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
       <li>⛔ 完全使用不可のカードは投入しない。</li>
       <li>1️⃣ 新規の専用魔法・罠強化カードは<strong>1種類まで</strong>。</li>
     </ul></div>
+    <div class="principles stack">
+      <b>🚪 手順4まで進めても、まだ弱いとき</b>
+      <span>使える強化カードがない場合も含め、対戦した<strong>2人で自由に方法を決めて</strong>強化してかまいません。</span>
+      <span class="note">決めた内容は、規制報告ボードの理由欄に書いてください。汎用規制リストのルールは守ります（制限は緩めない・完全使用不可は使わない）。</span>
+    </div>
+  </div>
+
+  <div class="block">
+    <h3>↩️ 規制のゆるめ方（緩和）</h3>
+    <p>弱化しすぎて、6〜7より弱くなったと<strong>対戦した2人が感じたとき</strong>は、デッキごとの規制をゆるめられます。</p>
+    <ol class="steps seq">
+      <li><span class="n">1</span><div><strong>最後にかけた規制から、1段ずつ戻す</strong><span class="note">例：制限 → 準制限 → 規制なし。一度に全部は戻さない</span></div></li>
+      <li><span class="n">2</span><div><strong>何戦か見て</strong>、ラインに戻ったか確かめる</div></li>
+      <li><span class="n">3</span><div>規制報告ボードに<strong>「緩和」</strong>として登録する</div></li>
+    </ol>
+    <p class="note">ゆるめられるのはデッキごとの規制だけです。汎用規制リスト・汎用モンスター規制リストのカードは緩めません。</p>
   </div>
 </section>
 
@@ -1562,8 +1654,9 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     <p>そんなデッキも、この環境に<span class="hlw"><span class="hl">遊びに来て大歓迎</span></span>です。<br>このルールやカード規制には沿っていなくても、<strong>環境のトップにならないように調整したデッキ</strong>を「<strong>🌏 留学生デッキ</strong>」と呼んで、アカデミアに迎えます。<br>このルールに沿ったデッキは「<strong>🏫 在校生デッキ</strong>」と呼びます。</p>
     <ol class="steps seq">
       <li><span class="n">1</span><div><strong>対戦前に「留学生デッキです」とひとこと</strong><span class="note">相手が知っていれば、それで十分です</span></div></li>
-      <li><span class="n">2</span><div><strong>強さの目標は、みんなと同じ6〜7</strong><span class="note">強すぎたかな？と思ったら、カードの入れ替えなどで一緒に調整しましょう</span></div></li>
+      <li><span class="n">2</span><div><strong>強さの目標は、みんなと同じ6〜7</strong><span class="note">調整は本人におまかせ。まわりは口出しせず、アドバイスは本人から求められたときだけにしましょう。<br>自分で調整した内容（例：使いたいカード1枚だけ入れて、代わりにこれを抜いた）を残しておきたいときは、<a href="#board">📋 規制報告ボード</a>に自由に記録できます（記録は任意です）。</span></div></li>
       <li><span class="n">3</span><div><strong>プロフィールでテーマを「🌏 留学生」として登録</strong><span class="note">戦績・テーマ一覧・規制報告ボード・リンク対戦など、サイトの機能はすべて同じように使えます</span></div></li>
+      <li><span class="n">4</span><div><strong>対戦するかどうかは、相手が選べる</strong><span class="note">留学生デッキとの対戦は、相手が断ってもOK（理由はいりません）。口出しはしない代わりに、「やる・やらない」は自由です</span></div></li>
     </ol>
     <p class="ryu-heart">💬 在校生デッキと留学生デッキに、上も下もありません。どちらも「自分のやりたいことをやりに来た仲間」です。違う入口から来たデッキとのデュエルも、この環境の楽しみのひとつとして歓迎してください。</p>
   </div>
@@ -1572,21 +1665,28 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 <!-- 規制リスト -->
 <section class="fold" id="list">
   <div class="sec-h"><span>LIMITED LIST</span><h2>🚨 汎用魔法・罠 規制リスト</h2><p class="note">全デッキ共通</p></div>
-  <p><strong>リストにない汎用魔法・罠は無制限</strong>です。</p>
+  <p><strong>リストにない汎用魔法・罠</strong>は、GX以前（2008年3月まで）のカードなら<strong>無制限</strong>です。GX以降のカードは、<a href="#allow">許可リスト</a>にあるものだけ使えます。</p>
+  <p class="note">GX時代の公式リスト（2008年3月1日）で禁止だったカードは「完全使用不可」、制限・準制限だったカードは「制限」として載せています（一部はこの環境に合わせて変えています）。</p>
   <div class="legend"><span class="card sp">魔法</span><span class="card tr">罠</span><span><span class="after">後</span> ＝GX以降のカード</span></div>
 
   <div class="tier t-out">
-    <div class="tier-h"><h3>⛔ 完全使用不可（11枚）</h3><p>どのデッキも採用不可</p></div>
+    <div class="tier-h"><h3>⛔ 完全使用不可（26枚）</h3><p>どのデッキも採用不可</p></div>
     <div class="cats">
       <div class="cat"><b>全体除去</b><div class="cards"><span class="card sp">サンダー・ボルト</span></div></div>
       <div class="cat"><b>魔法・罠除去</b><div class="cards"><span class="card sp">ツインツイスター <span class="after">後</span></span><span class="card sp">コズミック・サイクロン <span class="after">後</span></span></div></div>
       <div class="cat"><b>カウンター罠</b><div class="cards"><span class="card tr">神の通告 <span class="after">後</span></span></div></div>
-      <div class="cat"><b>ドロー</b><div class="cards"><span class="card sp">天使の施し</span></div></div>
-      <div class="cat"><b>召喚補助</b><div class="cards"><span class="card tr">血の代償</span></div></div>
+      <div class="cat"><b>ドロー</b><div class="cards"><span class="card sp">天使の施し</span><span class="card sp">悪夢の蜃気楼</span><span class="card tr">第六感</span></div></div>
+      <div class="cat"><b>召喚補助</b><div class="cards"><span class="card tr">血の代償</span><span class="card sp">突然変異</span><span class="card sp">遺言状</span></div></div>
       <div class="cat"><b>コントロール奪取</b><div class="cards"><span class="card sp">心変わり</span><span class="card sp">強奪</span></div></div>
       <div class="cat"><b>蘇生・帰還</b><div class="cards"><span class="card sp">次元融合</span></div></div>
       <div class="cat"><b>効果無効</b><div class="cards"><span class="card sp">墓穴の指名者 <span class="after">後</span></span><span class="card sp">抹殺の指名者 <span class="after">後</span></span></div></div>
-    </div>
+    
+      <div class="cat"><b>単体除去</b><div class="cards"><span class="card tr">破壊輪</span></div></div>
+      <div class="cat"><b>サーチ</b><div class="cards"><span class="card sp">苦渋の選択</span></div></div>
+      <div class="cat"><b>手札・デッキ破壊</b><div class="cards"><span class="card sp">押収</span><span class="card sp">強引な番兵</span><span class="card sp">いたずら好きな双子悪魔</span></div></div>
+      <div class="cat"><b>墓地操作</b><div class="cards"><span class="card tr">現世と冥界の逆転</span></div></div>
+      <div class="cat"><b>ロック</b><div class="cards"><span class="card tr">王宮の勅命</span><span class="card tr">刻の封印</span></div></div>
+      <div class="cat"><b>その他</b><div class="cards"><span class="card tr">王家の神殿</span><span class="card sp">蝶の短剣－エルマ</span><span class="card sp">ラストバトル！</span></div></div></div>
   </div>
 
   <div class="tier t-ban">
@@ -1597,28 +1697,35 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   </div>
 
   <div class="tier t-lim">
-    <div class="tier-h"><h3>☝️ 制限（1枚まで・21枚）</h3><p>何があっても緩めない</p></div>
+    <div class="tier-h"><h3>☝️ 制限（1枚まで・48枚）</h3><p>何があっても緩めない</p></div>
     <div class="cats">
       <div class="cat"><b>全体除去</b><div class="cards"><span class="card sp">ブラック・ホール</span><span class="card sp">ライトニング・ボルテックス</span><span class="card tr">激流葬</span><span class="card tr">聖なるバリア －ミラーフォース－</span></div></div>
-      <div class="cat"><b>魔法・罠除去</b><div class="cards"><span class="card sp">大嵐</span><span class="card sp">ハーピィの羽根帚</span><span class="card tr">ナイト・ショット <span class="after">後</span></span></div></div>
+      <div class="cat"><b>魔法・罠除去</b><div class="cards"><span class="card sp">大嵐</span><span class="card sp">ハーピィの羽根帚</span><span class="card tr">ナイト・ショット <span class="after">後</span></span><span class="card sp">サイクロン</span><span class="card sp">ハリケーン</span></div></div>
       <div class="cat"><b>カウンター罠</b><div class="cards"><span class="card tr">神の宣告</span><span class="card tr">神の警告 <span class="after">後</span></span></div></div>
-      <div class="cat"><b>ドロー</b><div class="cards"><span class="card sp">強欲で謙虚な壺 <span class="after">後</span></span></div></div>
+      <div class="cat"><b>ドロー</b><div class="cards"><span class="card sp">強欲で謙虚な壺 <span class="after">後</span></span><span class="card sp">手札抹殺</span></div></div>
       <div class="cat"><b>サーチ</b><div class="cards"><span class="card sp">増援</span><span class="card sp">封印の黄金櫃</span></div></div>
       <div class="cat"><b>蘇生</b><div class="cards"><span class="card sp">死者蘇生</span><span class="card sp">早すぎた埋葬</span><span class="card tr">リビングデッドの呼び声</span></div></div>
-      <div class="cat"><b>召喚補助</b><div class="cards"><span class="card sp">超融合 <span class="after">後</span></span><span class="card sp">未来融合－フューチャー・フュージョン</span></div></div>
+      <div class="cat"><b>召喚補助</b><div class="cards"><span class="card sp">超融合 <span class="after">後</span></span><span class="card sp">未来融合－フューチャー・フュージョン</span><span class="card sp">高等儀式術</span><span class="card sp">オーバーロード・フュージョン</span></div></div>
       <div class="cat"><b>コントロール奪取</b><div class="cards"><span class="card sp">洗脳－ブレインコントロール</span></div></div>
-      <div class="cat"><b>攻撃の防御</b><div class="cards"><span class="card sp">光の護封剣</span></div></div>
-      <div class="cat"><b>ロック</b><div class="cards"><span class="card tr">王宮のお触れ</span><span class="card tr">スキルドレイン</span></div></div>
-    </div>
+      <div class="cat"><b>攻撃の防御</b><div class="cards"><span class="card sp">光の護封剣</span><span class="card sp">スケープ・ゴート</span><span class="card tr">魔法の筒</span><span class="card tr">光の護封壁</span></div></div>
+      <div class="cat"><b>ロック</b><div class="cards"><span class="card tr">王宮のお触れ</span><span class="card tr">スキルドレイン</span><span class="card sp">レベル制限Ｂ地区</span><span class="card tr">グラヴィティ・バインド－超重力の網－</span><span class="card tr">おジャマトリオ</span></div></div>
+    
+      <div class="cat"><b>単体除去</b><div class="cards"><span class="card sp">地砕き</span><span class="card sp">地割れ</span><span class="card sp">抹殺の使徒</span></div></div>
+      <div class="cat"><b>墓地操作</b><div class="cards"><span class="card sp">おろかな埋葬</span><span class="card sp">魔法石の採掘</span><span class="card tr">転生の予言</span></div></div>
+      <div class="cat"><b>妨害</b><div class="cards"><span class="card sp">月の書</span></div></div>
+      <div class="cat"><b>強化</b><div class="cards"><span class="card sp">巨大化</span><span class="card sp">団結の力</span><span class="card sp">魔導師の力</span><span class="card sp">リミッター解除</span></div></div>
+      <div class="cat"><b>手札・デッキ破壊</b><div class="cards"><span class="card tr">死のデッキ破壊ウイルス</span><span class="card tr">ダスト・シュート</span><span class="card tr">マインドクラッシュ</span></div></div>
+      <div class="cat"><b>バーン</b><div class="cards"><span class="card tr">連鎖爆撃</span><span class="card tr">停戦協定</span></div></div></div>
   </div>
   <p class="ll-note" id="ll-note" hidden>🆕 ＝あとから追加・変更されたカード</p>
   <form class="ll-form" id="ll-form" hidden>
     <b>✏️ 規制リストに追加・変更（ルール管理者のみ）</b>
+    <p class="note">種類を「モンスター」にすると、🟣 汎用モンスター規制リストに入ります。</p>
     <label for="ll-name">カード名<input type="text" id="ll-name" maxlength="60" placeholder="例：サイクロン" autocomplete="off"></label>
     <p class="note" id="ll-hint" role="status"></p>
     <div class="ll-row">
-      <label for="ll-level">規制<select id="ll-level"><option value="lim">☝️ 制限（1枚まで）</option><option value="ban">❌ 禁止</option><option value="out">⛔ 完全使用不可</option><option value="free">🔓 リストから外す（無制限に）</option></select></label>
-      <label for="ll-type">種類<select id="ll-type"><option value="sp">魔法</option><option value="tr">罠</option></select></label>
+      <label for="ll-level">規制<select id="ll-level"><option value="lim">☝️ 制限（1枚まで）</option><option value="ban">❌ 禁止</option><option value="out">⛔ 完全使用不可</option><option value="semi">✌️ 準制限（2枚まで・モンスターのみ）</option><option value="free">🔓 リストから外す（無制限に）</option></select></label>
+      <label for="ll-type">種類<select id="ll-type"><option value="sp">魔法</option><option value="tr">罠</option><option value="mo">モンスター（汎用モンスター規制リストへ）</option></select></label>
     </div>
     <label for="ll-cat">分類<select id="ll-cat"></select></label>
     <label for="ll-newcat" id="ll-newcat-wrap" hidden>新しい分類の名前<input type="text" id="ll-newcat" maxlength="20" placeholder="例：手札破壊"></label>
@@ -1632,14 +1739,61 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 </section>
 
 <!-- 許可リスト -->
+<!-- 汎用モンスター規制リスト -->
+<section class="fold" id="mlist">
+  <div class="sec-h"><span>MONSTER LIST</span><h2>🟣 汎用モンスター 規制リスト</h2><p class="note">GX以前（2008年3月まで）の汎用モンスター・全デッキ共通</p></div>
+  <p><strong>リストにないGX以前の汎用モンスターは無制限</strong>です。GX以降の汎用モンスターは<a href="#allow">許可リスト</a>を見てください。</p>
+  <p class="note">GX時代の公式リスト（2008年3月1日）のうち、汎用モンスターを採用しています（この環境に合わせて、開闢・カオス・ソーサラー・ブレイカー・聖なる魔術師は禁止から制限に、黒き森のウィッチは準制限にしています）。E・HEROやエクゾディアなど、テーマのカードは<a href="#tune">デッキごとの規制</a>で扱います。</p>
+  <div class="legend"><span class="card mo">モンスター</span><span class="note">カードを押すと効果の要約が見られます</span></div>
+  <div class="tier t-out">
+    <div class="tier-h"><h3>⛔ 完全使用不可（12枚）</h3><p>どのデッキも採用不可（どうしても使いたいときは<a href="#ryu" style="color:inherit">🌏 留学生デッキ</a>で）</p></div>
+    <div class="cats">
+      <div class="cat"><b>切り札</b><div class="cards"><span class="card mo">混沌帝龍 －終焉の使者－</span><span class="card mo">ヴィクトリー・ドラゴン</span></div></div>
+      <div class="cat"><b>除去・妨害</b><div class="cards"><span class="card mo">同族感染ウィルス</span><span class="card mo">サウザンド・アイズ・サクリファイス</span></div></div>
+      <div class="cat"><b>サーチ・展開</b><div class="cards"><span class="card mo">魔導サイエンティスト</span><span class="card mo">デビル・フランケン</span><span class="card mo">キラー・スネーク</span><span class="card mo">処刑人-マキュラ</span></div></div>
+      <div class="cat"><b>リバース・ドロー</b><div class="cards"><span class="card mo">サイバーポッド</span><span class="card mo">ファイバーポッド</span></div></div>
+      <div class="cat"><b>ロック</b><div class="cards"><span class="card mo">八汰烏</span><span class="card mo">月読命</span></div></div>
+    </div>
+  </div>
+  <div class="tier t-lim">
+    <div class="tier-h"><h3>☝️ 制限（1枚まで・19枚）</h3><p>何があっても緩めない</p></div>
+    <div class="cats">
+      <div class="cat"><b>切り札</b><div class="cards"><span class="card mo">カオス・ソルジャー －開闢の使者－</span><span class="card mo">カオス・ソーサラー</span></div></div>
+      <div class="cat"><b>サーチ・展開</b><div class="cards"><span class="card mo">クリッター</span><span class="card mo">ダンディライオン</span><span class="card mo">黄泉ガエル</span><span class="card mo">冥府の使者ゴーズ</span><span class="card mo">森の番人グリーン・バブーン</span><span class="card mo">ドル・ドラ</span></div></div>
+      <div class="cat"><b>除去・妨害</b><div class="cards"><span class="card mo">魔導戦士 ブレイカー</span><span class="card mo">異次元の女戦士</span><span class="card mo">深淵の暗殺者</span><span class="card mo">風帝ライザー</span><span class="card mo">スナイプストーカー</span><span class="card mo">魂を削る死霊</span></div></div>
+      <div class="cat"><b>ドロー・回収</b><div class="cards"><span class="card mo">聖なる魔術師</span><span class="card mo">カードガンナー</span><span class="card mo">メタモルポット</span><span class="card mo">混沌の黒魔術師</span></div></div>
+      <div class="cat"><b>壁</b><div class="cards"><span class="card mo">マシュマロン</span></div></div>
+    </div>
+  </div>
+  <div class="tier t-semi">
+    <div class="tier-h"><h3>✌️ 準制限（2枚まで・4枚）</h3><p>何があっても緩めない</p></div>
+    <div class="cats">
+      <div class="cat"><b>サーチ・展開</b><div class="cards"><span class="card mo">黒き森のウィッチ</span></div></div>
+      <div class="cat"><b>展開・妨害</b><div class="cards"><span class="card mo">暗黒のマンティコア</span><span class="card mo">ネクロフェイス</span><span class="card mo">光と闇の竜</span></div></div>
+    </div>
+  </div>
+</section>
+
 <section class="fold" id="allow">
-  <div class="sec-h"><span>ALLOW LIST</span><h2>🟢 汎用モンスター 許可リスト</h2><p class="note">GX以降に登場した汎用モンスターが対象</p></div>
+  <div class="sec-h"><span>ALLOW LIST</span><h2>🟢 汎用カード 許可リスト</h2><p class="note">GX以降（2008年4月〜）に登場した汎用カードが対象</p></div>
   <div class="principles stack">
-    <span>⛔ GX以降の汎用モンスターは<span class="red">原則使用不可。</span></span>
-    <span>✅ このリストの<strong>「許可」</strong>にあるカードだけ、<span class="hlw"><span class="hl">弱いデッキが強化手順1で1枚</span></span>投入できます。</span>
+    <span>⛔ GX以降の汎用カードは<span class="red">原則使用不可。</span></span>
+    <span>✅ <strong>汎用魔法・罠</strong>：「許可」にあるカードは<span class="hlw"><span class="hl">どのデッキも使えます</span></span>（枚数は<a href="#list">汎用規制リスト</a>に従う。載っていなければ3枚まで）。</span>
+    <span>✅ <strong>汎用モンスター</strong>：「許可」にあるカードだけ、<span class="hlw"><span class="hl">弱いデッキが強化手順1で1枚</span></span>投入できます。</span>
+    <span class="note">汎用規制リストに「後」マークつきで載っている魔法・罠は、許可済みとしてリストの枚数まで使えます。</span>
     <span>📏 追加の目安：<strong>効果が1つだけ</strong>で、かつ<strong>サーチ・ドローや相手の展開を止めない</strong>カード</span><span class="note">効果が1つでも、灰流うららのようにこの環境の土台（増援・強欲な壺など）を止めるカードは不許可にします。</span>
   </div>
 
+  <h3 class="al-kind">🪄 汎用魔法・罠</h3>
+  <div class="al-group">
+    <h3>✅ 許可</h3>
+    <ul class="al-items" id="list-ok-st"></ul>
+  </div>
+  <div class="al-group">
+    <h3>⛔ 不許可（検討済み）</h3>
+    <ul class="al-items" id="list-ng-st"></ul>
+  </div>
+  <h3 class="al-kind">👾 汎用モンスター</h3>
   <div class="al-group">
     <h3>✅ 許可</h3>
     <ul class="al-items" id="list-ok"></ul>
@@ -1652,6 +1806,10 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   <form class="add" id="add-form" hidden>
     <b>➕ カードを追加</b>
     <label for="f-name">カード名<input type="text" id="f-name" maxlength="60" required placeholder="例：マジシャンズ・ヴァルキュリア"></label>
+    <div class="seg" role="radiogroup" aria-label="種類">
+      <label><input type="radio" name="kd" id="f-mo" value="mo" checked> 👾 モンスター</label>
+      <label><input type="radio" name="kd" id="f-st" value="st"> 🪄 魔法・罠</label>
+    </div>
     <div class="seg" role="radiogroup" aria-label="判定">
       <label><input type="radio" name="st" id="f-ok" value="ok" checked> ✅ 許可</label>
       <label><input type="radio" name="st" id="f-ng" value="ng"> ⛔ 不許可</label>
@@ -1756,6 +1914,17 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 </div>
 
 <nav class="tabbar" aria-label="メインメニュー"><div class="subnav rt-off" id="subnav"><button type="button" class="hs-b" id="hs-l" aria-label="左へ" hidden>‹</button><nav class="toc" id="toc" aria-label="この画面のメニュー"></nav><button type="button" class="hs-b" id="hs-r" aria-label="右へ" hidden>›</button><span class="sub-count" id="sub-count"></span></div><div class="tabbar-in" id="tabbar-in"></div></nav>
+
+<div class="fx-first" id="fx-first" hidden role="dialog" aria-modal="true" aria-label="先攻・後攻の抽選">
+  <div class="fx-dots" aria-hidden="true"></div>
+  <div class="fx-flash" aria-hidden="true"></div>
+  <div class="fx-stars" id="fx-stars" aria-hidden="true"></div>
+  <p class="fx-top" id="fx-top">先攻・後攻 抽選！</p>
+  <div class="fx-stage"><div class="fx-card" id="fx-card"><div class="fx-face f1"><span>⚡</span><b>先攻</b></div><div class="fx-face f0"><span>🛡️</span><b>後攻</b></div></div></div>
+  <p class="fx-res" id="fx-res" role="status"></p>
+  <p class="fx-sub" id="fx-sub"></p>
+  <p class="fx-tap">タップで閉じる</p>
+</div>
 
 <div class="duel" id="duel" hidden role="dialog" aria-modal="true" aria-label="デュエル">
 
@@ -2175,7 +2344,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
       r.appendChild(el('td','',t.ace.length?(t.ace.reduce(function(a,b){return a+b;},0)/t.ace.length).toFixed(1)+'T':'―'));
       tb.appendChild(r);});
     tbl.appendChild(tb);var sc=el('div','tstats-scroll');sc.appendChild(tbl);box.appendChild(sc);
-    box.appendChild(el('p','note','勝率は引き分けを除いて計算。👑平均は、エースが登場したターンの平均です（目安は3ターンほど）。'));
+    box.appendChild(el('p','note','勝率は引き分けを除いて計算。👑平均は、エースが登場したターンの平均です（目安は自分の3ターン目ごろ）。'));
   }
   renderLog();
 
@@ -2242,7 +2411,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     if(opp){setLinkSt('🔗 '+opp.name+' とつながりました！','ok');}else if(sub){setLinkSt('キー '+linkKey+' で待機中。相手が入ると自動でつながります。');}
     if(opp){
       // 先攻・後攻をそろえる（あとから選んだ方に合わせる）
-      if(!D&&opp.firstAt>setupFirstAt){setupFirst=!opp.first;setupFirstAt=opp.firstAt;renderFirst();}
+      if(!D&&opp.firstAt>setupFirstAt){var hadFirst=setupFirstAt;setupFirst=!opp.first;setupFirstAt=opp.firstAt;renderFirst();if(!overlay.hidden&&!views.setup.hidden&&!rolling&&Date.now()-opp.firstAt<15000)firstFx(setupFirst,'opp');}
       if(D&&opp.firstAt>(D.firstAt||0)){D.first=!opp.first;D.firstAt=opp.firstAt;saveD();}
       // ターンをそろえる
       if(D&&D.phase==='play'&&opp.TAt>(D.TAt||0)&&opp.T){D.T=Math.max(1,opp.T);D.TAt=opp.TAt;saveD();renderTurn();}
@@ -2261,8 +2430,24 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   var rolling=false;
   function renderFirst(){if(rolling)return;var r=$('first-res');if(!setupFirstAt){r.textContent='まだ決まっていません';r.className='';}else{r.textContent=setupFirst?'⚡ あなたが先攻':'🛡️ あなたが後攻';r.className=setupFirst?'f1':'f0';}
     $('duel-start').disabled=!setupFirstAt;var lockd=!!(opp&&opp.phase==='play');$('first-roll').disabled=lockd;$('first-note').textContent=lockd?'相手はもうデュエルを始めています。この結果で開始してください。':'リンク中は、どちらか1人が押せばOK。2人の画面とログに同じ結果が入ります。';}
-  $('first-roll').addEventListener('click',function(){if(rolling||(opp&&opp.phase==='play'))return;var r=$('first-res'),n=0,fin=rnd(2)===1;rolling=true;r.className='roll';
-    var iv=setInterval(function(){r.textContent=n%2?'⚡ 先攻…？':'🛡️ 後攻…？';n++;if(n>9){clearInterval(iv);rolling=false;setupFirst=fin;setupFirstAt=Date.now();renderFirst();pushPresence();}},reduce?1:90);});
+  /* 先攻・後攻：全画面の豪華な演出 */
+  var fxT=null;
+  function firstFx(first,from,cb){var fx=$('fx-first'),card=$('fx-card'),stars=$('fx-stars');if(!fx){if(cb)cb();return;}
+    clearTimeout(fxT);fx.hidden=false;fx.className='fx-first spin';$('fx-top').textContent=from==='opp'?'相手が抽選しました！':'先攻・後攻 抽選！';$('fx-res').textContent='';$('fx-sub').textContent='';
+    stars.innerHTML='';for(var i=0;i<26;i++){var st=document.createElement('i'),a=Math.random()*Math.PI*2,d=110+Math.random()*170;st.textContent=['★','✦','⚡','✨'][i%4];
+      st.style.setProperty('--x',Math.cos(a)*d+'px');st.style.setProperty('--y',Math.sin(a)*d+'px');st.style.setProperty('--r',(Math.random()*360-180)+'deg');st.style.setProperty('--sz',(16+Math.random()*20)+'px');st.style.setProperty('--d',(Math.random()*.15)+'s');st.style.color=i%3?'#f6d77c':'#fff';stars.appendChild(st);}
+    document.dispatchEvent(new CustomEvent('ygo:roll',{detail:{first:first}}));
+    var T=reduce?250:2300,end=(reduce?0:6*360)+(first?0:180);
+    if(card.animate&&!reduce){card.getAnimations&&card.getAnimations().forEach(function(a){a.cancel();});card.animate([{transform:'rotateY(0deg) scale(.55)'},{transform:'rotateY('+Math.round(end*.72)+'deg) scale(1.08)',offset:.68},{transform:'rotateY('+end+'deg) scale(1)'}],{duration:T,easing:'cubic-bezier(.25,.6,.25,1)',fill:'forwards'});}
+    else card.style.transform='rotateY('+(first?0:180)+'deg)';
+    setTimeout(function(){fx.classList.remove('spin');fx.classList.add('reveal',first?'is-first':'is-second');
+      $('fx-res').textContent=first?'あなたが 先攻！':'あなたが 後攻！';
+      $('fx-sub').textContent=first?'先攻1ターン目は、ドローなし・攻撃なし。先手で場を整えよう！':'相手の先攻から。最初のドローで反撃開始！';
+      if(cb)cb();fxT=setTimeout(closeFx,reduce?2500:4200);},T);}
+  function closeFx(){clearTimeout(fxT);var fx=$('fx-first');if(fx)fx.hidden=true;}
+  if($('fx-first'))$('fx-first').addEventListener('click',function(){if(this.classList.contains('reveal'))closeFx();});
+  $('first-roll').addEventListener('click',function(){if(rolling||(opp&&opp.phase==='play'))return;var r=$('first-res'),fin=rnd(2)===1;rolling=true;r.className='roll';r.textContent='🎲 抽選中…';$('first-roll').disabled=true;
+    firstFx(fin,'me',function(){rolling=false;setupFirst=fin;setupFirstAt=Date.now();renderFirst();pushPresence();});});
     function renderRecSetup(){[].forEach.call(document.querySelectorAll('#su-rec button'),function(b){b.setAttribute('aria-checked',String((b.getAttribute('data-v')==='1')===setupRec));});}
   [].forEach.call(document.querySelectorAll('#su-rec button'),function(b){b.addEventListener('click',function(){setupRec=b.getAttribute('data-v')==='1';renderRecSetup();});});
   function fillSetup(){
@@ -2537,6 +2722,9 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-10-22-rules-fix',createdAt:1792660338054,text:'📜 ルールを見直し：GX以降の汎用魔法・罠は許可リストにあるものだけ使用可に。🟣汎用モンスター規制リストを新設（当時の公式リストを元に）、魔法・罠の規制リストにGX時代の規制カードを追加。ターンは「自分のターン」で数える、規制のゆるめ方、手順を使い切ったとき、意見がまとまらないときの決め方、基本の数字（ライフ8000など）を追加'},
+      {id:'auto-2026-10-22-first-fx',createdAt:1792660337054,text:'🎲 先攻・後攻は必ずサイトの抽選で。抽選が全画面の演出と効果音つきに（リンク対戦なら相手の画面にも出ます）'},
+      {id:'auto-2026-10-22-ryu',createdAt:1792660336054,text:'🌏 留学生デッキの調整は本人におまかせ（アドバイスは求められたときだけ）。対戦するかは相手が選べます'},
       {id:'auto-2026-10-21-redesign',createdAt:1792512816880,text:'📱 サイトを一新：下のタブ（ホーム・デュエル・戦績・ルール・設定ほか）で切り替え、1画面に1項目だけ表示。🔎 検索、ルールの「前へ・次へ」を追加し、項目メニューは画面下で横スクロール（パソコンはホイール・ドラッグ・‹ ›でも動きます）'},
       {id:'auto-2026-10-21-card-summary',createdAt:1792511782877,text:'📖 規制リストの全カードに効果の要約を追加。あとから追加・変更するカードも、効果の要約をその場で入れられるように（よく使われるカードは自動で入ります）'},
       {id:'auto-2026-10-21-start-sound',createdAt:1792510863265,text:'🎺 デュエル開始ボタンを押すと開始の音が鳴るように（ニコニ・コモンズの素材 nc177763 を使用）。音の最後は響きながらフェードアウトします'},
@@ -2677,13 +2865,14 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   });
 })();
 (function(){
-  var okEl=document.getElementById('list-ok'), ngEl=document.getElementById('list-ng');
+  var okEl=document.getElementById('list-ok'), ngEl=document.getElementById('list-ng'), okSt=document.getElementById('list-ok-st'), ngSt=document.getElementById('list-ng-st');
   var form=document.getElementById('add-form'), hint=document.getElementById('al-hint');
   var statusEl=document.getElementById('f-status'), btn=document.getElementById('f-btn');
   var canWrite=false, col=null;
   function empty(el,msg){el.innerHTML='';var d=document.createElement('div');d.className='al-empty';d.textContent=msg;el.appendChild(d);}
   empty(okEl,'読み込み中…'); empty(ngEl,'読み込み中…');
   function setStatus(t,cls){statusEl.textContent=t;statusEl.className='status'+(cls?' '+cls:'');}
+  function kindOf(d){if(d.kind==='st'||d.kind==='mo')return d.kind;var t=(window.YGO_DICT||{})[String(d.name||'').trim()];return t&&(t[0]==='sp'||t[0]==='tr')?'st':'mo';}
   function row(doc){
     var d=doc.data()||{}; var li=document.createElement('li');
     var box=document.createElement('div');
@@ -2696,16 +2885,18 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
         if(!b.classList.contains('confirm')){b.classList.add('confirm');b.textContent='本当に削除';setTimeout(function(){b.classList.remove('confirm');b.textContent='削除';},4000);return;}
         b.disabled=true; col.doc(doc.id).delete().catch(function(){b.disabled=false;setStatus('削除できませんでした。編集権限があるか確認してください。','err');});
       });
-      li.appendChild(b);
+      var k=kindOf(d),sw=document.createElement('button');sw.type='button';sw.className='del kind-sw';sw.textContent=k==='st'?'👾 モンスターへ':'🪄 魔法・罠へ';sw.title='種類を変更して、もう一方の欄へ移します';
+      sw.addEventListener('click',function(){sw.disabled=true;col.doc(doc.id).set({kind:k==='st'?'mo':'st'},{merge:true}).catch(function(){sw.disabled=false;setStatus('種類を変更できませんでした。編集権限があるか確認してください。','err');});});
+      var acts=document.createElement('div');acts.className='al-acts';acts.appendChild(sw);acts.appendChild(b);li.appendChild(acts);
     }
     return li;
   }
   function render(snap){
-    var ok=[],ng=[];
-    snap.docs.forEach(function(doc){var d=doc.data()||{}; (d.status==='ng'?ng:ok).push(doc);});
-    okEl.innerHTML=''; ngEl.innerHTML='';
-    if(!ok.length) empty(okEl,'まだありません。下のフォームから追加できます。'); else ok.forEach(function(x){okEl.appendChild(row(x));});
-    if(!ng.length) empty(ngEl,'まだありません。'); else ng.forEach(function(x){ngEl.appendChild(row(x));});
+    var g={mo:{ok:[],ng:[]},st:{ok:[],ng:[]}};
+    snap.docs.forEach(function(doc){var d=doc.data()||{}; g[kindOf(d)][d.status==='ng'?'ng':'ok'].push(doc);});
+    [['mo',okEl,ngEl],['st',okSt,ngSt]].forEach(function(a){var o=g[a[0]];a[1].innerHTML='';a[2].innerHTML='';
+      if(!o.ok.length) empty(a[1],'まだありません。'+(canWrite?'下のフォームから追加できます。':'')); else o.ok.forEach(function(x){a[1].appendChild(row(x));});
+      if(!o.ng.length) empty(a[2],'まだありません。'); else o.ng.forEach(function(x){a[2].appendChild(row(x));});});
   }
   var last=null;
   async function start(){
@@ -2726,7 +2917,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
       var note=document.getElementById('f-note').value.trim();
       btn.disabled=true; setStatus('追加しています…');
       try{
-        await col.add({name:name,status:st,note:note,addedAt:Date.now()});
+        await col.add({name:name,status:st,kind:document.getElementById('f-st').checked?'st':'mo',note:note,addedAt:Date.now()});
         document.getElementById('f-name').value=''; document.getElementById('f-note').value='';
         setStatus('「'+name+'」を追加しました。','ok');
       }catch(err){
@@ -2984,14 +3175,15 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   function $(id){return document.getElementById(id);}
   function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
   function key(t){return String(t||'').normalize('NFKC').replace(/[\s　]+/g,'').replace(/[－−‐-]/g,'-').toLowerCase();}
-  var Y=window.YGO,sec=$('list');if(!sec)return;
-  var TIER={out:sec.querySelector('.t-out'),ban:sec.querySelector('.t-ban'),lim:sec.querySelector('.t-lim')};
-  var LVN={out:'完全使用不可',ban:'禁止',lim:'制限',free:'リストから外す'};
+  var Y=window.YGO,sec=$('list'),msec=$('mlist');if(!sec||!msec)return;
+  var TIER={'st:out':sec.querySelector('.t-out'),'st:ban':sec.querySelector('.t-ban'),'st:lim':sec.querySelector('.t-lim'),'mo:out':msec.querySelector('.t-out'),'mo:lim':msec.querySelector('.t-lim'),'mo:semi':msec.querySelector('.t-semi')};
+  function tk(d){var part=d.type==='mo'?'mo':'st',lv=d.level;if(part==='mo'&&lv==='ban')lv='out';if(part==='st'&&lv==='semi')lv='lim';return part+':'+lv;}
+  var LVN={out:'完全使用不可',ban:'禁止',lim:'制限',semi:'準制限',free:'リストから外す'};
   /* よく使われる汎用魔法・罠の辞書（名前から種類と分類を自動入力） */
-  var DICT={"ブラック・ホール": ["sp", "全体除去"], "ライトニング・ボルテックス": ["sp", "全体除去"], "サンダー・ボルト": ["sp", "全体除去"], "激流葬": ["tr", "全体除去"], "聖なるバリア －ミラーフォース－": ["tr", "全体除去"], "地砕き": ["sp", "単体除去"], "地割れ": ["sp", "単体除去"], "シールドクラッシュ": ["sp", "単体除去"], "抹殺の使徒": ["sp", "単体除去"], "死者への手向け": ["sp", "単体除去"], "奈落の落とし穴": ["tr", "単体除去"], "落とし穴": ["tr", "単体除去"], "炸裂装甲": ["tr", "単体除去"], "次元幽閉": ["tr", "単体除去"], "万能地雷グレイモヤ": ["tr", "単体除去"], "破壊輪": ["tr", "単体除去"], "底なし落とし穴": ["tr", "単体除去"], "強制脱出装置": ["tr", "単体除去"], "サイクロン": ["sp", "魔法・罠除去"], "大嵐": ["sp", "魔法・罠除去"], "ハーピィの羽根帚": ["sp", "魔法・罠除去"], "砂塵の大竜巻": ["tr", "魔法・罠除去"], "撲滅の使徒": ["sp", "魔法・罠除去"], "魔法除去": ["sp", "魔法・罠除去"], "ハリケーン": ["sp", "魔法・罠除去"], "ナイト・ショット": ["tr", "魔法・罠除去"], "ツインツイスター": ["sp", "魔法・罠除去"], "コズミック・サイクロン": ["sp", "魔法・罠除去"], "神の宣告": ["tr", "カウンター罠"], "神の警告": ["tr", "カウンター罠"], "神の通告": ["tr", "カウンター罠"], "魔宮の賄賂": ["tr", "カウンター罠"], "天罰": ["tr", "カウンター罠"], "盗賊の七つ道具": ["tr", "カウンター罠"], "強欲な壺": ["sp", "ドロー"], "天使の施し": ["sp", "ドロー"], "成金ゴブリン": ["sp", "ドロー"], "打ち出の小槌": ["sp", "ドロー"], "手札抹殺": ["sp", "ドロー"], "貪欲な壺": ["sp", "ドロー"], "一時休戦": ["sp", "ドロー"], "凡骨の意地": ["sp", "ドロー"], "無謀な欲張り": ["tr", "ドロー"], "八汰烏の骸": ["tr", "ドロー"], "ゴブリンのやりくり上手": ["tr", "ドロー"], "強欲で謙虚な壺": ["sp", "ドロー"], "増援": ["sp", "サーチ"], "封印の黄金櫃": ["sp", "サーチ"], "苦渋の選択": ["sp", "サーチ"], "テラ・フォーミング": ["sp", "サーチ"], "光の援軍": ["sp", "サーチ"], "おろかな埋葬": ["sp", "墓地操作"], "死者蘇生": ["sp", "蘇生"], "早すぎた埋葬": ["sp", "蘇生"], "リビングデッドの呼び声": ["tr", "蘇生"], "次元融合": ["sp", "蘇生・帰還"], "超融合": ["sp", "召喚補助"], "未来融合－フューチャー・フュージョン": ["sp", "召喚補助"], "血の代償": ["tr", "召喚補助"], "心変わり": ["sp", "コントロール奪取"], "強奪": ["sp", "コントロール奪取"], "洗脳－ブレインコントロール": ["sp", "コントロール奪取"], "精神操作": ["sp", "コントロール奪取"], "光の護封剣": ["sp", "攻撃の防御"], "闇の護封剣": ["sp", "攻撃の防御"], "威嚇する咆哮": ["tr", "攻撃の防御"], "和睦の使者": ["tr", "攻撃の防御"], "攻撃の無力化": ["tr", "攻撃の防御"], "魔法の筒": ["tr", "攻撃の防御"], "王宮のお触れ": ["tr", "ロック"], "スキルドレイン": ["tr", "ロック"], "平和の使者": ["sp", "ロック"], "グラヴィティ・バインド－超重力の網－": ["tr", "ロック"], "レベル制限B地区": ["sp", "ロック"], "生贄封じの仮面": ["tr", "ロック"], "魔封じの芳香": ["sp", "ロック"], "禁じられた聖杯": ["sp", "効果無効"], "我が身を盾に": ["tr", "効果無効"], "墓穴の指名者": ["sp", "効果無効"], "抹殺の指名者": ["sp", "効果無効"], "月の書": ["sp", "妨害"], "収縮": ["sp", "強化"], "突進": ["sp", "強化"], "団結の力": ["sp", "強化"], "魔導師の力": ["sp", "強化"], "リミッター解除": ["sp", "強化"]};
+  var DICT=window.YGO_DICT={"ブラック・ホール": ["sp", "全体除去"], "ライトニング・ボルテックス": ["sp", "全体除去"], "サンダー・ボルト": ["sp", "全体除去"], "激流葬": ["tr", "全体除去"], "聖なるバリア －ミラーフォース－": ["tr", "全体除去"], "地砕き": ["sp", "単体除去"], "地割れ": ["sp", "単体除去"], "シールドクラッシュ": ["sp", "単体除去"], "抹殺の使徒": ["sp", "単体除去"], "死者への手向け": ["sp", "単体除去"], "奈落の落とし穴": ["tr", "単体除去"], "落とし穴": ["tr", "単体除去"], "炸裂装甲": ["tr", "単体除去"], "次元幽閉": ["tr", "単体除去"], "万能地雷グレイモヤ": ["tr", "単体除去"], "破壊輪": ["tr", "単体除去"], "底なし落とし穴": ["tr", "単体除去"], "強制脱出装置": ["tr", "単体除去"], "サイクロン": ["sp", "魔法・罠除去"], "大嵐": ["sp", "魔法・罠除去"], "ハーピィの羽根帚": ["sp", "魔法・罠除去"], "砂塵の大竜巻": ["tr", "魔法・罠除去"], "撲滅の使徒": ["sp", "魔法・罠除去"], "魔法除去": ["sp", "魔法・罠除去"], "ハリケーン": ["sp", "魔法・罠除去"], "ナイト・ショット": ["tr", "魔法・罠除去"], "ツインツイスター": ["sp", "魔法・罠除去"], "コズミック・サイクロン": ["sp", "魔法・罠除去"], "神の宣告": ["tr", "カウンター罠"], "神の警告": ["tr", "カウンター罠"], "神の通告": ["tr", "カウンター罠"], "魔宮の賄賂": ["tr", "カウンター罠"], "天罰": ["tr", "カウンター罠"], "盗賊の七つ道具": ["tr", "カウンター罠"], "強欲な壺": ["sp", "ドロー"], "天使の施し": ["sp", "ドロー"], "成金ゴブリン": ["sp", "ドロー"], "打ち出の小槌": ["sp", "ドロー"], "手札抹殺": ["sp", "ドロー"], "貪欲な壺": ["sp", "ドロー"], "一時休戦": ["sp", "ドロー"], "凡骨の意地": ["sp", "ドロー"], "無謀な欲張り": ["tr", "ドロー"], "八汰烏の骸": ["tr", "ドロー"], "ゴブリンのやりくり上手": ["tr", "ドロー"], "強欲で謙虚な壺": ["sp", "ドロー"], "増援": ["sp", "サーチ"], "封印の黄金櫃": ["sp", "サーチ"], "苦渋の選択": ["sp", "サーチ"], "テラ・フォーミング": ["sp", "サーチ"], "光の援軍": ["sp", "サーチ"], "おろかな埋葬": ["sp", "墓地操作"], "死者蘇生": ["sp", "蘇生"], "早すぎた埋葬": ["sp", "蘇生"], "リビングデッドの呼び声": ["tr", "蘇生"], "次元融合": ["sp", "蘇生・帰還"], "超融合": ["sp", "召喚補助"], "未来融合－フューチャー・フュージョン": ["sp", "召喚補助"], "血の代償": ["tr", "召喚補助"], "心変わり": ["sp", "コントロール奪取"], "強奪": ["sp", "コントロール奪取"], "洗脳－ブレインコントロール": ["sp", "コントロール奪取"], "精神操作": ["sp", "コントロール奪取"], "光の護封剣": ["sp", "攻撃の防御"], "闇の護封剣": ["sp", "攻撃の防御"], "威嚇する咆哮": ["tr", "攻撃の防御"], "和睦の使者": ["tr", "攻撃の防御"], "攻撃の無力化": ["tr", "攻撃の防御"], "魔法の筒": ["tr", "攻撃の防御"], "王宮のお触れ": ["tr", "ロック"], "スキルドレイン": ["tr", "ロック"], "平和の使者": ["sp", "ロック"], "グラヴィティ・バインド－超重力の網－": ["tr", "ロック"], "レベル制限B地区": ["sp", "ロック"], "生贄封じの仮面": ["tr", "ロック"], "魔封じの芳香": ["sp", "ロック"], "禁じられた聖杯": ["sp", "効果無効"], "我が身を盾に": ["tr", "効果無効"], "墓穴の指名者": ["sp", "効果無効"], "抹殺の指名者": ["sp", "効果無効"], "月の書": ["sp", "妨害"], "収縮": ["sp", "強化"], "突進": ["sp", "強化"], "団結の力": ["sp", "強化"], "魔導師の力": ["sp", "強化"], "リミッター解除": ["sp", "強化"], "悪夢の蜃気楼": ["sp", "ドロー"], "第六感": ["tr", "ドロー"], "押収": ["sp", "手札・デッキ破壊"], "強引な番兵": ["sp", "手札・デッキ破壊"], "いたずら好きな双子悪魔": ["sp", "手札・デッキ破壊"], "突然変異": ["sp", "召喚補助"], "遺言状": ["sp", "召喚補助"], "現世と冥界の逆転": ["tr", "墓地操作"], "王宮の勅命": ["tr", "ロック"], "刻の封印": ["tr", "ロック"], "王家の神殿": ["tr", "その他"], "蝶の短剣－エルマ": ["sp", "その他"], "ラストバトル！": ["sp", "その他"], "高等儀式術": ["sp", "召喚補助"], "オーバーロード・フュージョン": ["sp", "召喚補助"], "魔法石の採掘": ["sp", "墓地操作"], "転生の予言": ["tr", "墓地操作"], "スケープ・ゴート": ["sp", "攻撃の防御"], "光の護封壁": ["tr", "攻撃の防御"], "おジャマトリオ": ["tr", "ロック"], "巨大化": ["sp", "強化"], "死のデッキ破壊ウイルス": ["tr", "手札・デッキ破壊"], "ダスト・シュート": ["tr", "手札・デッキ破壊"], "マインドクラッシュ": ["tr", "手札・デッキ破壊"], "連鎖爆撃": ["tr", "バーン"], "停戦協定": ["tr", "バーン"], "キラー・トマト": ["mo", "サーチ・展開"], "巨大ネズミ": ["mo", "サーチ・展開"], "ピラミッド・タートル": ["mo", "サーチ・展開"], "カオス・ソルジャー －開闢の使者－": ["mo", "切り札"], "混沌帝龍 －終焉の使者－": ["mo", "切り札"], "カオス・ソーサラー": ["mo", "切り札"], "ヴィクトリー・ドラゴン": ["mo", "切り札"], "魔導戦士 ブレイカー": ["mo", "除去・妨害"], "同族感染ウィルス": ["mo", "除去・妨害"], "サウザンド・アイズ・サクリファイス": ["mo", "除去・妨害"], "異次元の女戦士": ["mo", "除去・妨害"], "深淵の暗殺者": ["mo", "除去・妨害"], "風帝ライザー": ["mo", "除去・妨害"], "スナイプストーカー": ["mo", "除去・妨害"], "魂を削る死霊": ["mo", "除去・妨害"], "黒き森のウィッチ": ["mo", "サーチ・展開"], "聖なる魔術師": ["mo", "サーチ・展開"], "魔導サイエンティスト": ["mo", "サーチ・展開"], "デビル・フランケン": ["mo", "サーチ・展開"], "キラー・スネーク": ["mo", "サーチ・展開"], "処刑人-マキュラ": ["mo", "サーチ・展開"], "クリッター": ["mo", "サーチ・展開"], "ダンディライオン": ["mo", "サーチ・展開"], "黄泉ガエル": ["mo", "サーチ・展開"], "冥府の使者ゴーズ": ["mo", "サーチ・展開"], "森の番人グリーン・バブーン": ["mo", "サーチ・展開"], "ドル・ドラ": ["mo", "サーチ・展開"], "サイバーポッド": ["mo", "リバース・ドロー"], "ファイバーポッド": ["mo", "リバース・ドロー"], "八汰烏": ["mo", "ロック"], "月読命": ["mo", "ロック"], "カードガンナー": ["mo", "ドロー・回収"], "メタモルポット": ["mo", "ドロー・回収"], "混沌の黒魔術師": ["mo", "ドロー・回収"], "マシュマロン": ["mo", "壁"], "暗黒のマンティコア": ["mo", "展開・妨害"], "ネクロフェイス": ["mo", "展開・妨害"], "光と闇の竜": ["mo", "展開・妨害"]};
   var DK={};Object.keys(DICT).forEach(function(n){DK[key(n)]=DICT[n];});
   function nameOf(c){return (c.firstChild&&c.firstChild.nodeType===3?c.firstChild.nodeValue:c.textContent).replace(/後\s*$/,'').trim();}
-  var statics=[].slice.call(sec.querySelectorAll('.tier .card'));
+  var statics=[].slice.call(document.querySelectorAll('#list .tier .card,#mlist .tier .card'));
   var cats={};Object.keys(TIER).forEach(function(l){[].forEach.call(TIER[l].querySelectorAll('.cat > b'),function(b){cats[b.textContent]=1;});});
   var heads={};Object.keys(TIER).forEach(function(l){var h3=TIER[l].querySelector('.tier-h h3');heads[l]={el:h3,text:h3.textContent};});
   function fillCats(){var s=$('ll-cat');s.innerHTML='';Object.keys(cats).forEach(function(c){var o=el('option','',c);o.value=c;s.appendChild(o);});var o=el('option','','＋ 新しい分類');o.value='__new';s.appendChild(o);}
@@ -3001,18 +3193,18 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     if(!found){found=el('div','cat dyn-cat');found.appendChild(el('b','',cat));found.appendChild(el('div','cards'));cs.appendChild(found);}return found.querySelector('.cards');}
   var docs=[],owner=false,col=null;
   function render(){
-    [].forEach.call(sec.querySelectorAll('.card.dyn,.dyn-cat'),function(e){e.remove();});
+    [].forEach.call(document.querySelectorAll('#list .card.dyn,#list .dyn-cat,#mlist .card.dyn,#mlist .dyn-cat'),function(e){e.remove();});
     statics.forEach(function(c){c.hidden=false;});
     var latest={};docs.slice().sort(function(a,b){return (a.d.addedAt||0)-(b.d.addedAt||0);}).forEach(function(x){latest[key(x.d.name)]=x;});
     var any=false,dsum={};Object.keys(latest).forEach(function(k){var t=latest[k].d.sum;if(t)dsum[k]=String(t).slice(0,200);});window.YGO_DYNSUM=dsum;
     Object.keys(latest).forEach(function(k){var x=latest[k],d=x.d;
       statics.forEach(function(c){if(key(nameOf(c))===k)c.hidden=true;});
-      if(!TIER[d.level])return;any=true;
-      var c=el('span','card '+(d.type==='tr'?'tr':'sp')+' dyn');c.appendChild(document.createTextNode(String(d.name)+' '));
+      var tkey=tk(d);if(!TIER[tkey])return;any=true;
+      var c=el('span','card '+(d.type==='tr'?'tr':d.type==='mo'?'mo':'sp')+' dyn');c.appendChild(document.createTextNode(String(d.name)+' '));
       if(d.after){c.appendChild(el('span','after','後'));}c.appendChild(el('span','nw','🆕'));
-      catBox(d.level,String(d.cat||'その他')).appendChild(c);});
+      catBox(tkey,String(d.cat||'その他')).appendChild(c);});
     Object.keys(TIER).forEach(function(l){var n=[].filter.call(TIER[l].querySelectorAll('.card'),function(c){return !c.hidden;}).length;heads[l].el.textContent=heads[l].text.replace(/(\d+)枚）\s*$/,n+'枚）');});
-    [].forEach.call(sec.querySelectorAll('.cat'),function(c){c.hidden=![].some.call(c.querySelectorAll('.card'),function(x){return !x.hidden;});});
+    [].forEach.call(document.querySelectorAll('#list .cat,#mlist .cat'),function(c){c.hidden=![].some.call(c.querySelectorAll('.card'),function(x){return !x.hidden;});});
     $('ll-note').hidden=!docs.length;
     var hist=$('ll-hist');hist.innerHTML='';
     docs.slice().sort(function(a,b){return (b.d.addedAt||0)-(a.d.addedAt||0);}).forEach(function(x){var li=el('li');
@@ -3025,11 +3217,11 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     col.onSnapshot(function(s){docs=s.docs.map(function(d){return {id:d.id,d:d.data()||{}};});render();},function(){});
     if(owner)$('ll-form').hidden=false;});
   function setCat(c){if(!cats[c]){cats[c]=1;fillCats();}$('ll-cat').value=c;$('ll-newcat-wrap').hidden=true;}
-  $('ll-name').addEventListener('input',function(){var k=key(this.value),hit=null,hint=$('ll-hint');statics.concat([].slice.call(sec.querySelectorAll('.card.dyn'))).forEach(function(c){if(key(nameOf(c))===k)hit=c;});
+  $('ll-name').addEventListener('input',function(){var k=key(this.value),hit=null,hint=$('ll-hint');statics.concat([].slice.call(document.querySelectorAll('#list .card.dyn,#mlist .card.dyn'))).forEach(function(c){if(key(nameOf(c))===k)hit=c;});
     var sv=(window.YGO_DYNSUM||{})[k]||(function(){var S=window.YGO_SUM||{},r='';Object.keys(S).forEach(function(n){if(key(n)===k)r=S[n];});return r;})();$('ll-sum').value=sv;
     if(!k){hint.textContent='';return;}
-    if(hit){var tr=hit.closest('.tier');if(tr)$('ll-level').value=tr.classList.contains('t-out')?'out':tr.classList.contains('t-ban')?'ban':'lim';$('ll-type').value=hit.classList.contains('tr')?'tr':'sp';$('ll-after').checked=!!hit.querySelector('.after');var cb=hit.closest('.cat');if(cb)setCat(cb.querySelector('b').textContent);hint.textContent='📋 リストにあるカードです。規制や効果の要約を直して反映すると変更になります。';return;}
-    var d=DK[k];if(d){$('ll-type').value=d[0];setCat(d[1]);hint.textContent='📖 '+(d[0]==='tr'?'罠':'魔法')+'・「'+d[1]+'」を自動で選びました。違っていたら直してください。';}
+    if(hit){var tr=hit.closest('.tier');if(tr)$('ll-level').value=tr.classList.contains('t-out')?'out':tr.classList.contains('t-ban')?'ban':tr.classList.contains('t-semi')?'semi':'lim';$('ll-type').value=hit.classList.contains('tr')?'tr':hit.classList.contains('mo')?'mo':'sp';$('ll-after').checked=!!hit.querySelector('.after');var cb=hit.closest('.cat');if(cb)setCat(cb.querySelector('b').textContent);hint.textContent='📋 リストにあるカードです。規制や効果の要約を直して反映すると変更になります。';return;}
+    var d=DK[k];if(d){$('ll-type').value=d[0];setCat(d[1]);hint.textContent='📖 '+(d[0]==='tr'?'罠':d[0]==='mo'?'モンスター':'魔法')+'・「'+d[1]+'」を自動で選びました。違っていたら直してください。';}
     else hint.textContent='❔ 辞書にないカードです。種類・分類と、効果の要約を入れてください。';});
   $('ll-form').addEventListener('submit',function(e){e.preventDefault();var st=$('ll-st'),n=$('ll-name').value.trim(),lv=$('ll-level').value,cat=$('ll-cat').value==='__new'?$('ll-newcat').value.trim():$('ll-cat').value;
     if(!n){st.className='status err';st.textContent='カード名を入力してください。';return;}
@@ -3125,6 +3317,14 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   document.addEventListener('pointerdown',function(){if(ctx())loadStart();},{passive:true,once:true});
   SE.start=function(){var c=ctx();if(!c)return;(startBuf?Promise.resolve(startBuf):loadStart()).then(function(buf){if(!buf)return;var s=c.createBufferSource(),g=c.createGain();g.gain.value=1;s.buffer=buf;s.connect(g);g.connect(c.destination);s.start(c.currentTime+.02);});};
   document.addEventListener('ygo:start',function(){if(S.se)SE.start();});
+  /* 先攻・後攻の抽選：だんだん速くなるドラムロール → ドーン＋きらめき */
+  SE.roll=function(first){var c=ctx();if(!c)return;var t0=c.currentTime+.03,t=t0,end=t0+2.25,i=0;
+    while(t<end){var p=(t-t0)/2.25,iv=.11-.075*p;noise(t,.05,.12+.28*p,{type:'bandpass',f:1800+1400*p,q:.9,wet:.25});if(i%2===0)voice('sine',110,60,t,.08,.25+.3*p,{glide:.05});t+=iv;i++;}
+    voice('sawtooth',220,880,t0,2.25,.035,{cut:1800,att:.4,hold:1.6,glide:2.2,wet:.4});
+    var r=end+.02;impact(r,true);burst(r,.3);
+    var k=first?1.189:1;[523.3,659.3,784].forEach(function(f,j){partial(f*k,r+.04+j*.07,1.5,.08,{env:[[.05,1],[.5,.6],[1.4,.15]],wet:.5});});
+    myon(r+.1,.4,first?1.26:1.06,1.3);};
+  document.addEventListener('ygo:roll',function(e){if(S.se)SE.roll(!!(e.detail&&e.detail.first));});
   document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};var a=d.amt||0;if(d.zero)SE.zero(a);else if(d.kind==='heal')SE.heal(a);else if(d.kind==='cost')SE.cost(a);else SE.dmg(a);});
 
   /* --- オリジナルの勝ち確BGM（ニ長調・132BPM・8小節ループ。ストリングスとブラス風の重ね） --- */
@@ -3224,7 +3424,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 
 /* ===== 規制リストのカード：押すと効果の要約と公式データベース ===== */
 (function(){
-  var SUM=window.YGO_SUM={"サンダー・ボルト": "相手フィールドのモンスターをすべて破壊する。", "ツインツイスター": "手札を1枚捨てて発動。フィールドの魔法・罠カードを2枚まで破壊する（速攻魔法）。", "コズミック・サイクロン": "1500ライフを払い、フィールドの魔法・罠カード1枚を除外する（速攻魔法）。", "神の通告": "1500ライフを払い、モンスターの効果の発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "天使の施し": "デッキから3枚ドローし、そのあと手札を2枚捨てる。", "血の代償": "500ライフ払うたびに、通常召喚をもう1回できる（永続罠）。", "心変わり": "相手モンスター1体のコントロールを、そのターンのエンドフェイズまで得る。", "強奪": "相手モンスター1体に装備し、そのコントロールを得る。相手のスタンバイフェイズごとに相手は1000ライフ回復する。", "次元融合": "2000ライフを払い、お互いの除外されているモンスターを、できるだけ自分のフィールドに特殊召喚する。", "墓穴の指名者": "相手の墓地のモンスター1体を除外し、次のターンの終わりまで、同じ名前のモンスターの効果を無効にする（速攻魔法）。", "抹殺の指名者": "カード名を1つ言い、デッキからその1枚を除外する。このターン、同じ名前のカードの効果は無効になる（速攻魔法）。", "強欲な壺": "デッキから2枚ドローする。", "ブラック・ホール": "フィールドのモンスターをすべて破壊する。", "ライトニング・ボルテックス": "手札を1枚捨てて、相手フィールドの表側表示モンスターをすべて破壊する。", "激流葬": "モンスターが召喚・反転召喚・特殊召喚されたときに発動し、フィールドのモンスターをすべて破壊する（通常罠）。", "聖なるバリア －ミラーフォース－": "相手モンスターの攻撃宣言時に発動し、相手フィールドの攻撃表示モンスターをすべて破壊する（通常罠）。", "大嵐": "フィールドの魔法・罠カードをすべて破壊する。", "ハーピィの羽根帚": "相手フィールドの魔法・罠カードをすべて破壊する。", "ナイト・ショット": "相手フィールドにセットされた魔法・罠カード1枚を破壊する。対象のカードはこの効果に対して発動できない。", "神の宣告": "ライフを半分払い、魔法・罠カードの発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "神の警告": "2000ライフを払い、モンスターを召喚・特殊召喚する効果の発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "強欲で謙虚な壺": "デッキの上から3枚を見て、1枚を手札に加え、残りをデッキに戻す。使ったターンは特殊召喚できない（1ターンに1枚）。", "増援": "デッキからレベル4以下の戦士族モンスター1体を手札に加える。", "封印の黄金櫃": "デッキからカード1枚を除外する。発動から2回目の自分のスタンバイフェイズに、そのカードを手札に加える。", "死者蘇生": "自分か相手の墓地のモンスター1体を選んで、自分のフィールドに特殊召喚する。", "早すぎた埋葬": "800ライフを払い、自分の墓地のモンスター1体を攻撃表示で特殊召喚して、このカードを装備する。このカードが破壊されると、そのモンスターも破壊される。", "リビングデッドの呼び声": "自分の墓地のモンスター1体を攻撃表示で特殊召喚する。このカードがフィールドから離れると、そのモンスターは破壊される（永続罠）。", "超融合": "手札を1枚捨てて、自分と相手のフィールドのモンスターを素材にして融合召喚する。この発動に対して、魔法・罠・効果は発動できない（速攻魔法）。", "未来融合－フューチャー・フュージョン": "融合モンスター1体を見せ、その素材をデッキから墓地へ送る。発動から2回目の自分のスタンバイフェイズに、その融合モンスターを特殊召喚する（永続魔法）。", "洗脳－ブレインコントロール": "800ライフを払い、相手の表側表示モンスター1体のコントロールを、エンドフェイズまで得る。", "光の護封剣": "相手フィールドのモンスターをすべて表側表示にする。相手のターンで数えて3ターンの間、相手モンスターは攻撃できない。", "王宮のお触れ": "このカード以外のフィールドの罠カードの効果をすべて無効にする（永続罠）。", "スキルドレイン": "1000ライフを払って発動。フィールドの表側表示モンスターの効果をすべて無効にする（永続罠）。", "地砕き": "相手フィールドで守備力がいちばん高いモンスター1体を破壊する。", "地割れ": "相手フィールドで攻撃力がいちばん低いモンスター1体を破壊する。", "シールドクラッシュ": "フィールドの守備表示モンスター1体を破壊する。", "抹殺の使徒": "裏側表示のモンスター1体を破壊して除外する。それがリバースモンスターなら、お互いのデッキの同名カードも除外する。", "死者への手向け": "手札を1枚捨てて発動。フィールドのモンスター1体を破壊する。", "奈落の落とし穴": "相手が攻撃力1500以上のモンスターを召喚・反転召喚・特殊召喚したとき、そのモンスターを破壊して除外する。", "落とし穴": "相手が攻撃力1000以上のモンスターを召喚・反転召喚したとき、そのモンスターを破壊する。", "炸裂装甲": "相手モンスターが攻撃してきたとき、その攻撃モンスターを破壊する。", "次元幽閉": "相手モンスターが攻撃してきたとき、その攻撃モンスターを除外する。", "万能地雷グレイモヤ": "相手モンスターが攻撃してきたとき、相手の攻撃表示モンスターのうち攻撃力がいちばん高い1体を破壊する。", "破壊輪": "表側表示のモンスター1体を破壊し、その攻撃力分のダメージをお互いが受ける。", "底なし落とし穴": "相手が攻撃力1500以上のモンスターを召喚・反転召喚・特殊召喚したとき、そのモンスターを裏側守備表示にする。そのモンスターは表示形式を変更できない。", "強制脱出装置": "フィールドのモンスター1体を持ち主の手札に戻す。", "サイクロン": "フィールドの魔法・罠カード1枚を破壊する（速攻魔法）。", "砂塵の大竜巻": "相手フィールドの魔法・罠カード1枚を破壊する。そのあと、手札の魔法・罠カード1枚をセットできる。", "撲滅の使徒": "セットされた魔法・罠カード1枚を破壊して除外する。それが罠カードなら、お互いのデッキの同名カードも除外する。", "魔法除去": "フィールドの魔法カード1枚を破壊する。", "ハリケーン": "フィールドの魔法・罠カードをすべて持ち主の手札に戻す。", "魔宮の賄賂": "相手の魔法・罠カードの発動を無効にして破壊する。そのあと相手はカードを1枚ドローする（カウンター罠）。", "天罰": "手札を1枚捨てて発動。モンスター効果の発動を無効にして破壊する（カウンター罠）。", "盗賊の七つ道具": "1000ライフを払って発動。罠カードの発動を無効にして破壊する（カウンター罠）。", "成金ゴブリン": "カードを1枚ドローする。相手は1000ライフ回復する（速攻魔法）。", "打ち出の小槌": "手札を好きな枚数デッキに戻してシャッフルし、戻した枚数だけドローする。", "手札抹殺": "お互いに手札をすべて捨て、捨てた枚数だけドローする。", "貪欲な壺": "自分の墓地のモンスター5体をデッキに戻してシャッフルし、2枚ドローする。", "一時休戦": "お互いに1枚ドローする。次の相手ターンの終わりまで、お互いが受けるダメージは0になる。", "凡骨の意地": "ドローフェイズに通常モンスターを引いたとき、それを見せればもう1枚ドローできる（永続魔法）。", "無謀な欲張り": "カードを2枚ドローする。そのあと自分のドローフェイズを2回とばす。", "八汰烏の骸": "カードを1枚ドローする。相手フィールドに表側表示のスピリットモンスターがいれば、かわりに2枚ドローできる。", "ゴブリンのやりくり上手": "自分の墓地にある「ゴブリンのやりくり上手」の数＋1枚ドローし、そのあと手札1枚をデッキの一番下に戻す。", "苦渋の選択": "デッキからカードを5枚選んで相手に見せる。相手が選んだ1枚を手札に加え、残りは墓地へ送る。", "テラ・フォーミング": "デッキからフィールド魔法1枚を手札に加える。", "光の援軍": "デッキの上から3枚を墓地へ送って発動。デッキからレベル4以下の「ライトロード」モンスター1体を手札に加える。", "おろかな埋葬": "デッキからモンスター1体を選んで墓地へ送る。", "精神操作": "相手フィールドのモンスター1体のコントロールを、そのターンの終わりまで得る。そのモンスターは攻撃できず、リリースにも使えない。", "闇の護封剣": "相手フィールドのモンスターをすべて裏側守備表示にする。このカードがある間、相手モンスターは表示形式を変えられない。相手のターンで数えて2ターン目の終わりに破壊される。", "威嚇する咆哮": "このターン、相手は攻撃宣言できない。", "和睦の使者": "このターン、自分のモンスターは戦闘で破壊されず、自分が受ける戦闘ダメージは0になる。", "攻撃の無力化": "相手モンスターが攻撃してきたとき、その攻撃を無効にしてバトルフェイズを終わらせる（カウンター罠）。", "魔法の筒": "相手モンスターが攻撃してきたとき、その攻撃を無効にし、そのモンスターの攻撃力分のダメージを相手に与える。", "平和の使者": "攻撃力1500以上のモンスターは攻撃宣言できない。自分のスタンバイフェイズごとに100ライフ払わないと破壊される（永続魔法）。", "グラヴィティ・バインド－超重力の網－": "レベル4以上のモンスターは攻撃宣言できない（永続罠）。", "レベル制限B地区": "フィールドのレベル4以上のモンスターはすべて守備表示になる（永続魔法）。", "生贄封じの仮面": "このカードがある間、お互いにカードをリリースできない（永続罠）。", "魔封じの芳香": "魔法カードは発動する前にセットしなければならず、セットした次の自分のターンが来るまで発動できない（永続魔法）。", "禁じられた聖杯": "フィールドの表側表示モンスター1体の攻撃力を400上げ、ターンの終わりまで効果を無効にする（速攻魔法）。", "我が身を盾に": "1500ライフを払って発動。「フィールドのモンスターを破壊する効果」を持つカードの発動を無効にして破壊する。", "月の書": "フィールドの表側表示モンスター1体を裏側守備表示にする（速攻魔法）。", "収縮": "フィールドの表側表示モンスター1体の元々の攻撃力を、ターンの終わりまで半分にする（速攻魔法）。", "突進": "フィールドの表側表示モンスター1体の攻撃力を、ターンの終わりまで700上げる（速攻魔法）。", "団結の力": "装備したモンスターの攻撃力・守備力が、自分フィールドの表側表示モンスター1体につき800上がる（装備魔法）。", "魔導師の力": "装備したモンスターの攻撃力・守備力が、自分フィールドの魔法・罠カード1枚につき500上がる（装備魔法）。", "リミッター解除": "自分フィールドの機械族モンスターの攻撃力をすべて2倍にする。ターンの終わりにそれらは破壊される（速攻魔法）。"};
+  window.YGO_DICT_READY=true;var SUM=window.YGO_SUM={"サンダー・ボルト": "相手フィールドのモンスターをすべて破壊する。", "ツインツイスター": "手札を1枚捨てて発動。フィールドの魔法・罠カードを2枚まで破壊する（速攻魔法）。", "コズミック・サイクロン": "1500ライフを払い、フィールドの魔法・罠カード1枚を除外する（速攻魔法）。", "神の通告": "1500ライフを払い、モンスターの効果の発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "天使の施し": "デッキから3枚ドローし、そのあと手札を2枚捨てる。", "血の代償": "500ライフ払うたびに、通常召喚をもう1回できる（永続罠）。", "心変わり": "相手モンスター1体のコントロールを、そのターンのエンドフェイズまで得る。", "強奪": "相手モンスター1体に装備し、そのコントロールを得る。相手のスタンバイフェイズごとに相手は1000ライフ回復する。", "次元融合": "2000ライフを払い、お互いの除外されているモンスターを、できるだけ自分のフィールドに特殊召喚する。", "墓穴の指名者": "相手の墓地のモンスター1体を除外し、次のターンの終わりまで、同じ名前のモンスターの効果を無効にする（速攻魔法）。", "抹殺の指名者": "カード名を1つ言い、デッキからその1枚を除外する。このターン、同じ名前のカードの効果は無効になる（速攻魔法）。", "強欲な壺": "デッキから2枚ドローする。", "ブラック・ホール": "フィールドのモンスターをすべて破壊する。", "ライトニング・ボルテックス": "手札を1枚捨てて、相手フィールドの表側表示モンスターをすべて破壊する。", "激流葬": "モンスターが召喚・反転召喚・特殊召喚されたときに発動し、フィールドのモンスターをすべて破壊する（通常罠）。", "聖なるバリア －ミラーフォース－": "相手モンスターの攻撃宣言時に発動し、相手フィールドの攻撃表示モンスターをすべて破壊する（通常罠）。", "大嵐": "フィールドの魔法・罠カードをすべて破壊する。", "ハーピィの羽根帚": "相手フィールドの魔法・罠カードをすべて破壊する。", "ナイト・ショット": "相手フィールドにセットされた魔法・罠カード1枚を破壊する。対象のカードはこの効果に対して発動できない。", "神の宣告": "ライフを半分払い、魔法・罠カードの発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "神の警告": "2000ライフを払い、モンスターを召喚・特殊召喚する効果の発動か、モンスターの召喚・特殊召喚を無効にして破壊する（カウンター罠）。", "強欲で謙虚な壺": "デッキの上から3枚を見て、1枚を手札に加え、残りをデッキに戻す。使ったターンは特殊召喚できない（1ターンに1枚）。", "増援": "デッキからレベル4以下の戦士族モンスター1体を手札に加える。", "封印の黄金櫃": "デッキからカード1枚を除外する。発動から2回目の自分のスタンバイフェイズに、そのカードを手札に加える。", "死者蘇生": "自分か相手の墓地のモンスター1体を選んで、自分のフィールドに特殊召喚する。", "早すぎた埋葬": "800ライフを払い、自分の墓地のモンスター1体を攻撃表示で特殊召喚して、このカードを装備する。このカードが破壊されると、そのモンスターも破壊される。", "リビングデッドの呼び声": "自分の墓地のモンスター1体を攻撃表示で特殊召喚する。このカードがフィールドから離れると、そのモンスターは破壊される（永続罠）。", "超融合": "手札を1枚捨てて、自分と相手のフィールドのモンスターを素材にして融合召喚する。この発動に対して、魔法・罠・効果は発動できない（速攻魔法）。", "未来融合－フューチャー・フュージョン": "融合モンスター1体を見せ、その素材をデッキから墓地へ送る。発動から2回目の自分のスタンバイフェイズに、その融合モンスターを特殊召喚する（永続魔法）。", "洗脳－ブレインコントロール": "800ライフを払い、相手の表側表示モンスター1体のコントロールを、エンドフェイズまで得る。", "光の護封剣": "相手フィールドのモンスターをすべて表側表示にする。相手のターンで数えて3ターンの間、相手モンスターは攻撃できない。", "王宮のお触れ": "このカード以外のフィールドの罠カードの効果をすべて無効にする（永続罠）。", "スキルドレイン": "1000ライフを払って発動。フィールドの表側表示モンスターの効果をすべて無効にする（永続罠）。", "地砕き": "相手フィールドで守備力がいちばん高いモンスター1体を破壊する。", "地割れ": "相手フィールドで攻撃力がいちばん低いモンスター1体を破壊する。", "シールドクラッシュ": "フィールドの守備表示モンスター1体を破壊する。", "抹殺の使徒": "裏側表示のモンスター1体を破壊して除外する。それがリバースモンスターなら、お互いのデッキの同名カードも除外する。", "死者への手向け": "手札を1枚捨てて発動。フィールドのモンスター1体を破壊する。", "奈落の落とし穴": "相手が攻撃力1500以上のモンスターを召喚・反転召喚・特殊召喚したとき、そのモンスターを破壊して除外する。", "落とし穴": "相手が攻撃力1000以上のモンスターを召喚・反転召喚したとき、そのモンスターを破壊する。", "炸裂装甲": "相手モンスターが攻撃してきたとき、その攻撃モンスターを破壊する。", "次元幽閉": "相手モンスターが攻撃してきたとき、その攻撃モンスターを除外する。", "万能地雷グレイモヤ": "相手モンスターが攻撃してきたとき、相手の攻撃表示モンスターのうち攻撃力がいちばん高い1体を破壊する。", "破壊輪": "表側表示のモンスター1体を破壊し、その攻撃力分のダメージをお互いが受ける。", "底なし落とし穴": "相手が攻撃力1500以上のモンスターを召喚・反転召喚・特殊召喚したとき、そのモンスターを裏側守備表示にする。そのモンスターは表示形式を変更できない。", "強制脱出装置": "フィールドのモンスター1体を持ち主の手札に戻す。", "サイクロン": "フィールドの魔法・罠カード1枚を破壊する（速攻魔法）。", "砂塵の大竜巻": "相手フィールドの魔法・罠カード1枚を破壊する。そのあと、手札の魔法・罠カード1枚をセットできる。", "撲滅の使徒": "セットされた魔法・罠カード1枚を破壊して除外する。それが罠カードなら、お互いのデッキの同名カードも除外する。", "魔法除去": "フィールドの魔法カード1枚を破壊する。", "ハリケーン": "フィールドの魔法・罠カードをすべて持ち主の手札に戻す。", "魔宮の賄賂": "相手の魔法・罠カードの発動を無効にして破壊する。そのあと相手はカードを1枚ドローする（カウンター罠）。", "天罰": "手札を1枚捨てて発動。モンスター効果の発動を無効にして破壊する（カウンター罠）。", "盗賊の七つ道具": "1000ライフを払って発動。罠カードの発動を無効にして破壊する（カウンター罠）。", "成金ゴブリン": "カードを1枚ドローする。相手は1000ライフ回復する（速攻魔法）。", "打ち出の小槌": "手札を好きな枚数デッキに戻してシャッフルし、戻した枚数だけドローする。", "手札抹殺": "お互いに手札をすべて捨て、捨てた枚数だけドローする。", "貪欲な壺": "自分の墓地のモンスター5体をデッキに戻してシャッフルし、2枚ドローする。", "一時休戦": "お互いに1枚ドローする。次の相手ターンの終わりまで、お互いが受けるダメージは0になる。", "凡骨の意地": "ドローフェイズに通常モンスターを引いたとき、それを見せればもう1枚ドローできる（永続魔法）。", "無謀な欲張り": "カードを2枚ドローする。そのあと自分のドローフェイズを2回とばす。", "八汰烏の骸": "カードを1枚ドローする。相手フィールドに表側表示のスピリットモンスターがいれば、かわりに2枚ドローできる。", "ゴブリンのやりくり上手": "自分の墓地にある「ゴブリンのやりくり上手」の数＋1枚ドローし、そのあと手札1枚をデッキの一番下に戻す。", "苦渋の選択": "デッキからカードを5枚選んで相手に見せる。相手が選んだ1枚を手札に加え、残りは墓地へ送る。", "テラ・フォーミング": "デッキからフィールド魔法1枚を手札に加える。", "光の援軍": "デッキの上から3枚を墓地へ送って発動。デッキからレベル4以下の「ライトロード」モンスター1体を手札に加える。", "おろかな埋葬": "デッキからモンスター1体を選んで墓地へ送る。", "精神操作": "相手フィールドのモンスター1体のコントロールを、そのターンの終わりまで得る。そのモンスターは攻撃できず、リリースにも使えない。", "闇の護封剣": "相手フィールドのモンスターをすべて裏側守備表示にする。このカードがある間、相手モンスターは表示形式を変えられない。相手のターンで数えて2ターン目の終わりに破壊される。", "威嚇する咆哮": "このターン、相手は攻撃宣言できない。", "和睦の使者": "このターン、自分のモンスターは戦闘で破壊されず、自分が受ける戦闘ダメージは0になる。", "攻撃の無力化": "相手モンスターが攻撃してきたとき、その攻撃を無効にしてバトルフェイズを終わらせる（カウンター罠）。", "魔法の筒": "相手モンスターが攻撃してきたとき、その攻撃を無効にし、そのモンスターの攻撃力分のダメージを相手に与える。", "平和の使者": "攻撃力1500以上のモンスターは攻撃宣言できない。自分のスタンバイフェイズごとに100ライフ払わないと破壊される（永続魔法）。", "グラヴィティ・バインド－超重力の網－": "レベル4以上のモンスターは攻撃宣言できない（永続罠）。", "レベル制限B地区": "フィールドのレベル4以上のモンスターはすべて守備表示になる（永続魔法）。", "生贄封じの仮面": "このカードがある間、お互いにカードをリリースできない（永続罠）。", "魔封じの芳香": "魔法カードは発動する前にセットしなければならず、セットした次の自分のターンが来るまで発動できない（永続魔法）。", "禁じられた聖杯": "フィールドの表側表示モンスター1体の攻撃力を400上げ、ターンの終わりまで効果を無効にする（速攻魔法）。", "我が身を盾に": "1500ライフを払って発動。「フィールドのモンスターを破壊する効果」を持つカードの発動を無効にして破壊する。", "月の書": "フィールドの表側表示モンスター1体を裏側守備表示にする（速攻魔法）。", "収縮": "フィールドの表側表示モンスター1体の元々の攻撃力を、ターンの終わりまで半分にする（速攻魔法）。", "突進": "フィールドの表側表示モンスター1体の攻撃力を、ターンの終わりまで700上げる（速攻魔法）。", "団結の力": "装備したモンスターの攻撃力・守備力が、自分フィールドの表側表示モンスター1体につき800上がる（装備魔法）。", "魔導師の力": "装備したモンスターの攻撃力・守備力が、自分フィールドの魔法・罠カード1枚につき500上がる（装備魔法）。", "リミッター解除": "自分フィールドの機械族モンスターの攻撃力をすべて2倍にする。ターンの終わりにそれらは破壊される（速攻魔法）。", "悪夢の蜃気楼": "相手のスタンバイフェイズに、自分の手札が4枚になるまでドローする。その次の自分のスタンバイフェイズに、ドローした枚数分の手札をランダムに捨てる（永続魔法）。", "いたずら好きな双子悪魔": "1000ライフを払って発動。相手の手札をランダムに1枚捨て、さらに相手は手札を1枚選んで捨てる。", "王家の神殿": "自分は1ターンに1度、セットしたターンに罠カードを発動できる。ほかに「聖獣セルケト」と組み合わせた特殊召喚効果もある（永続罠）。", "押収": "1000ライフを払って発動。相手の手札を見て、1枚選んで捨てる。", "強引な番兵": "相手の手札を見て1枚選び、相手のデッキに戻してシャッフルする。", "蝶の短剣－エルマ": "装備したモンスターの攻撃力が300上がる。装備されたこのカードが破壊されて墓地へ送られたとき、手札に戻せる（装備魔法）。", "突然変異": "自分フィールドのモンスター1体をリリースし、そのレベルと同じレベルの融合モンスター1体を融合デッキから特殊召喚する。", "遺言状": "このターン、自分フィールドのモンスターが墓地へ送られたとき、デッキから攻撃力1500以下のモンスター1体を特殊召喚できる。", "王宮の勅命": "このカードがある間、フィールドの魔法カードの効果はすべて無効になる。自分のスタンバイフェイズごとに700ライフ払わないと破壊される（永続罠）。", "現世と冥界の逆転": "1000ライフを払って発動（お互いの墓地が15枚以上のとき）。お互いのデッキと墓地を入れ替え、デッキをシャッフルする。", "第六感": "1〜6の数字を2つ宣言してサイコロを振る。当たればその目の数だけドローし、外れればその目の数だけデッキの上から墓地へ送る。", "刻の封印": "相手の次のドローフェイズをスキップさせる。", "ラストバトル！": "自分のライフが1000以下のとき、相手ターンに発動。選んだ自分のモンスター1体以外の、お互いの手札・フィールドのカードをすべて墓地へ送り、相手はデッキからモンスター1体を出してバトルする。結果しだいでデュエルの勝敗が決まる（速攻魔法）。", "巨大化": "装備したモンスターの攻撃力は、自分のライフが相手より少なければ元々の攻撃力の2倍、多ければ半分になる（装備魔法）。", "高等儀式術": "手札の儀式モンスター1体を選び、そのレベルと同じになるように、デッキから通常モンスターを墓地へ送って儀式召喚する（儀式魔法）。", "オーバーロード・フュージョン": "自分のフィールド・墓地から融合素材を除外して、機械族・闇属性の融合モンスターを融合召喚する。", "魔法石の採掘": "手札を2枚捨てて発動。自分の墓地の魔法カード1枚を手札に加える。", "転生の予言": "お互いの墓地のカードを合計2枚選び、持ち主のデッキに戻してシャッフルする。", "スケープ・ゴート": "自分フィールドに「羊トークン」4体を守備表示で出す。このターン、自分はほかに召喚・反転召喚・特殊召喚できない（速攻魔法）。", "光の護封壁": "1000の倍数のライフを払って発動。払った数値以下の攻撃力を持つ相手モンスターは攻撃宣言できない（永続罠）。", "おジャマトリオ": "相手フィールドに「おジャマトークン」3体を守備表示で出す。トークンはリリースに使えず、破壊されるとそのコントローラーが1体につき300ダメージを受ける。", "死のデッキ破壊ウイルス": "攻撃力1000以下の闇属性モンスター1体をリリースして発動。相手のフィールドと手札の攻撃力1500以上のモンスターをすべて破壊する。その後3ターンの間、相手がドローしたそのようなモンスターも破壊される。", "ダスト・シュート": "相手の手札が4枚以上のとき発動。相手の手札を見て、モンスター1枚を選んでデッキに戻す。", "マインドクラッシュ": "カード名を1つ宣言する。相手の手札にあればそれをすべて捨てさせ、なければ自分が手札をランダムに1枚捨てる。", "連鎖爆撃": "チェーン2以降で発動。このカードのチェーンの数×400ダメージを相手に与える。", "停戦協定": "フィールドの裏側守備表示モンスターをすべて表側表示にする（リバース効果は発動しない）。その後、フィールドの効果モンスターの数×500ダメージを相手に与える。", "カオス・ソルジャー －開闢の使者－": "自分の墓地の光属性と闇属性モンスターを1体ずつ除外して特殊召喚できる。1ターンに1度、フィールドのモンスター1体を除外する（そのターンは攻撃できない）か、戦闘で破壊したときにもう1回攻撃できる。", "混沌帝龍 －終焉の使者－": "自分の墓地の光属性と闇属性モンスターを1体ずつ除外して特殊召喚できる。1000ライフを払い、お互いの手札とフィールドのカードをすべて墓地へ送り、送った相手のカードの数×300ダメージを与える。", "カオス・ソーサラー": "自分の墓地の光属性と闇属性モンスターを1体ずつ除外して特殊召喚できる。1ターンに1度、表側表示のモンスター1体を除外できる（そのターンは攻撃できない）。", "ヴィクトリー・ドラゴン": "このカードの攻撃で相手のライフを0にしたとき、マッチそのものに勝利する。", "魔導戦士 ブレイカー": "召喚したとき魔力カウンターを1つ置き、攻撃力が上がる。そのカウンターを取り除いて、フィールドの魔法・罠カード1枚を破壊できる。", "同族感染ウィルス": "手札を1枚捨てて種族を1つ宣言し、フィールドのその種族のモンスターをすべて破壊する。", "サウザンド・アイズ・サクリファイス": "1ターンに1度、相手モンスター1体を装備カードにして、その攻撃力・守備力を得る。このカードがある間、ほかのモンスターは攻撃宣言も表示形式の変更もできない（融合モンスター）。", "黒き森のウィッチ": "フィールドから墓地へ送られたとき、デッキから守備力1500以下のモンスター1体を手札に加える。", "聖なる魔術師": "リバースしたとき、自分の墓地の魔法カード1枚を手札に加える。", "魔導サイエンティスト": "1000ライフを払い、融合デッキからレベル6以下の融合モンスター1体を特殊召喚する。", "デビル・フランケン": "5000ライフを払い、融合デッキから融合モンスター1体を特殊召喚する。", "キラー・スネーク": "墓地のこのカードを、自分のスタンバイフェイズに手札に戻せる。", "処刑人-マキュラ": "このカードが墓地へ送られたターン、自分は罠カードを手札から発動できる。", "サイバーポッド": "リバースしたとき、フィールドのモンスターをすべて破壊する。その後お互いにデッキの上から5枚をめくり、レベル3以下のモンスターを特殊召喚して、残りを手札に加える。", "ファイバーポッド": "リバースしたとき、お互いの手札・フィールド・墓地のカードをすべてデッキに戻してシャッフルし、お互いに5枚ドローする。", "八汰烏": "相手に戦闘ダメージを与えたとき、相手の次のドローフェイズをスキップさせる。スピリットなので、エンドフェイズに手札に戻る。", "月読命": "召喚・リバースしたとき、フィールドのモンスター1体を裏側守備表示にする。スピリットなので、エンドフェイズに手札に戻る。", "クリッター": "フィールドから墓地へ送られたとき、デッキから攻撃力1500以下のモンスター1体を手札に加える。", "ダンディライオン": "墓地へ送られたとき、自分フィールドに「綿毛トークン」2体を守備表示で出す。", "黄泉ガエル": "自分のスタンバイフェイズに、自分の魔法・罠ゾーンにカードがなければ、墓地から特殊召喚できる。", "冥府の使者ゴーズ": "自分フィールドにカードがないときにダメージを受けると、手札から特殊召喚できる。戦闘ダメージなら、同じ数値のトークンも出す。", "森の番人グリーン・バブーン": "自分の獣族モンスターが効果で破壊されて墓地へ送られたとき、1000ライフを払って手札・墓地から特殊召喚できる。", "ドル・ドラ": "フィールドで破壊されて墓地へ送られたターンのエンドフェイズに、攻撃力・守備力1000になって特殊召喚される（デュエル中1度）。", "異次元の女戦士": "相手モンスターと戦闘を行ったとき、そのモンスターとこのカードを除外できる。", "深淵の暗殺者": "リバースしたとき、フィールドのモンスター1体を破壊する。", "風帝ライザー": "アドバンス召喚したとき、フィールドのカード1枚を持ち主のデッキの一番上に戻す。", "スナイプストーカー": "手札を1枚捨ててフィールドのカード1枚を選び、サイコロを振る。1・6以外ならそのカードを破壊する。", "魂を削る死霊": "戦闘では破壊されない。相手に戦闘ダメージを与えたとき、相手の手札をランダムに1枚捨てる。効果の対象になると破壊される。", "カードガンナー": "1ターンに1度、デッキの上から3枚まで墓地へ送り、1枚につき攻撃力を500上げる。破壊されて墓地へ送られたとき、1枚ドローする。", "メタモルポット": "リバースしたとき、お互いに手札をすべて捨て、5枚ドローする。", "混沌の黒魔術師": "召喚・特殊召喚したターンのエンドフェイズに、自分の墓地の魔法カード1枚を手札に加える。戦闘で破壊したモンスターは除外され、このカードもフィールドを離れると除外される。", "マシュマロン": "戦闘では破壊されない。裏側表示のこのカードを攻撃したモンスターのコントローラーに1000ダメージ。", "暗黒のマンティコア": "エンドフェイズに墓地にあるとき、手札・フィールドの獣族・獣戦士族・鳥獣族モンスター1体を墓地へ送って特殊召喚できる。", "ネクロフェイス": "召喚したとき、除外されているカードをすべて持ち主のデッキに戻し、その数×100攻撃力が上がる。除外されたとき、お互いのデッキの上から5枚を除外する。", "光と闇の竜": "カードの効果が発動するたびに、その発動を無効にし、このカードの攻撃力・守備力が500下がる。破壊されたとき、墓地のモンスター1体を特殊召喚し、自分フィールドのカードをすべて破壊する。"};
   function key(t){return String(t||'').normalize('NFKC').replace(/[\s　]+/g,'').replace(/[－−‐-]/g,'-').toLowerCase();}
   var SK={};Object.keys(SUM).forEach(function(n){SK[key(n)]=SUM[n];});
   var sec=document.getElementById('list');if(!sec)return;
@@ -3235,14 +3435,15 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   pop.addEventListener('click',function(e){if(e.target===pop)close();});pop.querySelector('#cp-x').addEventListener('click',close);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
   function nameOf(c){return (c.firstChild&&c.firstChild.nodeType===3?c.firstChild.nodeValue:c.textContent).replace(/後\s*$/,'').trim();}
-  sec.addEventListener('click',function(e){var c=e.target.closest&&e.target.closest('.card');if(!c||!sec.contains(c)||c.closest('.legend'))return;
-    var n=nameOf(c),tier=c.closest('.tier'),lv=tier?(tier.classList.contains('t-out')?'⛔ 完全使用不可':tier.classList.contains('t-ban')?'❌ 禁止':'☝️ 制限（1枚まで）'):'';
+  function onCard(S){S.addEventListener('click',function(e){var c=e.target.closest&&e.target.closest('.card');if(!c||!S.contains(c)||c.closest('.legend'))return;
+    var n=nameOf(c),tier=c.closest('.tier'),lv=tier?(tier.classList.contains('t-out')?'⛔ 完全使用不可':tier.classList.contains('t-ban')?'❌ 禁止':tier.classList.contains('t-semi')?'✌️ 準制限（2枚まで）':'☝️ 制限（1枚まで）'):'';
     document.getElementById('cp-name').textContent=n;var tg=document.getElementById('cp-tags');tg.innerHTML='';
-    [[c.classList.contains('tr')?'罠':'魔法','card '+(c.classList.contains('tr')?'tr':'sp')],[lv,'tag lim'],[c.querySelector('.after')?'GX以降のカード':'','tag semi']].forEach(function(t){if(!t[0])return;var s=document.createElement('span');s.className=t[1];s.textContent=t[0];tg.appendChild(s);});
+    [[c.classList.contains('tr')?'罠':c.classList.contains('mo')?'モンスター':'魔法','card '+(c.classList.contains('tr')?'tr':c.classList.contains('mo')?'mo':'sp')],[lv,'tag lim'],[c.querySelector('.after')?'GX以降のカード':'','tag semi']].forEach(function(t){if(!t[0])return;var s=document.createElement('span');s.className=t[1];s.textContent=t[0];tg.appendChild(s);});
     var cat=c.closest('.cat');if(cat){var s=document.createElement('span');s.className='tag ok';s.textContent=cat.querySelector('b').textContent;tg.appendChild(s);}
     var dyn=window.YGO_DYNSUM||{};document.getElementById('cp-sum').textContent=dyn[key(n)]||SK[key(n)]||'このカードの要約はまだありません。下のリンクから公式の説明を見てください。';
     document.getElementById('cp-db').href='https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sess=1&rp=10&keyword='+encodeURIComponent(n)+'&stype=1&request_locale=ja';
-    pop.hidden=false;});
+    pop.hidden=false;});}
+  onCard(sec);var ms=document.getElementById('mlist');if(ms)onCard(ms);
 })();
 </script>
 <script>
@@ -3328,7 +3529,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     {k:'home',i:'🏠',l:'ホーム',subs:[['home-hub','🏠 ホーム']]},
     {k:'duel',i:'⚔️',l:'デュエル',subs:[['life','🧮 デュエル']]},
     {k:'rec',i:'📊',l:'戦績',subs:[['results','📊 戦績・リザルト'],['ach','🏆 実績'],['owners','👥 テーマ一覧']]},
-    {k:'rules',i:'📜',l:'ルール',subs:[['list','🚨 規制リスト'],['allow','🟢 許可リスト'],['board','📋 報告ボード'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['deck','🛠️ デッキ構築']]},
+    {k:'rules',i:'📜',l:'ルール',subs:[['list','🚨 規制リスト'],['mlist','🟣 モンスター規制'],['allow','🟢 許可リスト'],['board','📋 報告ボード'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['deck','🛠️ デッキ構築']]},
     {k:'more',i:'⚙️',l:'設定ほか',subs:[['account','⚙️ アカウント設定'],['faq','❓ よくある質問'],['log','🗒️ 更新履歴'],['data','💾 データ'],['admin','🛠️ 管理者']]}
   ];
   var SEC={},LAST={};
