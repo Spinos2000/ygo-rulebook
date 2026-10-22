@@ -1038,6 +1038,63 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
 @media (max-height:700px){.news-list li:nth-child(n+3){display:none}.hd-sub{display:none}header.hd{padding-bottom:10px}.me-links a{min-height:38px}.tiles4 a{min-height:42px}.tiles4 a span,.me-links a span{font-size:16px}}
 
 .srch-box button[hidden]{display:none!important}
+
+.cp-adm{display:flex;flex-direction:column;gap:8px;background:var(--surface2);border:2px dashed var(--line);border-radius:8px;padding:10px}
+.cp-adm[hidden]{display:none}
+.cp-adm b{font-size:13px}
+.cp-adm-row{display:flex;gap:8px}
+.cp-adm-row select{flex:1;font:inherit;font-size:15px;padding:8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.cp-adm .del{align-self:flex-start;text-align:left}
+
+.rb-acts{display:flex;gap:6px;justify-content:flex-end}
+
+/* ===== プレイヤー ===== */
+.me-links{grid-template-columns:repeat(6,1fr)!important}
+.me-links a b{font-size:10px!important}
+.pl-jump{display:flex;justify-content:space-between;align-items:center;text-decoration:none;color:var(--ink);font-weight:700;font-size:14px;background:var(--info-bg);border:2px solid var(--edge);border-radius:6px;padding:10px 12px;box-shadow:2px 2px 0 var(--edge)}
+.pl-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.pl-card{display:flex;flex-direction:column;gap:2px;text-align:left;font:inherit;color:var(--ink);background:var(--surface2);border:2px solid var(--line);border-radius:8px;padding:10px;cursor:pointer}
+.pl-card:hover,.pl-card.on{border-color:var(--edge);background:var(--surface)}
+.pl-card b{font-size:16px}.pl-card small{font-size:12px;color:var(--muted);line-height:1.5}
+.pl-me{font-size:10px;font-weight:900;color:#fff;background:var(--osiris);border-radius:999px;padding:0 6px;margin-left:4px;vertical-align:middle}
+.pl-detail{display:flex;flex-direction:column;gap:12px;background:var(--surface);border:3px solid var(--edge);border-radius:8px;box-shadow:4px 4px 0 var(--edge);padding:12px 14px}
+.pl-detail[hidden]{display:none}
+.pl-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pl-h b{font-family:var(--display);font-size:22px}
+.pl-sec{display:flex;flex-direction:column;gap:6px}
+.pl-sec h3{font-size:15px;margin:0}
+.pl-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pl-chip{font-size:13px;font-weight:700;background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+.pl-vs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center}
+.pl-vs div{background:var(--surface2);border-radius:6px;padding:6px 2px}
+.pl-vs b{display:block;font-family:var(--digit);font-size:20px}.pl-vs small{font-size:11px;color:var(--muted)}
+.pl-games{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.pl-games li{display:flex;gap:8px;align-items:center;background:var(--surface2);border-radius:6px;padding:5px 8px}
+.pl-games .r{font-weight:900;min-width:2.5em}.pl-games .r.win{color:var(--spell)}.pl-games .r.lose{color:var(--red)}
+.pl-games .d{color:var(--muted);font-family:var(--digit);font-size:11px;margin-left:auto}
+
+/* ニュース：1件ずつクルクル回る */
+.news{flex-direction:row!important;align-items:center;gap:8px!important;padding:6px 10px!important}
+.news-ttl{flex:none;display:flex;align-items:center;gap:4px;font-size:13px!important}
+.news-ttl span{font-size:12px}
+.news-list{position:relative;flex:1;min-width:0;height:26px;overflow:hidden;display:block!important}
+.news-list li{position:absolute;inset:0;transform:translateY(110%);opacity:0;transition:transform .55s cubic-bezier(.2,.8,.2,1),opacity .4s;border:0!important}
+.news-list li.on{transform:none;opacity:1}
+.news-list li.out{transform:translateY(-110%);opacity:0}
+.news-list .news-i{height:26px;padding:0!important}
+.news-list .news-empty{display:flex;align-items:center;padding:0}
+.news-dots{flex:none;display:flex;gap:4px}
+.news-dot{width:7px;height:7px;border-radius:50%;border:0;padding:0;background:var(--line);cursor:pointer}
+.news-dot.on{background:var(--osiris)}
+@media (prefers-reduced-motion: reduce){.news-list li{transition:none}}
+@media (max-height:740px){.news-list li:nth-child(n+4){display:block}}
+@media (max-height:700px){.news-list li:nth-child(n+3){display:block}}
+
+@media (min-height:741px){#home-hub .tile.big small{display:block}#home-hub .tile.big{padding:14px}.tiles4 a{min-height:64px}.me-links a{min-height:52px}.tiles4 a span,.me-links a span{font-size:21px}.tiles4{gap:8px}#home-hub{gap:12px!important}}
+
+.me-links{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+.me-links a b{max-width:100%;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em}
+.pl-detail,#rb-form,#add-form,#wl-form{scroll-margin-top:84px}
 </style>
 </head>
 <body>
@@ -1152,6 +1209,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
       <a href="#results" data-go="results"><span>📊</span><b>戦績</b></a>
       <a href="#ach" data-go="ach"><span>🏆</span><b>実績</b></a>
       <a href="#bgm-lib" data-go="bgm-lib"><span>🎺</span><b>BGM</b></a>
+      <a href="#players" data-go="players"><span>🧑‍🤝‍🧑</span><b>プレイヤー</b></a>
       <a href="#data" data-go="data"><span>💾</span><b>データ</b></a>
     </nav>
   </div>
@@ -1166,9 +1224,10 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     <a href="#why" data-go="why"><span>📜</span><b>ルールを読む</b></a>
     <a href="#faq" data-go="faq"><span>❓</span><b>よくある質問</b></a>
   </nav>
-  <div class="news">
-    <h2 class="news-ttl">📰 最近のニュース</h2>
-    <ul class="news-list" id="news-list" aria-live="polite"></ul>
+  <div class="news" aria-roledescription="ニュースのティッカー">
+    <h2 class="news-ttl">📰<span>ニュース</span></h2>
+    <ul class="news-list" id="news-list"></ul>
+    <span class="news-dots" id="news-dots"></span>
   </div>
 </section>
 
@@ -1179,6 +1238,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
 <!-- アカウント設定 -->
 <section id="account">
   <div class="sec-h"><span>ACCOUNT</span><h2>⚙️ アカウント設定</h2><p class="note">プロフィール・デッキテーマ・勝ち確BGM</p></div>
+  <a class="pl-jump" href="#players" data-go="players">🧑‍🤝‍🧑 ほかのプレイヤーのプロフィールを見る <span>›</span></a>
   <details class="fold-in" id="profile" open>
     <summary><span>👤 プロフィール（<span id="pf-sum-name">未登録</span>）</span></summary>
     <div class="fold-body">
@@ -1312,6 +1372,14 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
   <details class="fold-in"><summary>👥 みんなの実績</summary><div class="fold-body"><div class="ach-rank" id="ach-rank"></div></div></details>
 </section>
 
+<!-- プレイヤー -->
+<section id="players">
+  <div class="sec-h"><span>PLAYERS</span><h2>🧑‍🤝‍🧑 プレイヤー</h2><p class="note">ほかのプレイヤーの使うデッキ・実績・あなたとの戦績</p></div>
+  <div class="pl-detail" id="pl-detail" hidden></div>
+  <p class="note" id="pl-hint">プレイヤーを押すと、くわしく見られます。</p>
+  <div class="pl-list" id="pl-list"></div>
+</section>
+
 <!-- テーマ一覧 -->
 <section id="owners">
   <div class="sec-h"><span>DECK THEMES</span><h2>👥 だれが何を使ってる？</h2><p class="note">テーマ被りを避けたいときに</p></div>
@@ -1350,6 +1418,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     <label for="rb-reason">理由<textarea id="rb-reason" rows="3" maxlength="400" placeholder="例：2ターン目にエースが出るため、起点の専用モンスターを準制限"></textarea></label>
     <p class="note">📅 日付は登録した日が自動で入ります。<br>🛠️ 組み直しで規制がなくなったときは、カードを空欄にして理由に「組み直し」と書いて登録できます。</p>
     <button class="btn" type="submit" id="rb-btn">ボードに登録</button>
+    <button class="btn-sub" type="button" id="rb-cancel" hidden>編集をやめる</button>
     <p class="status" id="rb-status" role="status"></p>
   </form>
 </section>
@@ -1996,6 +2065,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     </div>
     <label for="f-note">メモ（任意）<input type="text" id="f-note" maxlength="120" placeholder="例：効果が1つだけなのでOK"></label>
     <button class="btn" type="submit" id="f-btn">リストに追加</button>
+    <button class="btn-sub" type="button" id="f-cancel" hidden>編集をやめる</button>
     <p class="status" id="f-status" role="status"></p>
   </form>
   <p class="note" id="al-hint"></p>
@@ -2879,7 +2949,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     if(!YGO.db){msg('読み込めませんでした。ページを開き直してください。');return;}
     if(!u){msg('🔑 ログインすると、メンバーのテーマ一覧が見られます。');return;}
     YGO.db.collection('users').onSnapshot(function(s){
-      rows=s.docs.map(function(d){var x=d.data()||{};return {id:d.id,name:String(x.name||'').slice(0,20),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0};})
+      rows=s.docs.map(function(d){var x=d.data()||{};return {id:d.id,name:String(x.name||'').slice(0,20),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{}};})
         .filter(function(r){return r.name;}).sort(function(a,b){return a.name.localeCompare(b.name,'ja');});
       render();
     },function(){msg('読み込めませんでした。ページを開き直してください。');});
@@ -3022,12 +3092,20 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
           if(!del.classList.contains('confirm')){del.classList.add('confirm');del.textContent='本当に削除';setTimeout(function(){del.classList.remove('confirm');del.textContent='削除';},4000);return;}
           del.disabled=true; col.doc(r.id).delete().catch(function(){del.disabled=false;});
         });
-        li.appendChild(del);
+        var ed=document.createElement('button'); ed.type='button'; ed.className='del'; ed.textContent='✏️ 編集'; ed.style.alignSelf='flex-end';
+        ed.addEventListener('click',function(){rbEdit(r);});
+        var acts=document.createElement('div');acts.className='rb-acts';acts.appendChild(ed);acts.appendChild(del);li.appendChild(acts);
       }
       listEl.appendChild(li);
     });
   }
   qEl.addEventListener('input',render);
+  var rbEditId=null;
+  function rbEdit(r){rbEditId=r.id;document.getElementById('rb-user').value=String(r.d.user||'');document.getElementById('rb-theme').value=String(r.d.theme||'');document.getElementById('rb-reason').value=String(r.d.reason||'');
+    rows.innerHTML='';(r.d.cards||[]).forEach(function(c){addRow();var row=rows.lastChild;row.querySelector('input').value=String(c.name||'');row.querySelector('select').value=c.level||'lim';});if(!rows.children.length)addRow();
+    btn.textContent='この内容で設定し直す';document.getElementById('rb-cancel').hidden=false;setStatus('「'+(r.d.theme||'')+'（'+(r.d.user||'')+'）」を編集中です。直して「この内容で設定し直す」を押してください。');form.scrollIntoView({block:'start',behavior:'smooth'});}
+  function rbEditEnd(){rbEditId=null;btn.textContent=btnLabel;document.getElementById('rb-cancel').hidden=true;}
+  var btnLabel=btn.textContent;
   function addRow(){
     var row=document.createElement('div'); row.className='rb-row';
     var inp=document.createElement('input'); inp.type='text'; inp.maxLength=60; inp.placeholder='カード名'; inp.setAttribute('aria-label','カード名');
@@ -3039,6 +3117,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
   }
   addRow();
   document.getElementById('rb-addrow').addEventListener('click',addRow);
+  document.getElementById('rb-cancel').addEventListener('click',function(){document.getElementById('rb-reason').value='';rows.innerHTML='';addRow();rbEditEnd();setStatus('');});
   async function start(){
     if(!window.claude||!window.claude.use){msg('この画面ではボードを読み込めません。');return;}
     var db=await window.claude.use('db');
@@ -3058,9 +3137,9 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
       if(!cards.length && !reason){setStatus('規制するカードか理由のどちらかを入力してください。','err');return;}
       btn.disabled=true; setStatus('登録しています…');
       try{
-        await col.add({user:u,theme:t,cards:cards,reason:reason,createdAt:Date.now(),uid:myUid});
-        document.getElementById('rb-reason').value=''; rows.innerHTML=''; addRow();
-        setStatus('「'+t+'（'+u+'）」の規制を登録しました。','ok');
+        if(rbEditId){await col.doc(rbEditId).set({user:u,theme:t,cards:cards,reason:reason,editedAt:Date.now()},{merge:true});setStatus('「'+t+'（'+u+'）」の規制を設定し直しました。','ok');}
+        else{await col.add({user:u,theme:t,cards:cards,reason:reason,createdAt:Date.now(),uid:myUid});setStatus('「'+t+'（'+u+'）」の規制を登録しました。','ok');}
+        document.getElementById('rb-reason').value=''; rows.innerHTML=''; addRow();rbEditEnd();
       }catch(err){ setStatus('登録できませんでした。少し待ってからもう一度お試しください。','err'); }
       finally{btn.disabled=false;}
     });
@@ -3079,6 +3158,11 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
   });
 })();
 (function(){
+  var alEditId=null;
+  function alEdit(id,d){alEditId=id;document.getElementById('f-name').value=String(d.name||'');document.getElementById(d.status==='ng'?'f-ng':'f-ok').checked=true;document.getElementById((d.kind==='st'||(!d.kind&&kindOf(d)==='st'))?'f-st':'f-mo').checked=true;document.getElementById('f-note').value=String(d.note||'');
+    document.getElementById('f-btn').textContent='この内容で設定し直す';document.getElementById('f-cancel').hidden=false;document.querySelector('#add-form > b').textContent='✏️ 「'+(d.name||'')+'」を設定し直す';document.getElementById('add-form').scrollIntoView({block:'center',behavior:'smooth'});}
+  function alEditEnd(){alEditId=null;document.getElementById('f-btn').textContent='リストに追加';document.getElementById('f-cancel').hidden=true;document.querySelector('#add-form > b').textContent='➕ カードを追加';}
+  setTimeout(function(){var c=document.getElementById('f-cancel');if(c)c.addEventListener('click',function(){document.getElementById('add-form').reset();alEditEnd();});},0);
   var okEl=document.getElementById('list-ok'), ngEl=document.getElementById('list-ng'), okSt=document.getElementById('list-ok-st'), ngSt=document.getElementById('list-ng-st');
   var form=document.getElementById('add-form'), hint=document.getElementById('al-hint');
   var statusEl=document.getElementById('f-status'), btn=document.getElementById('f-btn');
@@ -3101,7 +3185,8 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
       });
       var k=kindOf(d),sw=document.createElement('button');sw.type='button';sw.className='del kind-sw';sw.textContent=k==='st'?'👾 モンスターへ':'🪄 魔法・罠へ';sw.title='種類を変更して、もう一方の欄へ移します';
       sw.addEventListener('click',function(){sw.disabled=true;col.doc(doc.id).set({kind:k==='st'?'mo':'st'},{merge:true}).catch(function(){sw.disabled=false;setStatus('種類を変更できませんでした。編集権限があるか確認してください。','err');});});
-      var acts=document.createElement('div');acts.className='al-acts';acts.appendChild(sw);acts.appendChild(b);li.appendChild(acts);
+      var ed=document.createElement('button');ed.type='button';ed.className='del';ed.textContent='✏️ 編集';ed.addEventListener('click',function(){alEdit(doc.id,d);});
+      var acts=document.createElement('div');acts.className='al-acts';acts.appendChild(ed);acts.appendChild(sw);acts.appendChild(b);li.appendChild(acts);
     }
     return li;
   }
@@ -3126,14 +3211,16 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     form.addEventListener('submit',async function(e){
       e.preventDefault();
       var name=document.getElementById('f-name').value.trim();
+      if(name&&!alEditId&&last){last.docs.forEach(function(x){var dd=x.data()||{};if(String(dd.name||'').trim()===name)alEditId=x.id;});}
       if(!name){setStatus('カード名を入力してください。','err');return;}
       var st=document.getElementById('f-ng').checked?'ng':'ok';
       var note=document.getElementById('f-note').value.trim();
       btn.disabled=true; setStatus('追加しています…');
       try{
-        await col.add({name:name,status:st,kind:document.getElementById('f-st').checked?'st':'mo',note:note,addedAt:Date.now()});
-        document.getElementById('f-name').value=''; document.getElementById('f-note').value='';
-        setStatus('「'+name+'」を追加しました。','ok');
+        var kd=document.getElementById('f-st').checked?'st':'mo';
+        if(alEditId){await col.doc(alEditId).set({name:name,status:st,kind:kd,note:note,editedAt:Date.now()},{merge:true});setStatus('「'+name+'」を設定し直しました（'+(st==='ng'?'不許可':'許可')+'・'+(kd==='st'?'魔法・罠':'モンスター')+'）。','ok');}
+        else{await col.add({name:name,status:st,kind:kd,note:note,addedAt:Date.now()});setStatus('「'+name+'」を追加しました。','ok');}
+        document.getElementById('f-name').value=''; document.getElementById('f-note').value='';alEditEnd();
       }catch(err){
         if(err&&(err.code==='permission_denied'||err.code==='not_granted')){canWrite=false;form.hidden=true;hint.textContent='閲覧のみです。追加・削除は編集権限のある人が行えます。';if(last)render(last);}
         else setStatus('追加できませんでした。少し待ってからもう一度お試しください。','err');
@@ -3241,7 +3328,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     if(!Y.db)return;
     Y.db.collection('reports').orderBy('createdAt','desc').onSnapshot(function(s){Y.reports=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
     if(!u)return;
-    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0};});Y.members=m;fillLists();fire('ygo:data');},function(){});
+    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{}};});Y.members=m;fillLists();fire('ygo:data');},function(){});
     Y.db.collection('results').where('oppUid','==',u.uid).onSnapshot(function(s){Y.ratedMe=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
   });
 
@@ -3423,7 +3510,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     var hist=$('ll-hist');hist.innerHTML='';
     docs.slice().sort(function(a,b){return (b.d.addedAt||0)-(a.d.addedAt||0);}).forEach(function(x){var li=el('li');
       li.appendChild(el('span','',(LVN[x.d.level]||'')+'：'+x.d.name+(x.d.level!=='free'?'（'+(x.d.cat||'その他')+'）':'')));
-      var b=el('button','del','取り消し');b.type='button';b.addEventListener('click',function(){if(!b.classList.contains('confirm')){b.classList.add('confirm');b.textContent='本当に取り消す';setTimeout(function(){b.classList.remove('confirm');b.textContent='取り消し';},4000);return;}col.doc(x.id).delete();});
+      var b=el('button','del','取り消し');b.type='button';b.addEventListener('click',function(){if(!b.classList.contains('confirm')){b.classList.add('confirm');b.textContent='本当に取り消す';setTimeout(function(){b.classList.remove('confirm');b.textContent='取り消し';},4000);return;}undoDoc(x);});
       li.appendChild(b);hist.appendChild(li);});
     if(!docs.length)hist.appendChild(el('li','','まだありません。'));
   }
@@ -3437,6 +3524,14 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     if(hit){var tr=hit.closest('.tier');if(tr)$('ll-level').value=tr.classList.contains('t-out')?'out':tr.classList.contains('t-ban')?'ban':tr.classList.contains('t-semi')?'semi':'lim';$('ll-type').value=hit.classList.contains('tr')?'tr':hit.classList.contains('mo')?'mo':'sp';$('ll-after').checked=!!hit.querySelector('.after');var cb=hit.closest('.cat');if(cb)setCat(cb.querySelector('b').textContent);hint.textContent='📋 リストにあるカードです。規制や効果の要約を直して反映すると変更になります。';return;}
     var d=DK[k];if(d){$('ll-type').value=d[0];setCat(d[1]);hint.textContent='📖 '+(d[0]==='tr'?'罠':d[0]==='mo'?'モンスター':'魔法')+'・「'+d[1]+'」を自動で選びました。違っていたら直してください。';}
     else hint.textContent='❔ 辞書にないカードです。種類・分類と、効果の要約を入れてください。';});
+  var LBL={free:'無制限',semi:'準制限',lim:'制限',ban:'禁止',out:'完全使用不可'};
+  function undoDoc(x){var d=x.d,from=d.from||'free',to=d.level;return col.doc(x.id).delete().then(function(){return Y.db.collection('changelog').add({text:'↩️ 取り消し：「'+d.name+'」の変更（'+(LBL[from]||from)+' → '+(LBL[to]||to)+'）を取り消して、元に戻しました',createdAt:Date.now()});}).catch(function(){});}
+  window.YGO_LL={
+    last:function(name){var k=key(name),r=null;docs.forEach(function(x){if(key(x.d.name)===k&&(!r||(x.d.addedAt||0)>(r.d.addedAt||0)))r=x;});return r;},
+    undo:function(name){var x=window.YGO_LL.last(name);return x?undoDoc(x):Promise.resolve();},
+    set:function(name,level){$('ll-name').value=name;$('ll-name').dispatchEvent(new Event('input',{bubbles:true}));$('ll-level').value=level;
+      var f=$('ll-form');if(f.requestSubmit)f.requestSubmit();else f.dispatchEvent(new Event('submit',{cancelable:true}));},
+    owner:function(){return owner;}};
   $('ll-form').addEventListener('submit',function(e){e.preventDefault();var st=$('ll-st'),n=$('ll-name').value.trim(),lv=$('ll-level').value,cat=$('ll-cat').value==='__new'?$('ll-newcat').value.trim():$('ll-cat').value;
     if(!n){st.className='status err';st.textContent='カード名を入力してください。';return;}
     if(lv!=='free'&&!cat){st.className='status err';st.textContent='分類を選ぶか、新しい分類の名前を入れてください。';return;}
@@ -3646,7 +3741,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
   var SK={};Object.keys(SUM).forEach(function(n){SK[key(n)]=SUM[n];});
   var sec=document.getElementById('list');if(!sec)return;
   var pop=document.createElement('div');pop.className='cpop';pop.hidden=true;pop.setAttribute('role','dialog');pop.setAttribute('aria-modal','true');
-  pop.innerHTML='<div class="cpop-box"><div class="cpop-h"><b id="cp-name"></b><button type="button" class="x" id="cp-x" aria-label="閉じる">✕</button></div><div class="cpop-tags" id="cp-tags"></div><p class="cpop-sum" id="cp-sum"></p><a class="cpop-db" id="cp-db" target="_blank" rel="noopener">🔎 公式カードデータベースで見る</a><p class="note">※効果はわかりやすく短くまとめたものです。正確なテキストやルールは公式カードデータベースで確認してください。</p></div>';
+  pop.innerHTML='<div class="cpop-box"><div class="cpop-h"><b id="cp-name"></b><button type="button" class="x" id="cp-x" aria-label="閉じる">✕</button></div><div class="cpop-tags" id="cp-tags"></div><p class="cpop-sum" id="cp-sum"></p><div class="cp-adm" id="cp-adm" hidden></div><a class="cpop-db" id="cp-db" target="_blank" rel="noopener">🔎 公式カードデータベースで見る</a><p class="note">※効果はわかりやすく短くまとめたものです。正確なテキストやルールは公式カードデータベースで確認してください。</p></div>';
   document.body.appendChild(pop);
   function close(){pop.hidden=true;}
   pop.addEventListener('click',function(e){if(e.target===pop)close();});pop.querySelector('#cp-x').addEventListener('click',close);
@@ -3660,6 +3755,19 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     var wi=(window.YGO_WATCH||{})[key(n)];if(wi){var w=document.createElement('span');w.className='tag wl-'+wi.dir;if(wi.dir==='done')w=null;else w.textContent=(wi.dir==='up'?'🔓 規制緩和するかも':'🔒 規制強化するかも')+(wi.to?'（→ '+wi.to+'）':'')+(wi.why?'：'+wi.why:'');if(w)tg.appendChild(w);}
     var dyn=window.YGO_DYNSUM||{};document.getElementById('cp-sum').textContent=dyn[key(n)]||SK[key(n)]||'このカードの要約はまだありません。下のリンクから公式の説明を見てください。';
     document.getElementById('cp-db').href='https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sess=1&rp=10&keyword='+encodeURIComponent(n)+'&stype=1&request_locale=ja';
+    var adm=document.getElementById('cp-adm');adm.innerHTML='';adm.hidden=true;
+    if(window.YGO_LL&&window.YGO_LL.owner()){adm.hidden=false;var ty=c.classList.contains('mo')?'mo':'st';
+      adm.appendChild(Object.assign(document.createElement('b'),{textContent:'🛠️ 管理者：この規制を設定し直す'}));
+      var row=document.createElement('div');row.className='cp-adm-row';var sel=document.createElement('select');
+      (ty==='mo'?[['out','⛔ 完全使用不可'],['lim','☝️ 制限'],['semi','✌️ 準制限'],['free','🔓 リストから外す']]:[['out','⛔ 完全使用不可'],['ban','❌ 禁止'],['lim','☝️ 制限'],['free','🔓 リストから外す']]).forEach(function(o){var op=document.createElement('option');op.value=o[0];op.textContent=o[1];sel.appendChild(op);});
+      var curK=tier?(tier.classList.contains('t-out')?'out':tier.classList.contains('t-ban')?'ban':tier.classList.contains('t-semi')?'semi':'lim'):'lim';sel.value=curK;
+      var go=document.createElement('button');go.type='button';go.className='btn-sub';go.textContent='この規制にする';
+      go.addEventListener('click',function(){if(sel.value===curK){go.textContent='いまと同じです';setTimeout(function(){go.textContent='この規制にする';},1500);return;}go.disabled=true;window.YGO_LL.set(n,sel.value);setTimeout(close,300);});
+      row.appendChild(sel);row.appendChild(go);adm.appendChild(row);
+      var last=window.YGO_LL.last(n);if(last){var LB={free:'無制限',semi:'準制限',lim:'制限',ban:'禁止',out:'完全使用不可'};var u=document.createElement('button');u.type='button';u.className='del';
+        u.textContent='↩️ 直前の変更を取り消す（'+(LB[last.d.from]||'元の規制')+' → '+(LB[last.d.level]||last.d.level)+' を元に戻す）';
+        u.addEventListener('click',function(){if(!u.classList.contains('confirm')){u.classList.add('confirm');u.textContent='もう一度押すと取り消します';return;}u.disabled=true;window.YGO_LL.undo(n).then(close);});adm.appendChild(u);}
+      else adm.appendChild(Object.assign(document.createElement('span'),{className:'note',textContent:'このカードはサイト公開時からの規制です（取り消す変更はありません）。'}));}
     pop.hidden=false;});}
   onCard(sec);var ms=document.getElementById('mlist');if(ms)onCard(ms);
 })();
@@ -3684,7 +3792,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     s.nOpp=Object.keys(s.opps).length;s.maxOpp=Math.max(0,Math.max.apply(null,Object.keys(s.opps).map(function(k){return s.opps[k];}).concat([0])));
     s.nThemeWon=Object.keys(s.themesWon).length;s.maxTheme=Math.max.apply(null,Object.keys(s.themeN).map(function(k){return s.themeN[k];}).concat([0]));s.nAces=Object.keys(s.aces).length;
     var me=Y.user&&Y.user.uid;s.reports=(Y.reports||[]).filter(function(r){return me&&r.uid===me;}).length;return s;}
-  var A=[
+  var A=window.YGO_ACH=[
     ['first','⚔️','初デュエル','デュエルを1回記録する',1,function(s){return s.n;},1],
     ['egg','🥚','デュエリストの卵','10回デュエルする',10,function(s){return s.n;},1],
     ['regular','🎒','一人前のデュエリスト','30回デュエルする',30,function(s){return s.n;},2],
@@ -3746,7 +3854,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
   var TABS=[
     {k:'home',i:'🏠',l:'ホーム',subs:[['home-hub','🏠 ホーム']]},
     {k:'duel',i:'⚔️',l:'デュエル',subs:[['life','🧮 デュエル']]},
-    {k:'rec',i:'📊',l:'戦績',subs:[['results','📊 戦績・リザルト'],['ach','🏆 実績'],['owners','👥 テーマ一覧']]},
+    {k:'rec',i:'📊',l:'戦績',subs:[['results','📊 戦績・リザルト'],['players','🧑‍🤝‍🧑 プレイヤー'],['ach','🏆 実績'],['owners','👥 テーマ一覧']]},
     {k:'rules',i:'📜',l:'ルール',subs:[['list','🚨 規制リスト'],['mlist','🟣 モンスター規制'],['allow','🟢 許可リスト'],['watch','👀 見直し候補'],['board','📋 報告ボード'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['deck','🛠️ デッキ構築']]},
     {k:'more',i:'⚙️',l:'設定ほか',subs:[['account','⚙️ アカウント設定'],['faq','❓ よくある質問'],['log','🗒️ 更新履歴'],['data','💾 データ'],['admin','🛠️ 管理者']]}
   ];
@@ -3928,7 +4036,10 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     if(d.why)box.appendChild(el('span','note',String(d.why)));
     if(d.addedAt)box.appendChild(el('span','wl-now','📅 '+new Date(d.addedAt).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo'})+' 追加'));
     li.appendChild(box);
-    if(owner){var del=el('button','del','外す');del.type='button';del.addEventListener('click',function(){if(!del.classList.contains('confirm')){del.classList.add('confirm');del.textContent='本当に外す';setTimeout(function(){del.classList.remove('confirm');del.textContent='外す';},4000);return;}del.disabled=true;col.doc(x.id).delete().catch(function(){del.disabled=false;});});li.appendChild(del);}
+    if(owner){var ed=el('button','del','✏️ 編集');ed.type='button';ed.addEventListener('click',function(){$('wl-name').value=String(d.name||'');$('wl-to').value=d.to||'';$('wl-why').value=String(d.why||'');judge();form.querySelector('b').textContent='✏️ 「'+(d.name||'')+'」を設定し直す';$('wl-btn').textContent='この内容で設定し直す';form.scrollIntoView({block:'center',behavior:'smooth'});});
+      var acts=el('div','al-acts');acts.appendChild(ed);li.appendChild(acts);
+      var del=el('button','del','外す');del.type='button';del.addEventListener('click',function(){if(!del.classList.contains('confirm')){del.classList.add('confirm');del.textContent='本当に外す';setTimeout(function(){del.classList.remove('confirm');del.textContent='外す';},4000);return;}del.disabled=true;col.doc(x.id).delete().catch(function(){del.disabled=false;});});}
+    if(owner){var aa=li.querySelector('.al-acts');if(aa&&del){aa.appendChild(del);}}
     return li;}
   function render(){var W={},G={up:[],down:[],done:[]};
     docs.forEach(function(x){var dir=dirOf(x.d);G[dir].push(x);W[key(x.d.name)]={dir:dir,why:String(x.d.why||''),to:x.d.to&&LV[x.d.to]?LV[x.d.to]:''};});window.YGO_WATCH=W;
@@ -3956,7 +4067,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     var ex=docs.filter(function(x){return key(x.d.name)===key(n);})[0],now=nowOf(n);
     $('wl-btn').disabled=true;st.className='status';st.textContent='追加しています…';
     var data={name:n.slice(0,60),dir:dir,from:now.k,to:to,why:$('wl-why').value.trim().slice(0,120),addedAt:Date.now()};
-    (ex?col.doc(ex.id).set(data):col.add(data)).then(function(){st.className='status ok';st.textContent='「'+n+'」を見直し候補（'+DIRL[dir]+'するかも：'+now.lv+' → '+LV[to]+'）にしました。';$('wl-name').value='';$('wl-why').value='';$('wl-to').value='';judge();},
+    (ex?col.doc(ex.id).set(data):col.add(data)).then(function(){st.className='status ok';st.textContent='「'+n+'」を見直し候補（'+DIRL[dir]+'するかも：'+now.lv+' → '+LV[to]+'）にしました。';$('wl-name').value='';$('wl-why').value='';$('wl-to').value='';judge();form.querySelector('b').textContent='✏️ 見直し候補に追加（ルール管理者のみ）';$('wl-btn').textContent='候補に追加';},
       function(err){st.className='status err';st.textContent='追加できませんでした（'+(err&&err.code||'error')+'）。セキュリティルールの公開が必要かもしれません。';}).then(function(){$('wl-btn').disabled=false;});});
 })();
 </script>
@@ -4027,10 +4138,19 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     var M=Y.members||{};Object.keys(M).forEach(function(u){var m=M[u],ta=m.themeAt||{};Object.keys(ta).forEach(function(t){if(!ta[t]||m.themes.indexOf(t)<0)return;out.push({t:Number(ta[t]),h:'👤 テーマ追加',b:m.name+' さんが「'+t+'」'+((m.kinds||{})[t]==='ryu'?'（🌏 留学生）':'')+'を追加',cls:'theme',go:'owners'});});});
     DATA.faq.forEach(function(d){if(d.createdAt)out.push({t:Number(d.createdAt),h:'❓ よくある質問',b:String(d.q||'').slice(0,40),cls:'faq',go:'faq'});});
     return out.filter(function(x){return x.t>0;}).sort(function(a,b){return b.t-a.t;}).slice(0,5);}
-  function render(){var arr=items();news.innerHTML='';
-    if(!arr.length){news.appendChild(el('li','news-empty','まだニュースはありません。規制の変更やテーマの追加がここに出ます'));return;}
+  var tk={i:0,t:null,n:0,paused:false},dots=$('news-dots'),reduceM=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function showN(i,dir){var lis=news.children;if(!lis.length)return;var n=lis.length;i=(i+n)%n;[].forEach.call(lis,function(li,j){li.classList.remove('on','out');if(j===tk.i&&j!==i)li.classList.add('out');});lis[i].classList.add('on');tk.i=i;
+    [].forEach.call(dots.children,function(d,j){d.classList.toggle('on',j===i);});}
+  function loop(){clearInterval(tk.t);if(tk.n<2)return;tk.t=setInterval(function(){if(!tk.paused&&!document.hidden)showN(tk.i+1);},3800);}
+  news.addEventListener('pointerenter',function(){tk.paused=true;});news.addEventListener('pointerleave',function(){tk.paused=false;});
+  var sx=null;news.addEventListener('touchstart',function(e){sx=e.touches[0].clientY;tk.paused=true;},{passive:true});
+  news.addEventListener('touchend',function(e){var dy=sx==null?0:e.changedTouches[0].clientY-sx;sx=null;tk.paused=false;if(Math.abs(dy)>24){showN(tk.i+(dy<0?1:-1));loop();}},{passive:true});
+  function render(){var arr=items();news.innerHTML='';dots.innerHTML='';tk.n=arr.length;
+    if(!arr.length){var e0=el('li','news-empty on','まだニュースはありません');news.appendChild(e0);loop();return;}
+    arr.forEach(function(x,j){var dd=el('button','news-dot');dd.type='button';dd.setAttribute('aria-label',(j+1)+'件目');dd.addEventListener('click',function(){showN(j);loop();});dots.appendChild(dd);});
     arr.forEach(function(x){var li=el('li'),b=el('a','news-i '+x.cls);b.href='#'+x.go;b.setAttribute('data-go',x.go);b.appendChild(el('span','news-h',x.h));b.appendChild(el('span','news-b',x.b));b.appendChild(el('span','news-t',ago(x.t)));
-      b.addEventListener('click',function(e){e.preventDefault();if(window.ygoRoute)window.ygoRoute(x.go);});li.appendChild(b);news.appendChild(li);});}
+      b.addEventListener('click',function(e){e.preventDefault();if(window.ygoRoute)window.ygoRoute(x.go);});li.appendChild(b);news.appendChild(li);});
+    tk.i=Math.min(tk.i,arr.length-1);[].forEach.call(news.children,function(li){li.classList.remove('on','out');});showN(tk.i);loop();}
   var tm=null;function later(){clearTimeout(tm);tm=setTimeout(render,120);}
   document.addEventListener('ygo:data',later);document.addEventListener('ygo:news',later);
   Y.ready.then(function(){if(!Y.db)return;
@@ -4038,6 +4158,46 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     Y.db.collection('allowlist').onSnapshot(function(s){DATA.al=s.docs.map(function(d){return d.data()||{};});later();},function(){});
     Y.db.collection('faq').onSnapshot(function(s){DATA.faq=s.docs.map(function(d){return d.data()||{};});later();},function(){});});
   render();
+})();
+</script>
+<script>
+/* ===== プレイヤーのプロフィール（使うデッキ・実績・あなたとの戦績） ===== */
+(function(){
+  function $(id){return document.getElementById(id);}
+  function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
+  var Y=window.YGO,list=$('pl-list'),det=$('pl-detail');if(!list||!Y)return;
+  var sel=null;
+  function fmt(ms){try{return new Date(ms).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'numeric',day:'numeric'});}catch(e){return '';}}
+  function me(){return Y.user&&Y.user.uid;}
+  function renderList(){var M=Y.members||{};list.innerHTML='';
+    if(!Y.user){list.appendChild(el('div','al-empty','ログインすると、ほかのプレイヤーのプロフィールが見られます。'));return;}
+    var ids=Object.keys(M).sort(function(a,b){return (a===me()?-1:b===me()?1:0)||String(M[a].name).localeCompare(String(M[b].name),'ja');});
+    if(!ids.length){list.appendChild(el('div','al-empty','まだプレイヤーがいません。'));return;}
+    ids.forEach(function(u){var m=M[u],b=el('button','pl-card'+(u===sel?' on':''));b.type='button';var n=el('b','',m.name);if(u===me())n.appendChild(el('span','pl-me','あなた'));b.appendChild(n);
+      b.appendChild(el('small','','🃏 '+(m.themes.length?m.themes.slice(0,3).join('、')+(m.themes.length>3?' ほか':''):'テーマ未登録')));
+      b.appendChild(el('small','','🏆 実績 '+(m.ach||0)+'/'+((window.YGO_ACH||[]).length||30)));
+      b.addEventListener('click',function(){sel=u;renderList();renderDetail();det.scrollIntoView({block:'start',behavior:'smooth'});});list.appendChild(b);});}
+  function vsData(u){var app=Y.app,log=(app&&app.pf().log)||[],mine=log.filter(function(r){return r.oppUid===u;});
+    if(mine.length)return {src:'あなたの記録',games:mine.map(function(r){return {at:r.at||0,res:r.result,my:r.myTheme||'',op:r.oppTheme||''};})};
+    var theirs=(Y.ratedMe||[]).filter(function(r){return r.uid===u;});
+    return {src:'相手の記録から',games:theirs.map(function(r){return {at:r.at||r.createdAt||0,res:r.result==='win'?'lose':r.result==='lose'?'win':'draw',my:r.oppTheme||'',op:r.myTheme||''};})};}
+  function renderDetail(){var M=Y.members||{},m=sel&&M[sel];det.innerHTML='';if(!m){det.hidden=true;return;}det.hidden=false;
+    var h=el('div','pl-h'),t=el('b','','👤 '+m.name);if(sel===me())t.appendChild(el('span','pl-me','あなた'));h.appendChild(t);
+    var x=el('button','del','✕ 閉じる');x.type='button';x.addEventListener('click',function(){sel=null;renderList();renderDetail();});h.appendChild(x);det.appendChild(h);
+    var s1=el('div','pl-sec');s1.appendChild(el('h3','','🃏 使うデッキ'));var c1=el('div','pl-chips');
+    if(m.themes.length)m.themes.forEach(function(th){c1.appendChild(el('span','pl-chip',th+((m.kinds||{})[th]==='ryu'?'（🌏 留学生）':'（🏫 在校生）')));});else c1.appendChild(el('span','note','まだ登録がありません'));
+    s1.appendChild(c1);det.appendChild(s1);
+    var A=window.YGO_ACH||[],got=m.achAt||{},s2=el('div','pl-sec');s2.appendChild(el('h3','','🏆 実績 '+Object.keys(got).length+'/'+(A.length||30)));var c2=el('div','pl-chips');
+    A.forEach(function(a){if(got[a[0]])c2.appendChild(el('span','pl-chip',a[1]+' '+a[2]));});if(!c2.children.length)c2.appendChild(el('span','note','まだ解除した実績はありません'));s2.appendChild(c2);det.appendChild(s2);
+    if(sel!==me()){var v=vsData(sel),g=v.games,w=0,l=0,d=0;g.forEach(function(x){if(x.res==='win')w++;else if(x.res==='lose')l++;else d++;});
+      var s3=el('div','pl-sec');s3.appendChild(el('h3','','🤝 あなたとの戦績'+(g.length?'（'+v.src+'）':'')));
+      if(!g.length)s3.appendChild(el('span','note','まだ対戦の記録がありません。'));
+      else{var vs=el('div','pl-vs');[['戦',g.length],['勝',w],['敗',l],['分',d],['勝率',(w+l)?Math.round(w/(w+l)*100)+'%':'―']].forEach(function(a){var c=el('div');c.appendChild(el('b','',String(a[1])));c.appendChild(el('small','',a[0]));vs.appendChild(c);});s3.appendChild(vs);
+        var ul=el('ul','pl-games');g.slice().sort(function(a,b){return b.at-a.at;}).slice(0,5).forEach(function(x){var li=el('li');li.appendChild(el('span','r '+x.res,x.res==='win'?'勝ち':x.res==='lose'?'負け':'引分'));li.appendChild(el('span','',(x.my||'？')+' vs '+(x.op||'？')));li.appendChild(el('span','d',fmt(x.at)));ul.appendChild(li);});s3.appendChild(ul);}
+      det.appendChild(s3);}
+    var go=el('button','btn-sub','📋 この人の規制報告を見る');go.type='button';go.addEventListener('click',function(){if(window.ygoRoute)window.ygoRoute('board');var q=$('rb-q');if(q){q.value=m.name;q.dispatchEvent(new Event('input',{bubbles:true}));}});det.appendChild(go);}
+  document.addEventListener('ygo:data',function(){renderList();if(sel)renderDetail();});
+  Y.ready.then(function(){renderList();});renderList();
 })();
 </script>
 </body>
