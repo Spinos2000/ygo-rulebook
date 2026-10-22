@@ -4128,7 +4128,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
   function ago(ms){var d=Date.now()-ms;if(d<3600e3)return Math.max(1,Math.round(d/60e3))+'分前';if(d<86400e3)return Math.round(d/3600e3)+'時間前';if(d<7*86400e3)return Math.round(d/86400e3)+'日前';try{return new Date(ms).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric'});}catch(e){return '';}}
   function items(){var out=[];
     /* 規制リストの変更：前の規制と比べて「規制強化」「規制緩和」を判定 */
-    var prev={};DATA.ll.slice().sort(function(a,b){return (a.addedAt||0)-(b.addedAt||0);}).forEach(function(d){var k=nm(d.name);var from=prev[k]||(d.from&&d.from in RANK?d.from:staticLv(d.name));var to=d.level==='free'?'free':d.level;
+    var prev={};DATA.ll.slice().sort(function(a,b){return (a.addedAt||0)-(b.addedAt||0);}).forEach(function(d){var k=nm(d.name);var to=d.level==='free'?'free':d.level;var sl=staticLv(d.name);var from=prev[k]||(d.from&&d.from in RANK?d.from:(sl!==to?sl:'free'));
       if(d.type==='mo'&&to==='ban')to='out';if(d.type!=='mo'&&to==='semi')to='lim';prev[k]=to;if(!(to in RANK))return;
       var dir=RANK[to]<RANK[from]?'up':RANK[to]>RANK[from]?'down':'same';
       var head=dir==='up'?'🔓 規制緩和':dir==='down'?'🔒 規制強化':'📝 規制リスト';var body='「'+d.name+'」'+(dir==='same'?'の分類を変更（'+LV[to]+'）':LV[from]+' → '+LV[to]);
