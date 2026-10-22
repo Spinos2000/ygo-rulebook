@@ -947,6 +947,27 @@ body.rt section > .sec-h::before{top:2px;bottom:10px}
   .tiles4 a{min-height:48px;padding:5px 2px}
 }
 @media (max-height:700px){.me-links a{min-height:40px}.tiles4 a{min-height:44px}.me-card .acct-l{font-size:12px}.hd-svg{max-height:56px}}
+
+/* ===== 見直し候補 ===== */
+.wl-group{display:flex;flex-direction:column;gap:8px}
+.wl-group h3{font-size:17px;display:flex;align-items:center;gap:6px}
+.wl-n{font-family:var(--digit);font-size:12px;color:var(--muted);background:var(--surface2);border-radius:999px;padding:1px 8px}
+.wl-n:empty{display:none}
+.wl-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.wl-items li{display:flex;align-items:flex-start;gap:10px;justify-content:space-between;background:var(--surface2);border-left:6px solid var(--line);border-radius:4px;padding:10px 12px}
+.wl-group.up .wl-items li{border-left-color:var(--spell)}
+.wl-group.down .wl-items li{border-left-color:var(--red)}
+.wl-items li > div{min-width:0;display:flex;flex-direction:column;gap:4px}
+.wl-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.wl-row .nm{font-weight:900;font-size:16px}
+.wl-now{font-size:12px;font-weight:700;color:var(--muted)}
+.wl-items .note{font-size:13px}
+.wl-items .al-empty{background:transparent;border:0;padding:0}
+.card[data-wl]::after{font-size:12px;margin-left:2px}
+.card[data-wl="up"]::after{content:"🔓"}
+.card[data-wl="down"]::after{content:"🔒"}
+.tag.wl-up{background:var(--spell-bg);color:var(--spell)}
+.tag.wl-down{background:var(--red-bg);color:var(--red)}
 </style>
 </head>
 <body>
@@ -1749,6 +1770,7 @@ body.rt section > .sec-h::before{top:2px;bottom:10px}
 <section class="fold" id="list">
   <div class="sec-h"><span>LIMITED LIST</span><h2>🚨 汎用魔法・罠 規制リスト</h2><p class="note">全デッキ共通</p></div>
   <p><strong>リストにない汎用魔法・罠</strong>は、GX以前（2008年3月まで）のカードなら<strong>無制限</strong>です。GX以降のカードは、<a href="#allow">許可リスト</a>にあるものだけ使えます。</p>
+  <p class="note">👀 今後の緩和・強化の候補は <a href="#watch">見直し候補</a> にまとめています。</p>
   <p class="note">GX時代の公式リスト（2008年3月1日）で禁止だったカードは「完全使用不可」、制限・準制限だったカードは「制限」として載せています（一部はこの環境に合わせて変えています）。</p>
   <div class="legend"><span class="card sp">魔法</span><span class="card tr">罠</span><span><span class="after">後</span> ＝GX以降のカード</span></div>
 
@@ -1826,6 +1848,7 @@ body.rt section > .sec-h::before{top:2px;bottom:10px}
 <section class="fold" id="mlist">
   <div class="sec-h"><span>MONSTER LIST</span><h2>🟣 汎用モンスター 規制リスト</h2><p class="note">GX以前（2008年3月まで）の汎用モンスター・全デッキ共通</p></div>
   <p><strong>リストにないGX以前の汎用モンスターは無制限</strong>です。GX以降の汎用モンスターは<a href="#allow">許可リスト</a>を見てください。</p>
+  <p class="note">👀 今後の緩和・強化の候補は <a href="#watch">見直し候補</a> にまとめています。</p>
   <p class="note">GX時代の公式リスト（2008年3月1日）のうち、汎用モンスターを採用しています（この環境に合わせて、開闢・カオス・ソーサラー・ブレイカー・聖なる魔術師は禁止から制限に、黒き森のウィッチは準制限にしています）。E・HEROやエクゾディアなど、テーマのカードは<a href="#tune">デッキごとの規制</a>で扱います。</p>
   <div class="legend"><span class="card mo">モンスター</span><span class="note">カードを押すと効果の要約が見られます</span></div>
   <div class="tier t-out">
@@ -1902,6 +1925,34 @@ body.rt section > .sec-h::before{top:2px;bottom:10px}
     <p class="status" id="f-status" role="status"></p>
   </form>
   <p class="note" id="al-hint"></p>
+</section>
+
+<!-- 見直し候補 -->
+<section class="fold" id="watch">
+  <div class="sec-h"><span>WATCH LIST</span><h2>👀 規制の見直し候補</h2><p class="note">今後、緩和・強化するかもしれないカード（まだ決定ではありません）</p></div>
+  <p>ここにあるのは<strong>検討中</strong>のカードです。決まるまでは<strong>今の規制のまま</strong>使ってください。</p>
+  <p class="note">意見があれば、ルール管理者に伝えてください。決まったら規制リストに反映し、更新履歴に載せます。規制リストのカードにも🔓・🔒の印がつきます。</p>
+  <div class="wl-group up">
+    <h3>🔓 緩和するかも <span class="wl-n" id="wl-n-up"></span></h3>
+    <ul class="wl-items" id="wl-up"></ul>
+  </div>
+  <div class="wl-group down">
+    <h3>🔒 強化するかも <span class="wl-n" id="wl-n-down"></span></h3>
+    <ul class="wl-items" id="wl-down"></ul>
+  </div>
+  <form class="ll-form" id="wl-form" hidden>
+    <b>✏️ 見直し候補に追加（ルール管理者のみ）</b>
+    <label for="wl-name">カード名<input type="text" id="wl-name" maxlength="60" placeholder="例：カオス・ソルジャー －開闢の使者－" autocomplete="off" list="wl-cards"></label>
+    <datalist id="wl-cards"></datalist>
+    <p class="note" id="wl-cur" role="status"></p>
+    <div class="seg" role="radiogroup" aria-label="方向">
+      <label><input type="radio" name="wl-dir" id="wl-d-up" value="up" checked> 🔓 緩和するかも</label>
+      <label><input type="radio" name="wl-dir" id="wl-d-down" value="down"> 🔒 強化するかも</label>
+    </div>
+    <label for="wl-why">理由・メモ<input type="text" id="wl-why" maxlength="120" placeholder="例：制限にしてから使われていないので様子見"></label>
+    <button class="btn" type="submit" id="wl-btn">候補に追加</button>
+    <p class="status" id="wl-st" role="status"></p>
+  </form>
 </section>
 
 <h2 class="grp" id="g-other">ℹ️ その他</h2>
@@ -3525,6 +3576,7 @@ body.rt section > .sec-h::before{top:2px;bottom:10px}
     document.getElementById('cp-name').textContent=n;var tg=document.getElementById('cp-tags');tg.innerHTML='';
     [[c.classList.contains('tr')?'罠':c.classList.contains('mo')?'モンスター':'魔法','card '+(c.classList.contains('tr')?'tr':c.classList.contains('mo')?'mo':'sp')],[lv,'tag lim'],[c.querySelector('.after')?'GX以降のカード':'','tag semi']].forEach(function(t){if(!t[0])return;var s=document.createElement('span');s.className=t[1];s.textContent=t[0];tg.appendChild(s);});
     var cat=c.closest('.cat');if(cat){var s=document.createElement('span');s.className='tag ok';s.textContent=cat.querySelector('b').textContent;tg.appendChild(s);}
+    var wi=(window.YGO_WATCH||{})[key(n)];if(wi){var w=document.createElement('span');w.className='tag wl-'+wi.dir;w.textContent=(wi.dir==='up'?'🔓 緩和するかも':'🔒 強化するかも')+(wi.why?'：'+wi.why:'');tg.appendChild(w);}
     var dyn=window.YGO_DYNSUM||{};document.getElementById('cp-sum').textContent=dyn[key(n)]||SK[key(n)]||'このカードの要約はまだありません。下のリンクから公式の説明を見てください。';
     document.getElementById('cp-db').href='https://www.db.yugioh-card.com/yugiohdb/card_search.action?ope=1&sess=1&rp=10&keyword='+encodeURIComponent(n)+'&stype=1&request_locale=ja';
     pop.hidden=false;});}
@@ -3614,7 +3666,7 @@ body.rt section > .sec-h::before{top:2px;bottom:10px}
     {k:'home',i:'🏠',l:'ホーム',subs:[['home-hub','🏠 ホーム']]},
     {k:'duel',i:'⚔️',l:'デュエル',subs:[['life','🧮 デュエル']]},
     {k:'rec',i:'📊',l:'戦績',subs:[['results','📊 戦績・リザルト'],['ach','🏆 実績'],['owners','👥 テーマ一覧']]},
-    {k:'rules',i:'📜',l:'ルール',subs:[['list','🚨 規制リスト'],['mlist','🟣 モンスター規制'],['allow','🟢 許可リスト'],['board','📋 報告ボード'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['deck','🛠️ デッキ構築']]},
+    {k:'rules',i:'📜',l:'ルール',subs:[['list','🚨 規制リスト'],['mlist','🟣 モンスター規制'],['allow','🟢 許可リスト'],['watch','👀 見直し候補'],['board','📋 報告ボード'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['deck','🛠️ デッキ構築']]},
     {k:'more',i:'⚙️',l:'設定ほか',subs:[['account','⚙️ アカウント設定'],['faq','❓ よくある質問'],['log','🗒️ 更新履歴'],['data','💾 データ'],['admin','🛠️ 管理者']]}
   ];
   var SEC={},LAST={};
@@ -3755,6 +3807,51 @@ body.rt section > .sec-h::before{top:2px;bottom:10px}
       if(an)parts.push('🏆 実績 '+an.textContent+'/'+(at?at.textContent:'30'));ms.textContent=parts.join('　');}
     upd();if(window.MutationObserver){var mo=new MutationObserver(upd);if(rs)mo.observe(rs,{childList:true,subtree:true,characterData:true});if(an)mo.observe(an,{childList:true,subtree:true,characterData:true});}})();
   start(true);
+})();
+</script>
+<script>
+/* ===== 見直し候補（緩和・強化するかも） ===== */
+(function(){
+  function $(id){return document.getElementById(id);}
+  function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
+  function key(t){return String(t||'').normalize('NFKC').replace(/[\s　]+/g,'').replace(/[－−‐-]/g,'-').toLowerCase();}
+  function nameOf(c){return (c.firstChild&&c.firstChild.nodeType===3?c.firstChild.nodeValue:c.textContent).replace(/後\s*$/,'').trim();}
+  var Y=window.YGO,up=$('wl-up'),down=$('wl-down'),form=$('wl-form');if(!up||!Y)return;
+  var docs=[],col=null,owner=false;
+  function cards(){return [].slice.call(document.querySelectorAll('#list .tier .card,#mlist .tier .card')).filter(function(c){return !c.hidden;});}
+  function nowOf(name){var k=key(name),hit=null;cards().forEach(function(c){if(key(nameOf(c))===k)hit=c;});
+    if(!hit){var al=null;[].forEach.call(document.querySelectorAll('#allow .al-items li'),function(li){var nm=li.querySelector('.nm');if(nm&&key(nm.textContent)===k)al=li;});
+      if(al)return {lv:al.closest('ul').id.indexOf('ng')>=0?'許可リスト：不許可':'許可リスト：許可',ty:/st$/.test(al.closest('ul').id)?'sp':'mo'};return {lv:'規制なし',ty:''};}
+    var t=hit.closest('.tier');return {lv:t.classList.contains('t-out')?'⛔ 完全使用不可':t.classList.contains('t-ban')?'❌ 禁止':t.classList.contains('t-semi')?'✌️ 準制限':'☝️ 制限',ty:hit.classList.contains('tr')?'tr':hit.classList.contains('mo')?'mo':'sp'};}
+  var marking=false;
+  function mark(){marking=true;var W=window.YGO_WATCH||{};cards().forEach(function(c){var w=W[key(nameOf(c))];if(w)c.setAttribute('data-wl',w.dir);else c.removeAttribute('data-wl');});marking=false;}
+  function row(x){var d=x.d,li=el('li'),box=el('div'),r=el('div','wl-row'),now=nowOf(d.name);
+    if(now.ty){var b=el('span','card '+now.ty,now.ty==='tr'?'罠':now.ty==='mo'?'モンスター':'魔法');b.style.fontSize='11px';b.style.padding='0 6px';r.appendChild(b);}
+    r.appendChild(el('span','nm',String(d.name||'')));box.appendChild(r);
+    box.appendChild(el('span','wl-now','いま：'+now.lv+'　→　'+(d.dir==='up'?'🔓 ゆるめるかも':'🔒 きびしくするかも')));
+    if(d.why)box.appendChild(el('span','note',String(d.why)));
+    if(d.addedAt)box.appendChild(el('span','wl-now','📅 '+new Date(d.addedAt).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo'})+' 追加'));
+    li.appendChild(box);
+    if(owner){var del=el('button','del','外す');del.type='button';del.addEventListener('click',function(){if(!del.classList.contains('confirm')){del.classList.add('confirm');del.textContent='本当に外す';setTimeout(function(){del.classList.remove('confirm');del.textContent='外す';},4000);return;}del.disabled=true;col.doc(x.id).delete().catch(function(){del.disabled=false;});});li.appendChild(del);}
+    return li;}
+  function render(){var W={};docs.forEach(function(x){W[key(x.d.name)]={dir:x.d.dir==='down'?'down':'up',why:String(x.d.why||'')};});window.YGO_WATCH=W;
+    [['up',up],['down',down]].forEach(function(a){var arr=docs.filter(function(x){return (x.d.dir==='down'?'down':'up')===a[0];}).sort(function(p,q){return (q.d.addedAt||0)-(p.d.addedAt||0);});
+      a[1].innerHTML='';$('wl-n-'+a[0]).textContent=arr.length?arr.length+'枚':'';
+      if(!arr.length)a[1].appendChild(el('li','al-empty','いまはありません。'));else arr.forEach(function(x){a[1].appendChild(row(x));});});
+    mark();}
+  render();
+  if(window.MutationObserver){var t=null,mo=new MutationObserver(function(){if(marking)return;clearTimeout(t);t=setTimeout(mark,50);});['list','mlist'].forEach(function(id){var e=$(id);if(e)mo.observe(e,{childList:true,subtree:true});});}
+  Y.ready.then(function(){if(!Y.db)return;owner=!!Y.isAdmin;col=Y.db.collection('watchlist');
+    col.onSnapshot(function(s){docs=s.docs.map(function(d){return {id:d.id,d:d.data()||{}};});render();},function(){});
+    if(owner){form.hidden=false;var dl=$('wl-cards');var seen={};cards().forEach(function(c){var n=nameOf(c);if(seen[n])return;seen[n]=1;var o=document.createElement('option');o.value=n;dl.appendChild(o);});}});
+  $('wl-name').addEventListener('input',function(){var v=this.value.trim();$('wl-cur').textContent=v?'いまの規制：'+nowOf(v).lv:'';});
+  form.addEventListener('submit',function(e){e.preventDefault();var st=$('wl-st'),n=$('wl-name').value.trim(),dir=$('wl-d-down').checked?'down':'up';
+    if(!n){st.className='status err';st.textContent='カード名を入力してください。';return;}
+    var ex=docs.filter(function(x){return key(x.d.name)===key(n);})[0];
+    $('wl-btn').disabled=true;st.className='status';st.textContent='追加しています…';
+    var data={name:n.slice(0,60),dir:dir,why:$('wl-why').value.trim().slice(0,120),addedAt:Date.now()};
+    (ex?col.doc(ex.id).set(data):col.add(data)).then(function(){st.className='status ok';st.textContent='「'+n+'」を見直し候補（'+(dir==='up'?'緩和':'強化')+'するかも）にしました。';$('wl-name').value='';$('wl-why').value='';$('wl-cur').textContent='';},
+      function(err){st.className='status err';st.textContent='追加できませんでした（'+(err&&err.code||'error')+'）。セキュリティルールの公開が必要かもしれません。';}).then(function(){$('wl-btn').disabled=false;});});
 })();
 </script>
 </body>
