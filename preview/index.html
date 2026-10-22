@@ -892,6 +892,61 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .fx-first.spin .fx-stage::after{content:"";position:absolute;inset:-18%;border-radius:50%;background:radial-gradient(circle,rgba(246,215,124,.35),transparent 65%);animation:fxglow .5s ease-in-out infinite alternate;z-index:-1}
 @keyframes fxglow{to{transform:scale(1.15);opacity:.6}}
 @media (prefers-reduced-motion: reduce){.fx-dots,.fx-first.spin .fx-stage::after{animation:none}.fx-first.reveal .fx-stage{animation:none}.fx-first.reveal .fx-stars i{animation:none}}
+
+/* ===== ホーム：1画面に収める ===== */
+header.hd{padding:10px 12px 14px;display:flex;flex-direction:column;gap:4px}
+header.hd::after{height:8px}
+.hd-h1{margin:0;line-height:0}
+.hd-svg{display:block;width:100%;height:auto;overflow:visible}
+.hd-svg text{font-family:var(--title);font-size:100px;font-weight:900;fill:#f6d77c;stroke:var(--edge);stroke-width:9px;stroke-linejoin:round;paint-order:stroke fill;filter:drop-shadow(5px 5px 0 var(--osiris))}
+.hd-sub{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;flex-wrap:wrap}
+.hd-chip{font-family:var(--title);font-size:15px;color:#fff;background:var(--osiris);border:2px solid var(--edge);padding:1px 10px;box-shadow:3px 3px 0 var(--edge);transform:skewX(-10deg)}
+.hd-upd{font-size:12px;color:#eef3fb}
+body.rt .wrap{gap:14px}
+#home-hub.hub{background:transparent;border:0;box-shadow:none;padding:0;gap:12px}
+.me-card{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:3px solid var(--edge);border-radius:6px;box-shadow:4px 4px 0 var(--edge);padding:10px 12px}
+.me-card .acct{border:0;box-shadow:none;padding:0;background:transparent;gap:6px}
+.me-card .acct-l{font-size:13px}
+.me-stats{margin:0;font-size:12px;color:var(--muted);font-family:var(--digit)}
+.me-stats:empty{display:none}
+.me-links{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.me-links a,.tiles4 a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-decoration:none;color:var(--ink);background:var(--surface2);border:2px solid var(--line);border-radius:6px;padding:7px 2px;min-height:54px;-webkit-tap-highlight-color:transparent}
+.me-links a span,.tiles4 a span{font-size:20px;line-height:1}
+.me-links a b,.tiles4 a b{font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:0;white-space:nowrap}
+.me-links a:active,.tiles4 a:active{transform:translate(1px,1px)}
+#home-hub .tile.big{padding:12px 14px;min-height:0}
+#home-hub .tile.big b{font-size:19px}
+.tiles4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tiles4 a{background:var(--surface);border:2px solid var(--edge);box-shadow:2px 2px 0 var(--edge);min-height:62px}
+.why-sum{margin:0;border:3px solid var(--edge)!important;border-radius:4px!important;box-shadow:4px 4px 0 var(--edge)!important}
+.why-sum b{color:var(--obelisk)}
+/* 各ページもスクロールを少なく：見出しをコンパクトに */
+body.rt section:not(#home-hub){padding:14px 14px 18px;gap:14px}
+body.rt section.fold.open{gap:14px;padding-bottom:18px}
+body.rt section > .sec-h{padding-top:0!important;padding-bottom:8px;gap:2px}
+body.rt section > .sec-h > span:first-child{display:none}
+body.rt section > .sec-h h2{font-size:21px}
+body.rt section > .sec-h::before{top:2px;bottom:10px}
+
+.hd-svg{max-height:96px;margin:0 auto}
+@media (min-width:600px){.tiles4{grid-template-columns:repeat(8,1fr)}.tiles4 a b{font-size:10.5px}}
+@media (max-height:760px){
+  body.rt .wrap{gap:10px}
+  header.hd{padding:6px 10px 12px}
+  .hd-svg{max-height:64px}
+  .hd-chip{font-size:13px}
+  .srch-box input{padding:5px 0}
+  .me-card{padding:8px 10px;gap:6px}
+  .me-links a{min-height:44px;padding:5px 2px}
+  .me-links a span,.tiles4 a span{font-size:18px}
+  #home-hub{gap:10px!important}
+  #home-hub .tile.big{padding:9px 12px}
+  #home-hub .tile.big small{display:none}
+  #home-hub .tile.big br{display:none}
+  .tiles4{gap:6px}
+  .tiles4 a{min-height:48px;padding:5px 2px}
+}
+@media (max-height:700px){.me-links a{min-height:40px}.tiles4 a{min-height:44px}.me-card .acct-l{font-size:12px}.hd-svg{max-height:56px}}
 </style>
 </head>
 <body>
@@ -985,45 +1040,41 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 
 <div class="wrap">
 
-<header>
-  <span class="eyebrow">GX ERA ORIGINAL FORMAT</span>
-  <h1 class="gx-title"><span class="t-pre">あのころ</span><span class="t-main">遊戯王</span><span class="t-sub">独自環境ルール</span></h1>
-  <div class="gx-stars" aria-hidden="true">★★★★★★★★</div>
-  <p class="lead">GX時代の遊戯王を<br>もう一度遊ぶためのルールブック</p>
-  <p class="updated">📅 最終更新：<span id="last-upd">2026年10月19日</span>　<a href="#log">🗒️ 更新履歴を見る</a></p>
-  <div class="acct" id="acct"><span class="acct-l" id="acct-l">🔄 ログイン状態を確認中…</span><button type="button" class="acct-btn" id="acct-in" hidden>🔑 Googleでログイン</button><button type="button" class="acct-out" id="acct-out" hidden>ログアウト</button><p class="acct-err" id="acct-err" role="status"></p></div>
-  <a class="life-jump" href="#life">⚔️ デュエル・ライフ計算へ</a>
-  <div class="summary">
-    <b>⚡ この環境を3行で</b>
-    <ol>
-      <li><span>🃏</span><span>使えるのは<strong>2008年3月までに初登場したカード</strong>（GX時代）</span></li>
-      <li><span>🎯</span><span>どのデッキも<strong>自分の3ターン目ごろにエースが出る</strong>強さにそろえる</span></li>
-      <li><span>📋</span><span>強すぎ・弱すぎは<strong>対戦後に話し合って</strong>デッキごとに規制し、ボードに記録</span></li>
-    </ol>
-  </div>
+<header class="hd">
+  <h1 class="hd-h1"><svg class="hd-svg" viewBox="0 0 720 132" role="img" aria-label="あのころ遊戯王"><text x="360" y="104" text-anchor="middle" textLength="700" lengthAdjust="spacingAndGlyphs">あのころ遊戯王</text></svg></h1>
+  <p class="hd-sub"><span class="hd-chip">独自環境ルール</span><span class="hd-upd">📅 <span id="last-upd">2026年10月19日</span> 更新</span></p>
 </header>
 
 <section id="home-hub" class="hub" aria-label="ホーム">
   <div class="srch" id="srch" role="search">
-    <div class="srch-box"><span aria-hidden="true">🔎</span><input type="search" id="srch-q" placeholder="サイト内を検索（カード・ルール・機能）" autocomplete="off" aria-label="ルールブック内を検索"><button type="button" id="srch-x" aria-label="検索をクリア" hidden>✕</button></div>
+    <div class="srch-box"><span aria-hidden="true">🔎</span><input type="search" id="srch-q" placeholder="カード・ルール・機能を検索" autocomplete="off" aria-label="ルールブック内を検索"><button type="button" id="srch-x" aria-label="検索をクリア" hidden>✕</button></div>
     <div class="srch-pop" id="srch-pop" hidden>
       <p class="srch-n" id="srch-n" role="status"></p>
       <div class="srch-r" id="srch-r"></div>
     </div>
   </div>
-  <div class="tiles">
-    <button type="button" class="tile big" data-go="duel-open"><span class="i">⚔️</span><span><b>デュエルを始める</b><br><small>ライフ計算・リンク対戦</small></span></button>
-    <a class="tile" href="#list" data-go="list"><span class="i">🚨</span><b>規制リスト</b><small>汎用魔法・罠の制限・禁止</small></a>
-    <a class="tile" href="#board" data-go="board"><span class="i">📋</span><b>報告ボード</b><small>デッキごとの規制の記録</small></a>
-    <a class="tile" href="#results" data-go="results"><span class="i">📊</span><b>戦績</b><small>勝率・グラフ・相手別</small></a>
-    <a class="tile" href="#owners" data-go="owners"><span class="i">👥</span><b>テーマ一覧</b><small>だれが何を使ってる？</small></a>
-    <a class="tile" href="#ach" data-go="ach"><span class="i">🏆</span><b>実績</b><small>解除した実績</small></a>
-    <a class="tile" href="#mlist" data-go="mlist"><span class="i">🟣</span><b>モンスター規制</b><small>GX以前の汎用モンスター</small></a>
-    <a class="tile" href="#allow" data-go="allow"><span class="i">🟢</span><b>許可リスト</b><small>使えるGX以降の汎用カード</small></a>
-    <a class="tile rules" href="#why" data-go="why"><span class="i">📜</span><b>ルールを読む</b><small>大義から順番に</small></a>
-    <a class="tile" href="#faq" data-go="faq"><span class="i">❓</span><b>よくある質問</b><small>メンバーの質問と答え</small></a>
-    <a class="tile" href="#account" data-go="account"><span class="i">⚙️</span><b>設定</b><small>プロフィール・BGM</small></a>
+  <div class="me-card">
+    <div class="acct" id="acct"><span class="acct-l" id="acct-l">🔄 ログイン状態を確認中…</span><button type="button" class="acct-btn" id="acct-in" hidden>🔑 Googleでログイン</button><button type="button" class="acct-out" id="acct-out" hidden>ログアウト</button><p class="acct-err" id="acct-err" role="status"></p></div>
+    <p class="me-stats" id="me-stats" aria-live="polite"></p>
+    <nav class="me-links" aria-label="アカウントに紐づく情報">
+      <a href="#account" data-go="account"><span>👤</span><b>プロフィール</b></a>
+      <a href="#results" data-go="results"><span>📊</span><b>戦績</b></a>
+      <a href="#ach" data-go="ach"><span>🏆</span><b>実績</b></a>
+      <a href="#bgm-lib" data-go="bgm-lib"><span>🎺</span><b>BGM</b></a>
+      <a href="#data" data-go="data"><span>💾</span><b>データ</b></a>
+    </nav>
   </div>
+  <button type="button" class="tile big" data-go="duel-open"><span class="i">⚔️</span><span><b>デュエルを始める</b><br><small>ライフ計算・リンク対戦・先攻後攻の抽選</small></span></button>
+  <nav class="tiles4" aria-label="よく使うページ">
+    <a href="#list" data-go="list"><span>🚨</span><b>規制リスト</b></a>
+    <a href="#mlist" data-go="mlist"><span>🟣</span><b>モンスター規制</b></a>
+    <a href="#allow" data-go="allow"><span>🟢</span><b>許可リスト</b></a>
+    <a href="#board" data-go="board"><span>📋</span><b>報告ボード</b></a>
+    <a href="#deck" data-go="deck"><span>🛠️</span><b>デッキ構築</b></a>
+    <a href="#owners" data-go="owners"><span>👥</span><b>テーマ一覧</b></a>
+    <a href="#why" data-go="why"><span>📜</span><b>ルールを読む</b></a>
+    <a href="#faq" data-go="faq"><span>❓</span><b>よくある質問</b></a>
+  </nav>
 </section>
 
 
@@ -1214,6 +1265,15 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 <!-- 大義 -->
 <section class="fold" id="why">
   <div class="sec-h"><span>WHY</span><h2>🔥 大義</h2><p class="note">このルールを作った理由と、遊ぶときの心構え</p></div>
+  <div class="summary why-sum">
+    <b>⚡ この環境を3行で</b>
+    <ol>
+      <li><span>🃏</span><span>使えるのは<strong>2008年3月までに初登場したカード</strong>（GX時代）</span></li>
+      <li><span>🎯</span><span>どのデッキも<strong>自分の3ターン目ごろにエースが出る</strong>強さにそろえる</span></li>
+      <li><span>📋</span><span>強すぎ・弱すぎは<strong>対戦後に話し合って</strong>デッキごとに規制し、ボードに記録</span></li>
+    </ol>
+  </div>
+
   <ul class="reasons">
     <li><b>🧱 環境デッキのない環境へ</b><span>固定化された環境デッキにはうんざり。</span><span class="hlw"><span class="hl">好きなテーマのデッキで戦いたい。</span></span></li>
     <li><b>🐢 ゆっくり盛り上がるデュエルへ</b><span>2ターンほどで勝敗が決まる展開や、ソリティアにはうんざり。</span><span class="hlw"><span class="hl">1ターンにできることを制限し、じわじわ盛り上がる展開にしたい。</span></span></li>
@@ -3581,7 +3641,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     /* 前へ・次へ（ルールとその他） */
     var ix=subs.map(function(s){return s[0];}).indexOf(id);
     if(subs.length>1&&e){step.innerHTML='';if(ix>0)step.appendChild(stepBtn(subs[ix-1],false));if(ix<subs.length-1)step.appendChild(stepBtn(subs[ix+1],true));e.insertAdjacentElement('afterend',step);step.hidden=false;}else step.hidden=true;
-    if(srch.parentNode!==header.parentNode||srch.nextElementSibling!==header)header.insertAdjacentElement('beforebegin',srch);
+    if(header.nextElementSibling!==srch)header.insertAdjacentElement('afterend',srch);
     [].forEach.call(bar.children,function(b){if(b.dataset.tab===t.k)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     var hash='#'+id;if(t.k==='home')hash=location.pathname+location.search;
     try{if(o.push){if(location.hash!=='#'+id&&!(t.k==='home'&&!location.hash))history.pushState({rt:id},'',hash);}else history.replaceState({rt:id},'',hash);}catch(err){}
@@ -3598,7 +3658,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     var t=h&&$(h);if(t){var s=t.closest('section[id]');if(s&&SEC[s.id]){go(s.id,{noScroll:true});var d=t.closest('details');if(d)d.open=true;setTimeout(function(){siv.call(t,{block:'start'});},first?300:0);return;}}
     go('home-hub');}
   /* ホームのボタン */
-  [].forEach.call(document.querySelectorAll('[data-go]'),function(b){b.addEventListener('click',function(e){e.preventDefault();var id=b.getAttribute('data-go');if(id==='duel-open'){go('life',{push:true});var d=$('duel-open');if(d)d.click();return;}go(id,{push:true});});});
+  [].forEach.call(document.querySelectorAll('[data-go]'),function(b){b.addEventListener('click',function(e){e.preventDefault();var id=b.getAttribute('data-go');if(id==='duel-open'){go('life',{push:true});var d=$('duel-open');if(d)d.click();return;}if(!SEC[id]){var t=$(id);if(t){if(t.tagName==='DETAILS')t.open=true;t.scrollIntoView({block:'start'});}return;}go(id,{push:true});});});
   /* 管理者メニューが出たらサブメニューを作り直す */
   var adm=$('admin');if(adm&&window.MutationObserver)new MutationObserver(function(){if(cur&&SEC[cur].tab.k==='more')go(cur,{noScroll:true});}).observe(adm,{attributes:true,attributeFilter:['hidden']});
 
@@ -3689,6 +3749,11 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     else if(e.key==='Enter'){e.preventDefault();var b=items[act>=0?act:0];if(b)b.click();}else if(e.key==='Escape'){closePop();q.blur();}});
   clr.addEventListener('click',function(){q.value='';render();q.focus();});
   document.addEventListener('pointerdown',function(e){if(!pop.hidden&&!srch.contains(e.target))closePop();});
+  /* ホームのアカウント欄：戦績と実績の要約 */
+  (function(){var ms=$('me-stats'),rs=$('rl-stats'),an=$('ach-n'),at=$('ach-total');if(!ms)return;
+    function upd(){var parts=[];if(rs){var t=[].map.call(rs.children,function(c){return (c.textContent||'').replace(/\s+/g,'');}).filter(Boolean).slice(0,3);if(t.length)parts.push('📊 '+t.join(' '));}
+      if(an)parts.push('🏆 実績 '+an.textContent+'/'+(at?at.textContent:'30'));ms.textContent=parts.join('　');}
+    upd();if(window.MutationObserver){var mo=new MutationObserver(upd);if(rs)mo.observe(rs,{childList:true,subtree:true,characterData:true});if(an)mo.observe(an,{childList:true,subtree:true,characterData:true});}})();
   start(true);
 })();
 </script>
