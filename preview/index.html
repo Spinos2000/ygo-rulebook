@@ -1216,6 +1216,48 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 @media (max-height:700px){#home-hub .tile.big{padding:6px 12px!important}#home-hub .tile.big .i{font-size:24px}.news{padding:4px 8px!important;gap:2px!important}}
 
 .me-links a b{font-size:10px!important;letter-spacing:-.03em!important;overflow:visible!important;text-overflow:clip!important}
+
+/* ===== カウンター ===== */
+.tb.ctr{position:relative}
+.ctr-n{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:999px;background:var(--osiris);color:#fff;font-size:11px;font-family:var(--digit);line-height:18px;text-align:center;padding:0 4px;border:2px solid var(--edge)}
+.ctr-n[hidden]{display:none}
+.ctr-bar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0;flex:none}
+.ctr-bar[hidden]{display:none}
+.ctr-bar::-webkit-scrollbar{display:none}
+.ctr-chip,.ctr-spell{flex:none;display:flex;align-items:center;gap:4px;font:inherit;font-size:13px;font-weight:700;border:2px solid var(--edge);border-radius:999px;padding:4px 10px;background:var(--surface);color:var(--ink);cursor:pointer;white-space:nowrap}
+.ctr-chip.mag{background:#efe6fb}.ctr-chip.turn{background:var(--gold-bg)}.ctr-chip.opp{border-style:dashed;opacity:.85}.ctr-chip.done{background:var(--red-bg);color:var(--red)}
+.ctr-chip .v{font-family:var(--digit);font-size:15px}
+.ctr-spell{background:var(--obelisk);color:#fff;border-color:var(--edge)}
+.ctr-spell:active,.ctr-chip:active{transform:translate(1px,1px)}
+.ctr-list{display:flex;flex-direction:column;gap:8px}
+.ctr-row{display:grid;grid-template-columns:1fr 44px 44px 44px 40px;gap:6px;align-items:center;background:var(--surface2);border:2px solid var(--line);border-radius:8px;padding:8px}
+.ctr-row.focus{border-color:var(--edge)}.ctr-row.done{background:var(--red-bg)}
+.ctr-info{display:flex;flex-direction:column;min-width:0}.ctr-info b{font-size:14px;line-height:1.4}.ctr-info small{font-size:11px;color:var(--muted);line-height:1.4}
+.ctr-pm{height:44px;font-size:22px;font-weight:900;border:2px solid var(--edge);border-radius:8px;background:var(--surface);color:var(--ink);cursor:pointer}
+.ctr-v{font-family:var(--digit);font-size:26px;text-align:center}
+.ctr-rm{height:40px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;font-size:12px}
+.ctr-rm.confirm{background:var(--red);color:#fff}
+.ctr-opp{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}.ctr-opp[hidden]{display:none}.ctr-opp b{width:100%;font-size:12px;color:var(--muted)}
+.ctr-oc{background:var(--surface2);border:1px dashed var(--line);border-radius:999px;padding:2px 10px}
+.ctr-form{display:flex;flex-direction:column;gap:8px;border-top:2px dashed var(--line);padding-top:10px}
+.ctr-form .field{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700}
+.ctr-form input[type=text],.ctr-form input[type=number],.ctr-form select{font:inherit;font-size:16px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.ctr-opt{display:flex;flex-direction:column;gap:8px}.ctr-opt[hidden]{display:none}
+.ctr-chk{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}
+.ctr-toast{position:absolute;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:8;background:var(--edge);color:#fff;font-weight:700;font-size:14px;border-radius:10px;padding:10px 14px;box-shadow:4px 4px 0 var(--osiris);transition:opacity .4s,transform .4s}
+.ctr-toast.out{opacity:0;transform:translateY(10px)}
+.ctr-alert{position:absolute;inset:0;z-index:9;background:color-mix(in srgb,#1b2235 55%,transparent);display:flex;align-items:center;justify-content:center;padding:16px}
+.ctr-alert[hidden]{display:none}
+.ctr-alert-box{width:100%;max-width:420px;background:var(--surface);border:4px solid var(--edge);border-radius:10px;box-shadow:6px 6px 0 var(--osiris);padding:16px;display:flex;flex-direction:column;gap:10px;animation:fxpop .4s cubic-bezier(.2,1.6,.4,1)}
+.ctr-alert-box b{font-family:var(--display);font-size:20px}
+.ctr-alert-box p{margin:0;font-size:16px;font-weight:700}
+
+.topbar{gap:5px!important}
+.topbar .tb:not(.end){padding:0 7px;min-width:38px;font-size:17px}
+.topbar .rec-chip{padding:0 8px;font-size:11px}
+.topbar .tb.end{padding:0 10px}
+.ctr-toast{top:118px;bottom:auto}
+@media (max-width:360px){.topbar .tb:not(.end){padding:0 5px;min-width:34px}.topbar .rec-chip{padding:0 6px}}
 </style>
 </head>
 <body>
@@ -2403,6 +2445,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       <button type="button" class="tb lock" id="lock-btn" aria-pressed="false" aria-label="画面ロック">🔓</button>
       <button type="button" class="tb" id="tl-btn" aria-label="ターンごとの記録" title="ターンごとの記録">📜</button>
       <button type="button" class="tb snd" id="snd-btn" aria-label="効果音のオン・オフ">🔊</button>
+      <button type="button" class="tb ctr" id="ctr-btn" aria-label="カウンター">🔢<span class="ctr-n" id="ctr-n" hidden></span></button>
       <button type="button" class="rec-chip" id="rec-chip" aria-label="戦績に残すかどうかの切り替え">📊 戦績ON</button>
       <span class="dot" id="link-dot" title="リンク状態"></span>
       <button type="button" class="tb end" id="end-btn">終了</button>
@@ -2416,6 +2459,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       <button type="button" class="turn-go" id="turn-go"><b id="turn-go-l">エンド ▶</b><span id="turn-go-s">相手のターンへ</span></button>
     </div>
     <div class="track" id="track" aria-label="ターンの流れ"></div>
+    <div class="ctr-bar" id="ctr-bar" hidden aria-label="カウンター"></div>
 
     <div class="opp" id="opp">
       <div class="opp-who"><b id="opp-name">相手</b><span id="opp-theme">未接続</span></div>
@@ -2453,6 +2497,26 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       <button type="button" class="bb bgm" id="bgm-btn" aria-pressed="false">🎺<span>BGM</span></button>
       <output class="rng" id="rng">—</output>
     </div>
+
+    <div class="sheet" id="ctr-sheet" hidden>
+      <div class="sheet-box">
+        <div class="dv-head"><b>🔢 カウンター</b><button type="button" class="x" id="ctr-close" aria-label="閉じる">✕</button></div>
+        <div class="ctr-list" id="ctr-list"></div>
+        <div class="ctr-opp" id="ctr-opp" hidden></div>
+        <div class="ctr-form">
+          <b>＋ カウンターを追加</b>
+          <label class="field" for="ctr-pre">カード・種類<select id="ctr-pre"></select></label>
+          <label class="field" for="ctr-name">カード名<input type="text" id="ctr-name" maxlength="30" autocomplete="off" placeholder="例：魔導戦士 ブレイカー"></label>
+          <label class="field" for="ctr-val">はじめの数<input type="number" id="ctr-val" min="0" max="99" inputmode="numeric" value="0"></label>
+          <div id="ctr-mag-opt" class="ctr-opt"><label class="ctr-chk"><input type="checkbox" id="ctr-auto"> 魔法が発動するたびに＋1（自分・相手どちらでも）</label><label class="field" for="ctr-max">上限（なしは空欄）<input type="number" id="ctr-max" min="0" max="99" inputmode="numeric"></label></div>
+          <div id="ctr-turn-opt" class="ctr-opt" hidden><label class="field" for="ctr-when">いつ減る？<select id="ctr-when"><option value="oppEnd">相手のターンが終わるたびに −1</option><option value="myStart">自分のターンが来るたびに −1（スタンバイ）</option><option value="myEnd">自分のターンが終わるたびに −1</option><option value="anyEnd">ターンが終わるたびに −1（どちらでも）</option></select></label></div>
+          <label class="ctr-chk"><input type="checkbox" id="ctr-own-op"> 相手のカード（リンクしていないとき用）</label>
+          <button type="button" class="btn" id="ctr-add">追加する</button>
+          <p class="note">🪄「魔法発動 ＋1」：魔法カードが発動したら押すと、自動で増える魔力カウンターがまとめて＋1されます。<br>⏳ ターンで減るカウンターは「エンド／ドロー」ボタンで自動で減り、0になるとお知らせします。</p>
+        </div>
+      </div>
+    </div>
+    <div class="ctr-alert" id="ctr-alert" hidden role="alertdialog" aria-live="assertive"><div class="ctr-alert-box"><b>⏰ カウンターが0になりました</b><div id="ctr-alert-t"></div><button type="button" class="btn" id="ctr-alert-ok">OK</button></div></div>
 
     <div class="veil" id="veil" hidden><span>🔒 ロック中<br><small>左上のボタンで解除</small></span></div>
 
@@ -2812,6 +2876,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     if(!sub)return;
     var p={app:'ygo',v:2,name:str(myName(),20),theme:str(D?D.myTheme:$('su-theme').value,30),lp:D?D.lp:START,T:D?D.T:1,TAt:D?D.TAt:0,
       first:myFirst(),firstAt:D?(D.firstAt||0):setupFirstAt,aceT:D&&D.aceT?D.aceT:null,phase:D?(D.phase||'setup'):'setup',seq:seq};
+    if(D&&D.ctr&&D.ctr.length)p.ctr=D.ctr.filter(function(c){return c.own!=='op';}).slice(0,12).map(function(c){return {k:c.k,n:String(c.n||'').slice(0,30),v:Number(c.v)||0,max:Number(c.max)||0};});
     if(lk){p.lk=lk;p.la=la;}
     sub.presence(p).catch(function(){});
   }
@@ -2819,7 +2884,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     var others=ch.peers.filter(function(p){return !p.isMe&&p.presence&&p.presence.app==='ygo';});
     others.sort(function(a,b){return b.updatedAt-a.updatedAt;});
     var o=others[0]||null,pr=o?o.presence:null;
-    opp=o?{uid:o.uid||null,name:str(pr.name,20)||'相手',theme:str(pr.theme,30),lp:num(pr.lp),T:num(pr.T),TAt:Number(pr.TAt)||0,first:!!pr.first,firstAt:Number(pr.firstAt)||0,aceT:num(pr.aceT),phase:str(pr.phase,10),seq:Number(pr.seq)||0,lk:str(pr.lk,6),la:num(pr.la)}:null;
+    opp=o?{uid:o.uid||null,name:str(pr.name,20)||'相手',theme:str(pr.theme,30),lp:num(pr.lp),T:num(pr.T),TAt:Number(pr.TAt)||0,first:!!pr.first,firstAt:Number(pr.firstAt)||0,aceT:num(pr.aceT),phase:str(pr.phase,10),seq:Number(pr.seq)||0,lk:str(pr.lk,6),la:num(pr.la),ctr:Array.isArray(pr.ctr)?pr.ctr.slice(0,12).map(function(c){return {k:str(c.k,5),n:str(c.n,30),v:Number(c.v)||0,max:Number(c.max)||0};}):[]}:null;
     if(opp){setLinkSt('🔗 '+opp.name+' とつながりました！','ok');}else if(sub){setLinkSt('キー '+linkKey+' で待機中。相手が入ると自動でつながります。');}
     if(opp){
       // 先攻・後攻をそろえる（あとから選んだ方に合わせる）
@@ -2902,6 +2967,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     $('turn-go-l').textContent=own==='me'?'🏁 エンド':'🃏 ドロー';$('turn-go-s').textContent=own==='me'?'相手のターンへ':'自分のターンへ';
     $('me-card').classList.toggle('my-turn',own==='me');
     renderTrack();
+    document.dispatchEvent(new CustomEvent('ygo:turn'));
   }
   function renderTrack(){
     if(!D)return;var tr=$('track');tr.innerHTML='';
@@ -3019,7 +3085,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   function releaseWake(){if(wl){try{wl.release();}catch(e){}wl=null;}}
   document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&!overlay.hidden&&D&&D.phase==='play')acquireWake();});
 
-  YGO.app={saveAch:function(o){if(CL)CL.ref.set({ach:o},{merge:true}).catch(function(){});},cloud:function(){return !!CL;},pf:function(){return pf;},opp:function(){return opp||null;},D:function(){return D;},
+  YGO.app={saveD:function(){saveD();},push:function(){pushPresence();},saveAch:function(o){if(CL)CL.ref.set({ach:o},{merge:true}).catch(function(){});},cloud:function(){return !!CL;},pf:function(){return pf;},opp:function(){return opp||null;},D:function(){return D;},
     editLog:function(r,patch){Object.assign(r,patch);if(CL&&r._id){CL.results.doc(r._id).set(cleanRec(r)).catch(function(){alert('保存できませんでした。通信状態を確認してください。');});}else savePf();renderLog();}};
   if(D&&D.phase==='result'){D.phase='play';saveD();}
   if(D&&D.phase==='play'){$('duel-open').textContent='⚔️ デュエルを再開する';}
@@ -4238,7 +4304,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   window.ygoYomiOf=function(name){var k=nm(name);for(var n in YOMI)if(nm(n)===k)return String(YOMI[n]).split('／')[0];return '';};
 
   /* ---- 入力欄に「正式名」の候補を出す ---- */
-  var SEL='#rl-f-q,#ar-q,#rb-q,#ll-name,#f-name,#wl-name,#rs-ace,#me-ace,#rb-rows input[type=text],#rb-rows input:not([type])';
+  var SEL='#ctr-name,#rl-f-q,#ar-q,#rb-q,#ll-name,#f-name,#wl-name,#rs-ace,#me-ace,#rb-rows input[type=text],#rb-rows input:not([type])';
   var box=el('div','cs-pop');box.hidden=true;box.setAttribute('role','listbox');document.body.appendChild(box);var cur=null,its=[],ai=-1;
   function place(){if(!cur)return;var r=cur.getBoundingClientRect(),w=Math.min(window.innerWidth-16,Math.max(r.width,260));box.style.width=w+'px';box.style.left=Math.max(8,Math.min(r.left,window.innerWidth-8-w))+'px';var h=box.offsetHeight||200,room=window.innerHeight-90-r.bottom;box.style.top=(room<h&&r.top>h+8?r.top-h-4:r.bottom+4)+'px';}
   function hide(){box.hidden=true;its=[];ai=-1;}
@@ -4360,6 +4426,93 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   function open(g){btns.forEach(function(b){var on=b.getAttribute('data-g')===g;b.setAttribute('aria-expanded',String(on));var p=document.getElementById('hp-'+b.getAttribute('data-g'));if(p)p.hidden=!on;});try{localStorage.setItem(K,g||'none');}catch(e){}}
   btns.forEach(function(b){b.addEventListener('click',function(){var g=b.getAttribute('data-g');open(b.getAttribute('aria-expanded')==='true'?'':g);});});
   var saved='reg';try{var v=localStorage.getItem(K);if(v)saved=v==='none'?'':v;}catch(e){}open(saved);
+})();
+</script>
+<script>
+/* ===== カウンター（魔力カウンター・ターンで減るカウンター・自由なカウンター） ===== */
+(function(){
+  function $(id){return document.getElementById(id);}
+  function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
+  var Y=window.YGO;if(!Y||!$('ctr-bar'))return;
+  function A(){return Y.app;}function D(){return A()&&A().D();}
+  /* よく使うカードのひな形（GX時代のカード） */
+  var PRE=[
+    {g:'🔮 魔力カウンター',n:'魔導戦士 ブレイカー',k:'mag',v:1,max:1,auto:false},
+    {g:'🔮 魔力カウンター',n:'王立魔法図書館',k:'mag',v:0,max:3,auto:true},
+    {g:'🔮 魔力カウンター',n:'熟練の黒魔術師',k:'mag',v:0,max:3,auto:true},
+    {g:'🔮 魔力カウンター',n:'熟練の白魔導師',k:'mag',v:0,max:3,auto:true},
+    {g:'🔮 魔力カウンター',n:'魔法都市エンディミオン',k:'mag',v:0,max:0,auto:true},
+    {g:'⏳ ターンで減る',n:'光の護封剣',k:'turn',v:3,when:'oppEnd',msg:'光の護封剣が破壊されます（墓地へ）'},
+    {g:'⏳ ターンで減る',n:'闇の護封剣',k:'turn',v:2,when:'oppEnd',msg:'闇の護封剣が破壊されます（墓地へ）'},
+    {g:'⏳ ターンで減る',n:'封印の黄金櫃',k:'turn',v:2,when:'myStart',msg:'封印の黄金櫃：除外したカードを手札に加えます'}
+  ];
+  var WHEN={oppEnd:'相手のターンが終わるたびに −1',myStart:'自分のターンが来るたびに −1（スタンバイ）',myEnd:'自分のターンが終わるたびに −1',anyEnd:'ターンが終わるたびに −1（どちらのターンでも）'};
+  var IC={mag:'🔮',turn:'⏳',free:'🔢'};
+  function list(){var d=D();if(!d)return [];if(!d.ctr)d.ctr=[];return d.ctr;}
+  function save(){var a=A();if(a&&a.saveD)a.saveD();if(a&&a.push)a.push();render();}
+  function ownerOf(T,first){return ((T%2===1)===!!first)?'me':'op';}
+  /* ---- 表示（デュエル画面の帯） ---- */
+  function render(){var bar=$('ctr-bar'),d=D(),mine=list(),op=(A()&&A().opp()&&A().opp().ctr)||[];bar.innerHTML='';
+    var cnt=mine.length+op.length;$('ctr-n').textContent=cnt?String(cnt):'';$('ctr-n').hidden=!cnt;bar.hidden=!cnt;if(!cnt){renderSheet();return;}
+    if(mine.some(function(c){return c.k==='mag'&&c.auto;})){var sp=el('button','ctr-spell','🪄 魔法発動 ＋1');sp.type='button';sp.title='魔法カードが発動したら押す（自動で増える魔力カウンターに＋1）';sp.addEventListener('click',spell);bar.appendChild(sp);}
+    mine.forEach(function(c,i){bar.appendChild(chip(c,i,false));});op.forEach(function(c){bar.appendChild(chip(c,-1,true));});
+    renderSheet();}
+  function chip(c,i,isOpp){var b=el('button','ctr-chip '+c.k+(isOpp?' opp':'')+(c.k==='turn'&&c.v<=0?' done':''));b.type='button';
+    b.appendChild(el('span','ic',IC[c.k]||'🔢'));b.appendChild(el('span','nm',(isOpp?'相手：':c.own==='op'?'相手の':'')+String(c.n||'カウンター').slice(0,14)));
+    b.appendChild(el('b','v',c.k==='turn'?(c.v<=0?'終了':'残り'+c.v):String(c.v)+(c.max?'/'+c.max:'')));
+    b.addEventListener('click',function(){openSheet(isOpp?-1:i);});return b;}
+  /* ---- 魔法発動：自動で増える魔力カウンターすべてに＋1 ---- */
+  function spell(){var ch=[];list().forEach(function(c){if(c.k==='mag'&&c.auto&&(!c.max||c.v<c.max)){c.v++;ch.push(c.n+' '+c.v+(c.max?'/'+c.max:''));}});
+    toast(ch.length?'🔮 魔力カウンター＋1：'+ch.join('、'):'🔮 上限に達しています');save();}
+  /* ---- ターンが進んだとき ---- */
+  document.addEventListener('ygo:turn',function(){var d=D();if(!d||!d.ctr)return;if(d.ctrT==null){d.ctrT=d.T;return;}if(d.T<d.ctrT){d.ctrT=d.T;return;}
+    var fired=[],remind=false;
+    while(d.ctrT<d.T){var endT=d.ctrT,startT=d.ctrT+1;
+      d.ctr.forEach(function(c){if(c.k!=='turn'||c.v<=0)return;var own=c.own==='op'?'op':'me',endOwner=ownerOf(endT,d.first),startOwner=ownerOf(startT,d.first),hit=false;
+        if(c.when==='oppEnd'&&endOwner!==own)hit=true;if(c.when==='myEnd'&&endOwner===own)hit=true;if(c.when==='anyEnd')hit=true;if(c.when==='myStart'&&startOwner===own)hit=true;
+        if(hit){c.v--;if(c.v<=0)fired.push(c);}});
+      if(ownerOf(startT,d.first)==='me'&&d.ctr.some(function(c){return c.k==='mag';}))remind=true;
+      d.ctrT++;}
+    save();
+    if(fired.length)alertBox(fired.map(function(c){return '⏳ '+(c.msg||(c.n+' のカウンターが0になりました'));}));
+    else if(remind){var m=d.ctr.filter(function(c){return c.k==='mag';}).map(function(c){return c.n+' '+c.v+(c.max?'/'+c.max:'');});toast('🔮 魔力カウンターの確認：'+m.join('、'));}});
+  function toast(t){var x=el('div','ctr-toast',t);$('dv-play').appendChild(x);setTimeout(function(){x.classList.add('out');},2600);setTimeout(function(){x.remove();},3100);}
+  function alertBox(lines){var box=$('ctr-alert');$('ctr-alert-t').innerHTML='';lines.forEach(function(l){$('ctr-alert-t').appendChild(el('p','',l));});box.hidden=false;
+    document.dispatchEvent(new CustomEvent('ygo:ctralert'));}
+  $('ctr-alert-ok').addEventListener('click',function(){$('ctr-alert').hidden=true;});
+  /* ---- パネル ---- */
+  var focus=-1;
+  function openSheet(i){focus=i;$('ctr-sheet').hidden=false;renderSheet();}
+  $('ctr-btn').addEventListener('click',function(){openSheet(-1);});
+  $('ctr-close').addEventListener('click',function(){$('ctr-sheet').hidden=true;});
+  function renderSheet(){var box=$('ctr-list');if(!box)return;box.innerHTML='';var mine=list();
+    if(!mine.length)box.appendChild(el('p','note','まだカウンターはありません。下から追加してください。'));
+    mine.forEach(function(c,i){var r=el('div','ctr-row '+c.k+(i===focus?' focus':'')+(c.k==='turn'&&c.v<=0?' done':''));
+      var info=el('div','ctr-info');info.appendChild(el('b','',(IC[c.k]||'🔢')+' '+(c.own==='op'?'（相手のカード）':'')+c.n));
+      info.appendChild(el('small','',c.k==='mag'?(c.auto?'魔法が発動するたびに＋1':'手動で数える')+(c.max?'・上限'+c.max:''):c.k==='turn'?(c.v<=0?'✅ 0になりました':WHEN[c.when]||''):'手動で数える'));r.appendChild(info);
+      var mi=el('button','ctr-pm','−');mi.type='button';mi.addEventListener('click',function(){c.v=Math.max(0,c.v-1);save();});
+      var v=el('b','ctr-v',String(c.v));
+      var pl=el('button','ctr-pm','＋');pl.type='button';pl.addEventListener('click',function(){if(c.max&&c.v>=c.max){toast('上限（'+c.max+'）です');return;}c.v++;save();});
+      var rm=el('button','ctr-rm','🗑');rm.type='button';rm.setAttribute('aria-label','このカウンターを片付ける');rm.addEventListener('click',function(){if(!rm.classList.contains('confirm')){rm.classList.add('confirm');rm.textContent='片付ける';setTimeout(function(){rm.classList.remove('confirm');rm.textContent='🗑';},3000);return;}mine.splice(i,1);save();});
+      r.appendChild(mi);r.appendChild(v);r.appendChild(pl);r.appendChild(rm);box.appendChild(r);});
+    var op=(A()&&A().opp()&&A().opp().ctr)||[];var ob=$('ctr-opp');ob.innerHTML='';ob.hidden=!op.length;
+    if(op.length){ob.appendChild(el('b','','🔗 相手のカウンター（相手の画面で操作）'));op.forEach(function(c){ob.appendChild(el('span','ctr-oc',(IC[c.k]||'🔢')+' '+c.n+'：'+(c.k==='turn'?(c.v<=0?'終了':'残り'+c.v):c.v+(c.max?'/'+c.max:''))));});}}
+  /* ---- 追加フォーム ---- */
+  var sel=$('ctr-pre');var gs={};PRE.forEach(function(p,i){var og=gs[p.g];if(!og){og=document.createElement('optgroup');og.label=p.g;gs[p.g]=og;sel.appendChild(og);}var o=document.createElement('option');o.value=String(i);o.textContent=p.n;og.appendChild(o);});
+  ['🔮 魔力カウンター（ほかのカード）|mag','⏳ ターンで減る（ほかのカード）|turn','🔢 自由なカウンター|free'].forEach(function(t){var a=t.split('|'),o=document.createElement('option');o.value='new:'+a[1];o.textContent=a[0];sel.appendChild(o);});
+  function kindUI(k){$('ctr-mag-opt').hidden=k!=='mag';$('ctr-turn-opt').hidden=k!=='turn';}
+  sel.addEventListener('change',function(){var v=sel.value;if(v.indexOf('new:')===0){var k=v.slice(4);$('ctr-name').value='';$('ctr-val').value=k==='turn'?'2':k==='mag'?'0':'0';$('ctr-auto').checked=k==='mag';$('ctr-max').value='';$('ctr-when').value='oppEnd';sel.dataset.k=k;kindUI(k);return;}
+    var p=PRE[+v];$('ctr-name').value=p.n;$('ctr-val').value=String(p.v);sel.dataset.k=p.k;if(p.k==='mag'){$('ctr-auto').checked=!!p.auto;$('ctr-max').value=p.max?String(p.max):'';}if(p.k==='turn')$('ctr-when').value=p.when;kindUI(p.k);});
+  sel.dispatchEvent(new Event('change'));
+  $('ctr-add').addEventListener('click',function(){var d=D();if(!d){toast('デュエル中に使えます');return;}var k=sel.dataset.k||'free',n=$('ctr-name').value.trim()||(k==='mag'?'魔力カウンター':k==='turn'?'ターンカウンター':'カウンター');
+    var p=sel.value.indexOf('new:')===0?null:PRE[+sel.value];
+    var c={id:Date.now().toString(36),k:k,n:n.slice(0,30),v:Math.max(0,parseInt($('ctr-val').value,10)||0),own:$('ctr-own-op').checked?'op':'me'};
+    if(k==='mag'){c.auto=$('ctr-auto').checked;c.max=Math.max(0,parseInt($('ctr-max').value,10)||0);if(c.max&&c.v>c.max)c.v=c.max;}
+    if(k==='turn'){c.when=$('ctr-when').value;c.msg=(p&&p.n===c.n&&p.msg)||(c.n+' のカウンターが0になりました（効果を処理してください）');if(c.v<1)c.v=1;}
+    if(d.ctrT==null)d.ctrT=d.T;list().push(c);focus=list().length-1;save();toast((IC[k]||'🔢')+' 「'+c.n+'」を追加しました');});
+  document.addEventListener('ygo:opp',render);document.addEventListener('ygo:dstart',function(){var d=D();if(d){d.ctr=[];d.ctrT=d.T;}render();});
+  setInterval(function(){if(!$('dv-play').hidden)render();},4000);
+  render();
 })();
 </script>
 </body>
