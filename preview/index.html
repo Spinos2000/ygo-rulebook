@@ -1293,6 +1293,22 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 .dv-play .apply button{white-space:nowrap;font-size:14px;padding:0 4px}
 .dv-play .amt button{padding:0 8px;flex:none}
 .theme-tag .ctr-tb{width:auto!important;height:auto!important;min-width:0!important;white-space:nowrap;display:inline-flex;align-items:center;line-height:1.4}
+
+.ctr-q{position:absolute;inset:0;z-index:9;background:color-mix(in srgb,#1b2235 45%,transparent);display:flex;align-items:flex-end;justify-content:center;padding:12px}
+.ctr-q[hidden]{display:none}
+.ctr-q-box{width:100%;max-width:420px;background:var(--surface);border:3px solid var(--edge);border-radius:12px;box-shadow:5px 5px 0 var(--edge);padding:14px;display:flex;flex-direction:column;gap:10px}
+.ctr-q-t{font-family:var(--display);font-size:20px}
+.ctr-q-box small{color:var(--muted);font-size:12px;margin-top:-6px}
+.ctr-q-row{display:grid;grid-template-columns:72px 1fr 72px;gap:8px;align-items:center}
+.ctr-q-row .ctr-pm{height:60px;font-size:30px}
+.ctr-q-row .ctr-v{font-size:40px}
+.ctr-gone{font:inherit;font-size:16px;font-weight:900;height:52px;border:3px solid var(--edge);border-radius:10px;background:var(--red);color:#fff;cursor:pointer}
+.ctr-q-more,.ctr-q-x{font:inherit;font-size:13px;font-weight:700;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);cursor:pointer}
+.ctr-rm{white-space:pre-line;line-height:1.15;font-size:10px!important}
+.ctr-toast.undo{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ctr-toast.undo button{flex:none;font:inherit;font-size:13px;font-weight:900;color:var(--edge);background:var(--ra);border:0;border-radius:8px;padding:6px 10px;cursor:pointer}
+
+.ctr-gone{font-size:15px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -4525,7 +4541,25 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   function chip(c,i,isOpp){var b=el('button','ctr-chip '+c.k+(isOpp?' opp':'')+(c.k==='turn'&&c.v<=0?' done':''));b.type='button';
     b.appendChild(el('span','ic',IC[c.k]||'🔢'));b.appendChild(el('span','nm',(isOpp?'相手：':c.own==='op'?'相手の':'')+String(c.n||'カウンター').slice(0,18)));
     b.appendChild(el('b','v',c.k==='turn'?(c.v<=0?'終了':'残り'+c.v):String(c.v)+(c.max?'/'+c.max:'')));
-    b.addEventListener('click',function(){openSheet(isOpp?-1:i);});return b;}
+    b.addEventListener('click',function(){if(isOpp)openSheet(-1);else openQuick(i);});return b;}
+  /* ---- カウンターを押したとき：その場で数える・破壊されたら片付ける ---- */
+  var qk=null,undoBuf=null;
+  function openQuick(i){var c=list()[i];if(!c)return;if(!qk){qk=el('div','ctr-q');qk.setAttribute('role','dialog');qk.addEventListener('click',function(e){if(e.target===qk)qk.hidden=true;});$('dv-play').appendChild(qk);}
+    qk.innerHTML='';var box=el('div','ctr-q-box');box.appendChild(el('b','ctr-q-t',(IC[c.k]||'🔢')+' '+c.n));
+    box.appendChild(el('small','',c.k==='turn'?(c.v<=0?'0になりました':'残り'+c.v+'（'+(WHEN[c.when]||'')+'）'):c.k==='mag'?('魔力カウンター'+(c.max?'（上限'+c.max+'）':'')):'カウンター'));
+    var row=el('div','ctr-q-row'),mi=el('button','ctr-pm','−'),v=el('b','ctr-v',String(c.v)),pl=el('button','ctr-pm','＋');mi.type=pl.type='button';
+    mi.addEventListener('click',function(){c.v=Math.max(0,c.v-1);v.textContent=String(c.v);save();});
+    pl.addEventListener('click',function(){if(c.max&&c.v>=c.max){toast('上限（'+c.max+'）です');return;}c.v++;v.textContent=String(c.v);save();});
+    row.appendChild(mi);row.appendChild(v);row.appendChild(pl);box.appendChild(row);
+    var gone=el('button','ctr-gone','💥 破壊された・場を離れた');gone.type='button';
+    gone.addEventListener('click',function(){var L=list(),j=L.indexOf(c);if(j<0)return;L.splice(j,1);undoBuf={c:c,j:j};save();qk.hidden=true;toastUndo('「'+c.n+'」のカウンターを片付けました');});
+    box.appendChild(gone);
+    var more=el('button','ctr-q-more','くわしく（すべてのカウンター）');more.type='button';more.addEventListener('click',function(){qk.hidden=true;openSheet(i);});box.appendChild(more);
+    var x=el('button','ctr-q-x','閉じる');x.type='button';x.addEventListener('click',function(){qk.hidden=true;});box.appendChild(x);
+    qk.appendChild(box);qk.hidden=false;}
+  function toastUndo(t){var x=el('div','ctr-toast undo');x.appendChild(el('span','',t));var u=el('button','','元に戻す');u.type='button';x.appendChild(u);$('dv-play').appendChild(x);
+    var tm=setTimeout(function(){x.classList.add('out');setTimeout(function(){x.remove();},400);},5000);
+    u.addEventListener('click',function(){clearTimeout(tm);if(undoBuf){list().splice(Math.min(undoBuf.j,list().length),0,undoBuf.c);undoBuf=null;save();}x.remove();});}
   /* ---- 魔法発動：自動で増える魔力カウンターすべてに＋1 ---- */
   function spell(){var ch=[];list().forEach(function(c){if(c.k==='mag'&&c.auto&&(!c.max||c.v<c.max)){c.v++;ch.push(c.n+' '+c.v+(c.max?'/'+c.max:''));}});
     toast(ch.length?'🔮 魔力カウンター＋1：'+ch.join('、'):'🔮 上限に達しています');save();}
@@ -4560,7 +4594,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       var mi=el('button','ctr-pm','−');mi.type='button';mi.addEventListener('click',function(){c.v=Math.max(0,c.v-1);save();});
       var v=el('b','ctr-v',String(c.v));
       var pl=el('button','ctr-pm','＋');pl.type='button';pl.addEventListener('click',function(){if(c.max&&c.v>=c.max){toast('上限（'+c.max+'）です');return;}c.v++;save();});
-      var rm=el('button','ctr-rm','🗑');rm.type='button';rm.setAttribute('aria-label','このカウンターを片付ける');rm.addEventListener('click',function(){if(!rm.classList.contains('confirm')){rm.classList.add('confirm');rm.textContent='片付ける';setTimeout(function(){rm.classList.remove('confirm');rm.textContent='🗑';},3000);return;}mine.splice(i,1);save();});
+      var rm=el('button','ctr-rm','💥\n片付け');rm.type='button';rm.setAttribute('aria-label','破壊された・場を離れた（片付ける）');rm.title='破壊された・場を離れた';rm.addEventListener('click',function(){mine.splice(i,1);undoBuf={c:c,j:i};save();toastUndo('「'+c.n+'」のカウンターを片付けました');});
       r.appendChild(mi);r.appendChild(v);r.appendChild(pl);r.appendChild(rm);box.appendChild(r);});
     var op=(A()&&A().opp()&&A().opp().ctr)||[];var ob=$('ctr-opp');ob.innerHTML='';ob.hidden=!op.length;
     if(op.length){ob.appendChild(el('b','','🔗 相手のカウンター（相手の画面で操作）'));op.forEach(function(c){ob.appendChild(el('span','ctr-oc',(IC[c.k]||'🔢')+' '+c.n+'：'+(c.k==='turn'?(c.v<=0?'終了':'残り'+c.v):c.v+(c.max?'/'+c.max:''))));});}}
