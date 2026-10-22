@@ -1158,6 +1158,33 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 
 .me-links a b{font-size:9.5px!important;letter-spacing:-.06em!important}
 @media (min-height:820px){.hb.mo small,.hb.st small{display:block}.hb.mo,.hb.st{flex-direction:column;align-items:flex-start;min-height:70px;gap:2px}}
+
+/* ===== ホーム：規制・デッキ構築・ルールを押すと中身が開く ===== */
+.hacc{display:flex;flex-direction:column;gap:0}
+.hacc-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;position:relative;z-index:1}
+.hacc-b{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:inherit;color:var(--ink);background:var(--surface);border:3px solid var(--edge);border-radius:8px;box-shadow:3px 3px 0 var(--edge);padding:10px 4px 8px;min-height:74px;cursor:pointer;-webkit-tap-highlight-color:transparent;line-height:1.2}
+.hacc-b span{font-size:26px;line-height:1}
+.hacc-b b{font-family:var(--display);font-size:15px;font-weight:700}
+.hacc-b i{font-style:normal;font-size:11px;color:var(--muted);transition:transform .25s}
+.hacc-b:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--edge)}
+.hacc-b[aria-expanded="true"]{background:var(--ra);border-radius:8px 8px 0 0;box-shadow:none;border-bottom-color:var(--ra);padding-bottom:14px;margin-bottom:-6px}
+.hacc-b[aria-expanded="true"] i{transform:rotate(180deg);color:var(--edge)}
+.hacc-p{display:grid;gap:8px;background:var(--ra);border:3px solid var(--edge);border-radius:8px;box-shadow:3px 3px 0 var(--edge);padding:10px;animation:haccIn .22s ease-out}
+.hacc-p[hidden]{display:none}
+.hacc-p.two{grid-template-columns:1fr 1fr}
+.hacc-p.three{grid-template-columns:1fr 1fr 1fr}
+.hacc-p .hb{box-shadow:2px 2px 0 var(--edge)}
+.hacc-p.three .hb{flex-direction:column;gap:4px;text-align:center;justify-content:center;min-height:58px;padding:6px 4px}
+.hacc-p.three .hb b{font-size:13px}
+.hacc-p.three .hb span{font-size:20px}
+.hacc-p .hb.mo,.hacc-p .hb.st{flex-direction:column;align-items:flex-start;min-height:72px;gap:2px}
+.hacc-p .hb.mo small,.hacc-p .hb.st small{display:block}
+@keyframes haccIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.hacc-p{animation:none}.hacc-b i{transition:none}}
+@media (max-height:740px){.hacc-b{min-height:58px;padding:6px 4px}.hacc-b span{font-size:20px}.hacc-p .hb.mo,.hacc-p .hb.st{min-height:52px}.hacc-p .hb.mo small,.hacc-p .hb.st small{display:none}.hacc-p.three .hb{min-height:46px}}
+
+.me-links{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+.me-links a b{font-size:11px!important;letter-spacing:0!important}
 </style>
 </head>
 <body>
@@ -1271,29 +1298,26 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       <a href="#account" data-go="account"><span>👤</span><b>プロフィール</b></a>
       <a href="#results" data-go="results"><span>📊</span><b>戦績</b></a>
       <a href="#ach" data-go="ach"><span>🏆</span><b>実績</b></a>
-      <a href="#bgm-lib" data-go="bgm-lib"><span>🎺</span><b>BGM</b></a>
       <a href="#players" data-go="players"><span>🧑‍🤝‍🧑</span><b>プレイヤー</b></a>
     </nav>
   </div>
   <button type="button" class="tile big" data-go="duel-open"><span class="i">⚔️</span><span><b>デュエルを始める</b><br><small>ライフ計算・リンク対戦・先攻後攻の抽選</small></span></button>
-  <div class="hgrp">
-    <h2 class="hgrp-t">規制</h2>
-    <div class="hgrp-b two">
+  <div class="hacc" id="hacc">
+    <div class="hacc-row">
+      <button type="button" class="hacc-b" data-g="reg" aria-expanded="false" aria-controls="hp-reg"><span>🚨</span><b>規制</b><i aria-hidden="true">▾</i></button>
+      <button type="button" class="hacc-b" data-g="build" aria-expanded="false" aria-controls="hp-build"><span>🛠️</span><b>デッキ構築</b><i aria-hidden="true">▾</i></button>
+      <button type="button" class="hacc-b" data-g="rule" aria-expanded="false" aria-controls="hp-rule"><span>📜</span><b>ルール</b><i aria-hidden="true">▾</i></button>
+    </div>
+    <div class="hacc-p two" id="hp-reg" data-g="reg" hidden>
       <a href="#reg-mo" data-go="reg-mo" class="hb mo"><span>👾</span><b>モンスター</b><small>規制リスト・許可・見直し候補</small></a>
       <a href="#reg-st" data-go="reg-st" class="hb st"><span>🪄</span><b>魔法・罠</b><small>規制リスト・許可・見直し候補</small></a>
     </div>
-  </div>
-  <div class="hgrp">
-    <h2 class="hgrp-t">構築</h2>
-    <div class="hgrp-b three">
+    <div class="hacc-p three" id="hp-build" data-g="build" hidden>
       <a href="#deck" data-go="deck" class="hb"><span>📖</span><b>構築ルール</b></a>
       <a href="#owners" data-go="owners" class="hb"><span>👥</span><b>テーマ一覧</b></a>
       <a href="#board" data-go="board" class="hb"><span>📋</span><b>規制報告</b></a>
     </div>
-  </div>
-  <div class="hgrp">
-    <h2 class="hgrp-t">ルール</h2>
-    <div class="hgrp-b two">
+    <div class="hacc-p two" id="hp-rule" data-g="rule" hidden>
       <a href="#why" data-go="why" class="hb"><span>📜</span><b>ルールを読む</b></a>
       <a href="#faq" data-go="faq" class="hb"><span>❓</span><b>よくある質問</b></a>
     </div>
@@ -4283,6 +4307,14 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     var go=el('button','btn-sub','📋 この人の規制報告を見る');go.type='button';go.addEventListener('click',function(){if(window.ygoRoute)window.ygoRoute('board');var q=$('rb-q');if(q){q.value=m.name;q.dispatchEvent(new Event('input',{bubbles:true}));}});det.appendChild(go);}
   document.addEventListener('ygo:data',function(){renderList();if(sel)renderDetail();});
   Y.ready.then(function(){renderList();});renderList();
+})();
+</script>
+<script>
+/* ===== ホームの開閉（1つだけ開く・最後に開いたものを覚える） ===== */
+(function(){var box=document.getElementById('hacc');if(!box)return;var K='ygo-home-open',btns=[].slice.call(box.querySelectorAll('.hacc-b'));
+  function open(g){btns.forEach(function(b){var on=b.getAttribute('data-g')===g;b.setAttribute('aria-expanded',String(on));var p=document.getElementById('hp-'+b.getAttribute('data-g'));if(p)p.hidden=!on;});try{localStorage.setItem(K,g||'none');}catch(e){}}
+  btns.forEach(function(b){b.addEventListener('click',function(){var g=b.getAttribute('data-g');open(b.getAttribute('aria-expanded')==='true'?'':g);});});
+  var saved='reg';try{var v=localStorage.getItem(K);if(v)saved=v==='none'?'':v;}catch(e){}open(saved);
 })();
 </script>
 </body>
