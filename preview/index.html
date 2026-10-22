@@ -1095,6 +1095,69 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
 .me-links{grid-template-columns:repeat(6,minmax(0,1fr))!important}
 .me-links a b{max-width:100%;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em}
 .pl-detail,#rb-form,#add-form,#wl-form{scroll-margin-top:84px}
+
+/* ===== ホーム：規制・デッキ構築・ルールの3グループ ===== */
+.hgrp{display:flex;flex-direction:column;gap:6px}
+.hgrp-t{font-family:var(--display);font-size:14px;margin:0 2px;color:var(--edge);display:flex;align-items:center;gap:6px;line-height:1.3}
+.hgrp-t::after{content:"";flex:1;height:2px;background:var(--line)}
+.hgrp-b{display:grid;gap:8px}
+.hgrp-b.two{grid-template-columns:1fr 1fr}
+.hgrp-b.three{grid-template-columns:1fr 1fr 1fr}
+.hb{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);background:var(--surface);border:2px solid var(--edge);border-radius:6px;box-shadow:3px 3px 0 var(--edge);padding:10px 12px;min-height:52px;-webkit-tap-highlight-color:transparent;line-height:1.3}
+.hb:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--edge)}
+.hb span{font-size:22px;line-height:1;flex:none}
+.hb b{font-family:var(--display);font-size:15px;font-weight:700}
+.hb small{display:none}
+.hgrp-b.three .hb{flex-direction:column;justify-content:center;gap:4px;padding:8px 4px;text-align:center}
+.hgrp-b.three .hb b{font-size:13px}
+.hb.mo,.hb.st{flex-direction:column;align-items:flex-start;gap:2px;padding:12px 14px;min-height:76px}
+.hb.mo{background:var(--monster-bg);border-color:var(--edge)}
+.hb.st{background:var(--spell-bg)}
+.hb.mo b,.hb.st b{font-size:20px}
+.hb.mo span,.hb.st span{font-size:28px}
+.hb.mo small,.hb.st small{display:block;font-size:11px;color:var(--muted)}
+.hb.mo b{color:var(--monster)}.hb.st b{color:var(--spell)}
+/* 規制ページ：モンスター／魔法・罠で、許可リストと見直し候補も絞り込む */
+body[data-kind="mo"] #allow .k-st,body[data-kind="st"] #allow .k-mo{display:none}
+body[data-kind="mo"] #watch li[data-k="st"],body[data-kind="st"] #watch li[data-k="mo"]{display:none}
+body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"] #allow .principles > span:nth-child(3){display:none}
+@media (max-height:740px){.hb.mo,.hb.st{min-height:60px;padding:8px 12px}.hb.mo small,.hb.st small{display:none}.hb{min-height:44px;padding:6px 10px}.hgrp{gap:4px}}
+
+/* ホームを1画面に（3グループ版） */
+.me-links{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+.me-links a b{font-size:10.5px!important}
+#home-hub .tile.big small{display:none!important}
+#home-hub .tile.big{padding:10px 14px!important}
+.hd-sub{position:relative;margin-top:-4px}
+.hd-upd{display:none}
+.hgrp{gap:5px}
+.hgrp-t{font-size:12.5px}
+.hb.mo,.hb.st{flex-direction:row;align-items:center;min-height:58px;padding:8px 12px;gap:8px}
+.hb.mo small,.hb.st small{display:none}
+.hb.mo b,.hb.st b{font-size:18px}
+.hb.mo span,.hb.st span{font-size:26px}
+.hgrp-b.three .hb{flex-direction:row;gap:6px;min-height:44px;padding:6px 6px}
+.hgrp-b.three .hb span{font-size:18px}
+.hb{min-height:44px;padding:6px 10px}
+.hb span{font-size:19px}
+#home-hub{gap:10px!important}
+@media (min-height:880px){.hb.mo small,.hb.st small{display:block}.hb.mo,.hb.st{flex-direction:column;align-items:flex-start;min-height:72px}#home-hub .tile.big small{display:block!important}}
+@media (max-height:700px){.hb.mo,.hb.st{min-height:46px}.hb{min-height:38px}.hgrp-t{font-size:11.5px}#home-hub{gap:7px!important}}
+
+/* グループ名は左の縦ラベルにして高さを節約 */
+.hgrp{flex-direction:row!important;align-items:stretch;gap:6px!important}
+.hgrp-t{flex:none;writing-mode:vertical-rl;text-orientation:upright;justify-content:center;font-size:12px!important;letter-spacing:.1em;color:#fff;background:var(--obelisk);border:2px solid var(--edge);border-radius:4px;padding:6px 1px;margin:0;line-height:1;gap:2px}
+.hgrp-t::after{display:none}
+.hgrp:nth-of-type(1) .hgrp-t{background:var(--osiris)}
+.hgrp-b{flex:1;min-width:0}
+@media (max-height:900px){.me-stats{display:none}}
+
+@media (max-height:700px){.hd-svg{max-height:50px}.hb{min-height:36px}.hgrp-t{font-size:11px!important;padding:3px 1px}}
+
+@media (max-height:700px){#home-hub{gap:6px!important}.news{padding:3px 8px!important}.me-card{padding:6px 8px}}
+
+.me-links a b{font-size:9.5px!important;letter-spacing:-.06em!important}
+@media (min-height:820px){.hb.mo small,.hb.st small{display:block}.hb.mo,.hb.st{flex-direction:column;align-items:flex-start;min-height:70px;gap:2px}}
 </style>
 </head>
 <body>
@@ -1210,20 +1273,31 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
       <a href="#ach" data-go="ach"><span>🏆</span><b>実績</b></a>
       <a href="#bgm-lib" data-go="bgm-lib"><span>🎺</span><b>BGM</b></a>
       <a href="#players" data-go="players"><span>🧑‍🤝‍🧑</span><b>プレイヤー</b></a>
-      <a href="#data" data-go="data"><span>💾</span><b>データ</b></a>
     </nav>
   </div>
   <button type="button" class="tile big" data-go="duel-open"><span class="i">⚔️</span><span><b>デュエルを始める</b><br><small>ライフ計算・リンク対戦・先攻後攻の抽選</small></span></button>
-  <nav class="tiles4" aria-label="よく使うページ">
-    <a href="#list" data-go="list"><span>🚨</span><b>規制リスト</b></a>
-    <a href="#mlist" data-go="mlist"><span>🟣</span><b>モンスター規制</b></a>
-    <a href="#allow" data-go="allow"><span>🟢</span><b>許可リスト</b></a>
-    <a href="#board" data-go="board"><span>📋</span><b>報告ボード</b></a>
-    <a href="#deck" data-go="deck"><span>🛠️</span><b>デッキ構築</b></a>
-    <a href="#owners" data-go="owners"><span>👥</span><b>テーマ一覧</b></a>
-    <a href="#why" data-go="why"><span>📜</span><b>ルールを読む</b></a>
-    <a href="#faq" data-go="faq"><span>❓</span><b>よくある質問</b></a>
-  </nav>
+  <div class="hgrp">
+    <h2 class="hgrp-t">規制</h2>
+    <div class="hgrp-b two">
+      <a href="#reg-mo" data-go="reg-mo" class="hb mo"><span>👾</span><b>モンスター</b><small>規制リスト・許可・見直し候補</small></a>
+      <a href="#reg-st" data-go="reg-st" class="hb st"><span>🪄</span><b>魔法・罠</b><small>規制リスト・許可・見直し候補</small></a>
+    </div>
+  </div>
+  <div class="hgrp">
+    <h2 class="hgrp-t">構築</h2>
+    <div class="hgrp-b three">
+      <a href="#deck" data-go="deck" class="hb"><span>📖</span><b>構築ルール</b></a>
+      <a href="#owners" data-go="owners" class="hb"><span>👥</span><b>テーマ一覧</b></a>
+      <a href="#board" data-go="board" class="hb"><span>📋</span><b>規制報告</b></a>
+    </div>
+  </div>
+  <div class="hgrp">
+    <h2 class="hgrp-t">ルール</h2>
+    <div class="hgrp-b two">
+      <a href="#why" data-go="why" class="hb"><span>📜</span><b>ルールを読む</b></a>
+      <a href="#faq" data-go="faq" class="hb"><span>❓</span><b>よくある質問</b></a>
+    </div>
+  </div>
   <div class="news" aria-roledescription="ニュースのティッカー">
     <h2 class="news-ttl">📰<span>ニュース</span></h2>
     <ul class="news-list" id="news-list"></ul>
@@ -1913,9 +1987,11 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
 <section class="fold" id="list">
   <div class="sec-h"><span>LIMITED LIST</span><h2>🚨 汎用魔法・罠 規制リスト</h2><p class="note">全デッキ共通</p></div>
   <p><strong>リストにない汎用魔法・罠</strong>は、GX以前（2008年3月まで）のカードなら<strong>無制限</strong>です。GX以降のカードは、<a href="#allow">許可リスト</a>にあるものだけ使えます。</p>
-  <p class="note">👀 今後の緩和・強化の候補は <a href="#watch">見直し候補</a> にまとめています。</p>
-  <p class="note">GX時代の公式リスト（2008年3月1日）で禁止だったカードは「完全使用不可」、制限・準制限だったカードは「制限」として載せています（一部はこの環境に合わせて変えています）。</p>
-  <div class="legend"><span class="card sp">魔法</span><span class="card tr">罠</span><span><span class="after">後</span> ＝GX以降のカード</span></div>
+    <details class="fold-in"><summary>ℹ️ このリストについて</summary><div class="fold-body">
+    <p class="note">👀 今後の緩和・強化の候補は <a href="#watch">見直し候補</a> にまとめています。</p>
+    <p class="note">GX時代の公式リスト（2008年3月1日）で禁止だったカードは「完全使用不可」、制限・準制限だったカードは「制限」として載せています（一部はこの環境に合わせて変えています）。</p>
+  </div></details>
+<div class="legend"><span class="card sp">魔法</span><span class="card tr">罠</span><span><span class="after">後</span> ＝GX以降のカード</span></div>
 
   <div class="tier t-out">
     <div class="tier-h"><h3>⛔ 完全使用不可（26枚）</h3><p>どのデッキも採用不可</p></div>
@@ -1991,9 +2067,11 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
 <section class="fold" id="mlist">
   <div class="sec-h"><span>MONSTER LIST</span><h2>🟣 汎用モンスター 規制リスト</h2><p class="note">GX以前（2008年3月まで）の汎用モンスター・全デッキ共通</p></div>
   <p><strong>リストにないGX以前の汎用モンスターは無制限</strong>です。GX以降の汎用モンスターは<a href="#allow">許可リスト</a>を見てください。</p>
-  <p class="note">👀 今後の緩和・強化の候補は <a href="#watch">見直し候補</a> にまとめています。</p>
-  <p class="note">GX時代の公式リスト（2008年3月1日）のうち、汎用モンスターを採用しています（この環境に合わせて、開闢・カオス・ソーサラー・ブレイカー・聖なる魔術師は禁止から制限に、黒き森のウィッチは準制限にしています）。E・HEROやエクゾディアなど、テーマのカードは<a href="#tune">デッキごとの規制</a>で扱います。</p>
-  <div class="legend"><span class="card mo">モンスター</span><span class="note">カードを押すと効果の要約が見られます</span></div>
+    <details class="fold-in"><summary>ℹ️ このリストについて</summary><div class="fold-body">
+    <p class="note">👀 今後の緩和・強化の候補は <a href="#watch">見直し候補</a> にまとめています。</p>
+    <p class="note">GX時代の公式リスト（2008年3月1日）のうち、汎用モンスターを採用しています（この環境に合わせて、開闢・カオス・ソーサラー・ブレイカー・聖なる魔術師は禁止から制限に、黒き森のウィッチは準制限にしています）。E・HEROやエクゾディアなど、テーマのカードは<a href="#tune">デッキごとの規制</a>で扱います。</p>
+  </div></details>
+<div class="legend"><span class="card mo">モンスター</span><span class="note">カードを押すと効果の要約が見られます</span></div>
   <div class="tier t-out">
     <div class="tier-h"><h3>⛔ 完全使用不可（12枚）</h3><p>どのデッキも採用不可（どうしても使いたいときは<a href="#ryu" style="color:inherit">🌏 留学生デッキ</a>で）</p></div>
     <div class="cats">
@@ -2033,21 +2111,21 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
     <span>📏 追加の目安：<strong>効果が1つだけ</strong>で、かつ<strong>サーチ・ドローや相手の展開を止めない</strong>カード</span><span class="note">効果が1つでも、灰流うららのようにこの環境の土台（増援・強欲な壺など）を止めるカードは不許可にします。</span>
   </div>
 
-  <h3 class="al-kind">🪄 汎用魔法・罠</h3>
-  <div class="al-group">
+  <h3 class="al-kind k-st">🪄 汎用魔法・罠</h3>
+  <div class="al-group k-st">
     <h3>✅ 許可</h3>
     <ul class="al-items" id="list-ok-st"></ul>
   </div>
-  <div class="al-group">
+  <div class="al-group k-st">
     <h3>⛔ 不許可（検討済み）</h3>
     <ul class="al-items" id="list-ng-st"></ul>
   </div>
-  <h3 class="al-kind">👾 汎用モンスター</h3>
-  <div class="al-group">
+  <h3 class="al-kind k-mo">👾 汎用モンスター</h3>
+  <div class="al-group k-mo">
     <h3>✅ 許可</h3>
     <ul class="al-items" id="list-ok"></ul>
   </div>
-  <div class="al-group">
+  <div class="al-group k-mo">
     <h3>⛔ 不許可（検討済み）</h3>
     <ul class="al-items" id="list-ng"></ul>
   </div>
@@ -3856,27 +3934,32 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
   var TABS=[
     {k:'home',i:'🏠',l:'ホーム',subs:[['home-hub','🏠 ホーム']]},
     {k:'duel',i:'⚔️',l:'デュエル',subs:[['life','🧮 デュエル']]},
-    {k:'rec',i:'📊',l:'戦績',subs:[['results','📊 戦績・リザルト'],['players','🧑‍🤝‍🧑 プレイヤー'],['ach','🏆 実績'],['owners','👥 テーマ一覧']]},
-    {k:'rules',i:'📜',l:'ルール',subs:[['list','🚨 規制リスト'],['mlist','🟣 モンスター規制'],['allow','🟢 許可リスト'],['watch','👀 見直し候補'],['board','📋 報告ボード'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['deck','🛠️ デッキ構築']]},
-    {k:'more',i:'⚙️',l:'設定ほか',subs:[['account','⚙️ アカウント設定'],['faq','❓ よくある質問'],['log','🗒️ 更新履歴'],['data','💾 データ'],['admin','🛠️ 管理者']]}
+    {k:'rec',i:'📊',l:'戦績',subs:[['results','📊 戦績・リザルト'],['players','🧑‍🤝‍🧑 プレイヤー'],['ach','🏆 実績']]},
+    {k:'rules',i:'📜',l:'ルール',subs:[['reg-mo','👾 モンスターの規制',{show:['mlist','allow','watch'],kind:'mo'}],['reg-st','🪄 魔法・罠の規制',{show:['list','allow','watch'],kind:'st'}],['deck','🛠️ デッキ構築'],['owners','👥 テーマ一覧'],['board','📋 報告ボード'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['faq','❓ よくある質問']]},
+    {k:'more',i:'⚙️',l:'設定ほか',subs:[['account','⚙️ アカウント設定'],['log','🗒️ 更新履歴'],['data','💾 データ'],['admin','🛠️ 管理者']]}
   ];
   var SEC={},LAST={};
-  TABS.forEach(function(t){t.subs.forEach(function(s){SEC[s[0]]={tab:t,label:s[1]};});});
+  TABS.forEach(function(t){t.subs.forEach(function(s){SEC[s[0]]={tab:t,label:s[1],opt:s[2]||null};});});
+  /* 規制の各リストは「モンスター」「魔法・罠」のページの中に表示（直接のリンクもそのページへ） */
+  (function(){var R=TABS[3];[['list','🪄 魔法・罠の規制リスト','reg-st'],['mlist','👾 モンスター規制リスト','reg-mo'],['allow','🟢 許可リスト',null],['watch','👀 見直し候補',null]].forEach(function(a){SEC[a[0]]={tab:R,label:a[1],alias:a[2],opt:null};});})();
   var header=document.querySelector('.wrap > header'),subnav=$('subnav'),toc=$('toc'),srch=$('srch'),bar=$('tabbar-in');
   if(!header||!toc||!bar)return;
   document.body.classList.add('rt');
-  function subsOf(t){return t.subs.filter(function(s){var e=$(s[0]);return e&&!(s[0]==='admin'&&e.hidden);});}
+  function subsOf(t){return t.subs.filter(function(s){if(s[2])return true;var e=$(s[0]);return e&&!(s[0]==='admin'&&e.hidden);});}
   /* タブバー */
   TABS.forEach(function(t){var b=el('button');b.type='button';b.dataset.tab=t.k;b.appendChild(el('span','i',t.i));b.appendChild(el('span','l',t.l));
     b.addEventListener('click',function(){var subs=subsOf(t);var id=LAST[t.k]&&$(LAST[t.k])?LAST[t.k]:subs[0][0];if(cur&&SEC[cur].tab===t&&id===cur){window.scrollTo({top:0,behavior:reduce?'auto':'smooth'});return;}go(id,{push:true});});
     bar.appendChild(b);});
   var step=el('div','stepnav'),cur=null;
   function stepBtn(s,next){var b=el('button',next?'n':'p');b.type='button';b.appendChild(el('small','',next?'次へ →':'← 前へ'));b.appendChild(el('b','',s[1]));b.addEventListener('click',function(){go(s[0],{push:true});});return b;}
-  function go(id,o){o=o||{};var info=SEC[id];if(!info)return false;var t=info.tab,subs=subsOf(t);
+  function go(id,o){o=o||{};var info=SEC[id];if(!info)return false;
+    if(info.alias){var r=go(info.alias,{push:o.push,noScroll:true});var tg=$(id);if(!o.noScroll&&tg)setTimeout(function(){siv.call(tg,{block:'start'});},30);return r;}
+    var t=info.tab,subs=subsOf(t),show=(info.opt&&info.opt.show)||[id];
     cur=id;LAST[t.k]=id;
-    Object.keys(SEC).forEach(function(k){var e=$(k);if(e)e.classList.toggle('rt-off',k!==id);});
+    Object.keys(SEC).forEach(function(k){var e=$(k);if(e)e.classList.toggle('rt-off',show.indexOf(k)<0);});
+    document.body.setAttribute('data-kind',(info.opt&&info.opt.kind)||'');
     header.classList.toggle('rt-off',t.k!=='home');
-    var e=$(id);if(e&&e.classList.contains('fold')){e.classList.add('open');var h=e.querySelector('.sec-h');if(h)h.setAttribute('aria-expanded','true');}
+    var e=null;show.forEach(function(k){var x=$(k);if(!x)return;if(x.classList.contains('fold')){x.classList.add('open');var h=x.querySelector('.sec-h');if(h)h.setAttribute('aria-expanded','true');}if(!e||(e.compareDocumentPosition(x)&Node.DOCUMENT_POSITION_FOLLOWING))e=x;});
     /* サブメニュー */
     toc.innerHTML='';subnav.classList.toggle('rt-off',subs.length<2);document.body.classList.toggle('has-sub',subs.length>1);
     subs.forEach(function(s){var a=el('a',s[0]===id?'on':'',s[1]);a.href='#'+s[0];a.draggable=false;if(s[0]===id)a.setAttribute('aria-current','page');toc.appendChild(a);});
@@ -3895,7 +3978,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
   window.ygoRoute=function(id){if(!SEC[id])return false;go(id,{push:true});return true;};
   /* ページ内のほかの場所へ移動するとき、その画面に切り替える */
   var siv=Element.prototype.scrollIntoView;
-  Element.prototype.scrollIntoView=function(){try{var s=this.closest&&this.closest('section[id]');if(s&&SEC[s.id]&&s.id!==cur)go(s.id,{push:true,noScroll:true});}catch(err){}return siv.apply(this,arguments);};
+  Element.prototype.scrollIntoView=function(){try{var s=this.closest&&this.closest('section[id]');if(s&&SEC[s.id]&&s.classList.contains('rt-off'))go(s.id,{push:true,noScroll:true});}catch(err){}return siv.apply(this,arguments);};
   var DEPTH=0;
   window.addEventListener('popstate',function(){DEPTH=Math.max(0,DEPTH-1);start(false);});
   (function(){var bk=$('srch-back');if(bk)bk.addEventListener('click',function(){if(DEPTH>0)history.back();else go('home-hub',{push:true});});})();
@@ -4030,7 +4113,7 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
   window.YGO_DIROF=function(fromK,toK){var a=RANK[fromK],b=RANK[toK];return b<a?'up':b>a?'down':'same';};
   var marking=false;
   function mark(){marking=true;var W=window.YGO_WATCH||{};cards().forEach(function(c){var w=W[key(nameOf(c))];if(w&&w.dir!=='done')c.setAttribute('data-wl',w.dir);else c.removeAttribute('data-wl');});marking=false;}
-  function row(x,dir){var d=x.d,li=el('li'),box=el('div'),r=el('div','wl-row'),now=nowOf(d.name);
+  function row(x,dir){var d=x.d,li=el('li'),box=el('div'),r=el('div','wl-row'),now=nowOf(d.name);if(now.ty)li.setAttribute('data-k',now.ty==='mo'?'mo':'st');
     if(now.ty){var b=el('span','card '+now.ty,now.ty==='tr'?'罠':now.ty==='mo'?'モンスター':'魔法');b.style.fontSize='11px';b.style.padding='0 6px';r.appendChild(b);}
     r.appendChild(el('span','nm',String(d.name||'')));box.appendChild(r);
     var ch=el('div','wl-chg');ch.appendChild(el('span','wl-from','いま '+now.lv));ch.appendChild(el('span','wl-arrow','→'));
