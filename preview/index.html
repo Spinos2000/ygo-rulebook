@@ -818,17 +818,33 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .tile.big .i{font-size:32px}.tile.big b{font-size:20px}.tile.big small{color:#fff;opacity:.9}
 .tile.rules{background:var(--info-bg)}
 /* 検索 */
-.srch{display:flex;flex-direction:column;gap:8px}
+.srch{position:sticky;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:25;display:flex;flex-direction:column;gap:8px}
 .srch-box{display:flex;align-items:center;gap:8px;background:var(--surface);border:3px solid var(--edge);border-radius:999px;padding:4px 6px 4px 14px;box-shadow:3px 3px 0 var(--edge)}
+.srch.open .srch-box{border-color:var(--obelisk)}
 .srch-box input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;color:var(--ink);padding:8px 0;outline:none}
 .srch-box button{flex:none;width:34px;height:34px;border-radius:50%;border:0;background:var(--surface2);color:var(--ink);font-size:14px;cursor:pointer}
-.srch-r{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto;overscroll-behavior:contain}
-.srch-r li button{width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--surface);border:2px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
-.srch-r li button:hover{border-color:var(--edge)}
-.srch-r .w{font-size:12px;font-weight:700;color:var(--obelisk)}
-.srch-r .t{font-size:14px;line-height:1.6}
-.srch-r mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
-.srch-n{font-size:12px;color:var(--muted)}
+.srch-pop{position:absolute;left:0;right:0;top:calc(100% + 8px);max-height:calc(100dvh - 230px);overflow:auto;overscroll-behavior:contain;background:var(--surface);border:3px solid var(--edge);border-radius:10px;box-shadow:5px 5px 0 var(--edge);padding:10px;display:flex;flex-direction:column;gap:10px}
+.srch-pop[hidden]{display:none}
+.srch-n{font-size:12px;color:var(--muted);margin:0 2px}
+.srch-r{display:flex;flex-direction:column;gap:12px}
+.sg{display:flex;flex-direction:column;gap:6px}
+.sg h4{font-family:var(--display);font-size:14px;color:var(--obelisk);margin:0 2px;display:flex;align-items:center;gap:6px}
+.sg-n{font-family:var(--digit);font-size:11px;color:var(--muted);background:var(--surface2);border-radius:999px;padding:1px 8px}
+.sg-i{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--surface2);border:2px solid transparent;border-radius:8px;padding:9px 10px;cursor:pointer}
+.sg-i:hover,.sg-i.act{border-color:var(--edge);background:var(--surface)}
+.sg-i .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.sg-i .tx b{font-size:14px;line-height:1.5;font-weight:700}
+.sg-i .tx small{font-size:12px;color:var(--muted);line-height:1.5}
+.sg-i mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
+.sg-go{flex:none;font-family:var(--latin);font-size:20px;color:var(--muted)}
+.sg-badge{flex:none;font-size:11px!important;padding:1px 6px!important}
+.sg-tags{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.srch-box input::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.sg-tag{font-size:11px;font-weight:700;color:var(--edge);background:var(--ra);border-radius:999px;padding:1px 8px}
+.sg-more{font:inherit;font-size:13px;font-weight:700;color:var(--obelisk);background:transparent;border:2px dashed var(--line);border-radius:8px;padding:8px;cursor:pointer}
+.sg-chips{display:flex;flex-wrap:wrap;gap:6px}
+.sg-chip{font:inherit;font-size:13px;font-weight:700;color:var(--ink);background:var(--surface2);border:2px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer}
+.sg-chip:hover{border-color:var(--edge)}
 .hit-flash{outline:3px solid var(--ra);outline-offset:3px;border-radius:4px;transition:outline-color 1.6s}
 /* 前へ・次へ */
 .stepnav{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:56px}
@@ -989,9 +1005,11 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 
 <section id="home-hub" class="hub" aria-label="ホーム">
   <div class="srch" id="srch" role="search">
-    <div class="srch-box"><span aria-hidden="true">🔎</span><input type="search" id="srch-q" placeholder="ルールやカード名で検索（例：サイクロン）" autocomplete="off" aria-label="ルールブック内を検索"><button type="button" id="srch-x" aria-label="検索をクリア" hidden>✕</button></div>
-    <p class="srch-n" id="srch-n" role="status"></p>
-    <ul class="srch-r" id="srch-r"></ul>
+    <div class="srch-box"><span aria-hidden="true">🔎</span><input type="search" id="srch-q" placeholder="サイト内を検索（カード・ルール・機能）" autocomplete="off" aria-label="ルールブック内を検索"><button type="button" id="srch-x" aria-label="検索をクリア" hidden>✕</button></div>
+    <div class="srch-pop" id="srch-pop" hidden>
+      <p class="srch-n" id="srch-n" role="status"></p>
+      <div class="srch-r" id="srch-r"></div>
+    </div>
   </div>
   <div class="tiles">
     <button type="button" class="tile big" data-go="duel-open"><span class="i">⚔️</span><span><b>デュエルを始める</b><br><small>ライフ計算・リンク対戦</small></span></button>
@@ -1623,8 +1641,9 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   <div class="block">
     <h3>🖨️ プロキシ（コピーカード）</h3>
     <p><span class="red">基本は使用禁止</span>です。</p>
-    <p>ただし、古いカードで手に入らないなどどうしてものときは、<span class="hlw"><span class="hl">対戦相手が了承すれば使ってOK</span></span>。楽しむことが一番です。</p>
-    <p class="note">使うときは対戦前に伝え、カード名が一目でわかるようにしてください。</p>
+    <p>使えるのは、<span class="hlw"><span class="hl">自分で購入済みで、今は手元にないカード</span></span>の代わりだけです。</p>
+    <p class="note">例：実家に置いてある、友達に貸している、別のデッキに入れていて持ってきていない。<br>まだ持っていない（購入していない）カードのプロキシは使えません。</p>
+    <p class="note">使うときは対戦前に相手に伝え、カード名が一目でわかるようにしてください。</p>
   </div>
 
   <div class="block">
@@ -3556,8 +3575,7 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     /* 前へ・次へ（ルールとその他） */
     var ix=subs.map(function(s){return s[0];}).indexOf(id);
     if(subs.length>1&&e){step.innerHTML='';if(ix>0)step.appendChild(stepBtn(subs[ix-1],false));if(ix<subs.length-1)step.appendChild(stepBtn(subs[ix+1],true));e.insertAdjacentElement('afterend',step);step.hidden=false;}else step.hidden=true;
-    srch.classList.toggle('rt-off',!(t.k==='home'||t.k==='rules'||t.k==='more'));
-    if(t.k==='home'){var hub=$('home-hub');hub.insertBefore(srch,hub.querySelector('.tiles'));}else{header.insertAdjacentElement('afterend',srch);}
+    if(srch.parentNode!==header.parentNode||srch.nextElementSibling!==header)header.insertAdjacentElement('beforebegin',srch);
     [].forEach.call(bar.children,function(b){if(b.dataset.tab===t.k)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     var hash='#'+id;if(t.k==='home')hash=location.pathname+location.search;
     try{if(o.push){if(location.hash!=='#'+id&&!(t.k==='home'&&!location.hash))history.pushState({rt:id},'',hash);}else history.replaceState({rt:id},'',hash);}catch(err){}
@@ -3593,29 +3611,78 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
   bl.addEventListener('click',function(){toc.scrollBy({left:-toc.clientWidth*.7,behavior:reduce?'auto':'smooth'});});
   br.addEventListener('click',function(){toc.scrollBy({left:toc.clientWidth*.7,behavior:reduce?'auto':'smooth'});});
 
-  /* ---- 検索：ルール・リスト・FAQ・掲示板の中から探す ---- */
-  var q=$('srch-q'),res=$('srch-r'),num=$('srch-n'),clr=$('srch-x');
-  function norm(s){return String(s||'').normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0x60);}).replace(/\s+/g,' ');}
-  var SEL='p,li,tr,summary,h3,h4,dt,dd,.card,.sec-h h2';
-  function search(){var raw=q.value.trim(),k=norm(raw);res.innerHTML='';num.textContent='';clr.hidden=!raw;if(!k)return;
-    var words=k.split(' ').filter(Boolean),hits=[];
-    Object.keys(SEC).forEach(function(id){if(id==='home-hub')return;var s=$(id);if(!s||(id==='admin'&&s.hidden))return;
-      var cand=[].slice.call(s.querySelectorAll(SEL)).filter(function(n){return !n.closest('form,[hidden]:not(section),.stepnav,script,style')&&!n.querySelector(SEL);});
-      cand.forEach(function(n){var txt=(n.textContent||'').replace(/\s+/g,' ').trim();if(!txt)return;var nt=norm(txt);if(words.every(function(w){return nt.indexOf(w)>=0;}))hits.push({id:id,n:n,txt:txt,nt:nt});});});
-    num.textContent=hits.length?hits.length+'件 見つかりました'+(hits.length>40?'（はじめの40件）':''):'見つかりませんでした。ことばを変えてみてください。';
-    hits.slice(0,40).forEach(function(h){var li=el('li'),b=el('button');b.type='button';b.appendChild(el('span','w',SEC[h.id].label));
-      var t=el('span','t'),p=h.nt.indexOf(words[0]),a=Math.max(0,p-24),z=Math.min(h.txt.length,p+words[0].length+40);
-      if(h.txt.length!==h.nt.length){a=0;z=Math.min(h.txt.length,80);p=-1;}
-      if(a>0)t.appendChild(document.createTextNode('…'));
-      if(p>=0){t.appendChild(document.createTextNode(h.txt.slice(a,p)));t.appendChild(el('mark','',h.txt.slice(p,p+words[0].length)));t.appendChild(document.createTextNode(h.txt.slice(p+words[0].length,z)));}else t.appendChild(document.createTextNode(h.txt.slice(a,z)));
-      if(z<h.txt.length)t.appendChild(document.createTextNode('…'));
-      b.appendChild(t);b.addEventListener('click',function(){go(h.id,{push:true,noScroll:true});var d=h.n.closest('details');if(d)d.open=true;
-        requestAnimationFrame(function(){siv.call(h.n,{block:'center',behavior:reduce?'auto':'smooth'});h.n.classList.add('hit-flash');setTimeout(function(){h.n.classList.remove('hit-flash');},2200);});
-        q.value='';res.innerHTML='';num.textContent='';clr.hidden=true;});
-      li.appendChild(b);res.appendChild(li);});}
-  var tm=null;q.addEventListener('input',function(){clearTimeout(tm);tm=setTimeout(search,150);});
-  q.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();var f=res.querySelector('button');if(f)f.click();}if(e.key==='Escape'){q.value='';search();}});
-  clr.addEventListener('click',function(){q.value='';search();q.focus();});
+  /* ---- 検索：サイト内のすべて（ページ・機能・カード・本文）から探して、種類ごとに候補を出す ---- */
+  var q=$('srch-q'),pop=$('srch-pop'),res=$('srch-r'),num=$('srch-n'),clr=$('srch-x'),RK='ygo-srch-recent';
+  var SKIP=/[\s・･\-－−‐―「」『』（）()【】［］\[\]、。,.!！?？:：\/／~〜＆&]/;
+  function nmap(str){str=String(str||'');var out='',map=[];for(var i=0;i<str.length;i++){var c=str[i].normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g,function(x){return String.fromCharCode(x.charCodeAt(0)-0x60);});
+      for(var j=0;j<c.length;j++){if(SKIP.test(c[j]))continue;out+=c[j];map.push(i);}}return {s:out,map:map};}
+  function txtOf(n){return (n.textContent||'').replace(/\s+/g,' ').trim();}
+  function nameOfCard(c){return (c.firstChild&&c.firstChild.nodeType===3?c.firstChild.nodeValue:c.textContent).replace(/後\s*$/,'').trim();}
+  function tabLabel(id){var t=SEC[id].tab;return t.i+' '+t.l+(t.subs.length>1?' ＞ '+SEC[id].label:'');}
+  function vis(n){return !n.closest('[hidden]:not(section),script,style,.stepnav,#srch');}
+  function words(){return q.value.trim().split(/\s+/).map(function(w){return nmap(w).s;}).filter(Boolean);}
+  function hit(text,ws){var m=nmap(text);for(var i=0;i<ws.length;i++)if(m.s.indexOf(ws[i])<0)return null;return m;}
+  function marked(text,m,ws,max){var f=document.createDocumentFragment(),p=m?m.s.indexOf(ws[0]):-1;
+    if(p<0){f.appendChild(document.createTextNode(text.length>max?text.slice(0,max)+'…':text));return f;}
+    var a=m.map[p],z=m.map[p+ws[0].length-1]+1,st=Math.max(0,a-Math.floor(max/3)),en=Math.min(text.length,st+max);if(z>en){en=Math.min(text.length,z+10);st=Math.max(0,en-max);}
+    if(st>0)f.appendChild(document.createTextNode('…'));f.appendChild(document.createTextNode(text.slice(st,a)));f.appendChild(el('mark','',text.slice(a,z)));f.appendChild(document.createTextNode(text.slice(z,en)));if(en<text.length)f.appendChild(document.createTextNode('…'));return f;}
+  function flash(n){if(!n)return;requestAnimationFrame(function(){siv.call(n,{block:'center',behavior:reduce?'auto':'smooth'});n.classList.add('hit-flash');setTimeout(function(){n.classList.remove('hit-flash');},2200);});}
+  /* 候補の集め方 */
+  var FEAT=[{t:'⚔️ デュエルを始める',s:'ライフ計算・リンク対戦・先攻後攻の抽選',k:'デュエル 開始 始める ライフ 計算 リンク 対戦 抽選 先攻 後攻 コイン サイコロ',run:function(){go('life',{push:true});var d=$('duel-open');if(d)d.click();}}];
+  function collect(ws){var G={page:[],card:[],text:[]};
+    FEAT.forEach(function(f){var m=hit(f.t+' '+f.k,ws);if(m)G.page.push({icon:'',title:f.t,sub:f.s,m:hit(f.t,ws),score:hit(f.t,ws)?2:1,run:f.run});});
+    Object.keys(SEC).forEach(function(id){var s=$(id);if(!s||id==='home-hub'||(id==='admin'&&s.hidden))return;
+      var h=s.querySelector('.sec-h'),note=h&&h.querySelector('.note')?txtOf(h.querySelector('.note')):'',lab=SEC[id].label;
+      var mt=hit(lab,ws),mk=hit(lab+' '+(h?txtOf(h):'')+' '+SEC[id].tab.l,ws);
+      if(mk)G.page.push({title:lab,sub:tabLabel(id)+(note?'｜'+note:''),m:mt,score:mt?3:1,run:function(){go(id,{push:true});}});
+      [].forEach.call(s.querySelectorAll('summary'),function(sm){if(!vis(sm))return;var t=txtOf(sm),m=hit(t,ws);if(m)G.page.push({title:t,sub:tabLabel(id),m:m,score:2,run:function(){go(id,{push:true,noScroll:true});var d=sm.closest('details');if(d)d.open=true;flash(sm);}});});});
+    [].forEach.call(document.querySelectorAll('#list .tier .card,#mlist .tier .card'),function(c){if(c.hidden||c.closest('[hidden]'))return;var n=nameOfCard(c),m=hit(n,ws),sid=c.closest('section').id;
+      var sumT=(window.YGO_DYNSUM||{})[nmap(n).s]||'';if(!sumT){var S=window.YGO_SUM||{};for(var k in S){if(nmap(k).s===nmap(n).s){sumT=S[k];break;}}}
+      var catB=c.closest('.cat')&&c.closest('.cat').querySelector('b'),catN=catB?txtOf(catB):'';var ms=m?null:hit(sumT,ws),mc=(m||ms)?null:hit(catN,ws);if(!m&&!ms&&!mc)return;
+      var tier=c.closest('.tier'),lv=tier.classList.contains('t-out')?'⛔ 完全使用不可':tier.classList.contains('t-ban')?'❌ 禁止':tier.classList.contains('t-semi')?'✌️ 準制限':'☝️ 制限';
+      var ty=c.classList.contains('tr')?'tr':c.classList.contains('mo')?'mo':'sp';
+      G.card.push({card:ty,title:n,tag:lv+(catN?'・'+catN:''),sub:m?(sumT||SEC[sid].label):mc?SEC[sid].label:'',subm:ms,subT:sumT,m:m,score:m?(nmap(n).s.indexOf(ws[0])===0?4:3):1,run:function(){go(sid,{push:true,noScroll:true});flash(c);setTimeout(function(){c.click();},reduce?0:450);}});});
+    [['list-ok','✅ 許可（モンスター）','mo'],['list-ng','⛔ 不許可（モンスター）','mo'],['list-ok-st','✅ 許可（魔法・罠）','sp'],['list-ng-st','⛔ 不許可（魔法・罠）','sp']].forEach(function(a){var u=$(a[0]);if(!u)return;
+      [].forEach.call(u.querySelectorAll('li .nm'),function(nm){var n=txtOf(nm),m=hit(n,ws);if(!m)return;G.card.push({card:a[2],title:n,tag:a[1],sub:'🟢 許可リスト',m:m,score:3,run:function(){go('allow',{push:true,noScroll:true});flash(nm.closest('li'));}});});});
+    var SEL='p,li,tr,h3,h4,dt,dd,label,.al-empty';
+    Object.keys(SEC).forEach(function(id){var s=$(id);if(!s||id==='home-hub'||(id==='admin'&&s.hidden))return;
+      [].forEach.call(s.querySelectorAll(SEL),function(n){if(!vis(n)||n.querySelector(SEL)||n.closest('.tier,.al-items,summary,.sec-h'))return;if(n.matches('label')&&n.querySelector('input,select,textarea')&&!n.firstChild.nodeValue)return;
+        var t=txtOf(n);if(!t||t.length<2)return;var m=hit(t,ws);if(m)(/^H[34]$/.test(n.tagName)?G.page:G.text).push({title:t,sub:tabLabel(id),m:m,score:/^H[34]$/.test(n.tagName)?2:1,run:function(){go(id,{push:true,noScroll:true});var d=n.closest('details');if(d)d.open=true;flash(n);}});});});
+    ['page','card','text'].forEach(function(k){G[k].sort(function(a,b){return b.score-a.score;});});
+    var seen={};G.page=G.page.filter(function(x){var k=x.title+'|'+x.sub;if(seen[k])return false;seen[k]=1;return true;});
+    return G;}
+  /* 表示 */
+  var items=[],act=-1,moreText=false;
+  function item(x,ws){var b=el('button','sg-i');b.type='button';
+    var tx=el('span','tx'),tt=el('b');tt.appendChild(marked(x.title,x.m,ws,x.card?60:64));tx.appendChild(tt);
+    if(x.card||x.tag){var row=el('span','sg-tags');if(x.card){var bd=el('span','card '+x.card,x.card==='tr'?'罠':x.card==='mo'?'モンスター':'魔法');bd.classList.add('sg-badge');row.appendChild(bd);}if(x.tag)row.appendChild(el('span','sg-tag',x.tag));tx.appendChild(row);}
+    if(x.subm){var sm=el('small');sm.appendChild(marked(x.subT,x.subm,ws,60));tx.appendChild(sm);}else if(x.sub){tx.appendChild(el('small','',x.sub.length>70?x.sub.slice(0,70)+'…':x.sub));}
+    b.appendChild(tx);b.appendChild(el('span','sg-go','›'));
+    b.addEventListener('click',function(){remember(q.value.trim());closePop();q.blur();x.run();});return b;}
+  function group(ttl,arr,max,ws,more){if(!arr.length)return;var g=el('div','sg');var h=el('h4','',ttl+' ');h.appendChild(el('span','sg-n',arr.length+'件'));g.appendChild(h);
+    arr.slice(0,max).forEach(function(x){var b=item(x,ws);g.appendChild(b);items.push(b);});
+    if(arr.length>max&&more){var m=el('button','sg-more','▼ 残り'+(arr.length-max)+'件を表示');m.type='button';m.addEventListener('click',function(){moreText=true;render();});g.appendChild(m);}
+    res.appendChild(g);}
+  function recent(){try{return JSON.parse(localStorage.getItem(RK))||[];}catch(e){return [];}}
+  function remember(v){if(!v)return;try{var r=recent().filter(function(x){return x!==v;});r.unshift(v);localStorage.setItem(RK,JSON.stringify(r.slice(0,6)));}catch(e){}}
+  var POP=['規制リスト','モンスター規制','許可リスト','先攻','プロキシ','留学生','エース級','サイドデッキ','BGM','強化手順'];
+  function chips(ttl,arr){if(!arr.length)return;var g=el('div','sg');g.appendChild(el('h4','',ttl));var w=el('div','sg-chips');
+    arr.forEach(function(v){var c=el('button','sg-chip',v);c.type='button';c.addEventListener('click',function(){q.value=v;render();q.focus();});w.appendChild(c);});g.appendChild(w);res.appendChild(g);}
+  function render(){res.innerHTML='';items=[];act=-1;var raw=q.value.trim();clr.hidden=!raw;var ws=words();
+    if(!ws.length){num.textContent='カード名・ルールの言葉・機能の名前で探せます';chips('🕘 最近の検索',recent());chips('✨ よく探されるもの',POP);moreText=false;return;}
+    var G=collect(ws),n=G.page.length+G.card.length+G.text.length;
+    num.textContent=n?'「'+raw+'」の検索結果　全'+n+'件':'「'+raw+'」は見つかりませんでした。ひらがな・別の言い方でも試してみてください。';
+    group('📍 ページ・機能・見出し',G.page,8,ws,false);group('🃏 カード',G.card,8,ws,false);group('📖 ルール・本文',G.text,moreText?999:12,ws,true);
+    if(!n)chips('✨ よく探されるもの',POP);}
+  function openPop(){pop.hidden=false;srch.classList.add('open');render();}
+  function closePop(){pop.hidden=true;srch.classList.remove('open');moreText=false;}
+  function setAct(i){items.forEach(function(b){b.classList.remove('act');});act=i;if(items[i]){items[i].classList.add('act');items[i].scrollIntoView&&siv.call(items[i],{block:'nearest'});}}
+  var tm=null;q.addEventListener('input',function(){moreText=false;clearTimeout(tm);tm=setTimeout(function(){if(pop.hidden)openPop();else render();},120);});
+  q.addEventListener('focus',function(){if(pop.hidden)openPop();if(srch.getBoundingClientRect().top>120)siv.call(srch,{block:'start',behavior:reduce?'auto':'smooth'});});
+  q.addEventListener('keydown',function(e){if(e.key==='ArrowDown'){e.preventDefault();setAct(Math.min(items.length-1,act+1));}else if(e.key==='ArrowUp'){e.preventDefault();setAct(Math.max(0,act-1));}
+    else if(e.key==='Enter'){e.preventDefault();var b=items[act>=0?act:0];if(b)b.click();}else if(e.key==='Escape'){closePop();q.blur();}});
+  clr.addEventListener('click',function(){q.value='';render();q.focus();});
+  document.addEventListener('pointerdown',function(e){if(!pop.hidden&&!srch.contains(e.target))closePop();});
   start(true);
 })();
 </script>
