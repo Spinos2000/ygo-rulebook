@@ -1258,6 +1258,41 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 .topbar .tb.end{padding:0 10px}
 .ctr-toast{top:118px;bottom:auto}
 @media (max-width:360px){.topbar .tb:not(.end){padding:0 5px;min-width:34px}.topbar .rec-chip{padding:0 6px}}
+
+/* ===== 電卓まわりの再配置：上から「カウンター帯 → 早押し → 金額を作る → 決定」、下に道具 ===== */
+.dv-play .calc{display:grid;grid-template-columns:1fr 1.25fr 1fr;grid-template-areas:"adds adds adds" "dmg amt hel";gap:6px;padding:7px}
+.dv-play .adds{grid-area:adds}
+.dv-play .amt{grid-area:amt;min-width:0}
+.dv-play .amt output{font-size:clamp(20px,3.6vh,28px);padding:2px 8px;min-width:0;display:flex;align-items:center;justify-content:flex-end}
+.dv-play .amt button{padding:0 10px}
+.dv-play .apply{display:contents}
+.dv-play .apply .dmg{grid-area:dmg}.dv-play .apply .hel{grid-area:hel}
+.dv-play .apply button{font-size:15px;height:clamp(42px,6.2vh,52px)}
+.dv-play .bottom{grid-template-columns:repeat(6,1fr) 1fr!important}
+.bb.ctr{position:relative}
+.bb.ctr span{font-size:9px;letter-spacing:-.04em}
+.bb .ctr-n{position:absolute;top:-6px;right:-4px;min-width:18px;height:18px;border-radius:999px;background:var(--osiris);color:#fff;font-size:11px;font-style:normal;font-family:var(--digit);line-height:15px;text-align:center;padding:0 4px;border:2px solid var(--edge)}
+.bb .ctr-n[hidden]{display:none}
+.ctr-bar{background:var(--surface);border:2px dashed var(--line);border-radius:10px;padding:5px 6px!important}
+.ctr-ghost{flex:none;display:flex;align-items:center;gap:4px;font:inherit;font-size:13px;font-weight:700;border:2px dashed var(--obelisk);border-radius:999px;padding:4px 10px;background:transparent;color:var(--obelisk);cursor:pointer;white-space:nowrap}
+.ctr-lbl{flex:none;align-self:center;font-size:11px;font-weight:900;color:var(--muted);padding:0 2px}
+.topbar .tb:not(.end){padding:0 9px;min-width:40px;font-size:18px}
+/* プロフィール：テーマごとのカウンター */
+.theme-tag .ctr-tb{border:1px solid var(--line);background:var(--surface);border-radius:999px;font:inherit;font-size:11px;font-weight:700;padding:1px 8px;cursor:pointer;color:var(--ink)}
+.theme-tag .ctr-tb.on{background:#efe6fb;border-color:var(--obelisk)}
+.pf-ctr{display:flex;flex-direction:column;gap:8px;background:var(--surface2);border:2px solid var(--obelisk);border-radius:8px;padding:10px 12px}
+.pf-ctr[hidden]{display:none}
+.pf-ctr b{font-size:14px}
+.pf-ctr .chips{display:flex;flex-wrap:wrap;gap:6px}
+.pf-ctr .chips button{font:inherit;font-size:13px;font-weight:700;border:2px solid var(--line);border-radius:999px;padding:5px 10px;background:var(--surface);color:var(--ink);cursor:pointer}
+.pf-ctr .chips button[aria-pressed="true"]{border-color:var(--obelisk);background:#efe6fb}
+.pf-ctr .row{display:flex;gap:6px}.pf-ctr .row input{flex:1;min-width:0;font:inherit;font-size:16px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.pf-ctr .row button,.pf-ctr .done{font:inherit;font-size:13px;font-weight:700;border:2px solid var(--edge);border-radius:8px;padding:6px 12px;background:var(--surface);cursor:pointer;color:var(--ink)}
+
+.dv-play .calc{grid-template-columns:1fr 1fr 1fr!important}
+.dv-play .apply button{white-space:nowrap;font-size:14px;padding:0 4px}
+.dv-play .amt button{padding:0 8px;flex:none}
+.theme-tag .ctr-tb{width:auto!important;height:auto!important;min-width:0!important;white-space:nowrap;display:inline-flex;align-items:center;line-height:1.4}
 </style>
 </head>
 <body>
@@ -1419,6 +1454,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     <div class="field">
       <span>デッキテーマ</span>
       <div class="theme-list" id="pf-themes"></div>
+      <div class="pf-ctr" id="pf-ctr" hidden></div>
       <div class="theme-add">
         <input type="text" id="pf-theme-in" maxlength="30" placeholder="例：ドラゴン族ビート" aria-label="追加するデッキテーマ">
         <button type="button" id="pf-theme-add">追加</button>
@@ -2445,7 +2481,6 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       <button type="button" class="tb lock" id="lock-btn" aria-pressed="false" aria-label="画面ロック">🔓</button>
       <button type="button" class="tb" id="tl-btn" aria-label="ターンごとの記録" title="ターンごとの記録">📜</button>
       <button type="button" class="tb snd" id="snd-btn" aria-label="効果音のオン・オフ">🔊</button>
-      <button type="button" class="tb ctr" id="ctr-btn" aria-label="カウンター">🔢<span class="ctr-n" id="ctr-n" hidden></span></button>
       <button type="button" class="rec-chip" id="rec-chip" aria-label="戦績に残すかどうかの切り替え">📊 戦績ON</button>
       <span class="dot" id="link-dot" title="リンク状態"></span>
       <button type="button" class="tb end" id="end-btn">終了</button>
@@ -2459,7 +2494,6 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       <button type="button" class="turn-go" id="turn-go"><b id="turn-go-l">エンド ▶</b><span id="turn-go-s">相手のターンへ</span></button>
     </div>
     <div class="track" id="track" aria-label="ターンの流れ"></div>
-    <div class="ctr-bar" id="ctr-bar" hidden aria-label="カウンター"></div>
 
     <div class="opp" id="opp">
       <div class="opp-who"><b id="opp-name">相手</b><span id="opp-theme">未接続</span></div>
@@ -2473,6 +2507,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       <div class="meter"><i id="me-meter"></i></div>
     </div>
 
+    <div class="ctr-bar" id="ctr-bar" hidden aria-label="カウンター"></div>
     <div class="quick">
       <button type="button" class="mode" id="mode-btn" aria-label="減らす種類の切り替え"><span id="mode-ic">💥</span><small id="mode-l">ダメージ</small></button>
       <button type="button" class="qb" data-d="500">−500</button>
@@ -2486,12 +2521,13 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       <div class="adds">
         <button type="button" data-a="100">+100</button><button type="button" data-a="500">+500</button><button type="button" data-a="1000">+1000</button><button type="button" data-a="2000">+2000</button>
       </div>
-      <div class="apply"><button type="button" class="dmg" id="dmg-btn">💥 ダメージ −</button><button type="button" class="hel" id="heal-btn">💚 回復 ＋</button></div>
+      <div class="apply"><button type="button" class="dmg" id="dmg-btn">💥 ダメージ</button><button type="button" class="hel" id="heal-btn">💚 回復</button></div>
     </div>
 
     <div class="bottom">
       <button type="button" class="bb" id="ace-btn">👑<span>エース</span></button>
       <button type="button" class="bb" id="undo-btn">↶<span>戻す</span></button>
+      <button type="button" class="bb ctr" id="ctr-btn" aria-label="カウンター">🔢<span>カウンター</span><i class="ctr-n" id="ctr-n" hidden></i></button>
       <button type="button" class="bb" id="coin-btn">🪙<span>コイン</span></button>
       <button type="button" class="bb" id="dice-btn">🎲<span>サイコロ</span></button>
       <button type="button" class="bb bgm" id="bgm-btn" aria-pressed="false">🎺<span>BGM</span></button>
@@ -2516,7 +2552,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
         </div>
       </div>
     </div>
-    <div class="ctr-alert" id="ctr-alert" hidden role="alertdialog" aria-live="assertive"><div class="ctr-alert-box"><b>⏰ カウンターが0になりました</b><div id="ctr-alert-t"></div><button type="button" class="btn" id="ctr-alert-ok">OK</button></div></div>
+    <div class="ctr-alert" id="ctr-alert" hidden role="alertdialog" aria-live="assertive"><div class="ctr-alert-box"><b id="ctr-alert-h">⏰ カウンターが0になりました</b><div id="ctr-alert-t"></div><button type="button" class="btn" id="ctr-alert-ok">OK</button></div></div>
 
     <div class="veil" id="veil" hidden><span>🔒 ロック中<br><small>左上のボタンで解除</small></span></div>
 
@@ -2624,7 +2660,8 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 
   /* ---------- プロフィール（複数人対応） ---------- */
   function uid(){return 'p'+Date.now().toString(36)+rnd(1e6).toString(36);}
-  function normP(x){x=x||{};return {id:x.id||uid(),name:str(x.name,20),themes:Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[],log:Array.isArray(x.log)?x.log:[],lastTheme:x.lastTheme==null?null:str(x.lastTheme,30),recDefault:x.recDefault!==false,kinds:normK(x.kinds)};}
+  function normP(x){x=x||{};return {id:x.id||uid(),name:str(x.name,20),themes:Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[],log:Array.isArray(x.log)?x.log:[],lastTheme:x.lastTheme==null?null:str(x.lastTheme,30),recDefault:x.recDefault!==false,kinds:normK(x.kinds),ctr:normC(x.ctr)};}
+  function normC(c){var o={};if(c&&typeof c==='object')Object.keys(c).forEach(function(t){if(Array.isArray(c[t])&&c[t].length)o[str(t,30)]=c[t].map(function(v){return str(v,30);}).filter(Boolean).slice(0,12);});return o;}
   function normK(k){var o={};if(k&&typeof k==='object')Object.keys(k).forEach(function(t){if(k[t]==='ryu')o[str(t,30)]='ryu';});return o;}
   var store=load(SKEY,null);
   if(!store||!Array.isArray(store.list)){
@@ -2638,13 +2675,13 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   if(!pf){pf=normP({});}
   var CL=null;
   function savePf(){
-    if(CL){var ta={},NT=window.YGO_NEWTHEME||{};pf.themes.forEach(function(t){if(NT[t])ta[t]=NT[t];});window.YGO_NEWTHEME={};var body={name:pf.name,themes:pf.themes,kinds:pf.kinds||{},lastTheme:pf.lastTheme,recDefault:pf.recDefault!==false,updatedAt:Date.now()};if(Object.keys(ta).length)body.themeAt=ta;CL.ref.set(body,{merge:true}).catch(function(){pfStatus('保存できませんでした。通信状態を確認して、もう一度お試しください。','err');});return;}
+    if(CL){var ta={},NT=window.YGO_NEWTHEME||{};pf.themes.forEach(function(t){if(NT[t])ta[t]=NT[t];});window.YGO_NEWTHEME={};var body={name:pf.name,themes:pf.themes,kinds:pf.kinds||{},ctr:pf.ctr||{},lastTheme:pf.lastTheme,recDefault:pf.recDefault!==false,updatedAt:Date.now()};if(Object.keys(ta).length)body.themeAt=ta;CL.ref.set(body,{merge:true}).catch(function(){pfStatus('保存できませんでした。通信状態を確認して、もう一度お試しください。','err');});return;}
     if(!findP(pf.id)&&(pf.name||pf.themes.length||pf.log.length)){store.list.push(pf);}store.cur=pf.id;save(SKEY,store);}
   function cleanRec(r){var o=JSON.parse(JSON.stringify(r||{}));delete o._id;if(CL){o.uid=CL.uid;}o.myName=str(o.myName||pf.name||'',20);return o;}
 
   var draft=null;
-  function resetDraft(){draft={name:pf.name||'',themes:pf.themes.slice(),kinds:Object.assign({},pf.kinds||{})};$('pf-name').value=draft.name;renderThemes();markDirty();renderCur();}
-  function isDirty(){return draft&&(draft.name!==(pf.name||'')||draft.themes.join('\u0001')!==pf.themes.join('\u0001')||JSON.stringify(draft.kinds)!==JSON.stringify(pf.kinds||{}));}
+  function resetDraft(){draft={name:pf.name||'',themes:pf.themes.slice(),kinds:Object.assign({},pf.kinds||{}),ctr:JSON.parse(JSON.stringify(pf.ctr||{}))};ctrFor=null;$('pf-name').value=draft.name;renderThemes();markDirty();renderCur();}
+  function isDirty(){return draft&&(draft.name!==(pf.name||'')||draft.themes.join('\u0001')!==pf.themes.join('\u0001')||JSON.stringify(draft.kinds)!==JSON.stringify(pf.kinds||{})||JSON.stringify(draft.ctr||{})!==JSON.stringify(pf.ctr||{}));}
   function markDirty(){$('pf-dirty').hidden=!isDirty();}
   function renderCur(){$('pf-cur-name').textContent=pf.name||'未登録';$('pf-sum-name').textContent=pf.name||'未登録';if(!pf.name)$('profile').open=true;$('pf-delete').hidden=CL?true:!findP(pf.id);$('pf-switch').hidden=!!CL;}
   function nameHint(){var v=$('pf-name').value.trim();$('pf-name-hint').hidden=!v||/^[ぁ-んー]+$/.test(v);}
@@ -2657,11 +2694,26 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       kb.addEventListener('click',function(){if(draft.kinds[t]==='ryu')delete draft.kinds[t];else draft.kinds[t]='ryu';renderThemes();markDirty();});tag.appendChild(kb);
       var x=el('button','','×');x.type='button';x.setAttribute('aria-label',t+'を削除');
       x.addEventListener('click',function(){if(!x.classList.contains('confirm')){x.classList.add('confirm');setTimeout(function(){x.classList.remove('confirm');},3000);return;}draft.themes.splice(i,1);delete draft.kinds[t];renderThemes();markDirty();});
+      var cn=(draft.ctr&&draft.ctr[t]||[]).length,cb=el('button','ctr-tb'+(cn?' on':''),cn?'🔢 '+cn:'🔢 なし');cb.type='button';cb.title='このデッキで使うカウンター';cb.addEventListener('click',function(){openCtr(t);});tag.appendChild(cb);
       tag.appendChild(x);box.appendChild(tag);});
+    renderCtrEdit();
   }
+  /* テーマ登録のとき：カウンターやターンを数えるカードを使うか聞く */
+  var CTRS=[['mag','🔮 魔力カウンター'],['光の護封剣','⏳ 光の護封剣'],['闇の護封剣','⏳ 闇の護封剣'],['封印の黄金櫃','⏳ 封印の黄金櫃'],['Aカウンター','👽 Aカウンター（エーリアン）'],['時計カウンター','🕰️ 時計カウンター（幽獄の時計塔）'],['ヴェノムカウンター','🐍 ヴェノムカウンター']];
+  var ctrFor=null;
+  function openCtr(t){ctrFor=t;renderCtrEdit();var e=$('pf-ctr');if(e)e.scrollIntoView({block:'nearest',behavior:'smooth'});}
+  function renderCtrEdit(){var e=$('pf-ctr');if(!e)return;e.innerHTML='';if(!ctrFor||draft.themes.indexOf(ctrFor)<0){e.hidden=true;return;}e.hidden=false;
+    draft.ctr=draft.ctr||{};var cur=draft.ctr[ctrFor]=draft.ctr[ctrFor]||[];
+    e.appendChild(el('b','','🔢 「'+ctrFor+'」で、カウンターやターンを数えるカードは使いますか？'));
+    e.appendChild(el('span','note','使うものを押してください（あとから変えられます）。デュエルで注意を出し、すぐ数えられるようにします。'));
+    var ch=el('div','chips');CTRS.concat(cur.filter(function(v){return !CTRS.some(function(c){return c[0]===v;});}).map(function(v){return [v,'🔢 '+v];})).forEach(function(c){var b=el('button','',c[1]);b.type='button';b.setAttribute('aria-pressed',String(cur.indexOf(c[0])>=0));
+      b.addEventListener('click',function(){var i=cur.indexOf(c[0]);if(i>=0)cur.splice(i,1);else cur.push(c[0]);if(!cur.length)delete draft.ctr[ctrFor];renderThemes();markDirty();});ch.appendChild(b);});e.appendChild(ch);
+    var row=el('div','row'),inp=el('input');inp.type='text';inp.maxLength=30;inp.placeholder='ほかのカード・カウンター名（例：魔導戦士 ブレイカー）';inp.id='pf-ctr-in';var ad=el('button','','追加');ad.type='button';
+    ad.addEventListener('click',function(){var v=inp.value.trim().slice(0,30);if(!v)return;draft.ctr[ctrFor]=draft.ctr[ctrFor]||[];if(draft.ctr[ctrFor].indexOf(v)<0)draft.ctr[ctrFor].push(v);renderThemes();markDirty();});row.appendChild(inp);row.appendChild(ad);e.appendChild(row);
+    var dn=el('button','done',cur.length?'✅ これでOK（閉じる）':'使わない（閉じる）');dn.type='button';dn.addEventListener('click',function(){ctrFor=null;renderCtrEdit();});e.appendChild(dn);}
   var newKind='std';
   [].forEach.call(document.querySelectorAll('#pf-kind button'),function(b){b.addEventListener('click',function(){newKind=b.getAttribute('data-k');[].forEach.call(document.querySelectorAll('#pf-kind button'),function(x){x.setAttribute('aria-checked',String(x===b));});});});
-  function addTheme(){var i=$('pf-theme-in'),v=i.value.trim().slice(0,30);if(!v)return;if(draft.themes.indexOf(v)<0){draft.themes.push(v);window.YGO_NEWTHEME=window.YGO_NEWTHEME||{};window.YGO_NEWTHEME[v]=Date.now();}if(newKind==='ryu')draft.kinds[v]='ryu';else delete draft.kinds[v];i.value='';renderThemes();markDirty();}
+  function addTheme(){var i=$('pf-theme-in'),v=i.value.trim().slice(0,30);if(!v)return;if(draft.themes.indexOf(v)<0){draft.themes.push(v);window.YGO_NEWTHEME=window.YGO_NEWTHEME||{};window.YGO_NEWTHEME[v]=Date.now();}if(newKind==='ryu')draft.kinds[v]='ryu';else delete draft.kinds[v];i.value='';ctrFor=v;renderThemes();markDirty();}
   $('pf-theme-add').addEventListener('click',addTheme);
   $('pf-theme-in').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addTheme();}});
   function pfStatus(t,c){var e=$('pf-status');e.textContent=t;e.className='status'+(c?' '+c:'');}
@@ -2669,7 +2721,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     var pend=$('pf-theme-in').value.trim();if(pend){addTheme();}
     if(!draft.name){pfStatus('ニックネームを入力してください。','err');return;}
     if(CL&&YGO.nameTaken&&YGO.nameTaken(draft.name)){pfStatus('「'+draft.name+'」はほかのメンバーが使っています。成績が混ざらないよう、別のニックネームにしてください。','err');return;}
-    pf.name=draft.name;pf.themes=draft.themes.slice();pf.kinds={};pf.themes.forEach(function(t){if(draft.kinds[t]==='ryu')pf.kinds[t]='ryu';});savePf();markDirty();renderCur();pfStatus('💾 保存しました！','ok');
+    pf.name=draft.name;pf.themes=draft.themes.slice();pf.kinds={};pf.themes.forEach(function(t){if(draft.kinds[t]==='ryu')pf.kinds[t]='ryu';});pf.ctr={};pf.themes.forEach(function(t){if(draft.ctr&&draft.ctr[t]&&draft.ctr[t].length)pf.ctr[t]=draft.ctr[t].slice();});savePf();markDirty();renderCur();pfStatus('💾 保存しました！','ok');
   });
   var delBtn=$('pf-delete');
   delBtn.addEventListener('click',function(){
@@ -2748,7 +2800,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     who.hidden=true;pf=normP({id:u.uid});resetDraft();renderLog();
     var firstSnap=true;
     CL.ref.onSnapshot(function(d){var x=d.exists?(d.data()||{}):{};var dirty=!firstSnap&&isDirty();
-      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;pf.kinds=normK(x.kinds);pf.ach=(x.ach&&typeof x.ach==='object')?x.ach:{};
+      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;pf.kinds=normK(x.kinds);pf.ctr=normC(x.ctr);pf.ach=(x.ach&&typeof x.ach==='object')?x.ach:{};
       if(!dirty)resetDraft();else renderCur();
       if(firstSnap&&!pf.name){$('profile').open=true;pfStatus('👋 はじめまして！ニックネームに苗字をひらがなで（例：やまだ）、デッキテーマも入れて「💾 プロフィールを保存」を押してください。','');}
       firstSnap=false;},function(){pfStatus('プロフィールを読み込めませんでした。ページを開き直してください。','err');});
@@ -4304,7 +4356,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   window.ygoYomiOf=function(name){var k=nm(name);for(var n in YOMI)if(nm(n)===k)return String(YOMI[n]).split('／')[0];return '';};
 
   /* ---- 入力欄に「正式名」の候補を出す ---- */
-  var SEL='#ctr-name,#rl-f-q,#ar-q,#rb-q,#ll-name,#f-name,#wl-name,#rs-ace,#me-ace,#rb-rows input[type=text],#rb-rows input:not([type])';
+  var SEL='#pf-ctr-in,#ctr-name,#rl-f-q,#ar-q,#rb-q,#ll-name,#f-name,#wl-name,#rs-ace,#me-ace,#rb-rows input[type=text],#rb-rows input:not([type])';
   var box=el('div','cs-pop');box.hidden=true;box.setAttribute('role','listbox');document.body.appendChild(box);var cur=null,its=[],ai=-1;
   function place(){if(!cur)return;var r=cur.getBoundingClientRect(),w=Math.min(window.innerWidth-16,Math.max(r.width,260));box.style.width=w+'px';box.style.left=Math.max(8,Math.min(r.left,window.innerWidth-8-w))+'px';var h=box.offsetHeight||200,room=window.innerHeight-90-r.bottom;box.style.top=(room<h&&r.top>h+8?r.top-h-4:r.bottom+4)+'px';}
   function hide(){box.hidden=true;its=[];ai=-1;}
@@ -4452,10 +4504,22 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   function save(){var a=A();if(a&&a.saveD)a.saveD();if(a&&a.push)a.push();render();}
   function ownerOf(T,first){return ((T%2===1)===!!first)?'me':'op';}
   /* ---- 表示（デュエル画面の帯） ---- */
-  function render(){var bar=$('ctr-bar'),d=D(),mine=list(),op=(A()&&A().opp()&&A().opp().ctr)||[];bar.innerHTML='';
-    var cnt=mine.length+op.length;$('ctr-n').textContent=cnt?String(cnt):'';$('ctr-n').hidden=!cnt;bar.hidden=!cnt;if(!cnt){renderSheet();return;}
+  function themeCtr(){var d=D(),a=A();if(!d||!a||!a.pf)return [];return ((a.pf().ctr||{})[d.myTheme||'']||[]).slice();}
+  var NAMES={'Aカウンター':'👽','時計カウンター':'🕰️','ヴェノムカウンター':'🐍'};
+  function addFrom(key){var d=D();if(!d)return;if(d.ctrT==null)d.ctrT=d.T;
+    if(key==='mag'){openSheet(-1);var o=[].filter.call($('ctr-pre').options,function(x){return x.value==='new:mag';})[0];if(o){$('ctr-pre').value=o.value;$('ctr-pre').dispatchEvent(new Event('change'));}$('ctr-name').focus();return;}
+    var pi=-1;PRE.forEach(function(p,i){if(p.n===key)pi=i;});var c;
+    if(pi>=0){var p=PRE[pi];c={id:Date.now().toString(36),k:p.k,n:p.n,v:p.v,own:'me'};if(p.k==='mag'){c.auto=!!p.auto;c.max=p.max||0;}if(p.k==='turn'){c.when=p.when;c.msg=p.msg;}}
+    else c={id:Date.now().toString(36),k:'free',n:key,v:0,own:'me'};
+    list().push(c);save();toast((IC[c.k]||'🔢')+' 「'+c.n+'」を追加しました');}
+  function render(){var bar=$('ctr-bar'),d=D(),mine=list(),op=(A()&&A().opp()&&A().opp().ctr)||[],tc=themeCtr();bar.innerHTML='';
+    var cnt=mine.length+op.length;$('ctr-n').textContent=cnt?String(cnt):'';$('ctr-n').hidden=!cnt;bar.hidden=!cnt&&!tc.length;if(!cnt&&!tc.length){renderSheet();return;}
     if(mine.some(function(c){return c.k==='mag'&&c.auto;})){var sp=el('button','ctr-spell','🪄 魔法発動 ＋1');sp.type='button';sp.title='魔法カードが発動したら押す（自動で増える魔力カウンターに＋1）';sp.addEventListener('click',spell);bar.appendChild(sp);}
     mine.forEach(function(c,i){bar.appendChild(chip(c,i,false));});op.forEach(function(c){bar.appendChild(chip(c,-1,true));});
+    /* このデッキで使うカウンター：まだ出していないものを「＋」で */
+    var gh=tc.filter(function(k){if(k==='mag')return !mine.some(function(c){return c.k==='mag';});return !mine.some(function(c){return c.n===k&&!(c.k==='turn'&&c.v<=0);});});
+    if(gh.length){if(!cnt)bar.appendChild(el('span','ctr-lbl','このデッキ：'));gh.forEach(function(k){var isT=PRE.some(function(p){return p.n===k&&p.k==='turn';});
+      var g=el('button','ctr-ghost',k==='mag'?'＋🔮 魔力カウンター':isT?'＋⏳ '+k+'（発動したら）':'＋'+(NAMES[k]||'🔢')+' '+k);g.type='button';g.addEventListener('click',function(){addFrom(k);});bar.appendChild(g);});}
     renderSheet();}
   function chip(c,i,isOpp){var b=el('button','ctr-chip '+c.k+(isOpp?' opp':'')+(c.k==='turn'&&c.v<=0?' done':''));b.type='button';
     b.appendChild(el('span','ic',IC[c.k]||'🔢'));b.appendChild(el('span','nm',(isOpp?'相手：':c.own==='op'?'相手の':'')+String(c.n||'カウンター').slice(0,14)));
@@ -4477,7 +4541,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     if(fired.length)alertBox(fired.map(function(c){return '⏳ '+(c.msg||(c.n+' のカウンターが0になりました'));}));
     else if(remind){var m=d.ctr.filter(function(c){return c.k==='mag';}).map(function(c){return c.n+' '+c.v+(c.max?'/'+c.max:'');});toast('🔮 魔力カウンターの確認：'+m.join('、'));}});
   function toast(t){var x=el('div','ctr-toast',t);$('dv-play').appendChild(x);setTimeout(function(){x.classList.add('out');},2600);setTimeout(function(){x.remove();},3100);}
-  function alertBox(lines){var box=$('ctr-alert');$('ctr-alert-t').innerHTML='';lines.forEach(function(l){$('ctr-alert-t').appendChild(el('p','',l));});box.hidden=false;
+  function alertBox(lines,title){var box=$('ctr-alert');$('ctr-alert-h').textContent=title||'⏰ カウンターが0になりました';$('ctr-alert-t').innerHTML='';lines.forEach(function(l){$('ctr-alert-t').appendChild(el('p','',l));});box.hidden=false;
     document.dispatchEvent(new CustomEvent('ygo:ctralert'));}
   $('ctr-alert-ok').addEventListener('click',function(){$('ctr-alert').hidden=true;});
   /* ---- パネル ---- */
@@ -4505,11 +4569,14 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     var p=PRE[+v];$('ctr-name').value=p.n;$('ctr-val').value=String(p.v);sel.dataset.k=p.k;if(p.k==='mag'){$('ctr-auto').checked=!!p.auto;$('ctr-max').value=p.max?String(p.max):'';}if(p.k==='turn')$('ctr-when').value=p.when;kindUI(p.k);});
   sel.dispatchEvent(new Event('change'));
   $('ctr-add').addEventListener('click',function(){var d=D();if(!d){toast('デュエル中に使えます');return;}var k=sel.dataset.k||'free',n=$('ctr-name').value.trim()||(k==='mag'?'魔力カウンター':k==='turn'?'ターンカウンター':'カウンター');
-    var p=sel.value.indexOf('new:')===0?null:PRE[+sel.value];
+    var p=sel.value.indexOf('new:')===0?null:PRE[+sel.value];var pm=PRE.filter(function(x){return x.n===n;})[0];if(!p&&pm){addFrom(pm.n);$('ctr-name').value='';return;}
     var c={id:Date.now().toString(36),k:k,n:n.slice(0,30),v:Math.max(0,parseInt($('ctr-val').value,10)||0),own:$('ctr-own-op').checked?'op':'me'};
     if(k==='mag'){c.auto=$('ctr-auto').checked;c.max=Math.max(0,parseInt($('ctr-max').value,10)||0);if(c.max&&c.v>c.max)c.v=c.max;}
     if(k==='turn'){c.when=$('ctr-when').value;c.msg=(p&&p.n===c.n&&p.msg)||(c.n+' のカウンターが0になりました（効果を処理してください）');if(c.v<1)c.v=1;}
     if(d.ctrT==null)d.ctrT=d.T;list().push(c);focus=list().length-1;save();toast((IC[k]||'🔢')+' 「'+c.n+'」を追加しました');});
+  /* デュエル開始：このデッキがカウンターを使うなら注意を出す */
+  document.addEventListener('ygo:start',function(){setTimeout(function(){var tc=themeCtr();render();if(!tc.length)return;
+    var L={'mag':'🔮 魔力カウンター'};alertBox(tc.map(function(k){return (L[k]||((PRE.some(function(p){return p.n===k&&p.k==='turn';})?'⏳ ':(NAMES[k]?NAMES[k]+' ':'🔢 '))+k));}).concat(['','電卓の上の帯の「＋」から、すぐ数え始められます。数え忘れに注意！']),'🔢 このデッキはカウンターを使います');},1600);});
   document.addEventListener('ygo:opp',render);document.addEventListener('ygo:dstart',function(){var d=D();if(d){d.ctr=[];d.ctrT=d.T;}render();});
   setInterval(function(){if(!$('dv-play').hidden)render();},4000);
   render();
