@@ -1185,6 +1185,37 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 
 .me-links{grid-template-columns:repeat(4,minmax(0,1fr))!important}
 .me-links a b{font-size:11px!important;letter-spacing:0!important}
+
+/* ニュース：2行（種類と日時／内容）＋すべて見る */
+.news{flex-direction:column!important;align-items:stretch!important;gap:4px!important;padding:8px 10px!important}
+.news-head{display:flex;align-items:center;gap:8px}
+.news-head .news-ttl{flex:none}
+.news-head .news-dots{flex:1}
+.news-more{flex:none;font:inherit;font-size:12px;font-weight:700;color:var(--obelisk);background:transparent;border:0;padding:2px 4px;cursor:pointer}
+.news-list{height:46px!important;flex:none!important}
+.news-list .news-i,.news-all .news-i{height:auto!important;display:flex!important;flex-direction:column;align-items:stretch!important;gap:1px;text-decoration:none;color:var(--ink)}
+.news-top{display:flex;align-items:center;justify-content:space-between;gap:8px;line-height:1.3}
+.news-top .news-h{font-size:12px}
+.news-top .news-t{font-size:11px}
+.news-i .news-b{display:block;font-size:14px;font-weight:700;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.news-sheet{position:fixed;inset:0;z-index:72;background:color-mix(in srgb,#1b2235 45%,transparent);display:flex;align-items:flex-end;justify-content:center;padding:12px}
+.news-sheet[hidden]{display:none}
+.news-sheet-box{width:100%;max-width:560px;max-height:80vh;overflow:auto;background:var(--surface);border:3px solid var(--edge);border-radius:10px;box-shadow:5px 5px 0 var(--edge);padding:14px;display:flex;flex-direction:column;gap:8px}
+.news-sheet-h{display:flex;justify-content:space-between;align-items:center}
+.news-sheet-h b{font-family:var(--display);font-size:18px}
+.news-sheet-h .x{width:36px;height:36px;border-radius:50%;border:2px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.news-all{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.news-all li{background:var(--surface2);border-radius:6px;padding:8px 10px}
+.news-all .news-b{white-space:normal}
+@media (max-height:700px){.news-list{height:40px!important}.news-i .news-b{font-size:13px}}
+
+@media (min-width:600px) and (max-height:860px){.hd-svg{max-height:62px}.hacc-b{min-height:60px;padding:6px 4px}.hacc-b span{font-size:22px}.hacc-p .hb.mo,.hacc-p .hb.st{min-height:58px}}
+@media (max-height:700px){.hacc-b{min-height:50px;padding:4px}.hacc-b span{font-size:18px}.me-links a{min-height:34px!important}.hacc-p{padding:7px}.news-head{min-height:0}.news-ttl span{display:none}}
+
+@media (max-height:860px) and (min-width:600px){#home-hub{gap:8px!important}#home-hub .tile.big{padding:8px 14px!important}body.rt .wrap{gap:8px}}
+@media (max-height:700px){#home-hub .tile.big{padding:6px 12px!important}#home-hub .tile.big .i{font-size:24px}.news{padding:4px 8px!important;gap:2px!important}}
+
+.me-links a b{font-size:10px!important;letter-spacing:-.03em!important;overflow:visible!important;text-overflow:clip!important}
 </style>
 </head>
 <body>
@@ -1323,9 +1354,8 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     </div>
   </div>
   <div class="news" aria-roledescription="ニュースのティッカー">
-    <h2 class="news-ttl">📰<span>ニュース</span></h2>
+    <div class="news-head"><h2 class="news-ttl">📰<span>ニュース</span></h2><span class="news-dots" id="news-dots"></span><button type="button" class="news-more" id="news-more">すべて見る ›</button></div>
     <ul class="news-list" id="news-list"></ul>
-    <span class="news-dots" id="news-dots"></span>
   </div>
 </section>
 
@@ -4234,20 +4264,24 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   var DATA={ll:[],al:[],faq:[]};
   function staticLv(name){var k=nm(name),r='free';[].forEach.call(document.querySelectorAll('#list .tier .card:not(.dyn),#mlist .tier .card:not(.dyn)'),function(c){if(nm(nameOf(c))!==k)return;var t=c.closest('.tier');r=t.classList.contains('t-out')?'out':t.classList.contains('t-ban')?'ban':t.classList.contains('t-semi')?'semi':'lim';});return r;}
   function ago(ms){var d=Date.now()-ms;if(d<3600e3)return Math.max(1,Math.round(d/60e3))+'分前';if(d<86400e3)return Math.round(d/3600e3)+'時間前';if(d<7*86400e3)return Math.round(d/86400e3)+'日前';try{return new Date(ms).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric'});}catch(e){return '';}}
-  function items(){var out=[];
+  function items(max){var out=[];
     /* 規制リストの変更：前の規制と比べて「規制強化」「規制緩和」を判定 */
     var prev={};DATA.ll.slice().sort(function(a,b){return (a.addedAt||0)-(b.addedAt||0);}).forEach(function(d){var k=nm(d.name);var to=d.level==='free'?'free':d.level;var sl=staticLv(d.name);var from=prev[k]||(d.from&&d.from in RANK?d.from:(sl!==to?sl:'free'));
       if(d.type==='mo'&&to==='ban')to='out';if(d.type!=='mo'&&to==='semi')to='lim';prev[k]=to;if(!(to in RANK))return;
       var dir=RANK[to]<RANK[from]?'up':RANK[to]>RANK[from]?'down':'same';
       var head=dir==='up'?'🔓 規制緩和':dir==='down'?'🔒 規制強化':'📝 規制リスト';var body='「'+d.name+'」'+(dir==='same'?'の分類を変更（'+LV[to]+'）':LV[from]+' → '+LV[to]);
-      out.push({t:d.addedAt||0,h:head,b:body,cls:dir,go:d.type==='mo'?'mlist':'list'});});
+      out.push({t:d.addedAt||0,h:head,b:body,cls:dir,go:d.type==='mo'?'mlist':'list',card:d.name});});
     (window.YGO_WATCH_DOCS||[]).forEach(function(x){var d=x.d,kw=String(d.name||'').normalize('NFKC').replace(/[\s　]+/g,'').replace(/[－−‐-]/g,'-').toLowerCase(),w=(window.YGO_WATCH||{})[kw]||{};var dir=w.dir||(d.dir==='down'?'down':'up');if(dir==='done')return;
-      out.push({t:d.addedAt||0,h:'👀 見直し候補',b:'「'+d.name+'」を'+(dir==='up'?'規制緩和':'規制強化')+'するかも'+(w.to?'（→ '+w.to+'）':''),cls:'watch',go:'watch'});});
-    DATA.al.forEach(function(d){out.push({t:d.addedAt||0,h:'🟢 許可リスト',b:'「'+d.name+'」を'+(d.status==='ng'?'不許可':'許可')+'に（'+(d.kind==='st'?'魔法・罠':'モンスター')+'）',cls:d.status==='ng'?'down':'up',go:'allow'});});
+      out.push({t:d.addedAt||0,h:'👀 見直し候補',b:'「'+d.name+'」を'+(dir==='up'?'規制緩和':'規制強化')+'するかも'+(w.to?'（→ '+w.to+'）':''),cls:'watch',go:'watch',card:d.name});});
+    DATA.al.forEach(function(d){out.push({t:d.addedAt||0,h:'🟢 許可リスト',b:'「'+d.name+'」を'+(d.status==='ng'?'不許可':'許可')+'に（'+(d.kind==='st'?'魔法・罠':'モンスター')+'）',cls:d.status==='ng'?'down':'up',go:'allow',card:d.name});});
     (Y.reports||[]).forEach(function(d){out.push({t:Number(d.createdAt)||0,h:'📋 規制の報告',b:(d.user||'だれか')+' さんの「'+(d.theme||'')+'」',cls:'board',go:'board'});});
     var M=Y.members||{};Object.keys(M).forEach(function(u){var m=M[u],ta=m.themeAt||{};Object.keys(ta).forEach(function(t){if(!ta[t]||m.themes.indexOf(t)<0)return;out.push({t:Number(ta[t]),h:'👤 テーマ追加',b:m.name+' さんが「'+t+'」'+((m.kinds||{})[t]==='ryu'?'（🌏 留学生）':'')+'を追加',cls:'theme',go:'owners'});});});
-    DATA.faq.forEach(function(d){if(d.createdAt)out.push({t:Number(d.createdAt),h:'❓ よくある質問',b:String(d.q||'').slice(0,40),cls:'faq',go:'faq'});});
-    return out.filter(function(x){return x.t>0;}).sort(function(a,b){return b.t-a.t;}).slice(0,5);}
+    DATA.faq.forEach(function(d){if(d.createdAt&&!/^q\d+$/.test(d._id||''))out.push({t:Number(d.createdAt),h:'❓ よくある質問',b:String(d.q||'').slice(0,40),cls:'faq',go:'faq'});});
+    return out.filter(function(x){return x.t>0;}).sort(function(a,b){return b.t-a.t;}).slice(0,max||5);}
+  function openNews(x){if(window.ygoRoute)window.ygoRoute(x.go);if(!x.card)return;var k=nm(x.card);
+    setTimeout(function(){var hit=null;[].forEach.call(document.querySelectorAll('#'+x.go+' .tier .card,#'+x.go+' .al-items li,#'+x.go+' .wl-items li'),function(c){if(hit||c.hidden||c.offsetParent===null)return;var t=c.classList.contains('card')?nameOf(c):txt(c.querySelector('.nm')||c);if(nm(t)===k||nm(t).indexOf(k)===0)hit=c;});
+      if(hit){hit.scrollIntoView({block:'center',behavior:'smooth'});hit.classList.add('hit-flash');setTimeout(function(){hit.classList.remove('hit-flash');},2400);}},120);}
+  window.ygoOpenNews=openNews;
   var tk={i:0,t:null,n:0,paused:false},dots=$('news-dots'),reduceM=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function showN(i,dir){var lis=news.children;if(!lis.length)return;var n=lis.length;i=(i+n)%n;[].forEach.call(lis,function(li,j){li.classList.remove('on','out');if(j===tk.i&&j!==i)li.classList.add('out');});lis[i].classList.add('on');tk.i=i;
     [].forEach.call(dots.children,function(d,j){d.classList.toggle('on',j===i);});}
@@ -4255,18 +4289,27 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   news.addEventListener('pointerenter',function(){tk.paused=true;});news.addEventListener('pointerleave',function(){tk.paused=false;});
   var sx=null;news.addEventListener('touchstart',function(e){sx=e.touches[0].clientY;tk.paused=true;},{passive:true});
   news.addEventListener('touchend',function(e){var dy=sx==null?0:e.changedTouches[0].clientY-sx;sx=null;tk.paused=false;if(Math.abs(dy)>24){showN(tk.i+(dy<0?1:-1));loop();}},{passive:true});
+  function newsItem(x){var b=el('a','news-i '+x.cls);b.href='#'+x.go;var top=el('span','news-top');top.appendChild(el('span','news-h',x.h));top.appendChild(el('span','news-t',ago(x.t)));b.appendChild(top);b.appendChild(el('span','news-b',x.b));
+    b.addEventListener('click',function(e){e.preventDefault();closeAll();openNews(x);});return b;}
+  /* すべてのニュース（直近30件） */
+  var sheet=null;function closeAll(){if(sheet)sheet.hidden=true;}
+  function openAll(){if(!sheet){sheet=el('div','news-sheet');sheet.setAttribute('role','dialog');sheet.setAttribute('aria-modal','true');sheet.setAttribute('aria-label','すべてのニュース');
+      var box=el('div','news-sheet-box'),h=el('div','news-sheet-h');h.appendChild(el('b','','📰 すべてのニュース'));var x=el('button','x','✕');x.type='button';x.setAttribute('aria-label','閉じる');x.addEventListener('click',closeAll);h.appendChild(x);box.appendChild(h);
+      box.appendChild(el('p','note','規制の変更・見直し候補・許可リスト・規制の報告・テーマの追加など（サイトの更新と戦績はのぞく）'));var ul=el('ul','news-all');ul.id='news-all';box.appendChild(ul);sheet.appendChild(box);
+      sheet.addEventListener('click',function(e){if(e.target===sheet)closeAll();});document.addEventListener('keydown',function(e){if(e.key==='Escape')closeAll();});document.body.appendChild(sheet);}
+    var ul=$('news-all');ul.innerHTML='';var arr=items(30);if(!arr.length)ul.appendChild(el('li','news-empty','まだニュースはありません'));arr.forEach(function(x){var li=el('li');li.appendChild(newsItem(x));ul.appendChild(li);});sheet.hidden=false;}
+  var moreB=$('news-more');if(moreB)moreB.addEventListener('click',openAll);
   function render(){var arr=items();news.innerHTML='';dots.innerHTML='';tk.n=arr.length;
     if(!arr.length){var e0=el('li','news-empty on','まだニュースはありません');news.appendChild(e0);loop();return;}
     arr.forEach(function(x,j){var dd=el('button','news-dot');dd.type='button';dd.setAttribute('aria-label',(j+1)+'件目');dd.addEventListener('click',function(){showN(j);loop();});dots.appendChild(dd);});
-    arr.forEach(function(x){var li=el('li'),b=el('a','news-i '+x.cls);b.href='#'+x.go;b.setAttribute('data-go',x.go);b.appendChild(el('span','news-h',x.h));b.appendChild(el('span','news-b',x.b));b.appendChild(el('span','news-t',ago(x.t)));
-      b.addEventListener('click',function(e){e.preventDefault();if(window.ygoRoute)window.ygoRoute(x.go);});li.appendChild(b);news.appendChild(li);});
+    arr.forEach(function(x){var li=el('li');li.appendChild(newsItem(x));news.appendChild(li);});
     tk.i=Math.min(tk.i,arr.length-1);[].forEach.call(news.children,function(li){li.classList.remove('on','out');});showN(tk.i);loop();}
   var tm=null;function later(){clearTimeout(tm);tm=setTimeout(render,120);}
   document.addEventListener('ygo:data',later);document.addEventListener('ygo:news',later);
   Y.ready.then(function(){if(!Y.db)return;
     Y.db.collection('limitlist').onSnapshot(function(s){DATA.ll=s.docs.map(function(d){return d.data()||{};});later();},function(){});
     Y.db.collection('allowlist').onSnapshot(function(s){DATA.al=s.docs.map(function(d){return d.data()||{};});later();},function(){});
-    Y.db.collection('faq').onSnapshot(function(s){DATA.faq=s.docs.map(function(d){return d.data()||{};});later();},function(){});});
+    Y.db.collection('faq').onSnapshot(function(s){DATA.faq=s.docs.map(function(d){var x=d.data()||{};x._id=d.id;return x;});later();},function(){});});
   render();
 })();
 </script>
