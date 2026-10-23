@@ -1319,6 +1319,26 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 .ctr-h{font-size:14px;margin:6px 0 0}
 .pf-ctr-g{font-size:12px;font-weight:900;color:var(--muted);margin-top:4px}
 .ctr-alert-box p{white-space:pre-wrap}
+
+.ctr-cf{position:absolute;inset:0;z-index:10;background:color-mix(in srgb,#1b2235 60%,transparent);display:flex;align-items:center;justify-content:center;padding:14px}
+.ctr-cf[hidden]{display:none}
+.ctr-cf-box{width:100%;max-width:440px;max-height:92%;overflow:auto;background:var(--surface);border:4px solid var(--edge);border-radius:12px;box-shadow:6px 6px 0 var(--ra);padding:16px;display:flex;flex-direction:column;gap:10px;animation:fxpop .35s cubic-bezier(.2,1.6,.4,1)}
+.ctr-cf-h{font-family:var(--display);font-size:21px}
+.ctr-cf-list{display:flex;flex-direction:column;gap:10px}
+.cf-row{display:flex;flex-direction:column;gap:6px;background:var(--surface2);border:2px solid var(--line);border-left:6px solid var(--obelisk);border-radius:8px;padding:10px 12px}
+.cf-row.turn{border-left-color:var(--gold)}
+.cf-row.zero{background:var(--red-bg);border-left-color:var(--red)}
+.cf-row.ok{opacity:.75;border-left-color:var(--spell)}
+.cf-row > b{font-size:16px;line-height:1.45}
+.cf-why{font-size:12px;color:var(--muted)}
+.cf-chg{font-family:var(--digit);font-size:26px;font-weight:700}
+.cf-q{font-size:14px;font-weight:700}
+.cf-bt{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cf-yes,.cf-no{font:inherit;font-size:14px;font-weight:900;min-height:52px;border:3px solid var(--edge);border-radius:10px;cursor:pointer;padding:6px;line-height:1.3}
+.cf-yes{background:var(--spell);color:#fff}
+.cf-no{background:var(--surface);color:var(--red)}
+.cf-row.zero .cf-no{color:var(--ink)}
+.ctr-row-bar.empty .ctr-ghost{font-size:12px}
 </style>
 </head>
 <body>
@@ -2578,6 +2598,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
         </div>
       </div>
     </div>
+    <div class="ctr-cf" id="ctr-cf" hidden role="alertdialog" aria-modal="true" aria-label="カウンターの確認"><div class="ctr-cf-box"><b class="ctr-cf-h">🔔 カウンターの確認</b><p class="note">自動で数える前に確認します。カードがもう場にないときは「破壊された」を押してください。</p><div id="ctr-cf-list" class="ctr-cf-list"></div></div></div>
     <div class="ctr-alert" id="ctr-alert" hidden role="alertdialog" aria-live="assertive"><div class="ctr-alert-box"><b id="ctr-alert-h">⏰ カウンターが0になりました</b><div id="ctr-alert-t"></div><button type="button" class="btn" id="ctr-alert-ok">OK</button></div></div>
 
     <div class="veil" id="veil" hidden><span>🔒 ロック中<br><small>左上のボタンで解除</small></span></div>
@@ -4544,7 +4565,10 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     else c={id:Date.now().toString(36),k:'free',n:key,v:0,own:'me'};
     list().push(c);save();toast((IC[c.k]||'🔢')+' 「'+c.n+'」を追加しました');}
   function render(){var bar=$('ctr-bar'),d=D(),mine=list(),op=(A()&&A().opp()&&A().opp().ctr)||[],tc=themeCtr();bar.innerHTML='';
-    var cnt=mine.length+op.length;$('ctr-n').textContent=cnt?String(cnt):'';$('ctr-n').hidden=!cnt;bar.hidden=!cnt&&!tc.length;if(!cnt&&!tc.length){renderSheet();return;}
+    var cnt=mine.length+op.length;$('ctr-n').textContent=cnt?String(cnt):'';$('ctr-n').hidden=!cnt;bar.hidden=false;
+    if(!cnt&&!tc.length){var r0=el('div','ctr-row-bar empty');r0.appendChild(el('span','ctr-lbl','🔢'));
+      [['new:free','＋ カウンター'],['new:turn','＋ ターンを数えるカード']].forEach(function(x){var b0=el('button','ctr-ghost',x[1]);b0.type='button';b0.addEventListener('click',function(){openSheet(-1);$('ctr-pre').value=x[0]==='new:free'?([].filter.call($('ctr-pre').options,function(o){return o.value==='new:mag';})[0]?'new:mag':'new:free'):'new:turn';$('ctr-pre').dispatchEvent(new Event('change'));});r0.appendChild(b0);});
+      bar.appendChild(r0);renderSheet();return;}
     function isTurnKey(k){return PRE.some(function(p){return p.n===k&&p.k==='turn';});}
     var gh=tc.filter(function(k){if(k==='mag')return !mine.some(function(c){return c.k==='mag';});return !mine.some(function(c){return c.n===k&&!(c.k==='turn'&&c.v<=0);});});
     /* 1段目：カウンター（魔力カウンターなど）／2段目：ターンを数えるカード（光の護封剣など） */
@@ -4576,26 +4600,50 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     var more=el('button','ctr-q-more','くわしく（すべてのカウンター）');more.type='button';more.addEventListener('click',function(){qk.hidden=true;openSheet(i);});box.appendChild(more);
     var x=el('button','ctr-q-x','閉じる');x.type='button';x.addEventListener('click',function(){qk.hidden=true;});box.appendChild(x);
     qk.appendChild(box);qk.hidden=false;}
-  function toastUndo(t){var x=el('div','ctr-toast undo');x.appendChild(el('span','',t));var u=el('button','','元に戻す');u.type='button';x.appendChild(u);$('dv-play').appendChild(x);
+  function toastUndo(t,fn){var x=el('div','ctr-toast undo');x.appendChild(el('span','',t));var u=el('button','','元に戻す');u.type='button';x.appendChild(u);$('dv-play').appendChild(x);
     var tm=setTimeout(function(){x.classList.add('out');setTimeout(function(){x.remove();},400);},5000);
-    u.addEventListener('click',function(){clearTimeout(tm);if(undoBuf){list().splice(Math.min(undoBuf.j,list().length),0,undoBuf.c);undoBuf=null;save();}x.remove();});}
+    u.addEventListener('click',function(){clearTimeout(tm);if(fn){fn();x.remove();return;}if(undoBuf){list().splice(Math.min(undoBuf.j,list().length),0,undoBuf.c);undoBuf=null;save();}x.remove();});}
   /* ---- 魔法発動：自動で増える魔力カウンターすべてに＋1 ---- */
-  function spell(){var ch=[];list().forEach(function(c){if(c.k==='mag'&&c.auto&&(!c.max||c.v<c.max)){c.v++;ch.push(c.n+' '+c.v+(c.max?'/'+c.max:''));}});
-    toast(ch.length?'🔮 魔力カウンター＋1：'+ch.join('、'):'🔮 上限に達しています');save();}
+  function spell(){var ch=[],prev=[];list().forEach(function(c){if(c.k==='mag'&&c.auto&&(!c.max||c.v<c.max)){prev.push([c,c.v]);c.v++;ch.push(c.n+' '+c.v+(c.max?'/'+c.max:''));}});
+    save();if(ch.length)toastUndo('🔮 魔力カウンター＋1：'+ch.join('、'),function(){prev.forEach(function(x){x[0].v=x[1];});save();});else toast('🔮 上限に達しています');}
   /* ---- ターンが進んだとき ---- */
+  /* ターンが進んだとき：自動で増減するものは、すぐ反映せず全画面で確認する（破壊されているのに数え続けるミスを防ぐ） */
+  var TXT={oppEnd:'相手のターンが終わりました',myStart:'自分のターンが来ました（スタンバイ）',myEnd:'自分のターンが終わりました',anyEnd:'ターンが終わりました'};
   document.addEventListener('ygo:turn',function(){var d=D();if(!d||!d.ctr)return;if(d.ctrT==null){d.ctrT=d.T;return;}if(d.T<d.ctrT){d.ctrT=d.T;return;}
-    var fired=[],remind=false;
+    var acts={},remind=false,full=[];
     while(d.ctrT<d.T){var endT=d.ctrT,startT=d.ctrT+1;
-      d.ctr.forEach(function(c){if(c.k!=='turn'||c.v<=0)return;var own=c.own==='op'?'op':'me',endOwner=ownerOf(endT,d.first),startOwner=ownerOf(startT,d.first),hit=false;
-        if(c.when==='oppEnd'&&endOwner!==own)hit=true;if(c.when==='myEnd'&&endOwner===own)hit=true;if(c.when==='anyEnd')hit=true;if(c.when==='myStart'&&startOwner===own)hit=true;
-        if(hit){c.v--;if(c.v<=0)fired.push(c);}});
-      d.ctr.forEach(function(c){if(c.k!=='mag'||!c.oppDraw)return;var own=c.own==='op'?'op':'me';if(ownerOf(startT,d.first)!==own&&startT>1&&(!c.max||c.v<c.max)){c.v++;}
-        if(ownerOf(startT,d.first)===own&&c.max&&c.v>=c.max&&c.full)fired.push({msg:c.full});});
+      d.ctr.forEach(function(c){var own=c.own==='op'?'op':'me',endOwner=ownerOf(endT,d.first),startOwner=ownerOf(startT,d.first);
+        if(c.k==='turn'&&c.v>0){var hit=(c.when==='oppEnd'&&endOwner!==own)||(c.when==='myEnd'&&endOwner===own)||c.when==='anyEnd'||(c.when==='myStart'&&startOwner===own);
+          if(hit){var a=acts[c.id]||(acts[c.id]={c:c,d:0,why:TXT[c.when]||''});a.d--;}}
+        if(c.k==='mag'&&c.oppDraw&&startOwner!==own&&startT>1){var a2=acts[c.id]||(acts[c.id]={c:c,d:0,why:'相手がドローしました（ドローフェイズ）'});a2.d++;}
+        if(c.k==='mag'&&c.full&&c.max&&startOwner===own)full.push(c);});
       if(ownerOf(startT,d.first)==='me'&&d.ctr.some(function(c){return c.k==='mag';}))remind=true;
       d.ctrT++;}
     save();
-    if(fired.length)alertBox(fired.map(function(c){return (c.k==='turn'?'⏳ ':'🔮 ')+(c.msg||(c.n+' のカウンターが0になりました'));}),fired.some(function(c){return c.k==='turn';})?null:'🔮 魔力カウンターがたまりました');
+    var list2=Object.keys(acts).map(function(k){return acts[k];}).filter(function(a){if(a.c.k==='mag'&&a.c.max){a.d=Math.min(a.d,a.c.max-a.c.v);}return a.d!==0;});
+    var fulls=full.filter(function(c,i){return full.indexOf(c)===i&&c.v>=c.max&&!acts[c.id];});
+    if(list2.length||fulls.length)confirmBox(list2,fulls);
     else if(remind){var m=d.ctr.filter(function(c){return c.k==='mag';}).map(function(c){return c.n+' '+c.v+(c.max?'/'+c.max:'');});toast('🔮 魔力カウンターの確認：'+m.join('、'));}});
+  /* 全画面の確認：1つずつ「まだ場にある」か「破壊された」かを選ぶ */
+  function confirmBox(items,fulls){var box=$('ctr-cf'),body=$('ctr-cf-list');body.innerHTML='';var left=0;
+    function done(row){row.classList.add('ok');left--;if(left<=0){setTimeout(function(){box.hidden=true;},350);}}
+    function finalRow(row,c,txt,okLabel){row.innerHTML='';row.classList.add('zero');row.appendChild(el('b','',txt));var bt=el('div','cf-bt');
+      var ok=el('button','cf-yes',okLabel||'✅ 処理した（片付ける）');ok.type='button';ok.addEventListener('click',function(){var L=list(),j=L.indexOf(c);if(j>=0)L.splice(j,1);save();row.innerHTML='';row.appendChild(el('b','','✅ 「'+c.n+'」を片付けました'));done(row);});
+      var keep=el('button','cf-no','↩️ まだ残す');keep.type='button';keep.addEventListener('click',function(){row.innerHTML='';row.appendChild(el('b','','「'+c.n+'」をそのまま残しました'));done(row);});
+      bt.appendChild(ok);bt.appendChild(keep);row.appendChild(bt);}
+    items.forEach(function(a){var c=a.c,row=el('div','cf-row '+c.k);left++;var to=Math.max(0,c.v+a.d);
+      row.appendChild(el('b','',(IC[c.k]||'🔢')+' '+c.n));
+      row.appendChild(el('span','cf-why',a.why+(Math.abs(a.d)>1?'（'+Math.abs(a.d)+'回分）':'')));
+      row.appendChild(el('span','cf-chg',(c.k==='turn'?'残り ':'')+c.v+' → '+to));
+      row.appendChild(el('span','cf-q',c.k==='turn'?'このカードは、まだ場に残っていますか？':'このカードは、まだ場にいますか？'));
+      var bt=el('div','cf-bt'),yes=el('button','cf-yes',c.k==='turn'?'✅ 場にある（'+(a.d<0?'−':'＋')+Math.abs(a.d)+'する）':'✅ 場にいる（＋'+a.d+'する）'),no=el('button','cf-no','💥 破壊された・場を離れた');yes.type=no.type='button';
+      yes.addEventListener('click',function(){c.v=to;save();if(c.k==='turn'&&c.v<=0)finalRow(row,c,'⏰ '+(c.msg||(c.n+' のカウンターが0になりました（効果を処理してください）')));
+        else if(c.k==='mag'&&c.full&&c.max&&c.v>=c.max&&ownerOf(D().T,D().first)===(c.own==='op'?'op':'me'))finalRow(row,c,'🔮 '+c.full,'✅ LV8を出した（片付ける）');
+        else{row.innerHTML='';row.appendChild(el('b','','✅ 「'+c.n+'」 '+(c.k==='turn'?'残り':'')+c.v+(c.max?'/'+c.max:'')));done(row);}});
+      no.addEventListener('click',function(){var L=list(),j=L.indexOf(c);if(j>=0)L.splice(j,1);save();row.innerHTML='';row.appendChild(el('b','','💥 「'+c.n+'」を片付けました'));done(row);});
+      bt.appendChild(yes);bt.appendChild(no);row.appendChild(bt);body.appendChild(row);});
+    fulls.forEach(function(c){var row=el('div','cf-row mag');left++;body.appendChild(row);finalRow(row,c,'🔮 '+c.full,'✅ LV8を出した（片付ける）');row.querySelector('.cf-no').textContent='あとで';});
+    box.hidden=false;}
   function toast(t){var x=el('div','ctr-toast',t);$('dv-play').appendChild(x);setTimeout(function(){x.classList.add('out');},2600);setTimeout(function(){x.remove();},3100);}
   function alertBox(lines,title){var box=$('ctr-alert');$('ctr-alert-h').textContent=title||'⏰ カウンターが0になりました';$('ctr-alert-t').innerHTML='';lines.forEach(function(l){$('ctr-alert-t').appendChild(el('p','',l));});box.hidden=false;
     document.dispatchEvent(new CustomEvent('ygo:ctralert'));}
