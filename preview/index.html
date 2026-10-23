@@ -1339,6 +1339,14 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 .cf-no{background:var(--surface);color:var(--red)}
 .cf-row.zero .cf-no{color:var(--ink)}
 .ctr-row-bar.empty .ctr-ghost{font-size:12px}
+
+.ctr-wait{position:absolute;inset:0;z-index:9;background:color-mix(in srgb,#1b2235 60%,transparent);display:flex;align-items:center;justify-content:center;padding:14px}
+.ctr-wait[hidden]{display:none}
+.ctr-wait-box{width:100%;max-width:420px;background:var(--surface);border:4px solid var(--edge);border-radius:12px;box-shadow:6px 6px 0 var(--obelisk);padding:16px;display:flex;flex-direction:column;gap:8px;animation:fxpop .35s cubic-bezier(.2,1.6,.4,1)}
+.ctr-wait-box b{font-family:var(--display);font-size:20px}
+.ctr-wait-box p{margin:0;font-size:14px;line-height:1.6}
+.ctr-wait-box ul{margin:0;padding-left:1.2em;font-weight:700;font-size:15px}
+.ctr-wait-box .cf-no{min-height:44px;font-size:13px}
 </style>
 </head>
 <body>
@@ -2599,6 +2607,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       </div>
     </div>
     <div class="ctr-cf" id="ctr-cf" hidden role="alertdialog" aria-modal="true" aria-label="カウンターの確認"><div class="ctr-cf-box"><b class="ctr-cf-h">🔔 カウンターの確認</b><p class="note">自動で数える前に確認します。カードがもう場にないときは「破壊された」を押してください。</p><div id="ctr-cf-list" class="ctr-cf-list"></div></div></div>
+    <div class="ctr-wait" id="ctr-wait" hidden role="alertdialog" aria-modal="true" aria-label="相手のカウント確認待ち"><div class="ctr-wait-box"><b>⏳ 相手のカウントを確認中</b><p>相手のカードのカウントが進むタイミングです。<br><strong>相手に「カウントの確認をして」と声をかけてください。</strong></p><ul id="ctr-wait-list"></ul><p class="note">相手が答えるまで、この画面は閉じません（お互いのカウント忘れを防ぐため）。</p><button type="button" class="cf-no" id="ctr-wait-esc" hidden>相手の画面が止まっている（閉じる）</button></div></div>
     <div class="ctr-alert" id="ctr-alert" hidden role="alertdialog" aria-live="assertive"><div class="ctr-alert-box"><b id="ctr-alert-h">⏰ カウンターが0になりました</b><div id="ctr-alert-t"></div><button type="button" class="btn" id="ctr-alert-ok">OK</button></div></div>
 
     <div class="veil" id="veil" hidden><span>🔒 ロック中<br><small>左上のボタンで解除</small></span></div>
@@ -2978,7 +2987,8 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     if(!sub)return;
     var p={app:'ygo',v:2,name:str(myName(),20),theme:str(D?D.myTheme:$('su-theme').value,30),lp:D?D.lp:START,T:D?D.T:1,TAt:D?D.TAt:0,
       first:myFirst(),firstAt:D?(D.firstAt||0):setupFirstAt,aceT:D&&D.aceT?D.aceT:null,phase:D?(D.phase||'setup'):'setup',seq:seq};
-    if(D&&D.ctr&&D.ctr.length)p.ctr=D.ctr.filter(function(c){return c.own!=='op';}).slice(0,12).map(function(c){return {k:c.k,n:String(c.n||'').slice(0,30),v:Number(c.v)||0,max:Number(c.max)||0};});
+    if(D&&D.ctr&&D.ctr.length)p.ctr=D.ctr.filter(function(c){return c.own!=='op';}).slice(0,12).map(function(c){return {k:c.k,n:String(c.n||'').slice(0,30),v:Number(c.v)||0,max:Number(c.max)||0,w:String(c.when||''),od:!!c.oppDraw};});
+    if(D&&D.cfP&&D.cfP.length)p.cf=D.cfP.slice(0,6).map(function(x){return String(x).slice(0,80);});
     if(lk){p.lk=lk;p.la=la;}
     sub.presence(p).catch(function(){});
   }
@@ -2986,7 +2996,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     var others=ch.peers.filter(function(p){return !p.isMe&&p.presence&&p.presence.app==='ygo';});
     others.sort(function(a,b){return b.updatedAt-a.updatedAt;});
     var o=others[0]||null,pr=o?o.presence:null;
-    opp=o?{uid:o.uid||null,name:str(pr.name,20)||'相手',theme:str(pr.theme,30),lp:num(pr.lp),T:num(pr.T),TAt:Number(pr.TAt)||0,first:!!pr.first,firstAt:Number(pr.firstAt)||0,aceT:num(pr.aceT),phase:str(pr.phase,10),seq:Number(pr.seq)||0,lk:str(pr.lk,6),la:num(pr.la),ctr:Array.isArray(pr.ctr)?pr.ctr.slice(0,12).map(function(c){return {k:str(c.k,5),n:str(c.n,30),v:Number(c.v)||0,max:Number(c.max)||0};}):[]}:null;
+    opp=o?{uid:o.uid||null,name:str(pr.name,20)||'相手',theme:str(pr.theme,30),lp:num(pr.lp),T:num(pr.T),TAt:Number(pr.TAt)||0,first:!!pr.first,firstAt:Number(pr.firstAt)||0,aceT:num(pr.aceT),phase:str(pr.phase,10),seq:Number(pr.seq)||0,lk:str(pr.lk,6),la:num(pr.la),ctr:Array.isArray(pr.ctr)?pr.ctr.slice(0,12).map(function(c){return {k:str(c.k,5),n:str(c.n,30),v:Number(c.v)||0,max:Number(c.max)||0,w:str(c.w,8),od:!!c.od};}):[],cf:Array.isArray(pr.cf)?pr.cf.slice(0,6).map(function(x){return str(x,80);}):[]}:null;
     if(opp){setLinkSt('🔗 '+opp.name+' とつながりました！','ok');}else if(sub){setLinkSt('キー '+linkKey+' で待機中。相手が入ると自動でつながります。');}
     if(opp){
       // 先攻・後攻をそろえる（あとから選んだ方に合わせる）
@@ -4624,9 +4634,27 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     var fulls=full.filter(function(c,i){return full.indexOf(c)===i&&c.v>=c.max&&!acts[c.id];});
     if(list2.length||fulls.length)confirmBox(list2,fulls);
     else if(remind){var m=d.ctr.filter(function(c){return c.k==='mag';}).map(function(c){return c.n+' '+c.v+(c.max?'/'+c.max:'');});toast('🔮 魔力カウンターの確認：'+m.join('、'));}});
+  /* 相手のカードのカウントは、相手が答えるまで自分の画面でも待つ */
+  var wait={st:null,tm:null,esc:null,oT:null};
+  function showWait(lines){var box=$('ctr-wait'),ul=$('ctr-wait-list');ul.innerHTML='';lines.forEach(function(l){ul.appendChild(el('li','',l));});
+    if(box.hidden){$('ctr-wait-esc').hidden=true;clearTimeout(wait.esc);wait.esc=setTimeout(function(){$('ctr-wait-esc').hidden=false;},90000);}box.hidden=false;}
+  function hideWait(msg){$('ctr-wait').hidden=true;clearTimeout(wait.tm);clearTimeout(wait.esc);var was=wait.st;wait.st=null;if(msg&&was)toast(msg);}
+  $('ctr-wait-esc').addEventListener('click',function(){hideWait();});
+  document.addEventListener('ygo:opp',function(){var o=A()&&A().opp();if(!o)return;var cf=o.cf||[];
+    if(cf.length){wait.st='shown';clearTimeout(wait.tm);showWait(cf.map(function(x){return '相手の '+x;}));}
+    else if(wait.st==='shown')hideWait('✅ 相手がカウントを確認しました');});
+  document.addEventListener('ygo:turn',function(){var d=D(),o=A()&&A().opp();if(!d||!o)return;if(wait.oT==null||d.T<wait.oT){wait.oT=d.T;return;}
+    var lines=[];while(wait.oT<d.T){var endT=wait.oT,startT=wait.oT+1;
+      (o.ctr||[]).forEach(function(c){/* 相手のカードなので、相手から見た「自分」は、こちらから見ると相手 */var endO=ownerOf(endT,d.first),stO=ownerOf(startT,d.first);
+        var hit=c.k==='turn'&&c.v>0&&((c.w==='oppEnd'&&endO==='me')||(c.w==='myEnd'&&endO==='op')||c.w==='anyEnd'||(c.w==='myStart'&&stO==='op'));
+        if(c.k==='mag'&&c.od&&stO==='me'&&startT>1)hit=true;if(hit)lines.push('相手の '+(c.k==='turn'?'⏳ ':'🔮 ')+c.n+'（'+(c.k==='turn'?'残り'+c.v:c.v+(c.max?'/'+c.max:''))+'）');});
+      wait.oT++;}
+    if(lines.length&&wait.st!=='shown'){wait.st='predict';showWait(lines);clearTimeout(wait.tm);wait.tm=setTimeout(function(){if(wait.st==='predict')hideWait();},12000);}});
   /* 全画面の確認：1つずつ「まだ場にある」か「破壊された」かを選ぶ */
+  function setPending(arr){var d=D();if(!d)return;d.cfP=arr;save();}
   function confirmBox(items,fulls){var box=$('ctr-cf'),body=$('ctr-cf-list');body.innerHTML='';var left=0;
-    function done(row){row.classList.add('ok');left--;if(left<=0){setTimeout(function(){box.hidden=true;},350);}}
+    setPending(items.map(function(a){return (a.c.k==='turn'?'⏳ ':'🔮 ')+a.c.n+'：'+(a.c.k==='turn'?'残り':'')+a.c.v+' → '+Math.max(0,a.c.v+a.d);}).concat(fulls.map(function(c){return '🔮 '+c.n+'：魔力カウンター'+c.v+'つ（LV8を出すか確認）';})));
+    function done(row){row.classList.add('ok');left--;if(left<=0){setPending([]);setTimeout(function(){box.hidden=true;},350);}}
     function finalRow(row,c,txt,okLabel){row.innerHTML='';row.classList.add('zero');row.appendChild(el('b','',txt));var bt=el('div','cf-bt');
       var ok=el('button','cf-yes',okLabel||'✅ 処理した（片付ける）');ok.type='button';ok.addEventListener('click',function(){var L=list(),j=L.indexOf(c);if(j>=0)L.splice(j,1);save();row.innerHTML='';row.appendChild(el('b','','✅ 「'+c.n+'」を片付けました'));done(row);});
       var keep=el('button','cf-no','↩️ まだ残す');keep.type='button';keep.addEventListener('click',function(){row.innerHTML='';row.appendChild(el('b','','「'+c.n+'」をそのまま残しました'));done(row);});
