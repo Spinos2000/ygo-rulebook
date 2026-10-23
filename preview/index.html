@@ -5,7 +5,18 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>あのころ遊戯王 ｜ 独自環境ルール</title>
 <meta name="description" content="GX時代の遊戯王をもう一度遊ぶためのルールブックとデュエルツール">
-<meta name="theme-color" content="#0058cf">
+<meta name="theme-color" content="#4a7fcc">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="あのころ遊戯王">
+<script>
+/* ホーム画面に追加（アプリ化）：本番と試作で同じファイルを使うので、場所に合わせてリンクを作る */
+(function(){var base=location.pathname.indexOf('/preview/')>=0?'../':'';window.YGO_BASE=base;
+  [['manifest','manifest.webmanifest'],['apple-touch-icon','icons/apple-touch-icon.png']].forEach(function(a){var l=document.createElement('link');l.rel=a[0];l.href=base+a[1];document.head.appendChild(l);});
+  if('serviceWorker' in navigator)window.addEventListener('load',function(){navigator.serviceWorker.register(base+'sw.js',{scope:base||'./'}).catch(function(){});});
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.YGO_INSTALL=e;document.dispatchEvent(new Event('ygo:installable'));});})();
+</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%83%8F%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=M+PLUS+Rounded+1c:wght@400;700&family=Zen+Maru+Gothic:wght@700;900&display=swap">
@@ -1347,6 +1358,21 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 .ctr-wait-box p{margin:0;font-size:14px;line-height:1.6}
 .ctr-wait-box ul{margin:0;padding-left:1.2em;font-weight:700;font-size:15px}
 .ctr-wait-box .cf-no{min-height:44px;font-size:13px}
+
+.app-st{font-weight:700;margin:0}.app-st.ok{color:var(--spell)}
+
+/* ===== 3本勝負 ===== */
+.rl-fmt{margin-bottom:-4px}
+.rl-match{font-size:12px;font-weight:900;color:var(--edge);background:var(--ra);border-radius:999px;padding:1px 8px;margin-left:6px}
+#su-fmt button:disabled{opacity:.4;cursor:not-allowed}
+.match-msg{position:fixed;inset:0;z-index:88;background:color-mix(in srgb,#1b2235 55%,transparent);display:flex;align-items:center;justify-content:center;padding:16px}
+.match-msg[hidden]{display:none}
+.match-msg-box{width:100%;max-width:400px;background:var(--surface);border:4px solid var(--edge);border-radius:12px;box-shadow:6px 6px 0 var(--obelisk);padding:20px;display:flex;flex-direction:column;gap:10px;text-align:center;animation:fxpop .45s cubic-bezier(.2,1.6,.4,1)}
+.match-msg-box b{font-family:var(--display);font-size:28px}
+.match-msg.win .match-msg-box{box-shadow:6px 6px 0 var(--ra)}.match-msg.win .match-msg-box b{color:var(--osiris)}
+.match-msg-box p{margin:0;font-size:16px;font-weight:700}
+
+.toast{pointer-events:none}
 </style>
 </head>
 <body>
@@ -1376,7 +1402,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   else{
     try{
       firebase.initializeApp(config);
-      Y.auth=firebase.auth();Y.db=firebase.firestore();Y.ok=true;
+      Y.auth=firebase.auth();Y.db=firebase.firestore();try{Y.db.enablePersistence({synchronizeTabs:true}).catch(function(){});}catch(e){}Y.ok=true;
       try{Y.db.enablePersistence({synchronizeTabs:true}).catch(function(){});}catch(e){}
       var first=true,firstUid=null;
       Y.auth.onAuthStateChanged(function(u){
@@ -1588,6 +1614,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 <!-- 戦績 -->
 <section id="results">
   <div class="sec-h"><span>RESULTS</span><h2>📊 戦績・リザルト</h2><p class="note" id="rl-where">デッキの見直しに</p></div>
+  <div class="su-first rl-fmt" id="rl-fmt" role="radiogroup" aria-label="戦績の種類"><button type="button" role="radio" data-v="bo1">⚔️ 1本勝負</button><button type="button" role="radio" data-v="bo3">🏆 3本勝負（マッチ）</button></div>
   <div class="stats" id="rl-stats"></div>
   <div class="tstats-wrap" id="rl-theme"></div>
 
@@ -2367,6 +2394,33 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 
 <h2 class="grp" id="g-other">ℹ️ その他</h2>
 
+<!-- アプリとして使う -->
+<section id="app">
+  <div class="sec-h"><span>APP</span><h2>📲 アプリとして使う</h2><p class="note">ホーム画面に追加すると、アプリのように起動できます</p></div>
+  <p class="app-st" id="app-st"></p>
+  <button type="button" class="btn" id="app-install" hidden>📲 ホーム画面に追加する</button>
+  <div class="block">
+    <h3>🍎 iPhone・iPad</h3>
+    <ol class="steps seq">
+      <li><span class="n">1</span><div><strong>Safari</strong>でこのページを開く<span class="note">LINEなどアプリの中のブラウザでは追加できません</span></div></li>
+      <li><span class="n">2</span><div>下の<strong>共有ボタン（□に↑）</strong>を押す</div></li>
+      <li><span class="n">3</span><div><strong>「ホーム画面に追加」</strong>→<strong>「追加」</strong></div></li>
+    </ol>
+  </div>
+  <div class="block">
+    <h3>🤖 Android</h3>
+    <ol class="steps seq">
+      <li><span class="n">1</span><div><strong>Chrome</strong>でこのページを開く</div></li>
+      <li><span class="n">2</span><div>上の<strong>「📲 ホーム画面に追加する」</strong>を押す<span class="note">ボタンが出ないときは、右上の︙ →「ホーム画面に追加」または「アプリをインストール」</span></div></li>
+    </ol>
+  </div>
+  <div class="principles stack">
+    <b>📶 電波が弱くても動きます</b>
+    <span>一度開いたあとは、カードショップなど電波が悪い場所でも、<strong>ルール・規制リスト・デュエル画面</strong>が開けます。</span>
+    <span class="note">戦績やプロフィールの保存は、つながったときに自動で送られます。リンク対戦・ニュース・新しい規制の読み込みには電波が必要です。</span>
+  </div>
+</section>
+
 <!-- データ -->
 <section class="fold" id="data">
   <div class="sec-h"><span>DATA</span><h2>💾 データとバックアップ</h2><p class="note">プロフィール・リザルトログの保存について</p></div>
@@ -2459,6 +2513,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 
 <nav class="tabbar" aria-label="メインメニュー"><div class="subnav rt-off" id="subnav"><button type="button" class="hs-b" id="hs-l" aria-label="左へ" hidden>‹</button><nav class="toc" id="toc" aria-label="この画面のメニュー"></nav><button type="button" class="hs-b" id="hs-r" aria-label="右へ" hidden>›</button><span class="sub-count" id="sub-count"></span></div><div class="tabbar-in" id="tabbar-in"></div></nav>
 
+<div class="match-msg" id="match-msg" hidden role="alertdialog" aria-modal="true"><div class="match-msg-box"><b id="match-msg-t"></b><p id="match-msg-s"></p><button type="button" class="btn" id="match-msg-ok">OK</button></div></div>
 <div class="fx-first" id="fx-first" hidden role="dialog" aria-modal="true" aria-label="先攻・後攻の抽選">
   <div class="fx-dots" aria-hidden="true"></div>
   <div class="fx-flash" aria-hidden="true"></div>
@@ -2485,6 +2540,14 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       <div class="field"><span>先攻・後攻（アプリの抽選で決めます）</span>
         <div class="first-box"><b id="first-res">まだ決まっていません</b><button type="button" class="first-roll" id="first-roll">🎲 抽選</button></div>
         <span class="note" id="first-note">リンク中は、どちらか1人が押せばOK。2人の画面とログに同じ結果が入ります。</span>
+      </div>
+      <div class="field"><span>🏆 対戦形式</span>
+        <div class="su-first" id="su-fmt" role="radiogroup" aria-label="対戦形式">
+          <button type="button" role="radio" data-v="bo1">⚔️ 1本勝負</button>
+          <button type="button" role="radio" data-v="bo3">🏆 3本勝負（マッチ）</button>
+        </div>
+        <span class="note" id="su-fmt-note"></span>
+        <button type="button" class="btn-sub" id="su-fmt-quit" hidden>このマッチを途中でやめる</button>
       </div>
       <div class="field"><span>📊 この対戦を戦績に残す？</span>
         <div class="su-first" id="su-rec" role="radiogroup" aria-label="戦績に残すかどうか">
@@ -2716,7 +2779,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 
   /* ---------- プロフィール（複数人対応） ---------- */
   function uid(){return 'p'+Date.now().toString(36)+rnd(1e6).toString(36);}
-  function normP(x){x=x||{};return {id:x.id||uid(),name:str(x.name,20),themes:Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[],log:Array.isArray(x.log)?x.log:[],lastTheme:x.lastTheme==null?null:str(x.lastTheme,30),recDefault:x.recDefault!==false,kinds:normK(x.kinds),ctr:normC(x.ctr)};}
+  function normP(x){x=x||{};return {id:x.id||uid(),name:str(x.name,20),themes:Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[],log:Array.isArray(x.log)?x.log:[],lastTheme:x.lastTheme==null?null:str(x.lastTheme,30),recDefault:x.recDefault!==false,kinds:normK(x.kinds),ctr:normC(x.ctr),fmtDefault:x.fmtDefault==='bo3'?'bo3':'bo1'};}
   function normC(c){var o={};if(c&&typeof c==='object')Object.keys(c).forEach(function(t){if(Array.isArray(c[t])&&c[t].length)o[str(t,30)]=c[t].map(function(v){return str(v,30);}).filter(Boolean).slice(0,12);});return o;}
   function normK(k){var o={};if(k&&typeof k==='object')Object.keys(k).forEach(function(t){if(k[t]==='ryu')o[str(t,30)]='ryu';});return o;}
   var store=load(SKEY,null);
@@ -2874,19 +2937,23 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   function renderLog(){
     setTimeout(function(){document.dispatchEvent(new Event('ygo:log'));},0);
     var list=$('rl-list'),stats=$('rl-stats');list.innerHTML='';stats.innerHTML='';
-    var w=0,l=0,d=0;pf.log.forEach(function(r){if(r.result==='win')w++;else if(r.result==='lose')l++;else d++;});
-    [['戦',pf.log.length],['勝',w],['敗',l],['分',d]].forEach(function(s){var b=el('div','stat');b.appendChild(el('b','',String(s[1])));b.appendChild(el('span','',s[0]));stats.appendChild(b);});
+    [].forEach.call(document.querySelectorAll('#rl-fmt button'),function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-v')===fmtView));});
+    var LG=logsF(),w=0,l=0,d=0;
+    if(fmtView==='bo3'){var ms=matchesOf(LG);ms.forEach(function(m){if(!m.done)return;if(m.res==='win')w++;else if(m.res==='lose')l++;else d++;});
+      [['マッチ',w+l+d],['勝',w],['敗',l],['分',d]].forEach(function(s){var b=el('div','stat');b.appendChild(el('b','',String(s[1])));b.appendChild(el('span','',s[0]));stats.appendChild(b);});}
+    else{LG.forEach(function(r){if(r.result==='win')w++;else if(r.result==='lose')l++;else d++;});
+      [['戦',LG.length],['勝',w],['敗',l],['分',d]].forEach(function(s){var b=el('div','stat');b.appendChild(el('b','',String(s[1])));b.appendChild(el('span','',s[0]));stats.appendChild(b);});}
     renderThemeStats();
-    if(!pf.log.length){list.appendChild(el('div','al-empty','まだ記録はありません。デュエルが終わると、ここに残ります。'));return;}
+    if(!LG.length){list.appendChild(el('div','al-empty',fmtView==='bo3'?'まだ3本勝負の記録はありません。デュエルの準備で「🏆 3本勝負」を選ぶと記録されます。':'まだ記録はありません。デュエルが終わると、ここに残ります。'));return;}
     fillFilter();
     var fT=$('rl-f-theme').value, fQ=$('rl-f-q').value.trim().toLowerCase(), shown=0;
-    pf.log.slice().reverse().forEach(function(r){
+    LG.slice().reverse().forEach(function(r){
       if(fT&&(r.myTheme||'__none')!==fT)return;
       if(fRes&&r.result!==fRes)return;
       if(fQ){var hay=[r.oppName,r.oppTheme,r.memo,r.myTheme].concat(r.why||[]).join(' ').toLowerCase();if(hay.indexOf(fQ)<0)return;}
       shown++;
       var li=el('li','rl '+(r.result||'draw'));
-      var top=el('div','rl-top');top.appendChild(el('span','rl-res',r.result==='win'?'勝ち':r.result==='lose'?'負け':'引き分け'));top.appendChild(el('span','rl-date',fmt(r.at)));li.appendChild(top);
+      var top=el('div','rl-top');top.appendChild(el('span','rl-res',r.result==='win'?'勝ち':r.result==='lose'?'負け':'引き分け'));if(r.fmt==='bo3'){top.appendChild(el('span','rl-match','🏆 第'+(r.game||'?')+'戦'+(r.matchEnd?' ・ マッチ'+(r.matchRes==='win'?'勝利':r.matchRes==='lose'?'敗北':'引き分け')+'（'+String(r.score||'').replace(/-/g,'-')+'）':'')));}top.appendChild(el('span','rl-date',fmt(r.at)));li.appendChild(top);
       li.appendChild(el('div','rl-vs',(r.myTheme||'テーマ未選択')+'　vs　'+(r.oppName||'相手')+(r.oppTheme?'（'+r.oppTheme+'）':'')));
       var meta='全体'+r.turn+'ターン'+(r.myTurns?'（自分'+r.myTurns+'回・'+(r.first?'先攻':'後攻')+'）':'')+' ・ 自分 '+r.myLp+' / 相手 '+(r.oppLp==null?'―':r.oppLp);
       if(r.aceTurn)meta+=' ・ 👑自分の'+r.aceTurn+'ターン目';
@@ -2903,10 +2970,16 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       var ed=el('button','del','✏️ 編集');ed.type='button';ed.addEventListener('click',function(){document.dispatchEvent(new CustomEvent('ygo:edit',{detail:r}));});
       del.style.alignSelf='';var acts=el('div','rl-acts');acts.appendChild(ed);acts.appendChild(del);li.appendChild(acts);list.appendChild(li);
     });
-    $('rl-count').textContent=(fT||fRes||fQ)?(shown+'件 表示中（全'+pf.log.length+'件）'):('全'+pf.log.length+'件');
+    $('rl-count').textContent=(fT||fRes||fQ)?(shown+'件 表示中（全'+LG.length+'件）'):('全'+LG.length+'件'+(fmtView==='bo3'?'（1本ずつ）':''));
     if(!shown)list.appendChild(el('div','al-empty','条件に合う記録はありません。'));
   }
-  var fRes='';
+  var fRes='',fmtView='bo1';
+  function logsF(){return pf.log.filter(function(r){return (r.fmt==='bo3')===(fmtView==='bo3');});}
+  function matchesOf(list){var M={},order=[];list.forEach(function(r){if(!r.matchId)return;var m=M[r.matchId];if(!m){m=M[r.matchId]={id:r.matchId,w:0,l:0,d:0,n:0,done:false,res:null,at:r.at,theme:r.myTheme,opp:r.oppName};order.push(m);}
+      m.n++;if(r.result==='win')m.w++;else if(r.result==='lose')m.l++;else m.d++;if(r.matchEnd){m.done=true;m.res=r.matchRes;}m.at=Math.max(m.at,r.at);});
+    order.forEach(function(m){if(!m.done&&(m.w>=2||m.l>=2||m.n>=3)){m.done=true;m.res=m.w>m.l?'win':m.l>m.w?'lose':'draw';}});return order;}
+  window.YGO_MATCHES=function(){return matchesOf(pf.log.filter(function(r){return r.fmt==='bo3';}));};
+  [].forEach.call(document.querySelectorAll('#rl-fmt button'),function(b){b.addEventListener('click',function(){fmtView=b.getAttribute('data-v');renderLog();});});
   function fillFilter(){
     var sel=$('rl-f-theme'),cur=sel.value,seen={};sel.innerHTML='';
     var o=el('option','','すべてのテーマ');o.value='';sel.appendChild(o);
@@ -2918,8 +2991,8 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   $('rl-f-q').addEventListener('input',renderLog);
   [].forEach.call(document.querySelectorAll('#rl-f-res button'),function(b){b.addEventListener('click',function(){fRes=b.getAttribute('data-r');renderLog();});});
   function renderThemeStats(){
-    var box=$('rl-theme');box.innerHTML='';if(!pf.log.length)return;
-    var m={};pf.log.forEach(function(r){var k=r.myTheme||'テーマ未選択';var t=m[k]||(m[k]={n:0,w:0,l:0,d:0,ace:[]});t.n++;if(r.result==='win')t.w++;else if(r.result==='lose')t.l++;else t.d++;if(r.aceTurn)t.ace.push(r.aceTurn);});
+    var box=$('rl-theme');box.innerHTML='';var LG=logsF();if(!LG.length)return;
+    var m={};LG.forEach(function(r){var k=r.myTheme||'テーマ未選択';var t=m[k]||(m[k]={n:0,w:0,l:0,d:0,ace:[]});t.n++;if(r.result==='win')t.w++;else if(r.result==='lose')t.l++;else t.d++;if(r.aceTurn)t.ace.push(r.aceTurn);});
     var keys=Object.keys(m).sort(function(a,b){return m[b].n-m[a].n;});
     box.appendChild(el('b','tstats-h','📊 テーマ別の成績'));
     var tbl=el('table','tstats'),th=el('thead'),tr=el('tr');
@@ -2964,7 +3037,13 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   function openOverlay(){overlay.hidden=false;document.documentElement.style.overflow='hidden';}
   function closeOverlay(){overlay.hidden=true;document.documentElement.style.overflow='';releaseWake();}
   function saveD(){if(D)save(DKEY,D);else{try{localStorage.removeItem(DKEY);}catch(e){}}}
-  var setupFirst=true, setupFirstAt=0, setupRec=true;
+  var setupFirst=true, setupFirstAt=0, setupRec=true, setupFmt='bo1', setupFmtAt=0, firstMinAt=0, MKEY='ygo-match-v1';
+  function getM(){try{return JSON.parse(localStorage.getItem(MKEY))||null;}catch(e){return null;}}
+  function setM(m){try{if(m)localStorage.setItem(MKEY,JSON.stringify(m));else localStorage.removeItem(MKEY);}catch(e){}}
+  function renderFmt(){var M=getM();[].forEach.call(document.querySelectorAll('#su-fmt button'),function(b){var v=b.getAttribute('data-v');b.setAttribute('aria-checked',String(v===setupFmt));b.disabled=!!M&&v==='bo1';});
+    var n=$('su-fmt-note');if(M)n.textContent='🏆 3本勝負 第'+M.g+'戦（'+M.w+'勝'+M.l+'敗'+(M.d?M.d+'分':'')+'）。先に2勝した方がマッチの勝ち。';
+    else n.textContent=setupFmt==='bo3'?'先に2勝した方がマッチの勝ち。1本ごとに先攻・後攻を抽選します。':'1回のデュエルで勝敗を決めます。';
+    $('su-fmt-quit').hidden=!M;}
 
   /* ---------- リンク ---------- */
   var roomP=null, sub=null, unsubs=[], opp=null, linkKey=null, lastOppSeq=null, lastOppLp=null, seq=0;
@@ -2986,7 +3065,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   function pushPresence(lk,la){
     if(!sub)return;
     var p={app:'ygo',v:2,name:str(myName(),20),theme:str(D?D.myTheme:$('su-theme').value,30),lp:D?D.lp:START,T:D?D.T:1,TAt:D?D.TAt:0,
-      first:myFirst(),firstAt:D?(D.firstAt||0):setupFirstAt,aceT:D&&D.aceT?D.aceT:null,phase:D?(D.phase||'setup'):'setup',seq:seq};
+      first:myFirst(),firstAt:D?(D.firstAt||0):setupFirstAt,aceT:D&&D.aceT?D.aceT:null,phase:D?(D.phase||'setup'):'setup',seq:seq,fmt:D?(D.fmt||'bo1'):setupFmt,fmtAt:setupFmtAt};
     if(D&&D.ctr&&D.ctr.length)p.ctr=D.ctr.filter(function(c){return c.own!=='op';}).slice(0,12).map(function(c){return {k:c.k,n:String(c.n||'').slice(0,30),v:Number(c.v)||0,max:Number(c.max)||0,w:String(c.when||''),od:!!c.oppDraw};});
     if(D&&D.cfP&&D.cfP.length)p.cf=D.cfP.slice(0,6).map(function(x){return String(x).slice(0,80);});
     if(lk){p.lk=lk;p.la=la;}
@@ -2996,11 +3075,12 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     var others=ch.peers.filter(function(p){return !p.isMe&&p.presence&&p.presence.app==='ygo';});
     others.sort(function(a,b){return b.updatedAt-a.updatedAt;});
     var o=others[0]||null,pr=o?o.presence:null;
-    opp=o?{uid:o.uid||null,name:str(pr.name,20)||'相手',theme:str(pr.theme,30),lp:num(pr.lp),T:num(pr.T),TAt:Number(pr.TAt)||0,first:!!pr.first,firstAt:Number(pr.firstAt)||0,aceT:num(pr.aceT),phase:str(pr.phase,10),seq:Number(pr.seq)||0,lk:str(pr.lk,6),la:num(pr.la),ctr:Array.isArray(pr.ctr)?pr.ctr.slice(0,12).map(function(c){return {k:str(c.k,5),n:str(c.n,30),v:Number(c.v)||0,max:Number(c.max)||0,w:str(c.w,8),od:!!c.od};}):[],cf:Array.isArray(pr.cf)?pr.cf.slice(0,6).map(function(x){return str(x,80);}):[]}:null;
+    opp=o?{uid:o.uid||null,name:str(pr.name,20)||'相手',theme:str(pr.theme,30),lp:num(pr.lp),T:num(pr.T),TAt:Number(pr.TAt)||0,first:!!pr.first,firstAt:Number(pr.firstAt)||0,aceT:num(pr.aceT),phase:str(pr.phase,10),seq:Number(pr.seq)||0,lk:str(pr.lk,6),la:num(pr.la),ctr:Array.isArray(pr.ctr)?pr.ctr.slice(0,12).map(function(c){return {k:str(c.k,5),n:str(c.n,30),v:Number(c.v)||0,max:Number(c.max)||0,w:str(c.w,8),od:!!c.od};}):[],cf:Array.isArray(pr.cf)?pr.cf.slice(0,6).map(function(x){return str(x,80);}):[],fmt:pr.fmt==='bo3'?'bo3':'bo1',fmtAt:Number(pr.fmtAt)||0}:null;
     if(opp){setLinkSt('🔗 '+opp.name+' とつながりました！','ok');}else if(sub){setLinkSt('キー '+linkKey+' で待機中。相手が入ると自動でつながります。');}
     if(opp){
       // 先攻・後攻をそろえる（あとから選んだ方に合わせる）
-      if(!D&&opp.firstAt>setupFirstAt){var hadFirst=setupFirstAt;setupFirst=!opp.first;setupFirstAt=opp.firstAt;renderFirst();if(!overlay.hidden&&!views.setup.hidden&&!rolling&&Date.now()-opp.firstAt<15000)firstFx(setupFirst,'opp');}
+      if(!D&&!getM()&&opp.fmtAt>setupFmtAt){setupFmt=opp.fmt;setupFmtAt=opp.fmtAt;renderFmt();}
+      if(!D&&opp.firstAt>setupFirstAt&&opp.firstAt>firstMinAt){var hadFirst=setupFirstAt;setupFirst=!opp.first;setupFirstAt=opp.firstAt;renderFirst();if(!overlay.hidden&&!views.setup.hidden&&!rolling&&Date.now()-opp.firstAt<15000)firstFx(setupFirst,'opp');}
       if(D&&opp.firstAt>(D.firstAt||0)){D.first=!opp.first;D.firstAt=opp.firstAt;saveD();}
       // ターンをそろえる
       if(D&&D.phase==='play'&&opp.TAt>(D.TAt||0)&&opp.T){D.T=Math.max(1,opp.T);D.TAt=opp.TAt;saveD();renderTurn();}
@@ -3039,6 +3119,9 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     firstFx(fin,'me',function(){rolling=false;setupFirst=fin;setupFirstAt=Date.now();renderFirst();pushPresence();});});
     function renderRecSetup(){[].forEach.call(document.querySelectorAll('#su-rec button'),function(b){b.setAttribute('aria-checked',String((b.getAttribute('data-v')==='1')===setupRec));});}
   [].forEach.call(document.querySelectorAll('#su-rec button'),function(b){b.addEventListener('click',function(){setupRec=b.getAttribute('data-v')==='1';renderRecSetup();});});
+  [].forEach.call(document.querySelectorAll('#su-fmt button'),function(b){b.addEventListener('click',function(){if(getM())return;setupFmt=b.getAttribute('data-v');setupFmtAt=Date.now();renderFmt();pushPresence();});});
+  $('su-fmt-quit').addEventListener('click',function(){var q=$('su-fmt-quit');if(!q.classList.contains('confirm')){q.classList.add('confirm');q.textContent='もう一度押すと、マッチをやめます（ここまでの1本ごとの記録は残ります）';setTimeout(function(){q.classList.remove('confirm');q.textContent='このマッチを途中でやめる';},4000);return;}
+    setM(null);setupFmt='bo1';setupFmtAt=Date.now();q.classList.remove('confirm');q.textContent='このマッチを途中でやめる';renderFmt();pushPresence();});
   function fillSetup(){
     setupRec=pf.recDefault!==false;renderRecSetup();
     $('su-name').textContent=pf.name||'名前未設定（プロフィールで登録できます）';
@@ -3046,7 +3129,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     var o0=el('option','','テーマを選ばない');o0.value='';sel.appendChild(o0);
     pf.themes.forEach(function(t){var o=el('option','',t+((pf.kinds||{})[t]==='ryu'?'（🌏 留学生）':''));o.value=t;sel.appendChild(o);});
     if(pf.lastTheme!=null&&(pf.lastTheme===''||pf.themes.indexOf(pf.lastTheme)>=0))sel.value=pf.lastTheme;else if(pf.themes.length)sel.value=pf.themes[0];
-    $('su-theme-hint').hidden=pf.themes.length>0;if(!sub){setupFirstAt=0;}renderFirst();
+    $('su-theme-hint').hidden=pf.themes.length>0;if(!sub){setupFirstAt=0;}var M=getM();if(M){setupFmt='bo3';if(M.theme!=null&&(M.theme===''||pf.themes.indexOf(M.theme)>=0))sel.value=M.theme;}else if(!setupFmtAt)setupFmt=pf.fmtDefault==='bo3'?'bo3':'bo1';renderFmt();renderFirst();
   }
   $('su-theme').addEventListener('change',function(){pushPresence();});
   $('duel-open').addEventListener('click',function(){
@@ -3060,8 +3143,9 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   $('key-join').addEventListener('click',async function(){var k=$('key-input').value;if(!/^\d{4}$/.test(k)){setLinkSt('4けたの数字を入力してください。','err');return;}$('key-show').hidden=true;await link(k);});
   $('duel-start').addEventListener('click',function(){
     if(!setupFirstAt){$('first-note').textContent='先に「🎲 抽選」で先攻・後攻を決めてください。';return;}
-    var th=$('su-theme').value;pf.lastTheme=th;pf.recDefault=setupRec;savePf();
-    D={v:2,rec:setupRec,phase:'play',lp:START,T:1,TAt:Date.now(),first:setupFirst,firstAt:setupFirstAt,myTheme:th,myName:pf.name||'あなた',hist:[],aceT:null,linkKey:sub?linkKey:null,startedAt:Date.now(),zeroAsked:false,oppZeroAsked:false,oppSnap:null};
+    var th=$('su-theme').value;pf.lastTheme=th;pf.recDefault=setupRec;pf.fmtDefault=setupFmt;savePf();
+    var MM=null;if(setupFmt==='bo3'){MM=getM()||{id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),g:1,w:0,l:0,d:0,theme:th,startedAt:Date.now()};MM.theme=th;setM(MM);}
+    D={v:2,rec:setupRec,phase:'play',lp:START,T:1,TAt:Date.now(),first:setupFirst,firstAt:setupFirstAt,myTheme:th,myName:pf.name||'あなた',hist:[],aceT:null,linkKey:sub?linkKey:null,startedAt:Date.now(),zeroAsked:false,oppZeroAsked:false,oppSnap:null,fmt:setupFmt,match:MM?{id:MM.id,g:MM.g}:null};
     if(opp){lastOppSeq=opp.seq;lastOppLp=opp.lp;}
     saveD();amount=0;mode='dmg';show('play');renderAll();pushPresence();acquireWake();document.dispatchEvent(new Event('ygo:start'));
   });
@@ -3075,7 +3159,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   function renderTurn(){
     if(!D)return;var own=ownerOf(D.T,D.first);
     $('turnbar').classList.toggle('opp-turn',own==='op');
-    $('turn-who').textContent=turnLabel(D.T,D.first);$('turn-all').textContent='全体 '+D.T+'ターン目 ・ '+(D.first?'あなたが先攻':'あなたが後攻');
+    $('turn-who').textContent=turnLabel(D.T,D.first);$('turn-all').textContent='全体 '+D.T+'ターン目 ・ '+(D.first?'あなたが先攻':'あなたが後攻')+(D.match?' ・ 🏆第'+D.match.g+'戦':'');
     $('turn-go-l').textContent=own==='me'?'🏁 エンド':'🃏 ドロー';$('turn-go-s').textContent=own==='me'?'相手のターンへ':'自分のターンへ';
     $('me-card').classList.toggle('my-turn',own==='me');
     renderTrack();
@@ -3176,7 +3260,9 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       b.addEventListener('click',function(){var i=why.indexOf(w);if(i>=0)why.splice(i,1);else why.push(w);renderRes();});box.appendChild(b);});
   }
   [].forEach.call(document.querySelectorAll('.seg3 button'),function(b){b.addEventListener('click',function(){res=b.getAttribute('data-r');var all=res==='win'?WHY.win:res==='lose'?WHY.lose:WHY.win.concat(WHY.lose);why=why.filter(function(w){return all.indexOf(w)>=0;});renderRes();});});
-  function finish(){D=null;saveD();leave();closeOverlay();renderLog();$('duel-open').textContent='⚔️ デュエルを始める';}
+  function finish(keep){D=null;saveD();if(!keep)leave();closeOverlay();renderLog();$('duel-open').textContent=getM()?'🏆 マッチの次のデュエルへ':'⚔️ デュエルを始める';}
+  function matchMsg(t,sub2,res){var m=$('match-msg');$('match-msg-t').textContent=t;$('match-msg-s').textContent=sub2;m.className='match-msg'+(res?' '+res:'');m.hidden=false;}
+  $('match-msg-ok').addEventListener('click',function(){$('match-msg').hidden=true;});
   $('rs-save').addEventListener('click',function(){
     if(!res){$('rs-err').hidden=false;return;}
     var o=opp||D.oppSnap,t=totals(D.hist);
@@ -3184,9 +3270,15 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     pf.log.push(Object.assign({at:Date.now(),result:res,why:why.slice(),memo:$('rs-memo').value.trim(),myName:myName(),myTheme:D.myTheme,
       oppName:o?o.name:($('rs-opp-name').value.trim()||null),oppTheme:o?o.theme:($('rs-opp-theme').value.trim()||null),
       myLp:D.lp,oppLp:o?o.lp:null,turn:D.T,first:D.first,myTurns:myTurnsUpTo(D.T),
-      aceTurn:D.aceT?Math.max(1,myTurnsUpTo(D.aceT)):null,aceT:D.aceT,dmg:t.dmg,cost:t.cost,heal:t.heal,tl:tl,linked:!!o,ryu:(pf.kinds||{})[D.myTheme]==='ryu'},window.YGO&&YGO.resultExtras?YGO.resultExtras(o):{}));
-    if(CL){CL.results.add(cleanRec(pf.log[pf.log.length-1])).catch(function(){alert('記録を保存できませんでした。通信状態を確認してください。');});}
-    savePf();finish();
+      aceTurn:D.aceT?Math.max(1,myTurnsUpTo(D.aceT)):null,aceT:D.aceT,dmg:t.dmg,cost:t.cost,heal:t.heal,tl:tl,linked:!!o,ryu:(pf.kinds||{})[D.myTheme]==='ryu',fmt:D.fmt==='bo3'?'bo3':'bo1',matchId:D.match?D.match.id:null,game:D.match?D.match.g:null},window.YGO&&YGO.resultExtras?YGO.resultExtras(o):{}));
+    var rec=pf.log[pf.log.length-1],cont=false,mdone=null;
+    if(D.match){var M=getM()||{id:D.match.id,g:D.match.g,w:0,l:0,d:0};if(res==='win')M.w++;else if(res==='lose')M.l++;else M.d++;
+      if(M.w>=2||M.l>=2||M.g>=3){rec.matchEnd=true;rec.matchRes=M.w>M.l?'win':M.l>M.w?'lose':'draw';rec.score=M.w+'-'+M.l+(M.d?'-'+M.d:'');mdone={res:rec.matchRes,score:rec.score};setM(null);}
+      else{M.g++;setM(M);cont=true;}}
+    if(CL){CL.results.add(cleanRec(rec)).catch(function(){alert('記録を保存できませんでした。通信状態を確認してください。');});}
+    savePf();finish(cont);
+    if(cont){setTimeout(function(){firstMinAt=Date.now();setupFirstAt=0;$('duel-open').click();var M2=getM();matchMsg('🏆 3本勝負 第'+M2.g+'戦へ','いまの成績：'+M2.w+'勝'+M2.l+'敗'+(M2.d?M2.d+'分':'')+'。先攻・後攻をもう一度抽選してください。',null);},200);return;}
+    if(mdone)setTimeout(function(){matchMsg(mdone.res==='win'?'🏆 マッチ勝利！':mdone.res==='lose'?'マッチ敗北…':'マッチ引き分け','3本勝負の結果：'+mdone.score.replace(/-/g,' - '),mdone.res);},300);
     var sec=$('results');if(sec)sec.scrollIntoView({behavior:reduce?'auto':'smooth'});
   });
   $('rs-skip').addEventListener('click',finish);
@@ -3200,7 +3292,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   YGO.app={saveD:function(){saveD();},push:function(){pushPresence();},saveAch:function(o){if(CL)CL.ref.set({ach:o},{merge:true}).catch(function(){});},cloud:function(){return !!CL;},pf:function(){return pf;},opp:function(){return opp||null;},D:function(){return D;},
     editLog:function(r,patch){Object.assign(r,patch);if(CL&&r._id){CL.results.doc(r._id).set(cleanRec(r)).catch(function(){alert('保存できませんでした。通信状態を確認してください。');});}else savePf();renderLog();}};
   if(D&&D.phase==='result'){D.phase='play';saveD();}
-  if(D&&D.phase==='play'){$('duel-open').textContent='⚔️ デュエルを再開する';}
+  if(D&&D.phase==='play'){$('duel-open').textContent='⚔️ デュエルを再開する';}else if(getM()){$('duel-open').textContent='🏆 マッチの次のデュエルへ';}
 })();
 (function(){
   var folds=[].slice.call(document.querySelectorAll('section.fold'));
@@ -4089,7 +4181,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 </script>
 <script>
 
-/* ===== 実績（30個・みんなに公開） ===== */
+/* ===== 実績（みんなに公開） ===== */
 (function(){
   function $(id){return document.getElementById(id);}
   function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
@@ -4106,6 +4198,11 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       if(r.ryu||r.oppRyu)s.ryu++;if(r.oppRate)s.rated++;if(r.aceName)s.aces[r.aceName]=1;if(r.heal)s.heal+=r.heal;});
     s.nOpp=Object.keys(s.opps).length;s.maxOpp=Math.max(0,Math.max.apply(null,Object.keys(s.opps).map(function(k){return s.opps[k];}).concat([0])));
     s.nThemeWon=Object.keys(s.themesWon).length;s.maxTheme=Math.max.apply(null,Object.keys(s.themeN).map(function(k){return s.themeN[k];}).concat([0]));s.nAces=Object.keys(s.aces).length;
+    var b1=log.filter(function(r){return r.fmt!=='bo3';}).sort(function(a,b){return a.at-b.at;}),st=0;s.b1w=0;s.b1st=0;b1.forEach(function(r){if(r.result==='win'){s.b1w++;st++;s.b1st=Math.max(s.b1st,st);}else st=0;});
+    var ms=window.YGO_MATCHES?window.YGO_MATCHES():[];s.mw=0;s.mst=0;s.mstraight=0;s.mcome=0;s.mplayed=0;var mst=0;
+    ms.slice().sort(function(a,b){return a.at-b.at;}).forEach(function(m){if(!m.done)return;s.mplayed++;if(m.res==='win'){s.mw++;mst++;s.mst=Math.max(s.mst,mst);if(m.l===0)s.mstraight++;}else mst=0;});
+    log.filter(function(r){return r.fmt==='bo3'&&r.matchId;}).forEach(function(r){});
+    ms.forEach(function(m){if(m.done&&m.res==='win'){var g=log.filter(function(r){return r.matchId===m.id;}).sort(function(a,b){return (a.game||0)-(b.game||0);});if(g[0]&&g[0].result==='lose')s.mcome++;}});
     var me=Y.user&&Y.user.uid;s.reports=(Y.reports||[]).filter(function(r){return me&&r.uid===me;}).length;return s;}
   var A=window.YGO_ACH=[
     ['first','⚔️','初デュエル','デュエルを1回記録する',1,function(s){return s.n;},1],
@@ -4137,7 +4234,16 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     ['intl','🌏','国際交流','留学生デッキが関わるデュエルをする',1,function(s){return s.ryu;},1],
     ['judge','🔟','審判の目','相手のデッキの強さを10回評価する',10,function(s){return s.rated;},1],
     ['keeper','📋','規制の番人','規制報告ボードに登録する',1,function(s){return s.reports;},1],
-    ['zukan','📖','ロマン図鑑','5種類のエースを図鑑に登録する',5,function(s){return s.nAces;},2]
+    ['zukan','📖','ロマン図鑑','5種類のエースを図鑑に登録する',5,function(s){return s.nAces;},2],
+    ['b1w5','⚔️','一本勝負の心得','1本勝負で5回勝つ',5,function(s){return s.b1w;},1],
+    ['b1w20','🗡️','一本勝負の達人','1本勝負で20回勝つ',20,function(s){return s.b1w;},2],
+    ['b1st5','🔥','一撃の連鎖','1本勝負で5連勝する',5,function(s){return s.b1st;},3],
+    ['mfirst','🏆','マッチ初勝利','3本勝負のマッチで勝つ',1,function(s){return s.mw;},1],
+    ['mplay10','🎟️','マッチの常連','3本勝負のマッチを10回する',10,function(s){return s.mplayed;},1],
+    ['mstraight','💨','ストレート勝ち','3本勝負を2-0で勝つ',1,function(s){return s.mstraight;},2],
+    ['mcome','💪','逆転のマッチ','1戦目を落としたマッチで勝つ',1,function(s){return s.mcome;},2],
+    ['mw10','👑','マッチの覇者','3本勝負のマッチで10回勝つ',10,function(s){return s.mw;},3],
+    ['mst3','⚡','マッチ3連勝','3本勝負のマッチで3連勝する',3,function(s){return s.mst;},3]
   ];
   var TN={1:'オシリス・レッド級',2:'ラー・イエロー級',3:'オベリスク・ブルー級'};
   $('ach-total').textContent=String(A.length);
@@ -4171,7 +4277,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     {k:'duel',i:'⚔️',l:'デュエル',subs:[['life','🧮 デュエル']]},
     {k:'rec',i:'📊',l:'戦績',subs:[['results','📊 戦績・リザルト'],['players','🧑‍🤝‍🧑 プレイヤー'],['ach','🏆 実績']]},
     {k:'rules',i:'📜',l:'ルール',subs:[['reg-mo','👾 モンスターの規制',{show:['mlist','allow','watch'],kind:'mo'}],['reg-st','🪄 魔法・罠の規制',{show:['list','allow','watch'],kind:'st'}],['deck','🛠️ デッキ構築'],['owners','👥 テーマ一覧'],['board','📋 報告ボード'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['faq','❓ よくある質問']]},
-    {k:'more',i:'⚙️',l:'設定ほか',subs:[['account','⚙️ アカウント設定'],['log','🗒️ 更新履歴'],['data','💾 データ'],['admin','🛠️ 管理者']]}
+    {k:'more',i:'⚙️',l:'設定ほか',subs:[['account','⚙️ アカウント設定'],['app','📲 アプリとして使う'],['log','🗒️ 更新履歴'],['data','💾 データ'],['admin','🛠️ 管理者']]}
   ];
   var SEC={},LAST={};
   TABS.forEach(function(t){t.subs.forEach(function(s){SEC[s[0]]={tab:t,label:s[1],opt:s[2]||null};});});
@@ -4717,6 +4823,17 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   document.addEventListener('ygo:opp',render);document.addEventListener('ygo:dstart',function(){var d=D();if(d){d.ctr=[];d.ctrT=d.T;}render();});
   setInterval(function(){if(!$('dv-play').hidden)render();},4000);
   render();
+})();
+</script>
+<script>
+/* ===== アプリとして使う（ホーム画面に追加） ===== */
+(function(){var st=document.getElementById('app-st'),bt=document.getElementById('app-install');if(!st)return;
+  function standalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}
+  function upd(){if(standalone()){st.textContent='✅ いまアプリとして開いています';st.className='app-st ok';bt.hidden=true;return;}
+    var ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+    st.textContent=window.YGO_INSTALL?'下のボタンから、ホーム画面に追加できます。':ios?'iPhoneは下の手順で追加できます（Safariで開いてください）。':'お使いのブラウザのメニューから、ホーム画面に追加できます。';st.className='app-st';bt.hidden=!window.YGO_INSTALL;}
+  bt.addEventListener('click',function(){var e=window.YGO_INSTALL;if(!e)return;e.prompt();(e.userChoice||Promise.resolve()).then(function(){window.YGO_INSTALL=null;upd();});});
+  document.addEventListener('ygo:installable',upd);window.addEventListener('appinstalled',function(){window.YGO_INSTALL=null;upd();});upd();
 })();
 </script>
 </body>

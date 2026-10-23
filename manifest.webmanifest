@@ -1,0 +1,17 @@
+{
+  "name": "あのころ遊戯王 独自環境ルール",
+  "short_name": "あのころ遊戯王",
+  "description": "GX時代の遊戯王をもう一度遊ぶためのルールブックとデュエルツール",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef2f9",
+  "theme_color": "#4a7fcc",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
