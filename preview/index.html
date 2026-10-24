@@ -1568,6 +1568,11 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 .f-calc .calc .amt output,.f-calc .calc .amt button{height:100%}
 .f-calc .bottom{flex:1 1 0;min-height:46px;max-height:68px;grid-template-columns:repeat(4,1fr) 1.3fr!important}
 .dv-play .f-calc .bb{height:auto!important}
+.rs-link{margin:0;font-size:13px;font-weight:700;line-height:1.6;background:var(--info-bg);border-radius:6px;padding:8px 10px}
+.rs-link[hidden]{display:none}
+.rs-link.bad{background:var(--red-bg);color:var(--red)}
+.seg3 button:disabled{opacity:.35;cursor:not-allowed}
+#rs-save.confirm{background:var(--red);color:#fff}
 </style>
 </head>
 <body>
@@ -2945,6 +2950,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     <label class="field" for="rs-ace" id="rs-ace-wrap">👑 出したエース（任意）<input type="text" id="rs-ace" maxlength="40" list="dl-aces" autocomplete="off" placeholder="例：E・HERO シャイニング・フレア・ウィングマン"><span class="note"></span></label>
     <datalist id="dl-aces"></datalist><datalist id="dl-members"></datalist><datalist id="dl-opp-themes"></datalist>
     <label class="field" for="rs-memo">メモ（任意）<textarea id="rs-memo" rows="3" maxlength="300" placeholder="例：伏せたミラーフォースで逆転"></textarea></label>
+    <p class="rs-link" id="rs-link" hidden></p>
     <p class="status err" id="rs-err" hidden>結果を選んでください。</p>
     <button type="button" class="start-btn" id="rs-save">💾 保存して終わる</button>
     <button type="button" class="ghost" id="rs-skip">保存せずに終わる</button>
@@ -3325,7 +3331,8 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     if(lk!=null){lastLk=lk;lastLa=la;}
     var p={app:'ygo',v:3,role:role,name:str(myName(),20),theme:str(myThemeNow(),30),phase:myPhase(),hb:hb,seq:seq,lk:lastLk,la:lastLa};
     if(role==='host'){p.set=setNow();p.page=S2.page;if(S2.start)p.start=S2.start;}
-    if(D){p.lp=D.lp;p.T=D.T;p.tv=D.tv||0;p.aceT=D.aceT||null;p.gid=D.gid||null;
+    if(D&&D.phase==='result'&&D.gid)p.rs={gid:D.gid,r:res||null};else if(S2.lastRes)p.rs=S2.lastRes;
+    if(D){p.rec=D.rec!==false;p.lp=D.lp;p.T=D.T;p.tv=D.tv||0;p.aceT=D.aceT||null;p.gid=D.gid||null;
       if(D.ctr&&D.ctr.length)p.ctr=D.ctr.filter(function(c){return c.own!=='op';}).slice(0,12).map(function(c){return {k:c.k,n:String(c.n||'').slice(0,30),v:Number(c.v)||0,max:Number(c.max)||0,w:String(c.when||''),od:!!c.oppDraw,au:!!c.auto};});
       if(D.cf)p.cf={T:Number(D.cf.T)||0,l:(D.cf.l||[]).slice(0,6).map(function(x){return String(x).slice(0,80);})};
       p.cfT=Number(D.cfT)||0;}
@@ -3339,6 +3346,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     ctr:Array.isArray(pr.ctr)?pr.ctr.slice(0,12).map(function(c){return {k:str(c.k,5),n:str(c.n,30),v:Number(c.v)||0,max:Number(c.max)||0,w:str(c.w,8),od:!!c.od,au:!!c.au};}):[],
     cf:pr.cf&&typeof pr.cf==='object'?{T:Number(pr.cf.T)||0,l:Array.isArray(pr.cf.l)?pr.cf.l.slice(0,6).map(function(x){return str(x,80);}):[]}:null,cfT:Number(pr.cfT)||0,
     set:pr.set&&typeof pr.set==='object'?{rec:pr.set.rec!==false,fmt:pr.set.fmt==='bo3'?'bo3':'bo1',m:pr.set.m&&typeof pr.set.m==='object'?{id:str(pr.set.m.id,30),g:num(pr.set.m.g)||1,w:num(pr.set.m.w)||0,l:num(pr.set.m.l)||0,d:num(pr.set.m.d)||0}:null}:null,
+    rec:pr.rec!==false,rs:pr.rs&&typeof pr.rs==='object'&&pr.rs.gid?{gid:str(pr.rs.gid,20),r:/^(win|lose|draw)$/.test(pr.rs.r||'')?pr.rs.r:null}:null,
     page:str(pr.page,8),start:pr.start&&typeof pr.start==='object'&&pr.start.id?{id:str(pr.start.id,20),first:!!pr.start.first}:null};}
   function onPeers(ch){
     var others=ch.peers.filter(function(p){return !p.isMe&&p.presence&&p.presence.app==='ygo'&&p.presence.v>=3;});
@@ -3352,6 +3360,8 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     if(!opp&&had&&!D){setLinkSt('相手との接続が切れました。','err');if(role==='guest'){S2.page='link';startHosting().then(function(){setLinkSt('親との接続が切れました。もう一度つないでください。','err');});}else if(role==='host'&&S2.page!=='link'&&S2.page!=='inv'){S2.page='link';renderSetup();}}
     if(opp){
       if(role==='guest')childSync();
+      if(D&&role==='guest'&&opp.gid&&opp.gid===D.gid&&(D.rec!==false)!==opp.rec){D.rec=opp.rec;saveD();}
+      if(D&&D.phase==='result'&&!views.result.hidden)renderRes();
       if(D&&D.phase==='play'&&opp.gid&&opp.gid===D.gid){
         // ターンをそろえる（操作の回数が多い方に合わせる）
         if(opp.tv>(D.tv||0)&&opp.T){D.T=Math.max(1,opp.T);D.tv=opp.tv;D.TAt=Date.now();saveD();renderTurn();}
@@ -3550,7 +3560,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 
   /* ---------- デュエル開始（親がスタート → 2台で同時に抽選） ---------- */
   function startGame(first,set,st){
-    S2.lastStartId=st?st.id:null;S2.starting=false;
+    S2.lastStartId=st?st.id:null;S2.starting=false;S2.lastRes=null;
     var th=S2.theme;pf.lastTheme=th;if(role!=='guest'){pf.recDefault=set.rec;pf.fmtDefault=set.fmt;}savePf();
     var MM=null;
     if(set.fmt==='bo3'){
@@ -3667,12 +3677,12 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   /* ---------- 終了確認 ---------- */
   function askEnd(title,text){var rec=!D||D.rec!==false;$('m-end-title').textContent=title;
     $('m-end-text').textContent=rec?text:(text.replace('終了すると、勝因・敗因を記録する画面に進みます。','')+' この対戦は「戦績に残さない」設定です。').trim();
-    $('m-end-yes').textContent=rec?'終了する':'終了する（記録しない）';$('m-end-rec').hidden=rec;$('m-end').hidden=false;}
+    $('m-end-yes').textContent=rec?'終了する':'終了する（記録しない）';$('m-end-rec').hidden=rec||role==='guest'&&!!sub;if(!rec&&role==='guest'&&sub)$('m-end-text').textContent+=' 戦績に残すかどうかは親が決めます。';$('m-end').hidden=false;}
   function checkOppZero(){if(!D||D.phase!=='play'||!opp||(D.gid&&opp.gid!==D.gid))return;if(opp.lp===0&&!D.oppZeroAsked){D.oppZeroAsked=true;saveD();askEnd('相手のライフが0になりました','バトルを終了しますか？');}if(opp.lp>0&&D.oppZeroAsked){D.oppZeroAsked=false;saveD();}}
   $('end-btn').addEventListener('click',function(){if(locked)return;askEnd('バトルを終了しますか？','終了すると、勝因・敗因を記録する画面に進みます。');});
   $('m-end-no').addEventListener('click',function(){$('m-end').hidden=true;});
   $('m-end-yes').addEventListener('click',function(){$('m-end').hidden=true;if(D&&D.rec===false){finish();}else{toResult();}});
-  $('m-end-rec').addEventListener('click',function(){$('m-end').hidden=true;if(D){D.rec=true;saveD();}toResult();});
+  $('m-end-rec').addEventListener('click',function(){$('m-end').hidden=true;if(D){D.rec=true;saveD();pushPresence();}toResult();});
 
   /* ---------- リザルト ---------- */
   var res=null, why=[];
@@ -3680,16 +3690,24 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   function toResult(){
     if(!D)return;D.phase='result';saveD();pushPresence();releaseWake();$('sheet').hidden=true;
     var o=opp||D.oppSnap;
-    res=D.lp<=0?'lose':(o&&o.lp===0?'win':null);why=[];
+    var og=opp&&(!D.gid||opp.gid===D.gid);res=D.lp<=0?'lose':(og&&opp.lp===0?'win':(!opp&&o&&o.lp===0?'win':null));resLock=res;why=[];
     var sum=$('rs-sum');sum.innerHTML='';
     var a=el('div');a.appendChild(el('b','',myName()));a.appendChild(document.createTextNode('（'+(D.myTheme||'テーマ未選択')+'）  LP '+D.lp));sum.appendChild(a);
     var b=el('div');b.appendChild(el('b','',o?o.name:'相手'));b.appendChild(document.createTextNode(o?('（'+(o.theme||'テーマ未選択')+'）  LP '+(o.lp==null?'―':o.lp)):'（リンクなし）'));sum.appendChild(b);
     sum.appendChild(el('div','note','全体 '+D.T+'ターン（自分のターン '+myTurnsUpTo(D.T)+'回）'+(D.aceT?' ・ 👑 '+turnLabel(D.aceT,D.first)+'にエース登場':'')));
     var t=totals(D.hist),tot=el('div','rs-tot');tot.appendChild(el('span','k-dmg','💥 受けたダメージ '+t.dmg));tot.appendChild(el('span','k-cost','💸 払ったコスト '+t.cost));tot.appendChild(el('span','k-heal','💚 回復 '+t.heal));sum.appendChild(tot);
     $('rs-opp').hidden=!!o;$('rs-opp-name').value='';$('rs-opp-theme').value='';$('rs-memo').value='';$('rs-err').hidden=true;
-    renderRes();show('result');document.dispatchEvent(new Event('ygo:result'));
+    renderRes();show('result');pushPresence();document.dispatchEvent(new Event('ygo:result'));
   }
+  var resLock=null;
+  function OPP_R(){return (opp&&D&&D.gid&&opp.rs&&opp.rs.gid===D.gid)?opp.rs.r:null;}
+  function COMP(r){return r==='win'?'lose':r==='lose'?'win':r==='draw'?'draw':null;}
   function renderRes(){
+    var or=OPP_R();if(!res&&or&&!resLock)res=COMP(or);
+    [].forEach.call(document.querySelectorAll('.seg3 button'),function(b){b.disabled=!!resLock&&b.getAttribute('data-r')!==resLock;});
+    var L=$('rs-link'),bad=!!(or&&res&&COMP(or)!==res);L.hidden=!(resLock||(sub&&opp&&D&&D.gid));L.className='rs-link'+(bad?' bad':'');
+    L.textContent=resLock?'🔒 ライフが0になったので、結果は自動で「'+(resLock==='win'?'勝ち':'負け')+'」になりました。':bad?'⚠️ 相手は「'+({win:'勝ち',lose:'負け',draw:'引き分け'})[or]+'」を選んでいます。結果が食い違っています。2人で確認してください。':or?'🔗 相手の入力：'+({win:'勝ち',lose:'負け',draw:'引き分け'})[or]+'（一致しています）':'🔗 相手の入力を待っています…（先に選んだ方に合わせて自動で入ります）';
+    $('rs-save').textContent=bad?'⚠️ 食い違ったまま保存する':'💾 保存して終わる';
     [].forEach.call(document.querySelectorAll('.seg3 button'),function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-r')===res));});
     var box=$('rs-why');box.innerHTML='';
     var list=res==='win'?WHY.win:res==='lose'?WHY.lose:WHY.win.concat(WHY.lose);
@@ -3697,12 +3715,14 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     list.forEach(function(w){var b=el('button','',w);b.type='button';b.setAttribute('aria-pressed',String(why.indexOf(w)>=0));
       b.addEventListener('click',function(){var i=why.indexOf(w);if(i>=0)why.splice(i,1);else why.push(w);renderRes();});box.appendChild(b);});
   }
-  [].forEach.call(document.querySelectorAll('.seg3 button'),function(b){b.addEventListener('click',function(){res=b.getAttribute('data-r');var all=res==='win'?WHY.win:res==='lose'?WHY.lose:WHY.win.concat(WHY.lose);why=why.filter(function(w){return all.indexOf(w)>=0;});renderRes();});});
+  [].forEach.call(document.querySelectorAll('.seg3 button'),function(b){b.addEventListener('click',function(){if(resLock)return;res=b.getAttribute('data-r');var all=res==='win'?WHY.win:res==='lose'?WHY.lose:WHY.win.concat(WHY.lose);why=why.filter(function(w){return all.indexOf(w)>=0;});renderRes();pushPresence();});});
   function finish(keep){if(D&&D.myTheme!=null)S2.theme=D.myTheme;D=null;saveD();if(sub&&opp){show('setup');S2.hist=[];S2.start=S2.start;S2.page=role==='host'?'go':'wait';renderSetup();pushPresence();}else{leave();closeOverlay();}renderLog();$('duel-open').textContent=getM()?'🏆 マッチの次のデュエルへ':'⚔️ デュエルを始める';}
   function matchMsg(t,sub2,res){var m=$('match-msg');$('match-msg-t').textContent=t;$('match-msg-s').textContent=sub2;m.className='match-msg'+(res?' '+res:'');m.hidden=false;}
   $('match-msg-ok').addEventListener('click',function(){$('match-msg').hidden=true;});
   $('rs-save').addEventListener('click',function(){
     if(!res){$('rs-err').hidden=false;return;}
+    var orr=OPP_R(),sv=$('rs-save');if(orr&&COMP(orr)!==res&&!sv.classList.contains('confirm')){sv.classList.add('confirm');sv.textContent='もう一度押すと、食い違ったまま保存します';setTimeout(function(){sv.classList.remove('confirm');renderRes();},4000);return;}sv.classList.remove('confirm');
+    if(D&&D.gid)S2.lastRes={gid:D.gid,r:res};
     var o=opp||D.oppSnap,t=totals(D.hist);
     var tl=D.hist.filter(function(e){return e.k==='lp'||e.k==='ace';}).map(function(e){return e.k==='ace'?{T:e.T,who:'me',kind:'ace'}:{T:e.T,who:e.who,kind:e.kind,amt:e.amt,b:e.b,a:e.a};});
     pf.log.push(Object.assign({at:Date.now(),result:res,why:why.slice(),memo:$('rs-memo').value.trim(),myName:myName(),myTheme:D.myTheme,
@@ -4489,6 +4509,12 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   document.addEventListener('ygo:ping',function(){if(!S.se)return;var c=ctx();if(!c)return;var t=c.currentTime+.02;partial(1318.5,t,.45,.13,{env:[[.01,1],[.35,.1]],wet:.3});partial(1760,t+.13,.7,.13,{env:[[.01,1],[.6,.08]],wet:.35});});
   document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};var a=d.amt||0;if(d.zero)SE.zero(a);else if(d.kind==='heal')SE.heal(a);else if(d.kind==='cost')SE.cost(a);else SE.dmg(a);});
 
+  /* 勝ち確BGMは廃止：アカウントに残った曲とこのスマホの曲を片付ける（1回だけ） */
+  (function(){var Y=window.YGO;try{if(window.indexedDB)indexedDB.deleteDatabase('ygo-audio');}catch(e){}
+    if(!Y||!Y.ready)return;Y.ready.then(function(u){if(!u||!Y.db)return;var k='ygo-bgm-clean-'+u.uid;try{if(localStorage.getItem(k))return;}catch(e){}
+      var col=Y.db.collection('users').doc(u.uid).collection('songs');
+      col.get().then(function(s){return Promise.all(s.docs.map(function(d){var n=Number((d.data()||{}).chunks)||0,ps=[];for(var i=0;i<n;i++)ps.push(col.doc(d.id).collection('chunks').doc(String(i)).delete().catch(function(){}));return Promise.all(ps).then(function(){return col.doc(d.id).delete();});}));})
+        .then(function(){try{localStorage.setItem(k,'1');}catch(e){}}).catch(function(){});});})();
   /* 設定 */
   function renderS(){[].forEach.call(document.querySelectorAll('#snd-se button'),function(b){b.setAttribute('aria-checked',String((b.getAttribute('data-v')==='1')===S.se));});}
   [].forEach.call(document.querySelectorAll('#snd-se button'),function(b){b.addEventListener('click',function(){S.se=b.getAttribute('data-v')==='1';saveS();renderS();if(S.se)SE.heal(1000);});});
