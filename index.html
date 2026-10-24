@@ -3536,7 +3536,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   /* 前回の相手と再戦（招待＋前回の設定） */
   function lastOpp(){try{var x=JSON.parse(localStorage.getItem(LOKEY));return x&&x.uid?x:null;}catch(e){return null;}}
   $('rematch').addEventListener('click',function(){var x=lastOpp();if(!x)return;S2.rec=x.rec!==false;if(!getM())S2.fmt=x.fmt==='bo3'?'bo3':'bo1';S2.pre=true;S2.page='inv';renderInvList();renderSetup();sendInvite(x.uid,x.name);});
-  $('solo-go').addEventListener('click',async function(){leaveLobby();cancelInvite();await leave();S2.page='type';S2.hist=[];renderSetup();});
+  $('solo-go').addEventListener('click',async function(){leaveLobby();cancelInvite();await leave();S2.rec=false;S2.fmt='bo1';S2.page='theme';S2.hist=[];renderSetup();});
 
   /* 届いた招待（どの画面にいても通知） */
   var inbox={sub:null,seen:{}};
@@ -3567,10 +3567,10 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     if(!views.setup||views.setup.hidden&&overlay.hidden)return;
     var p=S2.page;[].forEach.call(document.querySelectorAll('#dv-setup .pg'),function(e){e.hidden=e.getAttribute('data-pg')!==p;});
     var parent=role==='host'&&!!opp,solo=!sub;
-    var T={link:'⚔️ デュエルの準備',inv:'👥 招待する',type:'① 試合の種類',fmt:'② 何本勝負',theme:'③ デッキテーマ',go:'④ 確認',wait:'🔗 リンク中（子）'};
+    var T=solo?{link:'⚔️ デュエルの準備',inv:'👥 招待する',type:'① 試合の種類',fmt:'② 何本勝負',theme:'🧪 ひとりで使う',go:'🧪 確認',wait:'🔗 リンク中（子）'}:{link:'⚔️ デュエルの準備',inv:'👥 招待する',type:'① 試合の種類',fmt:'② 何本勝負',theme:'③ デッキテーマ',go:'④ 確認',wait:'🔗 リンク中（子）'};
     $('su-title').textContent=T[p]||'⚔️ デュエルの準備';
     var steps=['type','fmt','theme','go'],si=steps.indexOf(p),dots=$('su-dots');dots.innerHTML='';
-    if(si>=0)steps.forEach(function(s,i){dots.appendChild(el('i',i<si?'done':i===si?'cur':''));});
+    if(si>=0&&!solo)steps.forEach(function(s,i){dots.appendChild(el('i',i<si?'done':i===si?'cur':''));});
     $('su-back').hidden=!(p==='inv'||(si>0)||(si===0&&solo));
     /* リンク */
     if(p==='link'){$('key-num').textContent=(YGO.user&&myKey&&role==='host')?myKey:'----';var lo=lastOpp();var rb=$('rematch');rb.hidden=!(lo&&YGO.user);if(lo)rb.textContent='🔁 '+lo.name+' さんと再戦（招待する）';renderLobby();
@@ -3604,12 +3604,13 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   function fmtLabel(set){var M=set.m;return set.fmt==='bo3'?'🏆 3本勝負'+(M?' 第'+M.g+'戦（'+M.w+'-'+M.l+'）':' 第1戦'):'⚔️ 1本勝負';}
   function renderGo(){var box=$('go-sum');box.innerHTML='';var parent=role==='host'&&!!opp;var set=setNow();
     sumRow(box,'相手',parent?opp.name:'リンクなし（ひとりで使う）',null);
-    sumRow(box,'試合',S2.rec?'🏆 公式試合（戦績に残す）':'🧪 練習試合（残さない）','type');
-    sumRow(box,'形式',fmtLabel(set),getM()?null:'fmt');
+    if(!parent){sumRow(box,'試合','🧪 練習試合（リンクしないときは戦績に残りません）',null);}
+    else{sumRow(box,'試合',S2.rec?'🏆 公式試合（戦績に残す）':'🧪 練習試合（残さない）','type');
+    sumRow(box,'形式',fmtLabel(set),getM()?null:'fmt');}
     sumRow(box,'あなた',S2.theme||'テーマなし','theme');
     if(parent)sumRow(box,'相手のテーマ',opp.theme||'（相手が選んでいます）',null);
     var ready=!parent||opp.phase==='wait',btn=$('duel-start');btn.disabled=!ready;
-    $('go-note').textContent=!parent?'スタートを押すと、先攻・後攻を抽選してデュエルが始まります。':!oppLive()?'⚠️ 相手の通信を確認しています…（相手の画面を開いたままにしてもらってください）':!ready?(opp.phase==='result'?'⏳ 相手がリザルトを入力しています…':'⏳ 相手の準備を待っています…'):'スタートを押すと、2人のスマホで同時に先攻・後攻の抽選が始まります。';
+    $('go-note').textContent=!parent?'スタートを押すと、先攻・後攻を抽選してデュエルが始まります。戦績に残したいときは、相手とリンクしてください。':!oppLive()?'⚠️ 相手の通信を確認しています…（相手の画面を開いたままにしてもらってください）':!ready?(opp.phase==='result'?'⏳ 相手がリザルトを入力しています…':'⏳ 相手の準備を待っています…'):'スタートを押すと、2人のスマホで同時に先攻・後攻の抽選が始まります。';
     $('go-cut').hidden=!parent;}
   function renderWait(){var box=$('wait-set');box.innerHTML='';var ok=opp&&opp.role==='host';
     $('wait-h').textContent=ok?'⏳ 親の '+opp.name+' さんが設定中…':'⏳ 親を待っています…';
@@ -3661,9 +3662,9 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   }
   $('duel-start').addEventListener('click',function(){
     var b=this;if(b.disabled||D)return;
-    if(S2.fmt==='bo3'&&!getM())setM({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),g:1,w:0,l:0,d:0,theme:S2.theme,startedAt:Date.now()});
+    if(S2.fmt==='bo3'&&!getM()&&role==='host'&&opp)setM({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),g:1,w:0,l:0,d:0,theme:S2.theme,startedAt:Date.now()});
     var parent=role==='host'&&!!opp,set=setNow(),first=rnd(2)===1;
-    if(!parent){if(sub){leave();}startGame(first,set,null);return;}
+    if(!parent){if(sub){leave();}leaveLobby();cancelInvite();startGame(first,{rec:false,fmt:'bo1',m:null},null);return;}
     if(opp.phase!=='wait'){renderGo();return;}
     b.disabled=true;var st={id:Date.now().toString(36)+rnd(1e4).toString(36),first:first};S2.start=st;S2.starting=true;var go=false;
     function fire(){if(go)return;go=true;b.disabled=false;startGame(first,set,st);}
@@ -3823,7 +3824,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   /* ---------- 終了確認 ---------- */
   function askEnd(title,text){var rec=!D||D.rec!==false;$('m-end-title').textContent=title;
     $('m-end-text').textContent=rec?text:(text.replace('終了すると、勝因・敗因を記録する画面に進みます。','')+' この対戦は「戦績に残さない」設定です。').trim();
-    $('m-end-yes').textContent=rec?'終了する':'終了する（記録しない）';$('m-end-rec').hidden=rec||role==='guest'&&!!sub;if(!rec&&role==='guest'&&sub)$('m-end-text').textContent+=' 戦績に残すかどうかは親が決めます。';$('m-end').hidden=false;}
+    $('m-end-yes').textContent=rec?'終了する':'終了する（記録しない）';$('m-end-rec').hidden=rec||(role==='guest'&&!!sub)||!(D&&D.linkKey);if(!rec&&!(D&&D.linkKey))$('m-end-text').textContent='リンクしていない対戦は練習試合なので、戦績には残りません。';if(!rec&&role==='guest'&&sub)$('m-end-text').textContent+=' 戦績に残すかどうかは親が決めます。';$('m-end').hidden=false;}
   function checkOppZero(){if(!D||D.phase!=='play'||!opp||(D.gid&&opp.gid!==D.gid))return;if(opp.lp===0&&!D.oppZeroAsked){D.oppZeroAsked=true;saveD();askEnd('相手のライフが0になりました','バトルを終了しますか？');}if(opp.lp>0&&D.oppZeroAsked){D.oppZeroAsked=false;saveD();}}
   $('end-btn').addEventListener('click',function(){if(locked)return;askEnd('バトルを終了しますか？','終了すると、勝因・敗因を記録する画面に進みます。');});
   $('m-end-no').addEventListener('click',function(){$('m-end').hidden=true;});
@@ -4009,6 +4010,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-10-24-solo-practice',createdAt:1792848630388,text:'🧪 リンクせずに電卓だけで使うときは、自動で練習試合（戦績に残さない・1本勝負）になるように。戦績に残したいときは相手とリンクしてください'},
       {id:'auto-2026-10-24-link',createdAt:1792848238103,text:'🔗 リンク対戦を一新：キーを入れた人が「子」、入れられた人が「親」。親だけが試合を設定（公式／練習・1本／3本・テーマ）し、スタートで2人のスマホに同時に先攻・後攻の演出。子は待っている間に自分のテーマを選びます'},
       {id:'auto-2026-10-24-lobby',createdAt:1792848237103,text:'📡 デュエル画面を開くと「いま待っている人」に名前が出て、タップ1回でつながるように。メンバーを招待（招待した人が親）・LINEなどで送れる招待リンク・前回の相手と再戦も追加'},
       {id:'auto-2026-10-24-sync',createdAt:1792848236103,text:'🔄 同期を作り直し：ターンはスマホの時計に左右されない方式に。通信が止まったら自動でつなぎ直し、上の「同期中」表示をタップで手動でも。カウントの待ち画面が消えない不具合も修正'},
