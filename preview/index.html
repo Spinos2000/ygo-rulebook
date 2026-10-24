@@ -1573,6 +1573,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 .rs-link.bad{background:var(--red-bg);color:var(--red)}
 .seg3 button:disabled{opacity:.35;cursor:not-allowed}
 #rs-save.confirm{background:var(--red);color:#fff}
+select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;border:2px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
 </style>
 </head>
 <body>
@@ -1884,8 +1885,8 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   <form class="add" id="rb-form" hidden>
     <b>➕ 規制を登録</b>
     <span class="note">ログインしているメンバーなら誰でも登録できます。自分が登録したものは自分で削除できます。</span>
-    <label for="rb-user">使用者の名前<input type="text" id="rb-user" maxlength="40" placeholder="空欄なら自分のニックネーム"></label>
-    <label for="rb-theme">デッキテーマ名<input type="text" id="rb-theme" maxlength="60" required placeholder="例：ドラゴン族"></label>
+    <label for="rb-user">使用者<select id="rb-user" class="pick" data-pick="member" data-me="1"></select></label>
+    <label for="rb-theme">デッキテーマ<select id="rb-theme" class="pick" data-pick="theme" data-of="rb-user" required></select></label>
     <div class="rb-cards">
       <b>規制するカード</b>
       <span class="note">※「禁止」は汎用カードのみ。専用カードは禁止にしません。</span>
@@ -2933,8 +2934,8 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     <div class="dv-head"><b>🏁 リザルト</b></div>
     <div class="rs-sum" id="rs-sum"></div>
     <div class="rs-opp" id="rs-opp" hidden>
-      <label class="field" for="rs-opp-name">相手の名前<input type="text" id="rs-opp-name" maxlength="20" placeholder="例：さとう" list="dl-members" autocomplete="off"></label>
-      <label class="field" for="rs-opp-theme">相手のデッキテーマ<input type="text" id="rs-opp-theme" maxlength="30" placeholder="例：E・HERO" list="dl-opp-themes" autocomplete="off"></label>
+      <label class="field" for="rs-opp-name">相手の名前<select id="rs-opp-name" class="pick" data-pick="member" data-blank="（メンバー以外・わからない）"></select></label>
+      <label class="field" for="rs-opp-theme">相手のデッキテーマ<select id="rs-opp-theme" class="pick" data-pick="theme" data-of="rs-opp-name" data-blank="（テーマ不明）"></select></label>
     </div>
     <div class="field"><span>結果</span>
       <div class="seg3" role="radiogroup" aria-label="結果">
@@ -2972,8 +2973,8 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   <div class="modal-box me-box">
     <b>✏️ 記録を編集</b>
     <div class="seg3x" id="me-res" role="radiogroup" aria-label="結果"><button type="button" data-r="win" role="radio">🏆 勝ち</button><button type="button" data-r="lose" role="radio">💀 負け</button><button type="button" data-r="draw" role="radio">🤝 分け</button></div>
-    <label class="field" for="me-opp-name">相手の名前<input type="text" id="me-opp-name" maxlength="20" list="dl-members" autocomplete="off"></label>
-    <label class="field" for="me-opp-theme">相手のデッキテーマ<input type="text" id="me-opp-theme" maxlength="30" list="dl-opp-themes2" autocomplete="off"></label><datalist id="dl-opp-themes2"></datalist>
+    <label class="field" for="me-opp-name">相手の名前<select id="me-opp-name" class="pick" data-pick="member" data-blank="（メンバー以外・わからない）"></select></label>
+    <label class="field" for="me-opp-theme">相手のデッキテーマ<select id="me-opp-theme" class="pick" data-pick="theme" data-of="me-opp-name" data-blank="（テーマ不明）"></select></label><datalist id="dl-opp-themes2"></datalist>
     <div class="field"><span>🔟 相手のデッキの強さ</span><div class="rate10" id="me-rate" role="radiogroup" aria-label="相手のデッキの強さ"></div></div>
     <label class="field" for="me-ace">👑 出したエース<input type="text" id="me-ace" maxlength="40" list="dl-aces" autocomplete="off"></label>
     <label class="field" for="me-memo">メモ<textarea id="me-memo" rows="3" maxlength="300"></textarea></label>
@@ -3696,7 +3697,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     var b=el('div');b.appendChild(el('b','',o?o.name:'相手'));b.appendChild(document.createTextNode(o?('（'+(o.theme||'テーマ未選択')+'）  LP '+(o.lp==null?'―':o.lp)):'（リンクなし）'));sum.appendChild(b);
     sum.appendChild(el('div','note','全体 '+D.T+'ターン（自分のターン '+myTurnsUpTo(D.T)+'回）'+(D.aceT?' ・ 👑 '+turnLabel(D.aceT,D.first)+'にエース登場':'')));
     var t=totals(D.hist),tot=el('div','rs-tot');tot.appendChild(el('span','k-dmg','💥 受けたダメージ '+t.dmg));tot.appendChild(el('span','k-cost','💸 払ったコスト '+t.cost));tot.appendChild(el('span','k-heal','💚 回復 '+t.heal));sum.appendChild(tot);
-    $('rs-opp').hidden=!!o;$('rs-opp-name').value='';$('rs-opp-theme').value='';$('rs-memo').value='';$('rs-err').hidden=true;
+    $('rs-opp').hidden=!!o;YGO.pick.set($('rs-opp-name'),'');YGO.pick.set($('rs-opp-theme'),'');$('rs-memo').value='';$('rs-err').hidden=true;
     renderRes();show('result');pushPresence();document.dispatchEvent(new Event('ygo:result'));
   }
   var resLock=null;
@@ -3969,7 +3970,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   }
   qEl.addEventListener('input',render);
   var rbEditId=null;
-  function rbEdit(r){rbEditId=r.id;document.getElementById('rb-user').value=String(r.d.user||'');document.getElementById('rb-theme').value=String(r.d.theme||'');document.getElementById('rb-reason').value=String(r.d.reason||'');
+  function rbEdit(r){rbEditId=r.id;YGO.pick.set(document.getElementById('rb-user'),String(r.d.user||''));YGO.pick.set(document.getElementById('rb-theme'),String(r.d.theme||''));document.getElementById('rb-reason').value=String(r.d.reason||'');
     rows.innerHTML='';(r.d.cards||[]).forEach(function(c){addRow();var row=rows.lastChild;row.querySelector('input').value=String(c.name||'');row.querySelector('select').value=c.level||'lim';});if(!rows.children.length)addRow();
     btn.textContent='この内容で設定し直す';document.getElementById('rb-cancel').hidden=false;setStatus('「'+(r.d.theme||'')+'（'+(r.d.user||'')+'）」を編集中です。直して「この内容で設定し直す」を押してください。');form.scrollIntoView({block:'start',behavior:'smooth'});}
   function rbEditEnd(){rbEditId=null;btn.textContent=btnLabel;document.getElementById('rb-cancel').hidden=true;}
@@ -3994,14 +3995,14 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     isAdmin = !!(user && user.isOwner && user.isOwner()); myUid=user&&user.uid;
     canWrite = !!myUid;
     col=db.collection('reports');
-    if(canWrite){ form.hidden=false; setTimeout(function(){var n=document.getElementById('pf-name');var u=document.getElementById('rb-user');if(n&&u&&!u.value)u.value=n.value;},2500); }
+    if(canWrite){ form.hidden=false; setTimeout(function(){var u=document.getElementById('rb-user'),me=YGO.app&&YGO.app.pf().name;if(u&&me&&!rbEditId)YGO.pick.set(u,me);},2500); }
     else document.getElementById('rb-guest').hidden=false;
     col.orderBy('createdAt','desc').onSnapshot(function(s){docs=s.docs;render();},function(){msg('ボードを読み込めませんでした。ページを開き直してください。');});
     form.addEventListener('submit',async function(e){
       e.preventDefault();
       var u=document.getElementById('rb-user').value.trim()||((window.YGO&&YGO.app&&YGO.app.pf().name)||''), t=document.getElementById('rb-theme').value.trim(), reason=document.getElementById('rb-reason').value.trim();
       var cards=[].slice.call(rows.children).map(function(r){return {name:r.querySelector('input').value.trim(),level:r.querySelector('select').value};}).filter(function(c){return c.name;});
-      if(!u||!t){setStatus('使用者の名前とデッキテーマ名を入力してください。','err');return;}
+      if(!u||!t){setStatus('使用者とデッキテーマを選んでください。','err');return;}
       if(!cards.length && !reason){setStatus('規制するカードか理由のどちらかを入力してください。','err');return;}
       btn.disabled=true; setStatus('登録しています…');
       try{
@@ -4300,7 +4301,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   /* ---------- 記録の編集 ---------- */
   var editing=null,eRes=null,eRate=null;
   function openEdit(r){editing=r;eRes=r.result||'draw';eRate=Number(r.oppRate)||null;
-    $('me-opp-name').value=oppLabel(r)==='相手（名前なし）'?'':oppLabel(r);$('me-opp-theme').value=r.oppTheme||'';$('me-ace').value=r.aceName||'';$('me-memo').value=r.memo||'';
+    YGO.pick.set($('me-opp-name'),oppLabel(r)==='相手（名前なし）'?'':oppLabel(r));YGO.pick.set($('me-opp-theme'),r.oppTheme||'');$('me-ace').value=r.aceName||'';$('me-memo').value=r.memo||'';
     renderE();$('m-edit').hidden=false;}
   function renderE(){[].forEach.call(document.querySelectorAll('#me-res button'),function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-r')===eRes));});
     [].forEach.call(document.querySelectorAll('#me-rate button'),function(b){b.setAttribute('aria-checked',String(Number(b.getAttribute('data-v'))===eRate));});}
@@ -5216,6 +5217,38 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     st.textContent=window.YGO_INSTALL?'下のボタンから、ホーム画面に追加できます。':ios?'iPhoneは下の手順で追加できます（Safariで開いてください）。':'お使いのブラウザのメニューから、ホーム画面に追加できます。';st.className='app-st';bt.hidden=!window.YGO_INSTALL;}
   bt.addEventListener('click',function(){var e=window.YGO_INSTALL;if(!e)return;e.prompt();(e.userChoice||Promise.resolve()).then(function(){window.YGO_INSTALL=null;upd();});});
   document.addEventListener('ygo:installable',upd);window.addEventListener('appinstalled',function(){window.YGO_INSTALL=null;upd();});upd();
+})();
+</script>
+<script>
+/* ===== ニックネームとデッキテーマは選択式（メンバー → そのメンバーが登録したテーマ） ===== */
+(function(){
+  var Y=window.YGO;if(!Y)return;
+  function opt(sel,v,t,dis){var o=document.createElement('option');o.value=v;o.textContent=t;if(dis)o.disabled=true;sel.appendChild(o);return o;}
+  function key(n){return String(n||'').replace(/\s+/g,'').toLowerCase();}
+  function members(){var M=Y.members||{};return Object.keys(M).map(function(u){return {uid:u,name:M[u].name,themes:M[u].themes||[]};}).filter(function(m){return m.name;}).sort(function(a,b){return a.name.localeCompare(b.name,'ja');});}
+  function myName(){return (Y.app&&Y.app.pf&&Y.app.pf().name)||'';}
+  function fillMember(sel,keep){var v=keep!=null?keep:sel.value,me=Y.user&&Y.user.uid,withMe=sel.getAttribute('data-me')==='1';sel.innerHTML='';
+    opt(sel,'',sel.getAttribute('data-blank')||'（選んでください）');
+    var L=members().filter(function(m){return withMe||m.uid!==me;});
+    if(withMe){var mine=L.filter(function(m){return m.uid===me;})[0];if(mine){opt(sel,mine.name,'👤 '+mine.name+'（自分）');L=L.filter(function(m){return m!==mine;});}}
+    L.forEach(function(m){opt(sel,m.name,m.name);});
+    if(withMe&&!L.length&&!members().length&&myName())opt(sel,myName(),'👤 '+myName()+'（自分）');
+    put(sel,v);}
+  function fillTheme(sel,keep){var v=keep!=null?keep:sel.value,of=document.getElementById(sel.getAttribute('data-of')),name=of?of.value:'';sel.innerHTML='';
+    var m=null;members().forEach(function(x){if(key(x.name)===key(name))m=x;});
+    var th=m?m.themes:(name&&key(name)===key(myName())&&Y.app?Y.app.pf().themes:[]);
+    opt(sel,'',sel.getAttribute('data-blank')||(name?'（テーマを選んでください）':'（先に人を選んでください）'));
+    (th||[]).forEach(function(t){opt(sel,t,t);});
+    if(name&&!(th||[]).length)opt(sel,'__none','（この人はまだテーマを登録していません）',true);
+    put(sel,v);}
+  /* 選択肢にない値（昔の記録など）は、そのまま残せるように足す */
+  function put(sel,v){v=v==null?'':String(v);if(v&&![].some.call(sel.options,function(o){return o.value===v;}))opt(sel,v,v+'（登録外）');sel.value=v;}
+  function fillAll(){[].forEach.call(document.querySelectorAll('select.pick[data-pick=member]'),function(s){fillMember(s);});[].forEach.call(document.querySelectorAll('select.pick[data-pick=theme]'),function(s){fillTheme(s);});}
+  Y.pick={set:function(sel,v){if(!sel)return;if(sel.getAttribute('data-pick')==='member'){fillMember(sel,v);[].forEach.call(document.querySelectorAll('select.pick[data-of="'+sel.id+'"]'),function(t){fillTheme(t,'');});}else fillTheme(sel,v);},refresh:fillAll};
+  [].forEach.call(document.querySelectorAll('select.pick[data-pick=member]'),function(s){s.addEventListener('change',function(){[].forEach.call(document.querySelectorAll('select.pick[data-of="'+s.id+'"]'),function(t){fillTheme(t,'');});});});
+  document.addEventListener('ygo:data',fillAll);
+  if(Y.ready)Y.ready.then(function(){setTimeout(fillAll,0);});
+  fillAll();
 })();
 </script>
 </body>
