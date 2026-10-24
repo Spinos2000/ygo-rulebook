@@ -1574,6 +1574,46 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 .seg3 button:disabled{opacity:.35;cursor:not-allowed}
 #rs-save.confirm{background:var(--red);color:#fff}
 select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;border:2px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
+/* ===== 対戦画面 v3：ログ｜電卓｜カード盤 を左右スワイプで ===== */
+.dv-play .topbar{min-height:0;gap:8px}
+.sync-pill{display:flex;align-items:center;gap:8px;font:inherit;font-size:13px;font-weight:900;color:var(--muted);background:transparent;border:2px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer;min-width:0;max-width:70%}
+.sync-pill i{width:11px;height:11px;border-radius:50%;background:var(--line);flex:none}
+.sync-pill span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sync-pill.on{color:var(--spell);border-color:var(--spell)}.sync-pill.on i{background:var(--spell)}
+.sync-pill.wait i{background:var(--gold)}
+.sync-pill.slow{color:var(--gold);border-color:var(--gold)}.sync-pill.slow i{background:var(--gold);animation:dotblink 1s steps(2) infinite}
+.dv-play .topbar .tb.end{height:36px;font-size:14px;padding:0 14px;margin-left:auto;border-radius:6px;border:2px solid var(--osiris);color:var(--osiris);background:transparent}
+.ftabs{display:grid;grid-template-columns:1fr 1.1fr 1.2fr;gap:0;border:3px solid var(--edge);border-radius:6px;overflow:hidden;flex:none;background:var(--surface)}
+.ftabs button{position:relative;font:inherit;font-size:14px;font-weight:900;min-height:42px;border:0;border-right:2px solid var(--edge);background:transparent;color:var(--muted);cursor:pointer}
+.ftabs button:last-child{border-right:0}
+.ftabs button[aria-selected="true"]{background:var(--obelisk);color:#fff}
+.ftabs i{position:absolute;top:4px;right:6px;min-width:18px;height:18px;border-radius:999px;background:var(--osiris);color:#fff;font-style:normal;font-size:11px;line-height:18px;font-family:var(--digit);padding:0 4px}
+.ftabs i[hidden]{display:none}
+.f-log{overflow-y:auto;-webkit-overflow-scrolling:touch;gap:8px;padding:2px 2px 6px}
+.f-log .track{flex:none;padding:2px 0 4px}
+.pl-tl{display:flex;flex-direction:column;gap:8px}
+.tl-now{font-style:normal;font-size:11px;font-weight:900;color:#fff;background:var(--osiris);border-radius:4px;padding:1px 6px;margin-left:6px}
+.k-rng{font-weight:900}
+.dv-play.on-board .lpc-lp b{font-size:clamp(30px,5vh,42px)}
+.dv-play{gap:8px}
+.dv-play .turnbar{flex:none}
+.f-calc .bottom{grid-template-columns:repeat(4,1fr)!important}
+.rng-fx{position:fixed;inset:0;z-index:92;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:radial-gradient(circle,rgba(255,255,255,.12) 2px,transparent 2.6px) 0 0/18px 18px,linear-gradient(160deg,#3d4f7a,#1f2944);color:#fff;text-align:center;padding:24px}
+.rng-fx[hidden]{display:none}
+.rng-fx.dice{background:radial-gradient(circle,rgba(255,255,255,.12) 2px,transparent 2.6px) 0 0/18px 18px,linear-gradient(160deg,#6a4a8c,#2f2346)}
+.rng-h{margin:0;font-family:var(--display);font-size:24px;background:var(--osiris);border:3px solid var(--edge);padding:4px 18px;box-shadow:4px 4px 0 var(--edge);transform:skewX(-10deg)}
+.rng-big{font-size:min(46vw,200px);line-height:1;font-weight:400}
+.rng-fx.spin .rng-big{animation:rngshake .12s linear infinite}
+@keyframes rngshake{0%{transform:rotate(-12deg) scale(.92)}50%{transform:rotate(12deg) scale(1.04)}100%{transform:rotate(-12deg) scale(.92)}}
+.rng-fx.done .rng-big{animation:fxpop .5s cubic-bezier(.2,1.8,.4,1)}
+.rng-res{margin:0;min-height:1.3em;font-family:var(--display);font-size:clamp(40px,13vw,64px);color:#f6d77c;-webkit-text-stroke:2px var(--edge);paint-order:stroke fill;filter:drop-shadow(4px 4px 0 var(--edge))}
+.rng-tap{margin:0;font-size:12px;opacity:0}
+.rng-fx.coin .rng-big{width:min(56vw,220px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fbe9b0,#e0b04a 60%,#b9862a);border:6px solid var(--edge);box-shadow:6px 6px 0 var(--edge);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:min(24vw,96px);color:var(--edge)}
+.rng-fx.coin.spin .rng-big{animation:rngflip .16s linear infinite}
+@keyframes rngflip{0%{transform:scaleX(1)}50%{transform:scaleX(.1)}100%{transform:scaleX(1)}}
+.f-log .track{position:sticky;top:0;z-index:1;background:var(--bg);margin:-2px -2px 0;padding:4px 2px 6px}
+.rng-fx.done .rng-tap{opacity:.8}
+@media (prefers-reduced-motion: reduce){.rng-fx.spin .rng-big,.rng-fx.done .rng-big{animation:none}}
 </style>
 </head>
 <body>
@@ -2836,9 +2876,8 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   <!-- 対戦中 -->
   <div class="dv dv-play" id="dv-play" hidden>
     <div class="topbar">
-      <button type="button" class="tb tl" id="tl-btn" aria-label="ターンごとの記録" title="ターンごとの記録">📜 ログ</button>
-      <button type="button" class="dot sync" id="link-dot" aria-label="同期の状態"></button>
-      <button type="button" class="tb end" id="end-btn">終了</button>
+      <button type="button" class="sync-pill" id="link-dot" aria-label="同期の状態"><i></i><span id="sync-l">ひとりで使用中</span></button>
+      <button type="button" class="tb end" id="end-btn">🏁 終了</button>
     </div>
 
     <div class="turnbar" id="turnbar">
@@ -2848,7 +2887,6 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
       </div>
       <button type="button" class="turn-go" id="turn-go"><b id="turn-go-l">エンド ▶</b><span id="turn-go-s">相手のターンへ</span></button>
     </div>
-    <div class="track" id="track" aria-label="ターンの流れ"></div>
 
     <div class="lpc lpc-op" id="opp">
       <div class="lpc-who"><b id="opp-name">相手</b><span id="opp-theme">未接続</span></div>
@@ -2861,8 +2899,16 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
       <div class="meter"><i id="me-meter"></i></div>
     </div>
 
-    <button type="button" class="ctr-sum" id="ctr-sum" aria-label="カード盤（カウンター）とのきりかえ"></button>
+    <div class="ftabs" id="ftabs" role="tablist" aria-label="画面のきりかえ（左右にスワイプでも）">
+      <button type="button" role="tab" data-f="log">📜 ログ</button>
+      <button type="button" role="tab" data-f="calc">🧮 電卓</button>
+      <button type="button" role="tab" data-f="board">🃏 カード盤<i id="fb-n" hidden></i></button>
+    </div>
     <div class="faces" id="faces">
+    <div class="face f-log" id="face-log" hidden>
+      <div class="track" id="track" aria-label="ターンの流れ（押すとそのターンへ）"></div>
+      <div class="tl pl-tl" id="pl-tl"></div>
+    </div>
     <div class="face f-calc" id="face-calc">
     <div class="quick">
       <button type="button" class="qb" data-d="100"><b>−100</b><small>コスト</small></button>
@@ -2885,7 +2931,6 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
       <button type="button" class="bb" id="undo-btn">↶<span>戻す</span></button>
       <button type="button" class="bb" id="coin-btn">🪙<span>コイン</span></button>
       <button type="button" class="bb" id="dice-btn">🎲<span>サイコロ</span></button>
-      <output class="rng" id="rng">—</output>
     </div>
     </div>
     <div class="face f-board" id="face-board" hidden>
@@ -2921,11 +2966,11 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     <div class="ctr-alert" id="ctr-alert" hidden role="alertdialog" aria-live="assertive"><div class="ctr-alert-box"><b id="ctr-alert-h">⏰ カウンターが0になりました</b><div id="ctr-alert-t"></div><button type="button" class="btn" id="ctr-alert-ok">OK</button></div></div>
 
 
-    <div class="sheet" id="sheet" hidden>
-      <div class="sheet-box">
-        <div class="dv-head"><b>📜 ターンごとの記録</b><button type="button" class="x" id="sheet-close" aria-label="閉じる">✕</button></div>
-        <div class="tl" id="tl"></div>
-      </div>
+    <div class="rng-fx" id="rng-fx" hidden role="dialog" aria-modal="true" aria-label="コイン・サイコロ">
+      <p class="rng-h" id="rng-h">🪙 コイントス</p>
+      <b class="rng-big" id="rng-big">🪙</b>
+      <p class="rng-res" id="rng-res" role="status"></p>
+      <p class="rng-tap">タップで閉じる</p>
     </div>
   </div>
 
@@ -3263,13 +3308,15 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   function buildTimeline(box,entries,maxT,first){
     box.innerHTML='';
     for(var T=1;T<=maxT;T++){
-      var own=ownerOf(T,first),sec=el('div','tl-turn '+(own==='me'?'tm':'to'));sec.id='tl-'+T;
+      var own=ownerOf(T,first),sec=el('div','tl-turn '+(own==='me'?'tm':'to'));sec.setAttribute('data-t',String(T));
       var h=el('div','tl-h');h.appendChild(el('b','',turnLabel(T,first)));h.appendChild(el('span','','全体'+T+'T'));sec.appendChild(h);
       var es=entries.filter(function(e){return e.T===T;});
       if(!es.length)sec.appendChild(el('div','tl-none','ライフの変化なし'));
+      if(T===maxT&&box.id==='pl-tl')h.appendChild(el('i','tl-now','いまここ'));
       es.forEach(function(e){var r=el('div','tl-e');
         r.appendChild(el('span','who '+(e.who==='op'?'to':'tm'),e.who==='op'?'相手':'自分'));
         if(e.kind==='ace'){r.appendChild(el('span','k-ace','👑 エース登場'));r.appendChild(el('span','ar',''));}
+        else if(e.k==='rng'){r.appendChild(el('span','k-rng',e.txt||''));r.appendChild(el('span','ar',''));}
         else{var k=KL[e.kind]||KL.dmg;r.appendChild(el('span',k[2],k[0]+' '+k[1]+' '+(e.kind==='heal'?'＋':'−')+e.amt));r.appendChild(el('span','ar',(e.b!=null?e.b+'→':'')+e.a));}
         sec.appendChild(r);});
       box.appendChild(sec);
@@ -3305,7 +3352,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   function setLinkSt(t,c){var s=$('link-st');if(!s)return;s.textContent=t||'';s.className='link-st'+(c?' '+c:'');}
   function oppLive(){return !!(opp&&Date.now()-lastOppAt<25000);}
   function setDot(){var d=$('link-dot');if(!d)return;var st=!sub?'':!opp?'wait':(!oppLive()||(pend&&Date.now()-pendSince>5000))?'slow':'on';
-    d.className='dot sync'+(st?' '+st:'');d.title=!sub?'リンクなし':!opp?'相手を待っています':st==='slow'?'通信を確認中（タップで再同期）':'同期中（相手とつながっています）';d.setAttribute('aria-label',d.title);}
+    d.className='sync-pill'+(st?' '+st:'');var L=$('sync-l');if(L)L.textContent=!sub?'ひとりで使用中':!opp?'相手を待っています':st==='slow'?'通信を確認中…':'🔗 '+opp.name+' と同期中';d.title=!sub?'リンクなし':!opp?'相手を待っています':st==='slow'?'通信を確認中（タップで再同期）':'同期中（相手とつながっています）';d.setAttribute('aria-label',d.title);}
   async function leave(){clearTimeout(joinT);S2.start=null;S2.starting=false;unsubs.forEach(function(u){try{u();}catch(e){}});unsubs=[];if(sub){try{await sub.leave();}catch(e){}}sub=null;opp=null;role=null;lastOppSeq=null;stopHb();setDot();renderOpp();}
   /* 通信のつなぎ直し（スマホ回線で受信が止まったとき用） */
   function kick(force){var now=Date.now();if(!force&&now-kickAt<20000)return;kickAt=now;var db=YGO.db;if(!db||!db.disableNetwork)return;
@@ -3614,7 +3661,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     document.dispatchEvent(new CustomEvent('ygo:turn'));
   }
   function renderTrack(){
-    if(!D)return;var tr=$('track');tr.innerHTML='';
+    if(!D)return;renderPlayLog();var tr=$('track');tr.innerHTML='';
     for(var T=1;T<=D.T;T++){(function(T){var own=ownerOf(T,D.first);
       var has=D.hist.some(function(e){return e.T===T&&(e.k==='lp'||e.k==='ace');});
       var b=el('button','tp '+(own==='me'?'tm':'to')+(T===D.T?' cur':'')+(has?' has':''),(own==='me'?'自':'相')+nOf(T));b.type='button';b.title=turnLabel(T,D.first);
@@ -3658,22 +3705,31 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   function bumpTv(){D.tv=Math.max(D.tv||0,(opp&&D.gid&&opp.gid===D.gid?opp.tv:0)||0)+1;}
   $('turn-go').addEventListener('click',function(){if(!D||locked)return;D.hist.push({k:'turn',from:D.T,fromAt:D.TAt});D.T++;bumpTv();D.TAt=Date.now();saveD();renderTurn();pushPresence();});
   $('undo-btn').addEventListener('click',function(){
-    if(!D||locked)return;var i=D.hist.length-1;while(i>=0&&D.hist[i].who==='op')i--;if(i<0)return;
+    if(!D||locked)return;var i=D.hist.length-1;while(i>=0&&(D.hist[i].who==='op'||D.hist[i].k==='rng'))i--;if(i<0)return;
     var h=D.hist.splice(i,1)[0];
     if(h.k==='lp'){var from=D.lp;D.lp=h.b;if(D.lp>0)D.zeroAsked=false;seq++;saveD();renderMe(from);renderTrack();pushPresence('undo',0);}
     else if(h.k==='turn'){D.T=h.from;bumpTv();D.TAt=Date.now();saveD();renderTurn();pushPresence();}
     else if(h.k==='ace'){D.aceT=null;saveD();renderMe();renderTrack();pushPresence();}
   });
   $('ace-btn').addEventListener('click',function(){if(!D||locked||D.aceT)return;D.aceT=D.T;D.hist.push({k:'ace',who:'me',kind:'ace',T:D.T});saveD();renderMe();renderTrack();pushPresence();});
-  function roll(final,frames){var out=$('rng');if(reduce){out.textContent=final;return;}var n=0;var iv=setInterval(function(){out.textContent=frames[n%frames.length];n++;if(n>8){clearInterval(iv);out.textContent=final;}},60);}
-  $('coin-btn').addEventListener('click',function(){if(locked)return;roll(rnd(2)?'🪙 表':'🪙 裏',['🪙 表','🪙 裏']);});
-  $('dice-btn').addEventListener('click',function(){if(locked)return;var f=['⚀','⚁','⚂','⚃','⚄','⚅'],v=rnd(6);roll('🎲 '+(v+1),f);});
+  var rngT=null;
+  function rngFx(kind){var fx=$('rng-fx'),big=$('rng-big'),res=$('rng-res'),coin=kind==='coin',v=rnd(coin?2:6),F=coin?['表','裏']:['⚀','⚁','⚂','⚃','⚄','⚅'];
+    clearTimeout(rngT);fx.hidden=false;fx.className='rng-fx spin '+kind;$('rng-h').textContent=coin?'🪙 コイントス':'🎲 サイコロ';res.textContent='';
+    var txt=coin?(v?'表':'裏'):String(v+1),n=0,steps=reduce?0:14;
+    (function tick(){if(n<steps){big.textContent=coin?F[n%2]:F[rnd(6)];n++;rngT=setTimeout(tick,40+n*9);return;}
+      big.textContent=coin?txt:F[v];res.textContent=coin?txt+'！':txt+' が出た！';fx.className='rng-fx done '+kind;
+      if(D){D.hist.push({k:'rng',who:'me',kind:kind,txt:(coin?'🪙 コイン：':'🎲 サイコロ：')+txt,T:D.T});saveD();if(window.YGO_LOG)YGO_LOG();}
+      rngT=setTimeout(closeRng,5000);})();}
+  function closeRng(){clearTimeout(rngT);$('rng-fx').hidden=true;}
+  $('rng-fx').addEventListener('click',function(){if(this.classList.contains('done'))closeRng();});
+  $('coin-btn').addEventListener('click',function(){rngFx('coin');});
+  $('dice-btn').addEventListener('click',function(){rngFx('dice');});
 
   /* 記録シート */
-  function openSheet(T){if(!D||locked)return;buildTimeline($('tl'),D.hist.filter(function(e){return e.k==='lp'||e.k==='ace';}),D.T,D.first);$('sheet').hidden=false;
-    var t=$('tl-'+(T||D.T));if(t)t.scrollIntoView({block:'start'});}
-  $('tl-btn').addEventListener('click',function(){openSheet();});
-  $('sheet-close').addEventListener('click',function(){$('sheet').hidden=true;});
+  function openSheet(T){if(!D)return;if(window.YGO_FACE)YGO_FACE('log');renderPlayLog(T);}
+  function renderPlayLog(T){var box=$('pl-tl');if(!box||!D)return;buildTimeline(box,D.hist.filter(function(e){return e.k==='lp'||e.k==='ace'||e.k==='rng';}),D.T,D.first);
+    var t=box.querySelector('[data-t="'+(T||D.T)+'"]');if(t&&!$('face-log').hidden)t.scrollIntoView({block:T?'start':'end'});}
+  window.YGO_LOG=function(){renderTrack();renderPlayLog();};
 
   /* ---------- 終了確認 ---------- */
   function askEnd(title,text){var rec=!D||D.rec!==false;$('m-end-title').textContent=title;
@@ -3689,7 +3745,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   var res=null, why=[];
   function totals(h){var t={dmg:0,cost:0,heal:0};h.forEach(function(e){if(e.k==='lp'&&e.who==='me'&&t[e.kind]!=null)t[e.kind]+=e.amt;});return t;}
   function toResult(){
-    if(!D)return;D.phase='result';saveD();pushPresence();releaseWake();$('sheet').hidden=true;
+    if(!D)return;D.phase='result';saveD();pushPresence();releaseWake();closeRng();
     var o=opp||D.oppSnap;
     var og=opp&&(!D.gid||opp.gid===D.gid);res=D.lp<=0?'lose':(og&&opp.lp===0?'win':(!opp&&o&&o.lp===0?'win':null));resLock=res;why=[];
     var sum=$('rs-sum');sum.innerHTML='';
@@ -5072,11 +5128,15 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
 
   /* ---- 電卓⇔カード盤（表と裏） ---- */
   var face='calc';
-  function setFace(f){face=f;$('face-calc').hidden=f!=='calc';$('face-board').hidden=f!=='board';$('dv-play').classList.toggle('on-board',f==='board');render();}
-  $('ctr-sum').addEventListener('click',function(){setFace(face==='calc'?'board':'calc');});
+  var FACES=['log','calc','board'];
+  function setFace(f){face=f;FACES.forEach(function(k){$('face-'+k).hidden=k!==f;});$('dv-play').classList.toggle('on-board',f!=='calc');
+    [].forEach.call(document.querySelectorAll('#ftabs button'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-f')===f));});
+    if(f==='log'&&window.YGO_LOG)YGO_LOG();render();}
+  window.YGO_FACE=setFace;
+  [].forEach.call(document.querySelectorAll('#ftabs button'),function(b){b.addEventListener('click',function(){setFace(b.getAttribute('data-f'));});});
   (function(){var fs=$('faces'),x0=null,y0=0;if(!fs)return;
     fs.addEventListener('touchstart',function(e){if(e.touches.length!==1){x0=null;return;}x0=e.touches[0].clientX;y0=e.touches[0].clientY;},{passive:true});
-    fs.addEventListener('touchend',function(e){if(x0==null)return;var t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;x0=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*2){setFace(dx<0?'board':'calc');}},{passive:true});})();
+    fs.addEventListener('touchend',function(e){if(x0==null)return;var t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;x0=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*2){var i=FACES.indexOf(face)+(dx<0?1:-1);if(i>=0&&i<FACES.length)setFace(FACES[i]);}},{passive:true});})();
 
   /* ---- 表示 ---- */
   function valTxt(c){return c.k==='turn'?(c.v<=0?'終了':'残り'+c.v):String(c.v)+(c.max?'/'+c.max:'');}
@@ -5084,13 +5144,8 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     if(c.k==='turn')return c.v<=0?'✅ 0になりました':(WHEN[w]||'ターンで −1');
     if(c.k==='mag')return (od?'相手のドローで ＋1':au?'魔法発動で ＋1':'手動で数える')+(c.max?'・上限'+c.max:'');
     return '手動で数える';}
-  function render(){var mine=list(),op=oppCtr(),tc=themeCtr(),s=$('ctr-sum');if(!s)return;s.innerHTML='';
-    var n=mine.length+op.length;
-    if(face==='board'){s.className='ctr-sum back';s.appendChild(el('b','ic','🧮'));s.appendChild(el('span','sum-l','電卓にもどる'));s.appendChild(el('i','','◀'));}
-    else{s.className='ctr-sum'+(n?' has':'');s.appendChild(el('b','ic','🃏'));
-      var items=mine.map(function(c){return (IC[c.k]||'🔢')+c.n+' '+valTxt(c);}).concat(op.map(function(c){return '相手:'+c.n+' '+valTxt(c);}));
-      s.appendChild(el('span','sum-l'+(n?'':' muted'),n?items.join('　'):(tc.length?'カード盤（このデッキ：'+tc.map(function(k){return k==='mag'?'魔力カウンター':k;}).join('・')+'）':'カード盤（カウンター・光の護封剣など）')));
-      s.appendChild(el('i','','▶'));}
+  function render(){var mine=list(),op=oppCtr(),tc=themeCtr(),nb=$('fb-n');if(!nb)return;
+    var n=mine.length+op.length;nb.textContent=String(n);nb.hidden=!n;
     renderBoard(mine,op,tc);}
   function renderBoard(mine,op,tc){var g=$('bd-mine');if(!g)return;g.innerHTML='';
     $('bd-spell').hidden=!mine.some(function(c){return c.k==='mag'&&c.auto;});
@@ -5203,7 +5258,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   /* デュエル開始：電卓の面から。このデッキがカウンターを使うなら注意を出す */
   document.addEventListener('ygo:start',function(){setFace('calc');wait={T:null,oT:null,esc:null};var tc=themeCtr();if(!tc.length)return;
     var lines=['このデッキで使うカード：'];tc.forEach(function(k){var p=preOf(k);lines.push('　'+(k==='mag'?'🔮 魔力カウンター':((p?IC[p.k]:'🔢')+' '+k)));});
-    alertBox(lines.concat(['ライフの下の「🃏 カード盤」をタップ（または電卓を左にスワイプ）して、出したらすぐ置いてください。数えるタイミングになると、スマホが鳴って知らせます。']),'🃏 カウントを使うデッキです');});
+    alertBox(lines.concat(['下の「🃏 カード盤」を押す（または電卓を左にスワイプ）と開きます。出したらすぐ置いてください。数えるタイミングになると、スマホが鳴って知らせます。']),'🃏 カウントを使うデッキです');});
   document.addEventListener('ygo:result',function(){hideWait();$('ctr-cf').hidden=true;});
   setFace('calc');
 })();
