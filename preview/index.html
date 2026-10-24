@@ -1529,11 +1529,45 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 .dv-play .bottom{grid-template-columns:repeat(5,1fr) 1.2fr!important}
 .toast{width:max-content}
 .bd-pick,.bd-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-.dv-play.on-board .lp{font-size:clamp(34px,6.4vh,52px)}
-.dv-play.on-board .me{gap:2px;padding:6px 12px}
 .f-calc .qb,.f-calc .mode{height:clamp(48px,8vh,66px)}
 .f-calc .adds button{height:clamp(42px,6.4vh,56px)}
 .f-calc .apply button{height:clamp(50px,8vh,66px)!important}
+/* ===== 対戦画面 v2：ライフは同じ大きさ（相手＝赤・自分＝青）、電卓は画面に合わせて伸び縮み ===== */
+.topbar .tb.tl{font-size:15px!important;padding:0 12px!important}
+.lpc{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"who lp" "m m";align-items:center;gap:2px 10px;border:3px solid var(--edge);border-radius:6px;box-shadow:4px 4px 0 var(--edge);padding:6px 12px 8px;flex:none;transition:box-shadow .3s}
+.lpc-op{background:color-mix(in srgb,var(--osiris) 14%,var(--surface))}
+.lpc-me{background:color-mix(in srgb,var(--obelisk) 16%,var(--surface))}
+.lpc-who{grid-area:who;display:flex;flex-direction:column;min-width:0;line-height:1.3}
+.lpc-who b{font-weight:900;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lpc-who>span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lpc-op .lpc-who b{color:var(--osiris)}
+.lpc-me .lpc-who b{color:var(--obelisk)}
+.lpc-me .me-ace{color:var(--gold);font-weight:900}
+.lpc-lp{grid-area:lp;display:flex;align-items:baseline;gap:4px}
+.lpc-lp b{font-family:var(--digit);font-weight:700;font-size:clamp(38px,6.6vh,56px);line-height:1;font-variant-numeric:tabular-nums;border-radius:6px;padding:0 4px;transition:background .4s,color .4s}
+.lpc-op .lpc-lp b{color:var(--osiris)}
+.lpc-me .lpc-lp b{color:var(--obelisk)}
+.lpc-lp b.hit{background:var(--red-bg);color:var(--red)!important}
+.lpc-lp b.heal{background:var(--spell-bg);color:var(--spell)!important}
+.lpc-lp b.zero{text-decoration:line-through;opacity:.7}
+.lpc .meter{grid-area:m;height:8px}
+.lpc-op.my-turn{box-shadow:4px 4px 0 var(--edge),0 0 0 3px var(--osiris)}
+.lpc-me.my-turn{box-shadow:4px 4px 0 var(--edge),0 0 0 3px var(--obelisk)}
+.dv-play.on-board .lpc-lp b{font-size:clamp(30px,5vh,42px)}
+.dv-play.on-board .lpc{padding:4px 12px 6px}
+.f-calc{justify-content:flex-start!important;gap:8px;overflow:hidden}
+.f-calc .quick{flex:1 1 0;min-height:46px;max-height:78px;display:grid;grid-template-columns:repeat(4,1fr) .9fr!important;gap:6px}
+.f-calc .qb{height:auto!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;line-height:1.1;border:2px solid var(--gold)!important;background:var(--gold-bg)!important;color:var(--ink)!important;font-size:17px}
+.f-calc .qb b{font-family:var(--digit);font-weight:700}
+.f-calc .qb small{font-size:10px;font-weight:900;color:var(--muted)}
+.f-calc .qb.half b{font-size:22px}
+.f-calc .calc{flex:2.3 1 0;min-height:100px;max-height:178px;grid-template-rows:1fr 1fr}
+.f-calc .calc .adds{height:100%}
+.dv-play .f-calc .adds button,.dv-play .f-calc .apply button{height:auto!important;min-height:0}
+.f-calc .calc .amt{min-height:0}
+.f-calc .calc .amt output,.f-calc .calc .amt button{height:100%}
+.f-calc .bottom{flex:1 1 0;min-height:46px;max-height:68px;grid-template-columns:repeat(4,1fr) 1.3fr!important}
+.dv-play .f-calc .bb{height:auto!important}
 </style>
 </head>
 <body>
@@ -1683,7 +1717,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 
 <!-- アカウント設定 -->
 <section id="account">
-  <div class="sec-h"><span>ACCOUNT</span><h2>⚙️ アカウント設定</h2><p class="note">プロフィール・デッキテーマ・勝ち確BGM</p></div>
+  <div class="sec-h"><span>ACCOUNT</span><h2>⚙️ アカウント設定</h2><p class="note">プロフィール・デッキテーマ</p></div>
   <a class="pl-jump" href="#players" data-go="players">🧑‍🤝‍🧑 ほかのプレイヤーのプロフィールを見る <span>›</span></a>
   <details class="fold-in" id="profile" open>
     <summary><span>👤 プロフィール（<span id="pf-sum-name">未登録</span>）</span></summary>
@@ -1711,16 +1745,6 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     </div>
   </details>
 
-  <details class="fold-in" id="bgm-lib">
-    <summary><span>🎺 勝ち確BGM（<span id="bgm-count">0</span>曲）</span></summary>
-    <div class="fold-body">
-      <p class="note">デュエル前に選べる勝ち確BGMを、アカウントに<strong>5曲まで</strong>保存できます（1曲4MBまで。mp3・m4aなど）。保存した曲は<strong>あなただけ</strong>が聴けます。</p>
-      <div id="bgm-list"></div>
-      <label class="field" for="bgm-up" id="bgm-up-wrap">🎵 曲を追加<input type="file" id="bgm-up" accept="audio/*"></label>
-      <p class="status" id="bgm-up-st" role="status"></p>
-      <p class="note" id="bgm-guest" hidden>🔑 ログインすると、曲をアカウントに保存できます。</p>
-    </div>
-  </details>
 </section>
 
 <!-- デュエル -->
@@ -2792,15 +2816,6 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       <span class="su-l">🔊 サウンド</span>
       <div class="field"><span>効果音（ダメージ・回復）</span>
         <div class="su-first" id="snd-se" role="radiogroup" aria-label="効果音"><button type="button" role="radio" data-v="1">🔊 鳴らす</button><button type="button" role="radio" data-v="0">🔇 鳴らさない</button></div></div>
-      <div class="field"><span>🎺 勝ち確BGM（対戦中に「BGM」ボタンで再生）</span>
-        <select class="bgm-sel" id="bgm-sel" aria-label="勝ち確BGMの曲"></select>
-        <span class="note" id="bgm-sel-note">曲は「⚙️ アカウント設定」の「🎺 勝ち確BGM」で追加できます。</span>
-        <div class="bgm-own" id="bgm-own" hidden>
-          <label class="field" for="bgm-file">スマホの中の音楽ファイルを選ぶ<input type="file" id="bgm-file" accept="audio/*"></label>
-          <span class="note" id="bgm-file-st">まだ選ばれていません。曲はこのスマホの中だけに保存され、ほかの人には送られません。</span>
-        </div>
-        <button type="button" class="ghost" id="bgm-try">▶ 試しに聴く</button>
-      </div>
       <span class="note">スマホがマナーモード（消音）だと鳴らないことがあります。</span>
       <span class="note">デュエル開始の音：ニコニ・コモンズの素材（nc177763）を使用しています。</span>
     </div>
@@ -2815,10 +2830,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   <!-- 対戦中 -->
   <div class="dv dv-play" id="dv-play" hidden>
     <div class="topbar">
-      <button type="button" class="tb lock" id="lock-btn" aria-pressed="false" aria-label="画面ロック">🔓</button>
-      <button type="button" class="tb" id="tl-btn" aria-label="ターンごとの記録" title="ターンごとの記録">📜</button>
-      <button type="button" class="tb snd" id="snd-btn" aria-label="効果音のオン・オフ">🔊</button>
-      <button type="button" class="rec-chip" id="rec-chip" aria-label="戦績に残すかどうかの切り替え">📊 戦績ON</button>
+      <button type="button" class="tb tl" id="tl-btn" aria-label="ターンごとの記録" title="ターンごとの記録">📜 ログ</button>
       <button type="button" class="dot sync" id="link-dot" aria-label="同期の状態"></button>
       <button type="button" class="tb end" id="end-btn">終了</button>
     </div>
@@ -2832,15 +2844,14 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     </div>
     <div class="track" id="track" aria-label="ターンの流れ"></div>
 
-    <div class="opp" id="opp">
-      <div class="opp-who"><b id="opp-name">相手</b><span id="opp-theme">未接続</span></div>
-      <div class="opp-lp"><b id="opp-lp">----</b><span class="opp-ace" id="opp-ace"></span></div>
-      <div class="meter sm"><i id="opp-meter"></i></div>
+    <div class="lpc lpc-op" id="opp">
+      <div class="lpc-who"><b id="opp-name">相手</b><span id="opp-theme">未接続</span></div>
+      <div class="lpc-lp"><b id="opp-lp">----</b><span class="opp-ace" id="opp-ace"></span></div>
+      <div class="meter"><i id="opp-meter"></i></div>
     </div>
-
-    <div class="me" id="me-card">
-      <div class="me-who"><b id="me-name">あなた</b><span id="me-theme"></span><span class="me-ace" id="me-ace"></span></div>
-      <div class="lp" id="me-lp" aria-live="polite">8000</div>
+    <div class="lpc lpc-me" id="me-card">
+      <div class="lpc-who"><b id="me-name">あなた</b><span><span id="me-theme"></span> <span class="me-ace" id="me-ace"></span></span></div>
+      <div class="lpc-lp"><b id="me-lp" aria-live="polite">8000</b></div>
       <div class="meter"><i id="me-meter"></i></div>
     </div>
 
@@ -2848,11 +2859,11 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     <div class="faces" id="faces">
     <div class="face f-calc" id="face-calc">
     <div class="quick">
-      <button type="button" class="mode" id="mode-btn" aria-label="減らす種類の切り替え"><span id="mode-ic">💥</span><small id="mode-l">ダメージ</small></button>
-      <button type="button" class="qb" data-d="500">−500</button>
-      <button type="button" class="qb" data-d="1000">−1000</button>
-      <button type="button" class="qb" data-d="2000">−2000</button>
-      <button type="button" class="qb half" id="half-btn" aria-label="ライフを半分払う（コスト）">½</button>
+      <button type="button" class="qb" data-d="100"><b>−100</b><small>コスト</small></button>
+      <button type="button" class="qb" data-d="500"><b>−500</b><small>コスト</small></button>
+      <button type="button" class="qb" data-d="1000"><b>−1000</b><small>コスト</small></button>
+      <button type="button" class="qb" data-d="2000"><b>−2000</b><small>コスト</small></button>
+      <button type="button" class="qb half" id="half-btn" aria-label="ライフを半分払う（コスト）"><b>½</b><small>半分払う</small></button>
     </div>
 
     <div class="calc">
@@ -2860,7 +2871,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       <div class="adds">
         <button type="button" data-a="100">+100</button><button type="button" data-a="500">+500</button><button type="button" data-a="1000">+1000</button><button type="button" data-a="2000">+2000</button>
       </div>
-      <div class="apply"><button type="button" class="dmg" id="dmg-btn">💥 ダメージ</button><button type="button" class="hel" id="heal-btn">💚 回復</button></div>
+      <div class="apply"><button type="button" class="dmg" id="dmg-btn">💥 ダメージ −</button><button type="button" class="hel" id="heal-btn">💚 回復</button></div>
     </div>
 
     <div class="bottom">
@@ -2868,7 +2879,6 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
       <button type="button" class="bb" id="undo-btn">↶<span>戻す</span></button>
       <button type="button" class="bb" id="coin-btn">🪙<span>コイン</span></button>
       <button type="button" class="bb" id="dice-btn">🎲<span>サイコロ</span></button>
-      <button type="button" class="bb bgm" id="bgm-btn" aria-pressed="false">🎺<span>BGM</span></button>
       <output class="rng" id="rng">—</output>
     </div>
     </div>
@@ -2904,7 +2914,6 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     <div class="ctr-wait" id="ctr-wait" hidden role="alertdialog" aria-modal="true" aria-label="相手のカウント確認待ち"><div class="ctr-wait-box"><b>⏳ 相手のカウントを確認中</b><p>相手のカードのカウントが進むタイミングです。<br><strong>相手に「カウントの確認をして」と声をかけてください。</strong></p><ul id="ctr-wait-list"></ul><p class="note">相手が答えるまで、この画面は閉じません（お互いのカウント忘れを防ぐため）。</p><button type="button" class="cf-no" id="ctr-wait-esc" hidden>相手の画面が止まっている（閉じる）</button></div></div>
     <div class="ctr-alert" id="ctr-alert" hidden role="alertdialog" aria-live="assertive"><div class="ctr-alert-box"><b id="ctr-alert-h">⏰ カウンターが0になりました</b><div id="ctr-alert-t"></div><button type="button" class="btn" id="ctr-alert-ok">OK</button></div></div>
 
-    <div class="veil" id="veil" hidden><span>🔒 ロック中<br><small>左上のボタンで解除</small></span></div>
 
     <div class="sheet" id="sheet" hidden>
       <div class="sheet-box">
@@ -3589,7 +3598,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     $('turnbar').classList.toggle('opp-turn',own==='op');
     $('turn-who').textContent=turnLabel(D.T,D.first);$('turn-all').textContent='全体 '+D.T+'ターン目 ・ '+(D.first?'あなたが先攻':'あなたが後攻')+(D.match?' ・ 🏆第'+D.match.g+'戦':'');
     $('turn-go-l').textContent=own==='me'?'🏁 エンド':'🃏 ドロー';$('turn-go-s').textContent=own==='me'?'相手のターンへ':'自分のターンへ';
-    $('me-card').classList.toggle('my-turn',own==='me');
+    $('me-card').classList.toggle('my-turn',own==='me');$('opp').classList.toggle('my-turn',own==='op');
     renderTrack();
     document.dispatchEvent(new CustomEvent('ygo:turn'));
   }
@@ -3608,16 +3617,17 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     if(from==null||reduce){lpEl.textContent=String(to);return;}
     var df=Math.abs(to-from),t0=null,DUR=((df>=4000?11:df>2000?8:df>1000?6:4)+(window.__lpKind==='dmg'?3:0))*85+120;function step(ts){if(!t0)t0=ts;var k=Math.min(1,(ts-t0)/DUR);lpEl.textContent=String(Math.round(from+(to-from)*k));if(k<1)requestAnimationFrame(step);}requestAnimationFrame(step);
   }
+  var oppShown=null;
+  function oppFlash(v){var e=$('opp-lp');if(oppShown!=null&&v!=null&&v!==oppShown){e.classList.remove('hit','heal');void e.offsetWidth;e.classList.add(v<oppShown?'hit':'heal');setTimeout(function(){e.classList.remove('hit','heal');},600);}oppShown=v;}
   function renderOpp(){
     if(opp&&D&&D.gid&&opp.gid!==D.gid){$('opp-name').textContent=opp.name;$('opp-theme').textContent='相手の画面を待っています…';$('opp-lp').textContent='----';$('opp-ace').textContent='';meter('opp-meter',START);return;}
-    if(opp){$('opp-name').textContent=opp.name;$('opp-theme').textContent=opp.theme||'テーマ未選択';$('opp-lp').textContent=opp.lp==null?'----':String(opp.lp);$('opp-ace').textContent=opp.aceT?'👑':'';meter('opp-meter',opp.lp==null?START:opp.lp);
+    if(opp){oppFlash(opp.lp);$('opp-name').textContent=opp.name;$('opp-theme').textContent=opp.theme||'テーマ未選択';$('opp-lp').textContent=opp.lp==null?'----':String(opp.lp);$('opp-ace').textContent=opp.aceT?'👑':'';meter('opp-meter',opp.lp==null?START:opp.lp);
       if(D){D.oppSnap={name:opp.name,theme:opp.theme,lp:opp.lp};saveD();}}
     else{$('opp-name').textContent=sub?'相手を待っています':'相手（リンクなし）';$('opp-theme').textContent=sub?'キー '+linkKey:'リンクすると相手のライフが表示されます';$('opp-lp').textContent='----';$('opp-ace').textContent='';meter('opp-meter',START);}
   }
   function renderAmt(){$('amt').textContent=String(amount);}
-  function renderMode(){var c=mode==='cost';$('dv-play').classList.toggle('cost-mode',c);$('mode-btn').classList.toggle('cost',c);$('mode-ic').textContent=c?'💸':'💥';$('mode-l').textContent=c?'コスト':'ダメージ';$('dmg-btn').textContent=c?'💸 コスト −':'💥 ダメージ −';}
-  function renderRec(){var c=$('rec-chip'),on=!D||D.rec!==false;c.classList.toggle('off',!on);c.textContent=on?'📊 戦績ON':'🚫 戦績OFF';}
-  $('rec-chip').addEventListener('click',function(){if(!D||locked)return;D.rec=D.rec===false;saveD();renderRec();});
+  function renderMode(){return;var c=mode==='cost';$('dv-play').classList.toggle('cost-mode',c);$('mode-btn').classList.toggle('cost',c);$('mode-ic').textContent=c?'💸':'💥';$('mode-l').textContent=c?'コスト':'ダメージ';$('dmg-btn').textContent=c?'💸 コスト −':'💥 ダメージ −';}
+  function renderRec(){return;var c=$('rec-chip'),on=!D||D.rec!==false;c.classList.toggle('off',!on);c.textContent=on?'📊 戦績ON':'🚫 戦績OFF';}
   function renderAll(){renderRec();renderTurn();renderMe();renderOpp();renderAmt();renderMode();setDot();}
   function flash(cls){var e=$('me-lp');e.classList.remove('hit','heal');void e.offsetWidth;e.classList.add(cls);setTimeout(function(){e.classList.remove(cls);},450);}
   function change(d,kind){
@@ -3628,8 +3638,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     seq++;saveD();renderMe(b);renderTrack();flash(d<0?'hit':'heal');pushPresence(kind,Math.abs(d));document.dispatchEvent(new CustomEvent('ygo:lp',{detail:{kind:kind,amt:Math.abs(D.lp-b),zero:D.lp<=0}}));
     if(D.lp<=0&&!D.zeroAsked){D.zeroAsked=true;saveD();askEnd('ライフが0になりました','バトルを終了しますか？ まちがえて押した場合は「続ける」を押して、「↶ 戻す」で元に戻せます。');}
   }
-  $('mode-btn').addEventListener('click',function(){if(locked)return;mode=mode==='dmg'?'cost':'dmg';renderMode();});
-  [].forEach.call(document.querySelectorAll('#dv-play .qb[data-d]'),function(b){b.addEventListener('click',function(){change(-Number(b.getAttribute('data-d')),mode);});});
+  [].forEach.call(document.querySelectorAll('#dv-play .qb[data-d]'),function(b){b.addEventListener('click',function(){change(-Number(b.getAttribute('data-d')),'cost');});});
   $('half-btn').addEventListener('click',function(){if(!D)return;change(-Math.floor(D.lp/2),'cost');});
   [].forEach.call(document.querySelectorAll('#dv-play .adds button'),function(b){b.addEventListener('click',function(){if(locked)return;amount=Math.min(99999,amount+Number(b.getAttribute('data-a')));renderAmt();});});
   $('amt-c').addEventListener('click',function(){amount=0;renderAmt();});
@@ -3648,7 +3657,6 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   function roll(final,frames){var out=$('rng');if(reduce){out.textContent=final;return;}var n=0;var iv=setInterval(function(){out.textContent=frames[n%frames.length];n++;if(n>8){clearInterval(iv);out.textContent=final;}},60);}
   $('coin-btn').addEventListener('click',function(){if(locked)return;roll(rnd(2)?'🪙 表':'🪙 裏',['🪙 表','🪙 裏']);});
   $('dice-btn').addEventListener('click',function(){if(locked)return;var f=['⚀','⚁','⚂','⚃','⚄','⚅'],v=rnd(6);roll('🎲 '+(v+1),f);});
-  $('lock-btn').addEventListener('click',function(){locked=!locked;this.setAttribute('aria-pressed',String(locked));this.textContent=locked?'🔒':'🔓';$('veil').hidden=!locked;});
 
   /* 記録シート */
   function openSheet(T){if(!D||locked)return;buildTimeline($('tl'),D.hist.filter(function(e){return e.k==='lp'||e.k==='ace';}),D.T,D.first);$('sheet').hidden=false;
@@ -4481,97 +4489,10 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
   document.addEventListener('ygo:ping',function(){if(!S.se)return;var c=ctx();if(!c)return;var t=c.currentTime+.02;partial(1318.5,t,.45,.13,{env:[[.01,1],[.35,.1]],wet:.3});partial(1760,t+.13,.7,.13,{env:[[.01,1],[.6,.08]],wet:.35});});
   document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};var a=d.amt||0;if(d.zero)SE.zero(a);else if(d.kind==='heal')SE.heal(a);else if(d.kind==='cost')SE.cost(a);else SE.dmg(a);});
 
-  /* --- オリジナルの勝ち確BGM（ニ長調・132BPM・8小節ループ。ストリングスとブラス風の重ね） --- */
-  var BPM=132,B=60/BPM;
-  var MEL=[[62,.5],[62,.5],[64,.5],[66,1],[69,1.5],[67,.5],[66,.5],[64,1],[62,2],[59,.5],[62,.5],[64,.5],[66,1],[67,.5],[69,1],[71,1.5],[69,.5],[66,2],
-           [62,.5],[62,.5],[64,.5],[66,1],[69,1.5],[74,1],[73,.5],[71,.5],[69,2],[67,.5],[69,.5],[71,.5],[73,1],[74,1.5],[74,2],[0,2]];
-  var ROOT=[38,43,35,45,38,43,45,38];
-  function mf(m){return 440*Math.pow(2,(m-69)/12);}
-  var bgmGain=null,loopTimer=null,playing=false,nextT=0,audioEl=null;
-  function schedLoop(t0){var t=t0,G=bgmGain;
-    // 主旋律：ブラス風（フィルターがふくらむ）＋ストリングスの重ね
-    MEL.forEach(function(n){if(n[0]){var d=n[1]*B*.97,f=mf(n[0]);
-      [-9,-3,3,9].forEach(function(dt){voice('sawtooth',f,0,t,d+.12,.045,{att:.06,cut:600,cut1:1500,q:.9,detune:dt,dest:G,wet:.35});});
-      voice('sine',f*2,0,t,d+.1,.035,{att:.08,dest:G,wet:.4});}t+=n[1]*B;});
-    for(var bar=0;bar<8;bar++){var r=ROOT[bar],tb0=t0+bar*4*B;
-      // ストリングス風パッド（ルート・3度・5度、柔らかく）
-      var third=(bar===2)?3:4;[12,12+third,19,24].forEach(function(iv){[-8,0,8].forEach(function(dt){voice('sawtooth',mf(r+iv),0,tb0,4*B+.3,.016,{att:.35,hold:3*B,cut:700,detune:dt,dest:G,wet:.5});});});
-      // ベース（丸い音）
-      for(var i=0;i<4;i++){var tt=tb0+i*B;voice('triangle',mf(r),0,tt,B*.9,.3,{cut:300,dest:G});voice('sine',mf(r)/2,0,tt,B*.9,.25,{dest:G});}
-      // 打楽器：キック・スネア（胴鳴り）・シンバル・ティンパニ
-      for(var bt=0;bt<4;bt++){var tb=tb0+bt*B;if(bt%2===0){voice('sine',120,40,tb,.4,.85,{glide:.1,dest:G});}else{noise(tb,.28,.35,{type:'bandpass',f:1500,q:.5,dest:G,wet:.45});voice('sine',180,110,tb,.15,.25,{dest:G});}
-        noise(tb+.5*B,.06,.05,{type:'highpass',f:8000,dest:G,wet:.2});}
-      if(bar===0||bar===4)noise(tb0,2,.22,{type:'highpass',f:5000,dest:G,wet:.6});
-      if(bar===7){for(var k=0;k<8;k++){voice('sine',98,70,tb0+2*B+k*B/4,.3,.35+k*.04,{glide:.25,dest:G,wet:.3});noise(tb0+2*B+k*B/4,.08,.08,{f:600,dest:G});}}}
-    return t0+32*B;}
-  function startOrig(){var c=ctx();if(!c)return;bgmGain=c.createGain();bgmGain.gain.value=.8;bgmGain.connect(master);nextT=c.currentTime+.08;
-    (function pump(){if(!playing)return;while(nextT<ac.currentTime+4){nextT=schedLoop(nextT);}loopTimer=setTimeout(pump,1000);})();}
-  function stopOrig(){clearTimeout(loopTimer);if(bgmGain){var g=bgmGain;g.gain.setTargetAtTime(0.0001,ac.currentTime,.08);setTimeout(function(){try{g.disconnect();}catch(e){}},600);bgmGain=null;}}
-  /* 自分の曲（このスマホのIndexedDBに保存） */
-  function idb(){return new Promise(function(res,rej){try{var r=indexedDB.open('ygo-audio',1);r.onupgradeneeded=function(){r.result.createObjectStore('f');};r.onsuccess=function(){res(r.result);};r.onerror=function(){rej(r.error);};}catch(e){rej(e);}});}
-  function putOwn(file){return idb().then(function(db){return new Promise(function(res,rej){var tx=db.transaction('f','readwrite');tx.objectStore('f').put({blob:file,name:file.name},'bgm');tx.oncomplete=res;tx.onerror=function(){rej(tx.error);};});});}
-  function getOwn(){return idb().then(function(db){return new Promise(function(res){var tx=db.transaction('f','readonly'),q=tx.objectStore('f').get('bgm');q.onsuccess=function(){res(q.result||null);};q.onerror=function(){res(null);};});}).catch(function(){return null;});}
-  function startOwn(){return getOwn().then(function(o){if(!o)return false;if(audioEl){audioEl.pause();URL.revokeObjectURL(audioEl.src);}audioEl=new Audio(URL.createObjectURL(o.blob));audioEl.loop=true;audioEl.volume=.9;return audioEl.play().then(function(){return true;},function(){return false;});});}
-  function stopOwn(){if(audioEl){audioEl.pause();audioEl.currentTime=0;}}
-  function setBtn(){var b=$('bgm-btn');b.classList.toggle('on',playing);b.setAttribute('aria-pressed',String(playing));b.querySelector('span').textContent=playing?'停止':'BGM';$('bgm-try').textContent=playing?'■ 止める':'▶ 試しに聴く';}
-  function play(){if(playing){stop();return;}playing=true;setBtn();
-    if(/^acct:/.test(S.bgm)){$('bgm-sel-note').textContent='🎵 曲を読み込んでいます…';startAcct(S.bgm.slice(5)).then(function(ok){$('bgm-sel-note').textContent=ok?'🎵 再生中':'曲を読み込めませんでした。オリジナル曲を流します。';if(!ok&&playing)startOrig();});}
-    else if(S.bgm==='own'){startOwn().then(function(ok){if(!ok){S.bgm='orig';renderS();startOrig();}});}else startOrig();}
-  function stop(){playing=false;stopOrig();stopOwn();setBtn();}
-  $('bgm-btn').addEventListener('click',play);
-  $('bgm-try').addEventListener('click',play);
-  // デュエルを閉じたら止める
-  // 試し聴きのままデュエルを始めたとき・デュエルを閉じたときは止める
-  ['setup-close','duel-start','rs-save','rs-skip','m-end-yes'].forEach(function(id){var e=$(id);if(e)e.addEventListener('click',function(){if(playing)stop();});});
   /* 設定 */
-  function renderS(){[].forEach.call(document.querySelectorAll('#snd-se button'),function(b){b.setAttribute('aria-checked',String((b.getAttribute('data-v')==='1')===S.se));});
-    fillSel();
-    $('bgm-own').hidden=S.bgm!=='own';var sb=$('snd-btn');sb.textContent=S.se?'🔊':'🔇';sb.classList.toggle('off',!S.se);}
+  function renderS(){[].forEach.call(document.querySelectorAll('#snd-se button'),function(b){b.setAttribute('aria-checked',String((b.getAttribute('data-v')==='1')===S.se));});}
   [].forEach.call(document.querySelectorAll('#snd-se button'),function(b){b.addEventListener('click',function(){S.se=b.getAttribute('data-v')==='1';saveS();renderS();if(S.se)SE.heal(1000);});});
-  $('bgm-sel').addEventListener('change',function(){if(playing)stop();S.bgm=this.value;saveS();renderS();});
-  $('snd-btn').addEventListener('click',function(){S.se=!S.se;saveS();renderS();});
-  $('bgm-file').addEventListener('change',function(){var f=this.files&&this.files[0],st=$('bgm-file-st');if(!f)return;
-    if(f.size>30*1024*1024){st.textContent='ファイルが大きすぎます（30MBまで）。';return;}
-    putOwn(f).then(function(){st.textContent='🎵 「'+f.name+'」を勝ち確BGMにしました（このスマホだけに保存）。';},function(){st.textContent='保存できませんでした。ブラウザの設定を確認してください。';});});
-  getOwn().then(function(o){if(o)$('bgm-file-st').textContent='🎵 いまの曲：「'+o.name+'」（このスマホだけに保存）';});
-
-  /* --- アカウントに保存した曲（Firestoreに分割して保存・本人だけ読める） --- */
-  var Y=window.YGO,songs=[],CH=600000,MAXS=5,MAXB=4*1024*1024;
-  function songsCol(){return Y.db.collection('users').doc(Y.user.uid).collection('songs');}
-  function fillSel(){var sel=$('bgm-sel');if(!sel)return;var cur=S.bgm;sel.innerHTML='';
-    function opt(v,t){var o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o);}
-    opt('orig','🎼 オリジナル曲');songs.forEach(function(s){opt('acct:'+s.id,'🎵 '+s.name);});if(!Y.user)opt('own','📁 このスマホの曲');
-    if(!sel.querySelector('option[value="'+cur.replace(/"/g,'')+'"]')){cur='orig';S.bgm='orig';}sel.value=cur;
-    $('bgm-own').hidden=S.bgm!=='own';}
-  function cacheGet(id){return idb().then(function(db){return new Promise(function(res){var q=db.transaction('f','readonly').objectStore('f').get('song:'+id);q.onsuccess=function(){res(q.result||null);};q.onerror=function(){res(null);};});}).catch(function(){return null;});}
-  function cachePut(id,blob){return idb().then(function(db){return new Promise(function(res){var tx=db.transaction('f','readwrite');tx.objectStore('f').put(blob,'song:'+id);tx.oncomplete=res;tx.onerror=res;});}).catch(function(){});}
-  function b64(u8){var s='';for(var i=0;i<u8.length;i+=32768)s+=String.fromCharCode.apply(null,u8.subarray(i,i+32768));return btoa(s);}
-  function unb64(s){var b=atob(s),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
-  function songBlob(id){return cacheGet(id).then(function(c){if(c)return c;var m=songs.filter(function(s){return s.id===id;})[0];if(!m||!Y.user)return null;
-    return songsCol().doc(id).collection('chunks').get().then(function(s){var parts=s.docs.map(function(d){return {i:Number(d.id),d:(d.data()||{}).d||''};}).sort(function(a,b){return a.i-b.i;});
-      if(parts.length!==m.chunks)return null;var blob=new Blob(parts.map(function(p){return unb64(p.d);}),{type:m.type||'audio/mpeg'});cachePut(id,blob);return blob;});}).catch(function(){return null;});}
-  function startAcct(id){return songBlob(id).then(function(b){if(!b||!playing)return !!b;if(audioEl){audioEl.pause();URL.revokeObjectURL(audioEl.src);}audioEl=new Audio(URL.createObjectURL(b));audioEl.loop=true;audioEl.volume=.9;return audioEl.play().then(function(){return true;},function(){return false;});});}
-  function fmtMB(n){return (n/1024/1024).toFixed(1)+'MB';}
-  function renderLib(){var box=$('bgm-list');box.innerHTML='';$('bgm-count').textContent=String(songs.length);
-    if(!songs.length){var d=document.createElement('div');d.className='al-empty';d.textContent='まだ曲がありません。';box.appendChild(d);}
-    songs.forEach(function(s){var r=document.createElement('div');r.className='bgm-row';var b=document.createElement('b');b.textContent='🎵 '+s.name;r.appendChild(b);var sm=document.createElement('small');sm.textContent=fmtMB(s.size||0);r.appendChild(sm);
-      var p=document.createElement('button');p.type='button';p.className='del';p.textContent='▶';p.setAttribute('aria-label',s.name+'を試聴');p.addEventListener('click',function(){if(playing){stop();return;}S.bgm='acct:'+s.id;saveS();renderS();play();});r.appendChild(p);
-      var x=document.createElement('button');x.type='button';x.className='del';x.textContent='削除';x.addEventListener('click',function(){if(!x.classList.contains('confirm')){x.classList.add('confirm');x.textContent='本当に削除';setTimeout(function(){x.classList.remove('confirm');x.textContent='削除';},4000);return;}
-        x.disabled=true;var col=songsCol().doc(s.id);col.delete().then(function(){var ps=[];for(var i=0;i<(s.chunks||0);i++)ps.push(col.collection('chunks').doc(String(i)).delete());return Promise.all(ps);}).catch(function(){});});r.appendChild(x);box.appendChild(r);});
-    $('bgm-up-wrap').hidden=songs.length>=MAXS;}
-  $('bgm-up').addEventListener('change',function(){var f=this.files&&this.files[0],st=$('bgm-up-st'),inp=this;if(!f)return;
-    if(!Y.user){st.className='status err';st.textContent='ログインしてください。';return;}
-    if(songs.length>=MAXS){st.className='status err';st.textContent='保存できるのは5曲までです。どれかを削除してから追加してください。';return;}
-    if(f.size>MAXB){st.className='status err';st.textContent='ファイルが大きすぎます（'+fmtMB(f.size)+'）。4MBまでの曲にしてください。';return;}
-    st.className='status';st.textContent='読み込んでいます…';
-    f.arrayBuffer().then(function(buf){var u8=new Uint8Array(buf),n=Math.ceil(u8.length/CH),id=Date.now().toString(36)+Math.random().toString(36).slice(2,7),doc=songsCol().doc(id),k=0;
-      function next(){if(k>=n)return doc.set({name:f.name.replace(/\.[^.]+$/,'').slice(0,40),size:f.size,type:f.type||'audio/mpeg',chunks:n,createdAt:Date.now()});
-        st.textContent='アップロード中… '+Math.round(k/n*100)+'%';var part=b64(u8.subarray(k*CH,(k+1)*CH));return doc.collection('chunks').doc(String(k)).set({d:part}).then(function(){k++;return next();});}
-      return next().then(function(){cachePut(id,new Blob([u8],{type:f.type||'audio/mpeg'}));st.className='status ok';st.textContent='🎵 「'+f.name+'」を保存しました。デュエル前の画面で選べます。';inp.value='';});
-    }).catch(function(e){st.className='status err';st.textContent='保存できませんでした（'+(e&&e.code||'error')+'）。データベースのルールの更新が必要かもしれません。';});});
-  Y.ready.then(function(u){if(!u||!Y.db){$('bgm-guest').hidden=false;$('bgm-up-wrap').hidden=true;renderLib();fillSel();return;}
-    songsCol().orderBy('createdAt','asc').onSnapshot(function(s){songs=s.docs.map(function(d){var x=d.data()||{};x.id=d.id;return x;});renderLib();fillSel();},function(){renderLib();});});
-  renderS();setBtn();
+  renderS();
 })();
 </script>
 <script>
@@ -4840,7 +4761,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
     res.appendChild(g);}
   function recent(){try{return JSON.parse(localStorage.getItem(RK))||[];}catch(e){return [];}}
   function remember(v){if(!v)return;try{var r=recent().filter(function(x){return x!==v;});r.unshift(v);localStorage.setItem(RK,JSON.stringify(r.slice(0,6)));}catch(e){}}
-  var POP=['規制リスト','モンスター規制','許可リスト','先攻','プロキシ','留学生','エース級','サイドデッキ','BGM','強化手順'];
+  var POP=['規制リスト','モンスター規制','許可リスト','先攻','プロキシ','留学生','エース級','サイドデッキ','強化手順'];
   function chips(ttl,arr){if(!arr.length)return;var g=el('div','sg');g.appendChild(el('h4','',ttl));var w=el('div','sg-chips');
     arr.forEach(function(v){var c=el('button','sg-chip',v);c.type='button';c.addEventListener('click',function(){q.value=v;render();q.focus();});w.appendChild(c);});g.appendChild(w);res.appendChild(g);}
   function render(){res.innerHTML='';items=[];act=-1;var raw=q.value.trim();clr.hidden=!raw;var ws=words();
