@@ -1668,6 +1668,34 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
 .bd-addt{min-height:56px!important;flex-direction:row;gap:8px}
 .bd-addt b{font-size:26px}
 .ftabs i{position:static;display:inline-block;margin-left:6px;vertical-align:1px}
+/* ===== ターンのボタン（下・大きく）／あなたのターン！／押し忘れの確認 ===== */
+.turnbar{padding:8px 14px!important}
+.turn-dock{display:flex;gap:8px;flex:none}
+.turn-go2{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;font:inherit;min-height:58px;border:3px solid var(--edge);border-radius:6px;cursor:pointer;line-height:1.25;box-shadow:4px 4px 0 var(--edge);color:#fff}
+.turn-go2 b{font-family:var(--display);font-weight:400;font-size:22px;letter-spacing:.06em}
+.turn-go2 span{font-size:11px;font-weight:700;opacity:.92}
+.turn-go2.me{background:var(--obelisk)}
+.turn-go2.op{background:var(--osiris)}
+.turn-go2.wait{background:var(--surface2);color:var(--muted);box-shadow:none;border-style:dashed;cursor:default}
+.turn-go2:active:not(.wait){transform:translate(3px,3px);box-shadow:1px 1px 0 var(--edge)}
+.turn-go2.nudge{animation:tgnudge 1s ease-in-out infinite}
+@keyframes tgnudge{50%{box-shadow:4px 4px 0 var(--edge),0 0 0 6px var(--gold)}}
+.turn-fix{flex:none;font:inherit;font-size:11px;font-weight:900;line-height:1.35;border:2px solid var(--line);border-radius:6px;background:transparent;color:var(--muted);padding:4px 10px;cursor:pointer}
+.turn-fix[hidden]{display:none}
+.yt-fx{position:absolute;inset:0;z-index:12;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:color-mix(in srgb,var(--obelisk) 82%,transparent)}
+.yt-fx[hidden]{display:none}
+.yt-fx b{white-space:nowrap;font-family:var(--display);font-weight:400;font-size:clamp(30px,9vw,46px);color:#f8dc84;-webkit-text-stroke:2px var(--edge);paint-order:stroke fill;filter:drop-shadow(4px 4px 0 var(--edge))}
+.yt-fx span{font-size:22px;font-weight:900;color:#fff}
+.yt-fx.go b{animation:fxpop .5s cubic-bezier(.2,1.8,.4,1)}
+.yt-fx.go{animation:ytfade 1.6s ease-in forwards}
+@keyframes ytfade{0%,70%{opacity:1}100%{opacity:0}}
+.fg-ask{position:absolute;left:10px;right:10px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:11;background:var(--surface);color:var(--ink);border:3px solid var(--edge);border-radius:8px;box-shadow:5px 5px 0 var(--gold);padding:12px;display:flex;flex-direction:column;gap:6px;animation:fxpop .35s cubic-bezier(.2,1.6,.4,1)}
+.fg-ask b{font-size:16px}
+.fg-ask>span{font-size:12px;color:var(--muted);font-weight:700}
+.fg-bt{display:grid;grid-template-columns:1.6fr 1fr;gap:8px}
+.fg-bt button{font:inherit;font-weight:900;min-height:46px;border:2px solid var(--edge);border-radius:6px;cursor:pointer;background:var(--surface);color:var(--ink)}
+.fg-bt button:first-child{background:var(--obelisk);color:#fff}
+@media (prefers-reduced-motion: reduce){.turn-go2.nudge,.yt-fx.go,.yt-fx.go b{animation:none}}
 </style>
 </head>
 <body>
@@ -2939,7 +2967,6 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
         <b id="turn-who">あなたの 1ターン目</b>
         <span id="turn-all">全体 1ターン目</span>
       </div>
-      <button type="button" class="turn-go" id="turn-go"><b id="turn-go-l">エンド ▶</b><span id="turn-go-s">相手のターンへ</span></button>
     </div>
 
     <div class="lpc lpc-op" id="opp">
@@ -2996,6 +3023,11 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     </div>
 
 
+    <div class="turn-dock" id="turn-dock">
+      <button type="button" class="turn-go2" id="turn-go"><b id="turn-go-l">🏁 エンド</b><span id="turn-go-s">相手のターンへ</span></button>
+      <button type="button" class="turn-fix" id="turn-fix" hidden>押し忘れ？<br>自分のターンへ</button>
+    </div>
+    <div class="yt-fx" id="yt-fx" hidden aria-live="assertive"><b>あなたのターン！</b><span>🃏 ドロー</span></div>
     <div class="bd-add" id="bd-add" hidden>
       <div class="bd-add-box" role="dialog" aria-label="カードを置く">
         <div class="dv-head"><b>＋ カードを置く</b><button type="button" class="x" id="bd-add-x" aria-label="閉じる">✕</button></div>
@@ -3399,6 +3431,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
      ・ターンは「何回目の操作か（tv）」で比べる（スマホの時計のずれに左右されない）。
      ・10秒ごとに生存確認。相手から25秒届かない／自分の送信が6秒終わらないときは、通信をつなぎ直す。 */
   var roomP=null, sub=null, unsubs=[], opp=null, linkKey=null, lastOppSeq=null, lastOppLp=null, seq=0;
+  var lastLk2=null;
   var role=null, myKey=null, hb=0, hbT=null, lastOppAt=0, lastOppUpd=0, pend=0, pendSince=0, kickAt=0, lastLk=null, lastLa=null, joinT=null;
   var S2={page:'link',rec:true,fmt:'bo1',theme:'',start:null,lastStartId:null,pre:null,hist:[]};
   var LOKEY='ygo-last-opp-v1';
@@ -3466,14 +3499,15 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
       if(D&&D.phase==='result'&&!views.result.hidden)renderRes();
       if(D&&D.phase==='play'&&opp.gid&&opp.gid===D.gid){
         // ターンをそろえる（操作の回数が多い方に合わせる）
-        if(opp.tv>(D.tv||0)&&opp.T){D.T=Math.max(1,opp.T);D.tv=opp.tv;D.TAt=Date.now();saveD();renderTurn();}
+        if(opp.tv>(D.tv||0)&&opp.T){var pT=D.T;D.T=Math.max(1,opp.T);D.tv=opp.tv;D.TAt=Date.now();saveD();renderTurn();hideForgot();if(D.T>pT&&ownerOf(D.T,D.first)==='me')yourTurnFx();}
         // 相手のライフの変化を記録
         if(opp.lp!=null){
           if(lastOppSeq!=null&&opp.seq!==lastOppSeq&&lastOppLp!=null&&opp.lp!==lastOppLp&&(opp.lk==='dmg'||opp.lk==='cost'||opp.lk==='heal')){
-            D.hist.push({k:'lp',who:'op',kind:opp.lk,amt:Math.abs(opp.lp-lastOppLp),b:lastOppLp,a:opp.lp,T:D.T});saveD();renderTrack();}
+            D.hist.push({k:'lp',who:'op',kind:opp.lk,amt:Math.abs(opp.lp-lastOppLp),b:lastOppLp,a:opp.lp,T:D.T});saveD();renderTrack();if(opp.lk==='dmg'&&opp.lp<lastOppLp)askForgot('相手のターンのはずなのに、相手がダメージを受けました（あなたの攻撃？）');}
           lastOppSeq=opp.seq;lastOppLp=opp.lp;}
       }
     }
+    var lkNow=!!(sub&&opp);if(lkNow!==lastLk2){lastLk2=lkNow;if(D&&D.phase==='play')renderTurn();}
     setDot();renderOpp();checkOppZero();if(!D||D.phase!=='play')renderSetup();document.dispatchEvent(new Event('ygo:opp'));
   }
   function onConnect(){
@@ -3710,7 +3744,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     if(!D)return;var own=ownerOf(D.T,D.first);
     $('turnbar').classList.toggle('opp-turn',own==='op');
     $('turn-who').textContent=turnLabel(D.T,D.first);$('turn-all').textContent='全体 '+D.T+'ターン目 ・ '+(D.first?'あなたが先攻':'あなたが後攻')+(D.match?' ・ 🏆第'+D.match.g+'戦':'');
-    $('turn-go-l').textContent=own==='me'?'🏁 エンド':'🃏 ドロー';$('turn-go-s').textContent=own==='me'?'相手のターンへ':'自分のターンへ';
+    var lk=!!(sub&&opp),wt=own==='op'&&lk,tg=$('turn-go');tg.classList.toggle('me',own==='me');tg.classList.toggle('op',own==='op');tg.classList.toggle('wait',wt);tg.setAttribute('aria-disabled',String(wt));$('turn-go-l').textContent=own==='me'?'🏁 エンド':wt?'⏳ 相手のターン':'🃏 ドロー';$('turn-go-s').textContent=own==='me'?'ターンを終えたら押す（相手のターンへ）':wt?'相手がエンドを押すと自分のターンに':'自分のターンへ';$('turn-fix').hidden=!wt;
     $('me-card').classList.toggle('my-turn',own==='me');$('opp').classList.toggle('my-turn',own==='op');
     renderTrack();
     document.dispatchEvent(new CustomEvent('ygo:turn'));
@@ -3758,7 +3792,21 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   $('dmg-btn').addEventListener('click',function(){if(amount>0){var a=amount;amount=0;renderAmt();change(-a,mode);}});
   $('heal-btn').addEventListener('click',function(){if(amount>0){var a=amount;amount=0;renderAmt();change(a,'heal');}});
   function bumpTv(){D.tv=Math.max(D.tv||0,(opp&&D.gid&&opp.gid===D.gid?opp.tv:0)||0)+1;}
-  $('turn-go').addEventListener('click',function(){if(!D||locked)return;D.hist.push({k:'turn',from:D.T,fromAt:D.TAt});D.T++;bumpTv();D.TAt=Date.now();saveD();renderTurn();pushPresence();});
+  function advanceTurn(){if(!D||locked)return;D.hist.push({k:'turn',from:D.T,fromAt:D.TAt});D.T++;bumpTv();D.TAt=Date.now();saveD();renderTurn();pushPresence();hideForgot();}
+  $('turn-go').addEventListener('click',function(){if(!D)return;if(ownerOf(D.T,D.first)==='op'&&sub&&opp)return;advanceTurn();});
+  $('turn-fix').addEventListener('click',advanceTurn);
+  /* 相手がエンドを押して、自分のターンになったとき：鳴らして全画面で知らせる */
+  var ytT=null;
+  function yourTurnFx(){var f=$('yt-fx');clearTimeout(ytT);f.hidden=false;f.classList.remove('go');void f.offsetWidth;f.classList.add('go');try{if(navigator.vibrate)navigator.vibrate([150,70,150]);}catch(e){}document.dispatchEvent(new Event('ygo:ping'));ytT=setTimeout(function(){f.hidden=true;},1600);}
+  /* 押し忘れの推測：アプリ上は相手のターンなのに、自分のターンらしい操作があったら聞く */
+  var fgEl=null,fgT=null;
+  function hideForgot(){clearTimeout(fgT);if(fgEl){fgEl.remove();fgEl=null;}}
+  function askForgot(why){if(!D||D.phase!=='play'||ownerOf(D.T,D.first)!=='op'||D.fgT===D.T)return;D.fgT=D.T;saveD();hideForgot();
+    var x=el('div','fg-ask');x.appendChild(el('b','','🤔 ターンを進め忘れていませんか？'));x.appendChild(el('span','',why));
+    var r=el('div','fg-bt'),y=el('button','','✅ 自分のターンにする'),n=el('button','','ちがう');y.type=n.type='button';
+    y.addEventListener('click',advanceTurn);n.addEventListener('click',hideForgot);r.appendChild(y);r.appendChild(n);x.appendChild(r);$('dv-play').appendChild(x);fgEl=x;fgT=setTimeout(hideForgot,12000);}
+  /* 同じターンのまま3分たったら、ボタンを光らせる */
+  setInterval(function(){if(!D||D.phase!=='play')return;var tg=$('turn-go');tg.classList.toggle('nudge',!tg.classList.contains('wait')&&Date.now()-(D.TAt||0)>180000);},10000);
   $('undo-btn').addEventListener('click',function(){
     if(!D||locked)return;var i=D.hist.length-1;while(i>=0&&(D.hist[i].who==='op'||D.hist[i].k==='rng'))i--;if(i<0)return;
     var h=D.hist.splice(i,1)[0];
@@ -3766,7 +3814,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     else if(h.k==='turn'){D.T=h.from;bumpTv();D.TAt=Date.now();saveD();renderTurn();pushPresence();}
     else if(h.k==='ace'){D.aceT=null;saveD();renderMe();renderTrack();pushPresence();}
   });
-  $('ace-btn').addEventListener('click',function(){if(!D||locked||D.aceT)return;D.aceT=D.T;D.hist.push({k:'ace',who:'me',kind:'ace',T:D.T});saveD();renderMe();renderTrack();pushPresence();});
+  $('ace-btn').addEventListener('click',function(){if(!D||locked||D.aceT)return;if(ownerOf(D.T,D.first)==='op')setTimeout(function(){askForgot('相手のターンのはずなのに、エースが登場しました');},300);D.aceT=D.T;D.hist.push({k:'ace',who:'me',kind:'ace',T:D.T});saveD();renderMe();renderTrack();pushPresence();});
   /* ---------- コイン（古代ローマの金貨）・サイコロ（カジノ）：全画面の演出 ---------- */
   var rngT=null,rngBusy=false;
   var PIP={1:[4],2:[2,6],3:[2,4,6],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
