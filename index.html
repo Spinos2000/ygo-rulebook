@@ -1652,6 +1652,207 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
 .rng-fx.done .rng-tap{opacity:1;transition:opacity .4s .6s}
 .rng-fx.done .rng-stage::after{content:"";position:absolute;inset:-20%;border-radius:50%;background:radial-gradient(circle,rgba(255,226,140,.35),transparent 62%);animation:fxglow .8s ease-in-out infinite alternate;z-index:-1}
 @media (prefers-reduced-motion: reduce){.rng-fx.dice .rng-h::before,.rng-fx.done .rng-stage::after{animation:none}}
+.dv-play.on-board .lpc{display:none}
+/* カード盤：横長の行を縦に並べる */
+#bd-mine,.bd-opp .bd-grid{grid-template-columns:1fr!important;gap:10px}
+.bd-t:not(.bd-addt){display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nm nm" "sub vrow";align-items:center;column-gap:10px;row-gap:6px;padding:10px 12px;position:relative}
+.bd-t .nm{grid-area:nm;font-size:17px;word-break:normal;overflow-wrap:anywhere;padding-right:84px}
+.bd-t.opp .nm{padding-right:0}
+.bd-t .sub{grid-area:sub;font-size:12px;align-self:center}
+.bd-t .vrow{grid-area:vrow;margin:0;grid-template-columns:52px minmax(64px,auto) 52px;gap:6px}
+.bd-t .vrow .pm{height:50px}
+.bd-t .vrow .v b{font-size:38px}
+.bd-t .gone{position:absolute;top:8px;right:10px;min-height:32px;padding:0 10px;white-space:nowrap}
+.bd-t.opp{grid-template-areas:"nm vrow" "sub vrow"}
+.bd-t.opp .vrow{grid-template-columns:minmax(64px,auto)}
+.bd-addt{min-height:56px!important;flex-direction:row;gap:8px}
+.bd-addt b{font-size:26px}
+.ftabs i{position:static;display:inline-block;margin-left:6px;vertical-align:1px}
+/* ===== ターンのボタン（下・大きく）／あなたのターン！／押し忘れの確認 ===== */
+.turnbar{padding:8px 14px!important}
+.turn-dock{display:flex;gap:8px;flex:none}
+.turn-go2{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;font:inherit;min-height:58px;border:3px solid var(--edge);border-radius:6px;cursor:pointer;line-height:1.25;box-shadow:4px 4px 0 var(--edge);color:#fff}
+.turn-go2 b{font-family:var(--display);font-weight:400;font-size:22px;letter-spacing:.06em}
+.turn-go2 span{font-size:11px;font-weight:700;opacity:.92}
+.turn-go2.me{background:var(--obelisk)}
+.turn-go2.op{background:var(--osiris)}
+.turn-go2.wait{background:var(--surface2);color:var(--muted);box-shadow:none;border-style:dashed;cursor:default}
+.turn-go2:active:not(.wait){transform:translate(3px,3px);box-shadow:1px 1px 0 var(--edge)}
+.turn-go2.nudge{animation:tgnudge 1s ease-in-out infinite}
+@keyframes tgnudge{50%{box-shadow:4px 4px 0 var(--edge),0 0 0 6px var(--gold)}}
+.turn-fix{flex:none;font:inherit;font-size:11px;font-weight:900;line-height:1.35;border:2px solid var(--line);border-radius:6px;background:transparent;color:var(--muted);padding:4px 10px;cursor:pointer}
+.turn-fix[hidden]{display:none}
+.yt-fx{position:absolute;inset:0;z-index:12;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:color-mix(in srgb,var(--obelisk) 82%,transparent)}
+.yt-fx[hidden]{display:none}
+.yt-fx b{white-space:nowrap;font-family:var(--display);font-weight:400;font-size:clamp(30px,9vw,46px);color:#f8dc84;-webkit-text-stroke:2px var(--edge);paint-order:stroke fill;filter:drop-shadow(4px 4px 0 var(--edge))}
+.yt-fx span{font-size:22px;font-weight:900;color:#fff}
+.yt-fx.go b{animation:fxpop .5s cubic-bezier(.2,1.8,.4,1)}
+.yt-fx.go{animation:ytfade 1.6s ease-in forwards}
+@keyframes ytfade{0%,70%{opacity:1}100%{opacity:0}}
+.fg-ask{position:absolute;left:10px;right:10px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:11;background:var(--surface);color:var(--ink);border:3px solid var(--edge);border-radius:8px;box-shadow:5px 5px 0 var(--gold);padding:12px;display:flex;flex-direction:column;gap:6px;animation:fxpop .35s cubic-bezier(.2,1.6,.4,1)}
+.fg-ask b{font-size:16px}
+.fg-ask>span{font-size:12px;color:var(--muted);font-weight:700}
+.fg-bt{display:grid;grid-template-columns:1.6fr 1fr;gap:8px}
+.fg-bt button{font:inherit;font-weight:900;min-height:46px;border:2px solid var(--edge);border-radius:6px;cursor:pointer;background:var(--surface);color:var(--ink)}
+.fg-bt button:first-child{background:var(--obelisk);color:#fff}
+@media (prefers-reduced-motion: reduce){.turn-go2.nudge,.yt-fx.go,.yt-fx.go b{animation:none}}
+header.hd,body.rt header.hd{padding:0!important;background:none!important;border:0!important;box-shadow:none!important;min-height:0!important}
+header.hd::before,header.hd::after{display:none!important}
+header.hd .hd-sub{display:none!important}
+.cr-open{min-height:52px!important;padding:6px 12px!important;gap:10px!important}
+.cr-open .cr-ic{font-size:24px}
+.cr-open .cr-tx b{font-size:20px}
+.cr-open .cr-tx small{font-size:11px}
+.cr-open i{font-size:24px}
+/* ===== ホーム：カード規制ボタン／登録画面 ===== */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.cr-open{display:flex;align-items:center;gap:12px;width:100%;font:inherit;text-align:left;cursor:pointer;color:#fff;background:radial-gradient(circle,rgba(255,255,255,.16) 1.6px,transparent 2.2px) 0 0/12px 12px,linear-gradient(135deg,var(--obelisk),#6c58b8);border:3px solid var(--edge);border-radius:6px;box-shadow:5px 5px 0 var(--osiris);padding:10px 14px;min-height:64px}
+.cr-open:active{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--osiris)}
+.cr-ic{font-size:30px;flex:none}
+.cr-tx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.cr-tx b{font-family:var(--display);font-weight:400;font-size:24px;letter-spacing:.08em;color:#f8dc84;-webkit-text-stroke:1.2px var(--edge);paint-order:stroke fill}
+.cr-tx small{font-size:12px;font-weight:700;opacity:.95}
+.cr-open i{font-style:normal;font-size:30px;font-weight:900;flex:none}
+.cr{position:fixed;inset:0;z-index:60;background:color-mix(in srgb,#1b2235 55%,transparent);display:flex;align-items:flex-end;justify-content:center}
+.cr[hidden]{display:none}
+.cr-in{width:100%;max-width:520px;max-height:94vh;overflow-y:auto;background:var(--bg);color:var(--ink);border-top:4px solid var(--edge);border-radius:14px 14px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+.cr-head{gap:8px}.cr-head b{flex:1}
+.cr-head .x[hidden]{display:none}
+.cr-q{margin:0;font-family:var(--display);font-size:20px;text-align:center}
+.cr-pg{display:flex;flex-direction:column;gap:12px}
+.cr-pg[hidden]{display:none}
+.cr-menu{display:flex;flex-direction:column;gap:10px}
+.cr-m{display:grid;grid-template-columns:40px 1fr auto;grid-template-areas:"ic b i" "ic s i";align-items:center;column-gap:10px;font:inherit;text-align:left;border:3px solid var(--edge);border-radius:6px;background:var(--surface);color:var(--ink);padding:10px 12px;cursor:pointer;box-shadow:4px 4px 0 var(--edge);min-height:64px}
+.cr-m span{grid-area:ic;font-size:28px;text-align:center}
+.cr-m b{grid-area:b;font-size:17px}
+.cr-m small{grid-area:s;font-size:12px;color:var(--muted);font-weight:700}
+.cr-m i{grid-area:i;font-style:normal;font-size:22px;font-weight:900;color:var(--obelisk)}
+.cr-m:disabled{opacity:.5;box-shadow:none;cursor:not-allowed}
+.cr-m:disabled i{font-size:11px;color:var(--muted)}
+.cr-m.st{background:color-mix(in srgb,var(--spell) 12%,var(--surface))}
+.cr-m.mo{background:color-mix(in srgb,var(--monster) 14%,var(--surface))}
+.cr-m.rb{background:color-mix(in srgb,var(--obelisk) 12%,var(--surface))}
+.cr-m:active:not(:disabled){transform:translate(2px,2px);box-shadow:2px 2px 0 var(--edge)}
+.cr-f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:900}
+.cr-f input,.cr-f select,.cr-f textarea{font:inherit;font-size:16px;font-weight:400;padding:10px 12px;border-radius:8px;border:2px solid var(--line);background:var(--surface);color:var(--ink)}
+.cr-hint{margin:-4px 0 0;font-size:12px;font-weight:700;color:var(--muted);min-height:0}
+.cr-hint:empty{display:none}
+.cr-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.cr-seg.four{grid-template-columns:repeat(4,1fr)}
+.cr-seg.five{grid-template-columns:repeat(3,1fr)}
+.cr-seg button{font:inherit;font-size:14px;font-weight:900;min-height:48px;border:2px solid var(--edge);border-radius:6px;background:var(--surface);color:var(--ink);cursor:pointer;padding:4px}
+.cr-seg button[aria-pressed="true"]{background:var(--obelisk);color:#fff;box-shadow:3px 3px 0 var(--edge)}
+#cr-al-kd,#cr-al-ok,#cr-ll-ty{grid-template-columns:1fr 1fr}
+.cr-chk{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}
+.cr-rows{display:flex;flex-direction:column;gap:6px}
+.cr-row{display:grid;grid-template-columns:minmax(0,1fr) 8.6em 40px;gap:6px}
+.cr-row input,.cr-row select{font:inherit;font-size:16px;padding:8px 10px;border-radius:8px;border:2px solid var(--line);background:var(--surface);color:var(--ink);min-width:0}
+.cr-row button{font:inherit;font-weight:900;border:2px solid var(--line);border-radius:8px;background:transparent;color:var(--muted);cursor:pointer}
+.cr-go{margin-top:4px}
+.cr-go[hidden]{display:none}
+.cr-done{background:var(--spell-bg);border:3px solid var(--spell);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.cr-done b{font-family:var(--display);font-size:20px;font-weight:400;color:var(--spell)}
+.cr-done p{margin:0;font-size:14px;line-height:1.6}
+.cr-open{min-height:52px;padding:6px 12px;gap:10px}
+.cr-open .cr-ic{font-size:24px}
+.cr-open .cr-tx b{font-size:20px}
+.cr-open .cr-tx small{font-size:11px}
+.cr-open i{font-size:24px}
+/* =====================================================================
+   デザイン v5：アカデミアの3寮カラー × アメコミ（洗練版）
+   ・外側の箱（1段目）だけ「濃い線＋ずらした影」。中の箱は線を細く・影なし
+   ・角は丸く（箱16／ボタン12／タグは丸）
+   ・ボタンは3段階：主（色つき）／副（白）／控えめ（点線）
+   ===================================================================== */
+:root{--bg:#f5f2eb;--surface:#fffdf8;--surface2:#f3eee4;--ink:#262b3a;--muted:#6a6e7e;--line:#e2dbcd;
+  --edge:#2c3244;--obelisk:#3e6fd0;--obelisk-d:#2a4f9c;--osiris:#d75a5f;--osiris-d:#a03c41;--ra:#f1c95b;--ra-d:#b8902a;
+  --spell:#2b9479;--spell-bg:#e2f3ec;--gold:#a9841f;--gold-bg:#fbf2d6;--red:#d0545a;--red-bg:#fae6e6;--info:#3e6fd0;--info-bg:#e7eefa;
+  --dot:rgba(44,50,68,.045);--r1:16px;--r2:12px;--r3:10px;--sh:3px 3px 0 var(--edge);--sh2:4px 4px 0 var(--edge)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151a27;--surface:#1d2434;--surface2:#252d40;--ink:#eceff6;--muted:#a3abbe;--line:#323b52;--edge:#080b13;
+  --obelisk:#6a93ea;--obelisk-d:#4a72c8;--osiris:#e8787c;--osiris-d:#b45358;--ra:#efcb6c;--ra-d:#c39d3e;
+  --spell:#4cbf9b;--spell-bg:#173b33;--gold:#e3c06a;--gold-bg:#392f17;--red:#ee7378;--red-bg:#3f2026;--info:#86a8f2;--info-bg:#1e2b47;--dot:rgba(255,255,255,.035)}}
+:root[data-theme="dark"]{--bg:#151a27;--surface:#1d2434;--surface2:#252d40;--ink:#eceff6;--muted:#a3abbe;--line:#323b52;--edge:#080b13;
+  --obelisk:#6a93ea;--obelisk-d:#4a72c8;--osiris:#e8787c;--osiris-d:#b45358;--ra:#efcb6c;--ra-d:#c39d3e;
+  --spell:#4cbf9b;--spell-bg:#173b33;--gold:#e3c06a;--gold-bg:#392f17;--red:#ee7378;--red-bg:#3f2026;--info:#86a8f2;--info-bg:#1e2b47;--dot:rgba(255,255,255,.035)}
+
+body{line-height:1.85;letter-spacing:.02em}
+body,.duel{background:radial-gradient(circle,var(--dot) 1.4px,transparent 1.9px) 0 0/14px 14px,var(--bg)}
+.wrap{gap:20px}
+
+/* ---------- 1段目の箱 ---------- */
+section,.me-card,.srch-box,.news,.hacc-p,.lpc,.pg-box,.wait-card,.key-card,.turnbar,.ftabs,.cr-in .cr-m,.inv-ban,
+.ctr-alert-box,.ctr-cf-box,.ctr-wait-box,.modal-box,.fg-ask,.match-msg-box{
+  border:2px solid var(--edge)!important;border-radius:var(--r1)!important;box-shadow:var(--sh)!important}
+section{padding:18px 16px!important;gap:16px}
+section.fold{padding-block:0!important}
+section.fold.open{padding-bottom:20px!important}
+.sec-h{border-bottom:2px solid var(--line)!important;padding-bottom:12px!important;gap:4px!important}
+.sec-h h2{font-size:21px;line-height:1.4;letter-spacing:.03em}
+.sec-h > span{transform:none!important;border-radius:999px!important;border-width:1.5px!important;font-size:10.5px!important;padding:0 10px!important}
+.sec-h::before{border:0!important;border-radius:3px!important;width:5px!important}
+.sec-h .note{font-size:12.5px;line-height:1.6}
+
+/* ---------- 2段目の箱：線は細く、影なし ---------- */
+.fold-in{border:1.5px solid var(--line)!important;border-radius:var(--r2)!important;box-shadow:none!important;background:var(--surface)}
+.fold-in > summary{padding:12px 14px!important}
+.steps li,.reasons li,.faq-item,.rb-item,.ss-row,.keyfact,.ex li,.al-items li,.stat,.principles,.cmp-g,.wl-items li,.ach,.pl-card,.go-row,.th-b,.lobby-b,.inv-b,.bd-p,.cr-row input,.cr-row select{border-radius:var(--r2)!important}
+form.add,.ll-form,.pf-ctr{border:0!important;box-shadow:none!important;border-radius:var(--r2)!important}
+.tier{border-radius:14px!important;border-width:2px!important;box-shadow:none!important}
+.pool-row{border-radius:var(--r2)!important;border-width:1.5px!important}
+.stepnav button{border-radius:var(--r2)!important;box-shadow:var(--sh)!important}
+.card{border-radius:8px!important}
+
+/* ---------- ボタン ---------- */
+.btn,.start-btn,.cr-open,#home-hub .tile.big,.turn-go2:not(.wait),.pg-b:not(.ghost),.pg-opt,.bd-spell,.cf-yes{
+  border:2px solid var(--edge)!important;border-radius:var(--r2)!important;box-shadow:var(--sh)!important}
+.btn:active,.start-btn:active,.cr-open:active,#home-hub .tile.big:active,.turn-go2:active:not(.wait),.pg-b:active:not(.ghost),.pg-opt:active,.bd-spell:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--edge)!important}
+.btn-sub,.pg-b.ghost{border-radius:var(--r2)!important}
+.ghost{border-radius:var(--r2)}
+/* 小さな押しボタン（タイル） */
+.me-links a,.tiles4 a,.hacc-b,.hb,.qb,.bb,.adds button,.pm,.cr-seg button,.dv-play .amt output,.dv-play .amt button,.gone,.turn-fix,.sync-pill,.topbar .tb.end,.ctr-pm,.seg3 button,.su-first button,.why button,.rate10 button,.x{border-radius:var(--r3)!important}
+.x{box-shadow:none!important}
+
+/* ---------- 入力欄 ---------- */
+input[type=text],input[type=search],input[type=number],select,textarea{border-radius:var(--r3)!important}
+input[type=text]:focus,input[type=search]:focus,input[type=number]:focus,select:focus,textarea:focus{outline:3px solid color-mix(in srgb,var(--obelisk) 35%,transparent);outline-offset:1px;border-color:var(--obelisk)!important}
+
+.ach-grid{grid-template-columns:repeat(auto-fill,minmax(136px,1fr))!important}
+body.rt section.fold > .sec-h{padding-right:0!important}
+/* ---------- ホーム ---------- */
+section#home-hub{border:0!important;box-shadow:none!important;padding:0!important;background:transparent!important}
+#home-hub{gap:12px!important}
+.cr-open{background:radial-gradient(circle,rgba(255,255,255,.14) 1.4px,transparent 2px) 0 0/12px 12px,linear-gradient(120deg,var(--obelisk),#6a5bc4)!important}
+.srch-box{box-shadow:var(--sh)!important}
+.me-card{padding:10px 12px!important}
+.me-links a,.tiles4 a{border:1.5px solid var(--line)!important;background:var(--surface2)!important;box-shadow:none!important}
+.hacc-b{border:2px solid var(--edge)!important;box-shadow:var(--sh)!important}
+.news{box-shadow:var(--sh)!important}
+
+/* ---------- 下のメニュー ---------- */
+.tabbar{border-top:2px solid var(--edge)!important;background:color-mix(in srgb,var(--surface) 94%,transparent)!important;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.tabbar button{min-height:52px!important;border-radius:var(--r2)!important}
+.tabbar button[aria-current="page"]{background:var(--ra)!important;border:2px solid var(--edge)!important;box-shadow:2px 2px 0 var(--edge)!important}
+.subnav{border-bottom:1.5px solid var(--line)!important;margin-bottom:6px!important;padding-bottom:4px!important}
+.subnav .toc a{border:1.5px solid var(--line)!important;box-shadow:none!important;border-radius:999px!important;padding:5px 12px!important;font-size:12.5px!important;background:var(--surface)!important}
+.subnav .toc a.on{background:var(--edge)!important;color:#fff!important;border-color:var(--edge)!important}
+.hs-b{width:28px!important;height:28px!important;border-width:1.5px!important;font-size:15px!important}
+body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
+
+/* ---------- デュエル ---------- */
+.turnbar{box-shadow:var(--sh)!important}
+.lpc-me{background:linear-gradient(120deg,color-mix(in srgb,var(--obelisk) 20%,var(--surface)),var(--surface) 75%)!important}
+.lpc-op{background:linear-gradient(120deg,color-mix(in srgb,var(--osiris) 18%,var(--surface)),var(--surface) 75%)!important}
+.ftabs{box-shadow:none!important;border-width:2px!important}
+.ftabs button{font-size:13.5px}
+.dv-play .calc{border-radius:var(--r1)!important}
+.bd-t{border-radius:14px!important;border-width:2px!important;box-shadow:var(--sh)!important}
+.bd-t.opp,.bd-addt{box-shadow:none!important}
+.pg-opt{box-shadow:var(--sh2)!important}
+.pg-opt[aria-pressed="true"]{box-shadow:4px 4px 0 var(--obelisk)!important}
+.cr-in{border-radius:20px 20px 0 0!important}
+.cr-m{box-shadow:var(--sh)!important}
+.cr-m:disabled{box-shadow:none!important}
 </style>
 </head>
 <body>
@@ -1746,7 +1947,8 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
 <div class="wrap">
 
 <header class="hd">
-  <h1 class="hd-h1"><svg class="hd-svg" viewBox="0 0 720 132" role="img" aria-label="あのころ遊戯王"><text x="360" y="104" text-anchor="middle" textLength="700" lengthAdjust="spacingAndGlyphs">あのころ遊戯王</text></svg></h1>
+  <h1 class="sr-only">あのころ遊戯王 独自環境ルール</h1>
+  <button type="button" class="cr-open" id="cr-open"><span class="cr-ic">📋</span><span class="cr-tx"><b>カード規制</b><small>汎用の規制・デッキごとの規制をここから登録</small></span><i>›</i></button>
   <p class="hd-sub"><span class="hd-chip">独自環境ルール</span><span class="hd-upd">📅 <span id="last-upd">2026年10月19日</span> 更新</span></p>
 </header>
 
@@ -2794,6 +2996,73 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   <p class="fx-tap">タップで閉じる</p>
 </div>
 
+<div class="cr" id="cr" hidden role="dialog" aria-modal="true" aria-label="カード規制の登録">
+  <div class="cr-in">
+    <div class="dv-head cr-head"><button type="button" class="x" id="cr-back" aria-label="戻る" hidden>‹</button><b id="cr-title">📋 カード規制</b><button type="button" class="x" id="cr-x" aria-label="閉じる">✕</button></div>
+
+    <!-- どこに登録する？ -->
+    <div class="cr-pg" data-pg="menu">
+      <p class="cr-q">どの規制に登録しますか？</p>
+      <div class="cr-menu" id="cr-menu">
+        <button type="button" class="cr-m st" data-go="st"><span>🪄</span><b>汎用 魔法・罠</b><small>禁止・制限（全デッキ共通）</small><i></i></button>
+        <button type="button" class="cr-m mo" data-go="mo"><span>👾</span><b>汎用 モンスター</b><small>準制限・制限・完全使用不可</small><i></i></button>
+        <button type="button" class="cr-m al" data-go="al"><span>✅</span><b>許可リスト</b><small>GX以降の汎用カードを使えるか</small><i></i></button>
+        <button type="button" class="cr-m wl" data-go="wl"><span>👀</span><b>見直し候補</b><small>今後の規制緩和・規制強化の予定</small><i></i></button>
+        <button type="button" class="cr-m rb" data-go="rb"><span>🃏</span><b>デッキごとの規制</b><small>規制報告ボード（だれでも登録できます）</small><i></i></button>
+      </div>
+      <p class="note" id="cr-who"></p>
+    </div>
+
+    <!-- 汎用 魔法・罠／汎用モンスター（規制リスト） -->
+    <div class="cr-pg" data-pg="ll" hidden>
+      <label class="cr-f">カード名<input type="text" class="cr-card" id="cr-ll-name" maxlength="60" autocomplete="off" placeholder="読みでもOK（例：さいくろん）"></label>
+      <p class="cr-hint" id="cr-ll-hint"></p>
+      <div class="cr-f"><span>規制</span><div class="cr-seg" id="cr-ll-lv"></div></div>
+      <div class="cr-f" id="cr-ll-ty-w"><span>種類</span><div class="cr-seg" id="cr-ll-ty"><button type="button" data-v="sp">🪄 魔法</button><button type="button" data-v="tr">🪤 罠</button></div></div>
+      <label class="cr-f">分類<select id="cr-ll-cat"></select></label>
+      <label class="cr-f" id="cr-ll-newcat-w" hidden>新しい分類の名前<input type="text" id="cr-ll-newcat" maxlength="20" placeholder="例：手札破壊"></label>
+      <label class="cr-f">効果の要約（カードを押したときの説明）<textarea id="cr-ll-sum" rows="2" maxlength="200"></textarea></label>
+      <label class="cr-chk"><input type="checkbox" id="cr-ll-after"> GX以降に登場したカード（「後」マーク）</label>
+    </div>
+
+    <!-- 許可リスト -->
+    <div class="cr-pg" data-pg="al" hidden>
+      <label class="cr-f">カード名<input type="text" class="cr-card" id="cr-al-name" maxlength="60" autocomplete="off" placeholder="読みでもOK"></label>
+      <p class="cr-hint" id="cr-al-hint"></p>
+      <div class="cr-f"><span>種類</span><div class="cr-seg" id="cr-al-kd"><button type="button" data-v="mo">👾 モンスター</button><button type="button" data-v="st">🪄 魔法・罠</button></div></div>
+      <div class="cr-f"><span>判定</span><div class="cr-seg" id="cr-al-ok"><button type="button" data-v="ok">✅ 許可</button><button type="button" data-v="ng">⛔ 不許可</button></div></div>
+      <label class="cr-f">メモ（任意）<input type="text" id="cr-al-note" maxlength="120" placeholder="例：効果が1つだけなのでOK"></label>
+    </div>
+
+    <!-- 見直し候補 -->
+    <div class="cr-pg" data-pg="wl" hidden>
+      <label class="cr-f">カード名<input type="text" class="cr-card" id="cr-wl-name" maxlength="60" autocomplete="off" placeholder="読みでもOK"></label>
+      <p class="cr-hint" id="cr-wl-hint"></p>
+      <div class="cr-f"><span>変更後（予定）</span><div class="cr-seg five" id="cr-wl-to"><button type="button" data-v="free">🔓 無制限</button><button type="button" data-v="semi">✌️ 準制限</button><button type="button" data-v="lim">☝️ 制限</button><button type="button" data-v="ban">❌ 禁止</button><button type="button" data-v="out">⛔ 使用不可</button></div></div>
+      <label class="cr-f">理由・メモ<input type="text" id="cr-wl-why" maxlength="120" placeholder="例：制限にしてから使われていないので様子見"></label>
+    </div>
+
+    <!-- デッキごとの規制（報告ボード） -->
+    <div class="cr-pg" data-pg="rb" hidden>
+      <label class="cr-f">使用者<select id="cr-rb-user" class="pick" data-pick="member" data-me="1"></select></label>
+      <label class="cr-f">デッキテーマ<select id="cr-rb-theme" class="pick" data-pick="theme" data-of="cr-rb-user"></select></label>
+      <div class="cr-f"><span>規制するカード</span><div class="cr-rows" id="cr-rb-rows"></div><button type="button" class="pg-b ghost" id="cr-rb-add">＋ カードを追加</button></div>
+      <label class="cr-f">理由<textarea id="cr-rb-why" rows="2" maxlength="400" placeholder="例：2ターン目にエースが出るため、起点の専用モンスターを準制限"></textarea></label>
+      <p class="note">※「禁止」は汎用カードのみ。組み直しで規制がなくなったときは、カードを空欄にして理由に「組み直し」と書いて登録できます。</p>
+    </div>
+
+    <!-- 登録できた -->
+    <div class="cr-pg" data-pg="done" hidden>
+      <div class="cr-done" id="cr-done"></div>
+      <button type="button" class="start-btn" id="cr-again">＋ 続けて登録する</button>
+      <button type="button" class="pg-b" id="cr-see">📋 登録先のリストを見る</button>
+      <button type="button" class="pg-b ghost" id="cr-close">閉じる</button>
+    </div>
+
+    <p class="status" id="cr-st" role="status"></p>
+    <button type="button" class="start-btn cr-go" id="cr-go" hidden>登録する</button>
+  </div>
+</div>
 <div class="inv-ban" id="inv-ban" hidden role="alertdialog" aria-live="assertive"><b id="inv-ban-t">対戦の招待</b><div><button type="button" id="inv-ok">⚔️ 受ける</button><button type="button" id="inv-no">ことわる</button></div></div>
 <div class="duel" id="duel" hidden role="dialog" aria-modal="true" aria-label="デュエル">
 
@@ -2923,7 +3192,6 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
         <b id="turn-who">あなたの 1ターン目</b>
         <span id="turn-all">全体 1ターン目</span>
       </div>
-      <button type="button" class="turn-go" id="turn-go"><b id="turn-go-l">エンド ▶</b><span id="turn-go-s">相手のターンへ</span></button>
     </div>
 
     <div class="lpc lpc-op" id="opp">
@@ -2980,6 +3248,11 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     </div>
 
 
+    <div class="turn-dock" id="turn-dock">
+      <button type="button" class="turn-go2" id="turn-go"><b id="turn-go-l">🏁 エンド</b><span id="turn-go-s">相手のターンへ</span></button>
+      <button type="button" class="turn-fix" id="turn-fix" hidden>押し忘れ？<br>自分のターンへ</button>
+    </div>
+    <div class="yt-fx" id="yt-fx" hidden aria-live="assertive"><b>あなたのターン！</b><span>🃏 ドロー</span></div>
     <div class="bd-add" id="bd-add" hidden>
       <div class="bd-add-box" role="dialog" aria-label="カードを置く">
         <div class="dv-head"><b>＋ カードを置く</b><button type="button" class="x" id="bd-add-x" aria-label="閉じる">✕</button></div>
@@ -3383,6 +3656,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
      ・ターンは「何回目の操作か（tv）」で比べる（スマホの時計のずれに左右されない）。
      ・10秒ごとに生存確認。相手から25秒届かない／自分の送信が6秒終わらないときは、通信をつなぎ直す。 */
   var roomP=null, sub=null, unsubs=[], opp=null, linkKey=null, lastOppSeq=null, lastOppLp=null, seq=0;
+  var lastLk2=null;
   var role=null, myKey=null, hb=0, hbT=null, lastOppAt=0, lastOppUpd=0, pend=0, pendSince=0, kickAt=0, lastLk=null, lastLa=null, joinT=null;
   var S2={page:'link',rec:true,fmt:'bo1',theme:'',start:null,lastStartId:null,pre:null,hist:[]};
   var LOKEY='ygo-last-opp-v1';
@@ -3450,14 +3724,15 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
       if(D&&D.phase==='result'&&!views.result.hidden)renderRes();
       if(D&&D.phase==='play'&&opp.gid&&opp.gid===D.gid){
         // ターンをそろえる（操作の回数が多い方に合わせる）
-        if(opp.tv>(D.tv||0)&&opp.T){D.T=Math.max(1,opp.T);D.tv=opp.tv;D.TAt=Date.now();saveD();renderTurn();}
+        if(opp.tv>(D.tv||0)&&opp.T){var pT=D.T;D.T=Math.max(1,opp.T);D.tv=opp.tv;D.TAt=Date.now();saveD();renderTurn();hideForgot();if(D.T>pT&&ownerOf(D.T,D.first)==='me')yourTurnFx();}
         // 相手のライフの変化を記録
         if(opp.lp!=null){
           if(lastOppSeq!=null&&opp.seq!==lastOppSeq&&lastOppLp!=null&&opp.lp!==lastOppLp&&(opp.lk==='dmg'||opp.lk==='cost'||opp.lk==='heal')){
-            D.hist.push({k:'lp',who:'op',kind:opp.lk,amt:Math.abs(opp.lp-lastOppLp),b:lastOppLp,a:opp.lp,T:D.T});saveD();renderTrack();}
+            D.hist.push({k:'lp',who:'op',kind:opp.lk,amt:Math.abs(opp.lp-lastOppLp),b:lastOppLp,a:opp.lp,T:D.T});saveD();renderTrack();if(opp.lk==='dmg'&&opp.lp<lastOppLp)askForgot('相手のターンのはずなのに、相手がダメージを受けました（あなたの攻撃？）');}
           lastOppSeq=opp.seq;lastOppLp=opp.lp;}
       }
     }
+    var lkNow=!!(sub&&opp);if(lkNow!==lastLk2){lastLk2=lkNow;if(D&&D.phase==='play')renderTurn();}
     setDot();renderOpp();checkOppZero();if(!D||D.phase!=='play')renderSetup();document.dispatchEvent(new Event('ygo:opp'));
   }
   function onConnect(){
@@ -3694,7 +3969,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     if(!D)return;var own=ownerOf(D.T,D.first);
     $('turnbar').classList.toggle('opp-turn',own==='op');
     $('turn-who').textContent=turnLabel(D.T,D.first);$('turn-all').textContent='全体 '+D.T+'ターン目 ・ '+(D.first?'あなたが先攻':'あなたが後攻')+(D.match?' ・ 🏆第'+D.match.g+'戦':'');
-    $('turn-go-l').textContent=own==='me'?'🏁 エンド':'🃏 ドロー';$('turn-go-s').textContent=own==='me'?'相手のターンへ':'自分のターンへ';
+    var lk=!!(sub&&opp),wt=own==='op'&&lk,tg=$('turn-go');tg.classList.toggle('me',own==='me');tg.classList.toggle('op',own==='op');tg.classList.toggle('wait',wt);tg.setAttribute('aria-disabled',String(wt));$('turn-go-l').textContent=own==='me'?'🏁 エンド':wt?'⏳ 相手のターン':'🃏 ドロー';$('turn-go-s').textContent=own==='me'?'ターンを終えたら押す（相手のターンへ）':wt?'相手がエンドを押すと自分のターンに':'自分のターンへ';$('turn-fix').hidden=!wt;
     $('me-card').classList.toggle('my-turn',own==='me');$('opp').classList.toggle('my-turn',own==='op');
     renderTrack();
     document.dispatchEvent(new CustomEvent('ygo:turn'));
@@ -3742,7 +4017,21 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   $('dmg-btn').addEventListener('click',function(){if(amount>0){var a=amount;amount=0;renderAmt();change(-a,mode);}});
   $('heal-btn').addEventListener('click',function(){if(amount>0){var a=amount;amount=0;renderAmt();change(a,'heal');}});
   function bumpTv(){D.tv=Math.max(D.tv||0,(opp&&D.gid&&opp.gid===D.gid?opp.tv:0)||0)+1;}
-  $('turn-go').addEventListener('click',function(){if(!D||locked)return;D.hist.push({k:'turn',from:D.T,fromAt:D.TAt});D.T++;bumpTv();D.TAt=Date.now();saveD();renderTurn();pushPresence();});
+  function advanceTurn(){if(!D||locked)return;D.hist.push({k:'turn',from:D.T,fromAt:D.TAt});D.T++;bumpTv();D.TAt=Date.now();saveD();renderTurn();pushPresence();hideForgot();}
+  $('turn-go').addEventListener('click',function(){if(!D)return;if(ownerOf(D.T,D.first)==='op'&&sub&&opp)return;advanceTurn();});
+  $('turn-fix').addEventListener('click',advanceTurn);
+  /* 相手がエンドを押して、自分のターンになったとき：鳴らして全画面で知らせる */
+  var ytT=null;
+  function yourTurnFx(){var f=$('yt-fx');clearTimeout(ytT);f.hidden=false;f.classList.remove('go');void f.offsetWidth;f.classList.add('go');try{if(navigator.vibrate)navigator.vibrate([150,70,150]);}catch(e){}document.dispatchEvent(new Event('ygo:ping'));ytT=setTimeout(function(){f.hidden=true;},1600);}
+  /* 押し忘れの推測：アプリ上は相手のターンなのに、自分のターンらしい操作があったら聞く */
+  var fgEl=null,fgT=null;
+  function hideForgot(){clearTimeout(fgT);if(fgEl){fgEl.remove();fgEl=null;}}
+  function askForgot(why){if(!D||D.phase!=='play'||ownerOf(D.T,D.first)!=='op'||D.fgT===D.T)return;D.fgT=D.T;saveD();hideForgot();
+    var x=el('div','fg-ask');x.appendChild(el('b','','🤔 ターンを進め忘れていませんか？'));x.appendChild(el('span','',why));
+    var r=el('div','fg-bt'),y=el('button','','✅ 自分のターンにする'),n=el('button','','ちがう');y.type=n.type='button';
+    y.addEventListener('click',advanceTurn);n.addEventListener('click',hideForgot);r.appendChild(y);r.appendChild(n);x.appendChild(r);$('dv-play').appendChild(x);fgEl=x;fgT=setTimeout(hideForgot,12000);}
+  /* 同じターンのまま3分たったら、ボタンを光らせる */
+  setInterval(function(){if(!D||D.phase!=='play')return;var tg=$('turn-go');tg.classList.toggle('nudge',!tg.classList.contains('wait')&&Date.now()-(D.TAt||0)>180000);},10000);
   $('undo-btn').addEventListener('click',function(){
     if(!D||locked)return;var i=D.hist.length-1;while(i>=0&&(D.hist[i].who==='op'||D.hist[i].k==='rng'))i--;if(i<0)return;
     var h=D.hist.splice(i,1)[0];
@@ -3750,7 +4039,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     else if(h.k==='turn'){D.T=h.from;bumpTv();D.TAt=Date.now();saveD();renderTurn();pushPresence();}
     else if(h.k==='ace'){D.aceT=null;saveD();renderMe();renderTrack();pushPresence();}
   });
-  $('ace-btn').addEventListener('click',function(){if(!D||locked||D.aceT)return;D.aceT=D.T;D.hist.push({k:'ace',who:'me',kind:'ace',T:D.T});saveD();renderMe();renderTrack();pushPresence();});
+  $('ace-btn').addEventListener('click',function(){if(!D||locked||D.aceT)return;if(ownerOf(D.T,D.first)==='op')setTimeout(function(){askForgot('相手のターンのはずなのに、エースが登場しました');},300);D.aceT=D.T;D.hist.push({k:'ace',who:'me',kind:'ace',T:D.T});saveD();renderMe();renderTrack();pushPresence();});
   /* ---------- コイン（古代ローマの金貨）・サイコロ（カジノ）：全画面の演出 ---------- */
   var rngT=null,rngBusy=false;
   var PIP={1:[4],2:[2,6],3:[2,4,6],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
@@ -4010,6 +4299,10 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-10-25-design',createdAt:1792899989907,text:'🎨 デザインを一新：3寮カラー×アメコミをそのままに、色・角の丸み・線と影・ボタンを整理して見やすく。下のメニューもすっきり'},
+      {id:'auto-2026-10-25-cardreg',createdAt:1792899988907,text:'📋 ホームの一番上に「カード規制」ボタン。汎用魔法・罠／汎用モンスター／許可リスト／見直し候補／デッキごとの規制へ、選ぶだけでかんたんに登録できます'},
+      {id:'auto-2026-10-25-turn',createdAt:1792899987907,text:'🏁 ターンの押し忘れ対策：ターンを終えた人が下の大きな「エンド」を押すと、相手のスマホが鳴って「あなたのターン！」。押し忘れっぽいときは確認、3分たつとボタンが光ります'},
+      {id:'auto-2026-10-25-board2',createdAt:1792899986907,text:'🃏 カード盤は横長の行で縦に並ぶように。ログとカード盤は画面いっぱいに表示し、左右スワイプは画面のどこからでもOKに'},
       {id:'auto-2026-10-24-solo-practice',createdAt:1792848630388,text:'🧪 リンクせずに電卓だけで使うときは、自動で練習試合（戦績に残さない・1本勝負）になるように。戦績に残したいときは相手とリンクしてください'},
       {id:'auto-2026-10-24-link',createdAt:1792848238103,text:'🔗 リンク対戦を一新：キーを入れた人が「子」、入れられた人が「親」。親だけが試合を設定（公式／練習・1本／3本・テーマ）し、スタートで2人のスマホに同時に先攻・後攻の演出。子は待っている間に自分のテーマを選びます'},
       {id:'auto-2026-10-24-lobby',createdAt:1792848237103,text:'📡 デュエル画面を開くと「いま待っている人」に名前が出て、タップ1回でつながるように。メンバーを招待（招待した人が親）・LINEなどで送れる招待リンク・前回の相手と再戦も追加'},
@@ -5071,7 +5364,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   window.ygoYomiOf=function(name){var k=nm(name);for(var n in YOMI)if(nm(n)===k)return String(YOMI[n]).split('／')[0];return '';};
 
   /* ---- 入力欄に「正式名」の候補を出す ---- */
-  var SEL='#pf-ctr-in,#ctr-name,#rl-f-q,#ar-q,#rb-q,#ll-name,#f-name,#wl-name,#rs-ace,#me-ace,#rb-rows input[type=text],#rb-rows input:not([type])';
+  var SEL='.cr-card,#pf-ctr-in,#ctr-name,#rl-f-q,#ar-q,#rb-q,#ll-name,#f-name,#wl-name,#rs-ace,#me-ace,#rb-rows input[type=text],#rb-rows input:not([type])';
   var box=el('div','cs-pop');box.hidden=true;box.setAttribute('role','listbox');document.body.appendChild(box);var cur=null,its=[],ai=-1;
   function place(){if(!cur)return;var r=cur.getBoundingClientRect(),w=Math.min(window.innerWidth-16,Math.max(r.width,260));box.style.width=w+'px';box.style.left=Math.max(8,Math.min(r.left,window.innerWidth-8-w))+'px';var h=box.offsetHeight||200,room=window.innerHeight-90-r.bottom;box.style.top=(room<h&&r.top>h+8?r.top-h-4:r.bottom+4)+'px';}
   function hide(){box.hidden=true;its=[];ai=-1;}
@@ -5243,8 +5536,8 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     if(f==='log'&&window.YGO_LOG)YGO_LOG();render();}
   window.YGO_FACE=setFace;
   [].forEach.call(document.querySelectorAll('#ftabs button'),function(b){b.addEventListener('click',function(){setFace(b.getAttribute('data-f'));});});
-  (function(){var fs=$('faces'),x0=null,y0=0;if(!fs)return;
-    fs.addEventListener('touchstart',function(e){if(e.touches.length!==1){x0=null;return;}x0=e.touches[0].clientX;y0=e.touches[0].clientY;},{passive:true});
+  (function(){var fs=$('dv-play'),x0=null,y0=0;if(!fs)return;
+    fs.addEventListener('touchstart',function(e){if(e.touches.length!==1||e.target.closest('.track,.bd-add,.ctr-cf,.ctr-wait,.ctr-alert,.ctr-q,.sheet,input,select,textarea')||[].some.call(document.querySelectorAll('#bd-add,#ctr-cf,#ctr-wait,#ctr-alert,#m-end,#rng-fx'),function(x){return !x.hidden;})){x0=null;return;}x0=e.touches[0].clientX;y0=e.touches[0].clientY;},{passive:true});
     fs.addEventListener('touchend',function(e){if(x0==null)return;var t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;x0=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*2){var i=FACES.indexOf(face)+(dx<0?1:-1);if(i>=0&&i<FACES.length)setFace(FACES[i]);}},{passive:true});})();
 
   /* ---- 表示 ---- */
@@ -5274,7 +5567,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     mi.addEventListener('click',function(){if(c.v<=0)return;c.v--;save();if(c.k==='turn'&&c.v<=0)alertBox([c.msg||(c.n+'のカウントが0になりました（効果を処理してください）')],'⏰ '+c.n);});
     pl.addEventListener('click',function(){if(c.max&&c.v>=c.max){toast('上限（'+c.max+'）です');return;}c.v++;save();});
     row.appendChild(mi);row.appendChild(v);row.appendChild(pl);t.appendChild(row);
-    var gone=el('button','gone',done?'✅ 処理した（片付ける）':'💥 破壊・場を離れた');gone.type='button';
+    var gone=el('button','gone',done?'✅ 片付ける':'💥 破壊');gone.setAttribute('aria-label',done?c.n+'を片付ける':c.n+'が破壊された・場を離れた');gone.type='button';
     gone.addEventListener('click',function(){var L=list(),j=L.indexOf(c);if(j<0)return;L.splice(j,1);undoBuf={c:c,j:j};save();toastUndo('「'+c.n+'」を片付けました');});
     t.appendChild(gone);return t;}
   var undoBuf=null;
@@ -5413,6 +5706,98 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
   document.addEventListener('ygo:data',fillAll);
   if(Y.ready)Y.ready.then(function(){setTimeout(fillAll,0);});
   fillAll();
+})();
+</script>
+<script>
+/* ===== カード規制の登録（ホームの「📋 カード規制」から、全部の規制にかんたんに登録） ===== */
+(function(){
+  var Y=window.YGO;function $(i){return document.getElementById(i);}
+  function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;}
+  var M=$('cr');if(!M||!Y)return;
+  var pg='menu',mode=null,lastSec=null;
+  var T={menu:'📋 カード規制',st:'🪄 汎用 魔法・罠',mo:'👾 汎用 モンスター',al:'✅ 許可リスト',wl:'👀 見直し候補',rb:'🃏 デッキごとの規制',done:'✅ 登録しました'};
+  var SEC={st:'list',mo:'mlist',al:'allow',wl:'watch',rb:'board'};
+  function open(){M.hidden=false;document.documentElement.style.overflow='hidden';show('menu');}
+  function close(){M.hidden=true;document.documentElement.style.overflow='';}
+  function st(t,c){var e=$('cr-st');e.textContent=t||'';e.className='status'+(c?' '+c:'');}
+  function show(p,m){pg=p;if(m)mode=m;var cp=document.querySelector('.cs-pop');if(cp)cp.hidden=true;[].forEach.call(M.querySelectorAll('.cr-pg'),function(e){e.hidden=e.getAttribute('data-pg')!==p;});
+    $('cr-title').textContent=T[p==='ll'?mode:p]||T.menu;$('cr-back').hidden=p==='menu';$('cr-go').hidden=p==='menu'||p==='done';st('');
+    if(p==='menu')renderMenu();M.querySelector('.cr-in').scrollTop=0;}
+  function admin(){return !!Y.isAdmin;}
+  function renderMenu(){var a=admin(),u=!!Y.user;
+    [].forEach.call(M.querySelectorAll('.cr-m'),function(b){var g=b.getAttribute('data-go'),ok=g==='rb'?u:a;b.disabled=!ok;b.querySelector('i').textContent=ok?'›':(g==='rb'?'🔑 ログインが必要':'🔒 ルール管理者だけ');});
+    $('cr-who').textContent=!u?'🔑 登録するには、ページ上部の「Googleでログイン」でログインしてください。':a?'あなたはルール管理者なので、すべての規制に登録できます。':'汎用カードの規制はルール管理者が登録します。デッキごとの規制は、だれでも登録できます。';}
+  function seg(id,v){[].forEach.call($(id).querySelectorAll('button'),function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-v')===v));});}
+  function segV(id){var b=$(id).querySelector('button[aria-pressed="true"]');return b?b.getAttribute('data-v'):'';}
+  M.addEventListener('click',function(e){var b=e.target.closest('.cr-seg button');if(b){seg(b.parentNode.id,b.getAttribute('data-v'));}});
+  function cardTy(n){try{var L=window.ygoCardFind?window.ygoCardFind(n,3):[];for(var i=0;i<L.length;i++)if(L[i].name===n)return L[i].ty||null;}catch(e){}return null;}
+  function fire(e){e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));}
+  /* 元のフォームに入れて送る → 結果（ok/err）を待つ */
+  function waitSt(id){return new Promise(function(res){var e=$(id),t0=Date.now();(function chk(){var c=e.className||'';if(/\b(ok|err)\b/.test(c)&&e.textContent){res({ok:/\bok\b/.test(c),t:e.textContent});return;}if(Date.now()-t0>15000){res({ok:false,t:'時間がかかっています。通信状態を確認してください。'});return;}setTimeout(chk,150);})();});}
+  function send(formId,stId){var s=$(stId);s.className='status';s.textContent='';var f=$(formId);if(f.requestSubmit)f.requestSubmit();else f.dispatchEvent(new Event('submit',{cancelable:true}));return waitSt(stId);}
+
+  /* --- 汎用 魔法・罠／モンスター --- */
+  var LV={st:[['lim','☝️ 制限'],['ban','❌ 禁止'],['free','🔓 外す']],mo:[['semi','✌️ 準制限'],['lim','☝️ 制限'],['out','⛔ 使用不可'],['free','🔓 外す']]};
+  function initLL(m){var b=$('cr-ll-lv');b.innerHTML='';b.className='cr-seg'+(m==='mo'?' four':'');LV[m].forEach(function(x){var e=el('button','',x[1]);e.type='button';e.setAttribute('data-v',x[0]);b.appendChild(e);});seg('cr-ll-lv',m==='mo'?'lim':'lim');
+    $('cr-ll-ty-w').hidden=m==='mo';seg('cr-ll-ty','sp');$('cr-ll-name').value='';$('cr-ll-sum').value='';$('cr-ll-after').checked=false;$('cr-ll-hint').textContent='';copyCats('');}
+  function copyCats(v){var s=$('cr-ll-cat'),src=$('ll-cat');s.innerHTML=src?src.innerHTML:'';if(![].some.call(s.options,function(o){return o.value==='__new';}))s.appendChild(new Option('＋ 新しい分類…','__new'));s.value=v||s.value;$('cr-ll-newcat-w').hidden=s.value!=='__new';}
+  $('cr-ll-cat').addEventListener('change',function(){$('cr-ll-newcat-w').hidden=this.value!=='__new';});
+  $('cr-ll-name').addEventListener('input',function(){var n=this.value.trim();$('ll-name').value=n;fire($('ll-name'));
+    copyCats($('ll-cat').value);$('cr-ll-sum').value=$('ll-sum').value;$('cr-ll-after').checked=$('ll-after').checked;
+    var ty=$('ll-type').value,t2=cardTy(n);if(mode==='st'&&(ty==='sp'||ty==='tr'))seg('cr-ll-ty',ty);
+    var h=$('ll-hint').textContent||'';if(t2==='mo'&&mode==='st')h='⚠️ これはモンスターです。「汎用 モンスター」から登録してください。';if(t2&&t2!=='mo'&&mode==='mo')h='⚠️ これは魔法・罠です。「汎用 魔法・罠」から登録してください。';
+    if(/リストにある/.test(h)){var lv=$('ll-level').value;if([].some.call($('cr-ll-lv').children,function(b){return b.getAttribute('data-v')===lv;}))seg('cr-ll-lv',lv);}
+    $('cr-ll-hint').textContent=h;});
+  function goLL(){var n=$('cr-ll-name').value.trim(),lv=segV('cr-ll-lv');if(!n){st('カード名を入れてください。','err');return;}
+    var t2=cardTy(n);if(t2==='mo'&&mode==='st'||t2&&t2!=='mo'&&mode==='mo'){st($('cr-ll-hint').textContent,'err');return;}
+    var cat=$('cr-ll-cat').value;if(lv!=='free'&&(!cat||cat==='__new'&&!$('cr-ll-newcat').value.trim())){st('分類を選ぶか、新しい分類の名前を入れてください。','err');return;}
+    $('ll-name').value=n;$('ll-level').value=lv;$('ll-type').value=mode==='mo'?'mo':(segV('cr-ll-ty')||'sp');
+    $('ll-cat').value=cat;fire($('ll-cat'));$('ll-newcat').value=$('cr-ll-newcat').value.trim();$('ll-sum').value=$('cr-ll-sum').value.trim();$('ll-after').checked=$('cr-ll-after').checked;
+    return send('ll-form','ll-st');}
+
+  /* --- 許可リスト --- */
+  function initAL(){$('cr-al-name').value='';$('cr-al-note').value='';seg('cr-al-kd','st');seg('cr-al-ok','ok');$('cr-al-hint').textContent='';}
+  $('cr-al-name').addEventListener('input',function(){var t=cardTy(this.value.trim());if(t){seg('cr-al-kd',t==='mo'?'mo':'st');$('cr-al-hint').textContent='📖 '+(t==='mo'?'モンスター':t==='tr'?'罠':'魔法')+'を自動で選びました。';}else $('cr-al-hint').textContent='';});
+  function goAL(){var n=$('cr-al-name').value.trim();if(!n){st('カード名を入れてください。','err');return;}
+    $('f-name').value=n;$(segV('cr-al-kd')==='mo'?'f-mo':'f-st').checked=true;$(segV('cr-al-ok')==='ng'?'f-ng':'f-ok').checked=true;$('f-note').value=$('cr-al-note').value.trim();
+    return send('add-form','f-status');}
+
+  /* --- 見直し候補 --- */
+  function initWL(){$('cr-wl-name').value='';$('cr-wl-why').value='';seg('cr-wl-to','');$('cr-wl-hint').textContent='';}
+  $('cr-wl-name').addEventListener('input',function(){$('wl-name').value=this.value.trim();fire($('wl-name'));setTimeout(function(){$('cr-wl-hint').textContent=$('wl-cur').textContent||'';},0);});
+  function goWL(){var n=$('cr-wl-name').value.trim(),to=segV('cr-wl-to');if(!n){st('カード名を入れてください。','err');return;}if(!to){st('変更後（予定）を選んでください。','err');return;}
+    $('wl-name').value=n;fire($('wl-name'));$('wl-to').value=to;fire($('wl-to'));$('wl-why').value=$('cr-wl-why').value.trim();
+    return send('wl-form','wl-st');}
+
+  /* --- デッキごとの規制 --- */
+  function rbRow(){var r=el('div','cr-row'),i=el('input','cr-card');i.type='text';i.maxLength=60;i.placeholder='カード名（読みでもOK）';i.autocomplete='off';
+    var s=el('select');[['lim','☝️ 制限'],['semi','✌️ 準制限'],['ban','❌ 禁止']].forEach(function(o){s.appendChild(new Option(o[1],o[0]));});
+    var x=el('button','','×');x.type='button';x.setAttribute('aria-label','この行を削除');x.addEventListener('click',function(){if($('cr-rb-rows').children.length>1)r.remove();else i.value='';});
+    r.appendChild(i);r.appendChild(s);r.appendChild(x);$('cr-rb-rows').appendChild(r);return r;}
+  $('cr-rb-add').addEventListener('click',function(){rbRow().querySelector('input').focus();});
+  function initRB(){$('cr-rb-rows').innerHTML='';rbRow();$('cr-rb-why').value='';if(Y.pick){var me=Y.app&&Y.app.pf&&Y.app.pf().name;Y.pick.set($('cr-rb-user'),me||'');}}
+  function goRB(){var u=$('cr-rb-user').value,t=$('cr-rb-theme').value;if(!u||!t||t==='__none'){st('使用者とデッキテーマを選んでください。','err');return;}
+    var cards=[].map.call($('cr-rb-rows').children,function(r){return [r.querySelector('input').value.trim(),r.querySelector('select').value];}).filter(function(c){return c[0];});
+    if(!cards.length&&!$('cr-rb-why').value.trim()){st('規制するカードか理由のどちらかを入れてください。','err');return;}
+    if(Y.pick){Y.pick.set($('rb-user'),u);Y.pick.set($('rb-theme'),t);}
+    var rows=$('rb-rows');rows.innerHTML='';(cards.length?cards:[['','lim']]).forEach(function(c){$('rb-addrow').click();var r=rows.lastElementChild;r.querySelector('input').value=c[0];r.querySelector('select').value=c[1];});
+    $('rb-reason').value=$('cr-rb-why').value.trim();
+    return send('rb-form','rb-status');}
+
+  /* --- 画面の行き来 --- */
+  [].forEach.call(M.querySelectorAll('.cr-m'),function(b){b.addEventListener('click',function(){var g=b.getAttribute('data-go');
+    if(g==='st'||g==='mo'){initLL(g);show('ll',g);}else{mode=g;if(g==='al')initAL();if(g==='wl')initWL();if(g==='rb')initRB();show(g,g);}
+    setTimeout(function(){var f=M.querySelector('.cr-pg:not([hidden]) input,.cr-pg:not([hidden]) select');if(f&&f.tagName==='INPUT')f.focus();},60);});});
+  $('cr-back').addEventListener('click',function(){show('menu');});
+  $('cr-x').addEventListener('click',close);$('cr-close').addEventListener('click',close);
+  M.addEventListener('click',function(e){if(e.target===M)close();});
+  $('cr-go').addEventListener('click',function(){var b=this,p=mode==='st'||mode==='mo'?goLL():mode==='al'?goAL():mode==='wl'?goWL():mode==='rb'?goRB():null;if(!p)return;
+    b.disabled=true;st('登録しています…');p.then(function(r){b.disabled=false;if(!r.ok){st(r.t,'err');return;}
+      lastSec=SEC[mode];$('cr-done').innerHTML='';$('cr-done').appendChild(el('b','','✅ 登録しました'));$('cr-done').appendChild(el('p','',r.t));show('done');});});
+  $('cr-again').addEventListener('click',function(){var m=mode;if(m==='st'||m==='mo'){initLL(m);show('ll',m);}else{if(m==='al')initAL();if(m==='wl')initWL();if(m==='rb')initRB();show(m,m);}});
+  $('cr-see').addEventListener('click',function(){close();if(lastSec){location.hash='#'+lastSec;}});
+  var ob=$('cr-open');if(ob)ob.addEventListener('click',open);
+  window.YGO_CR=open;
 })();
 </script>
 </body>
