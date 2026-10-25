@@ -1653,6 +1653,21 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
 .rng-fx.done .rng-stage::after{content:"";position:absolute;inset:-20%;border-radius:50%;background:radial-gradient(circle,rgba(255,226,140,.35),transparent 62%);animation:fxglow .8s ease-in-out infinite alternate;z-index:-1}
 @media (prefers-reduced-motion: reduce){.rng-fx.dice .rng-h::before,.rng-fx.done .rng-stage::after{animation:none}}
 .dv-play.on-board .lpc{display:none}
+/* カード盤：横長の行を縦に並べる */
+#bd-mine,.bd-opp .bd-grid{grid-template-columns:1fr!important;gap:10px}
+.bd-t:not(.bd-addt){display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nm nm" "sub vrow";align-items:center;column-gap:10px;row-gap:6px;padding:10px 12px;position:relative}
+.bd-t .nm{grid-area:nm;font-size:17px;word-break:normal;overflow-wrap:anywhere;padding-right:84px}
+.bd-t.opp .nm{padding-right:0}
+.bd-t .sub{grid-area:sub;font-size:12px;align-self:center}
+.bd-t .vrow{grid-area:vrow;margin:0;grid-template-columns:52px minmax(64px,auto) 52px;gap:6px}
+.bd-t .vrow .pm{height:50px}
+.bd-t .vrow .v b{font-size:38px}
+.bd-t .gone{position:absolute;top:8px;right:10px;min-height:32px;padding:0 10px;white-space:nowrap}
+.bd-t.opp{grid-template-areas:"nm vrow" "sub vrow"}
+.bd-t.opp .vrow{grid-template-columns:minmax(64px,auto)}
+.bd-addt{min-height:56px!important;flex-direction:row;gap:8px}
+.bd-addt b{font-size:26px}
+.ftabs i{position:static;display:inline-block;margin-left:6px;vertical-align:1px}
 </style>
 </head>
 <body>
@@ -5275,7 +5290,7 @@ select.pick{font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;bord
     mi.addEventListener('click',function(){if(c.v<=0)return;c.v--;save();if(c.k==='turn'&&c.v<=0)alertBox([c.msg||(c.n+'のカウントが0になりました（効果を処理してください）')],'⏰ '+c.n);});
     pl.addEventListener('click',function(){if(c.max&&c.v>=c.max){toast('上限（'+c.max+'）です');return;}c.v++;save();});
     row.appendChild(mi);row.appendChild(v);row.appendChild(pl);t.appendChild(row);
-    var gone=el('button','gone',done?'✅ 処理した（片付ける）':'💥 破壊・場を離れた');gone.type='button';
+    var gone=el('button','gone',done?'✅ 片付ける':'💥 破壊');gone.setAttribute('aria-label',done?c.n+'を片付ける':c.n+'が破壊された・場を離れた');gone.type='button';
     gone.addEventListener('click',function(){var L=list(),j=L.indexOf(c);if(j<0)return;L.splice(j,1);undoBuf={c:c,j:j};save();toastUndo('「'+c.n+'」を片付けました');});
     t.appendChild(gone);return t;}
   var undoBuf=null;
