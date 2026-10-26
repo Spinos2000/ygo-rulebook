@@ -1907,11 +1907,18 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
   Y.signOut=function(){return Y.auth?Y.auth.signOut():Promise.resolve();};
 
   /* 旧ページ（Claudeアーティファクト）と同じ呼び出し方で使えるようにする */
+  /* 使い終わった部屋の記録を片付ける：書き込んだ部屋をこのスマホに覚えておき、次に開いたときに自分の分を消す */
+  var RKEY='ygo-myrooms-v1',LOADT=Date.now();
+  function myRooms(){try{return JSON.parse(localStorage.getItem(RKEY))||{};}catch(e){return {};}}
+  function setRoom(uid,name,on){try{var m=myRooms(),k=uid+'|'+name;if(on)m[k]=Date.now();else delete m[k];localStorage.setItem(RKEY,JSON.stringify(m));}catch(e){}}
+  function cleanRooms(u){var m=myRooms(),keep=null;try{var d=JSON.parse(localStorage.getItem('ygo-duel-v1'));if(d&&d.phase==='play'&&d.linkKey)keep='ygo2-'+d.linkKey;}catch(e){}
+    Object.keys(m).forEach(function(k){var i=k.indexOf('|'),uid=k.slice(0,i),name=k.slice(i+1);if(uid!==u.uid||name===keep||m[k]>=LOADT)return;
+      Y.db.collection('rooms').doc(name).collection('peers').doc(uid).delete().then(function(){setRoom(uid,name,false);},function(){});});}
   function room(){
     return {join:function(name){
       var u=Y.user,col=Y.db.collection('rooms').doc(String(name)).collection('peers'),me=col.doc(u.uid);
       return Promise.resolve({
-        presence:function(p){return me.set({p:JSON.parse(JSON.stringify(p||{})),updatedAt:Date.now()});},
+        presence:function(p){setRoom(u.uid,String(name),true);return me.set({p:JSON.parse(JSON.stringify(p||{})),updatedAt:Date.now()});},
         onPeers:function(cb,err){
           return col.onSnapshot(function(s){
             var now=Date.now(),peers=[];
@@ -1920,10 +1927,11 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
             cb({peers:peers});
           },function(e){if(err)err(e);});
         },
-        leave:function(){return me.delete().catch(function(){});}
+        leave:function(){return me.delete().then(function(){setRoom(u.uid,String(name),false);}).catch(function(){});}
       });
     }};
   }
+  Y.ready.then(function(u){if(u&&Y.db)setTimeout(function(){cleanRooms(u);},1500);});
   function downloads(){
     return {save:function(o){
       var blob=new Blob([String(o.data)],{type:'application/json'}),a=document.createElement('a');
@@ -4299,6 +4307,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-10-26-room-clean',createdAt:1793002313274,text:'🧹 リンク対戦の途中でアプリを閉じたときなどに残る通信の記録を、次にサイトを開いたとき自動で片付けるように（操作は不要です）'},
       {id:'auto-2026-10-25-design',createdAt:1792899989907,text:'🎨 デザインを一新：3寮カラー×アメコミをそのままに、色・角の丸み・線と影・ボタンを整理して見やすく。下のメニューもすっきり'},
       {id:'auto-2026-10-25-cardreg',createdAt:1792899988907,text:'📋 ホームの一番上に「カード規制」ボタン。汎用魔法・罠／汎用モンスター／許可リスト／見直し候補／デッキごとの規制へ、選ぶだけでかんたんに登録できます'},
       {id:'auto-2026-10-25-turn',createdAt:1792899987907,text:'🏁 ターンの押し忘れ対策：ターンを終えた人が下の大きな「エンド」を押すと、相手のスマホが鳴って「あなたのターン！」。押し忘れっぽいときは確認、3分たつとボタンが光ります'},
