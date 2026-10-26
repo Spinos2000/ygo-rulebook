@@ -2733,6 +2733,10 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
       <div class="cat"><b>手札・デッキ破壊</b><div class="cards"><span class="card tr">死のデッキ破壊ウイルス</span><span class="card tr">ダスト・シュート</span><span class="card tr">マインドクラッシュ</span></div></div>
       <div class="cat"><b>バーン</b><div class="cards"><span class="card tr">連鎖爆撃</span><span class="card tr">停戦協定</span></div></div></div>
   </div>
+  <div class="tier t-semi">
+    <div class="tier-h"><h3>✌️ 準制限（2枚まで・0枚）</h3><p>2枚まで使えます</p></div>
+    <div class="cats"></div>
+  </div>
   <p class="ll-note" id="ll-note" hidden>🆕 ＝あとから追加・変更されたカード</p>
   <form class="ll-form" id="ll-form" hidden>
     <b>✏️ 規制リストに追加・変更（ルール管理者のみ）</b>
@@ -2740,7 +2744,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     <label for="ll-name">カード名<input type="text" id="ll-name" maxlength="60" placeholder="例：サイクロン" autocomplete="off"></label>
     <p class="note" id="ll-hint" role="status"></p>
     <div class="ll-row">
-      <label for="ll-level">規制<select id="ll-level"><option value="lim">☝️ 制限（1枚まで）</option><option value="ban">❌ 禁止</option><option value="out">⛔ 完全使用不可</option><option value="semi">✌️ 準制限（2枚まで・モンスターのみ）</option><option value="free">🔓 リストから外す（無制限に）</option></select></label>
+      <label for="ll-level">規制<select id="ll-level"><option value="lim">☝️ 制限（1枚まで）</option><option value="ban">❌ 禁止</option><option value="out">⛔ 完全使用不可</option><option value="semi">✌️ 準制限（2枚まで）</option><option value="free">🔓 リストから外す（無制限に）</option></select></label>
       <label for="ll-type">種類<select id="ll-type"><option value="sp">魔法</option><option value="tr">罠</option><option value="mo">モンスター（汎用モンスター規制リストへ）</option></select></label>
     </div>
     <label for="ll-cat">分類<select id="ll-cat"></select></label>
@@ -3012,7 +3016,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     <div class="cr-pg" data-pg="menu">
       <p class="cr-q">どの規制に登録しますか？</p>
       <div class="cr-menu" id="cr-menu">
-        <button type="button" class="cr-m st" data-go="st"><span>🪄</span><b>汎用 魔法・罠</b><small>禁止・制限（全デッキ共通）</small><i></i></button>
+        <button type="button" class="cr-m st" data-go="st"><span>🪄</span><b>汎用 魔法・罠</b><small>禁止・制限・準制限（全デッキ共通）</small><i></i></button>
         <button type="button" class="cr-m mo" data-go="mo"><span>👾</span><b>汎用 モンスター</b><small>準制限・制限・完全使用不可</small><i></i></button>
         <button type="button" class="cr-m al" data-go="al"><span>✅</span><b>許可リスト</b><small>GX以降の汎用カードを使えるか</small><i></i></button>
         <button type="button" class="cr-m wl" data-go="wl"><span>👀</span><b>見直し候補</b><small>今後の規制緩和・規制強化の予定</small><i></i></button>
@@ -4307,6 +4311,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-10-26-st-semi',createdAt:1793002587083,text:'✌️ 汎用魔法・罠にも「準制限（2枚まで）」を設定できるように。規制リストに準制限の段を追加しました'},
       {id:'auto-2026-10-26-room-clean',createdAt:1793002313274,text:'🧹 リンク対戦の途中でアプリを閉じたときなどに残る通信の記録を、次にサイトを開いたとき自動で片付けるように（操作は不要です）'},
       {id:'auto-2026-10-25-design',createdAt:1792899989907,text:'🎨 デザインを一新：3寮カラー×アメコミをそのままに、色・角の丸み・線と影・ボタンを整理して見やすく。下のメニューもすっきり'},
       {id:'auto-2026-10-25-cardreg',createdAt:1792899988907,text:'📋 ホームの一番上に「カード規制」ボタン。汎用魔法・罠／汎用モンスター／許可リスト／見直し候補／デッキごとの規制へ、選ぶだけでかんたんに登録できます'},
@@ -4802,8 +4807,8 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
   function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
   function key(t){return String(t||'').normalize('NFKC').replace(/[\s　]+/g,'').replace(/[－−‐-]/g,'-').toLowerCase();}
   var Y=window.YGO,sec=$('list'),msec=$('mlist');if(!sec||!msec)return;
-  var TIER={'st:out':sec.querySelector('.t-out'),'st:ban':sec.querySelector('.t-ban'),'st:lim':sec.querySelector('.t-lim'),'mo:out':msec.querySelector('.t-out'),'mo:lim':msec.querySelector('.t-lim'),'mo:semi':msec.querySelector('.t-semi')};
-  function tk(d){var part=d.type==='mo'?'mo':'st',lv=d.level;if(part==='mo'&&lv==='ban')lv='out';if(part==='st'&&lv==='semi')lv='lim';return part+':'+lv;}
+  var TIER={'st:out':sec.querySelector('.t-out'),'st:ban':sec.querySelector('.t-ban'),'st:lim':sec.querySelector('.t-lim'),'st:semi':sec.querySelector('.t-semi'),'mo:out':msec.querySelector('.t-out'),'mo:lim':msec.querySelector('.t-lim'),'mo:semi':msec.querySelector('.t-semi')};
+  function tk(d){var part=d.type==='mo'?'mo':'st',lv=d.level;if(part==='mo'&&lv==='ban')lv='out';return part+':'+lv;}
   var LVN={out:'完全使用不可',ban:'禁止',lim:'制限',semi:'準制限',free:'リストから外す'};
   /* よく使われる汎用魔法・罠の辞書（名前から種類と分類を自動入力） */
   var DICT=window.YGO_DICT={"ブラック・ホール": ["sp", "全体除去"], "ライトニング・ボルテックス": ["sp", "全体除去"], "サンダー・ボルト": ["sp", "全体除去"], "激流葬": ["tr", "全体除去"], "聖なるバリア －ミラーフォース－": ["tr", "全体除去"], "地砕き": ["sp", "単体除去"], "地割れ": ["sp", "単体除去"], "シールドクラッシュ": ["sp", "単体除去"], "抹殺の使徒": ["sp", "単体除去"], "死者への手向け": ["sp", "単体除去"], "奈落の落とし穴": ["tr", "単体除去"], "落とし穴": ["tr", "単体除去"], "炸裂装甲": ["tr", "単体除去"], "次元幽閉": ["tr", "単体除去"], "万能地雷グレイモヤ": ["tr", "単体除去"], "破壊輪": ["tr", "単体除去"], "底なし落とし穴": ["tr", "単体除去"], "強制脱出装置": ["tr", "単体除去"], "サイクロン": ["sp", "魔法・罠除去"], "大嵐": ["sp", "魔法・罠除去"], "ハーピィの羽根帚": ["sp", "魔法・罠除去"], "砂塵の大竜巻": ["tr", "魔法・罠除去"], "撲滅の使徒": ["sp", "魔法・罠除去"], "魔法除去": ["sp", "魔法・罠除去"], "ハリケーン": ["sp", "魔法・罠除去"], "ナイト・ショット": ["tr", "魔法・罠除去"], "ツインツイスター": ["sp", "魔法・罠除去"], "コズミック・サイクロン": ["sp", "魔法・罠除去"], "神の宣告": ["tr", "カウンター罠"], "神の警告": ["tr", "カウンター罠"], "神の通告": ["tr", "カウンター罠"], "魔宮の賄賂": ["tr", "カウンター罠"], "天罰": ["tr", "カウンター罠"], "盗賊の七つ道具": ["tr", "カウンター罠"], "強欲な壺": ["sp", "ドロー"], "天使の施し": ["sp", "ドロー"], "成金ゴブリン": ["sp", "ドロー"], "打ち出の小槌": ["sp", "ドロー"], "手札抹殺": ["sp", "ドロー"], "貪欲な壺": ["sp", "ドロー"], "一時休戦": ["sp", "ドロー"], "凡骨の意地": ["sp", "ドロー"], "無謀な欲張り": ["tr", "ドロー"], "八汰烏の骸": ["tr", "ドロー"], "ゴブリンのやりくり上手": ["tr", "ドロー"], "強欲で謙虚な壺": ["sp", "ドロー"], "増援": ["sp", "サーチ"], "封印の黄金櫃": ["sp", "サーチ"], "苦渋の選択": ["sp", "サーチ"], "テラ・フォーミング": ["sp", "サーチ"], "光の援軍": ["sp", "サーチ"], "おろかな埋葬": ["sp", "墓地操作"], "死者蘇生": ["sp", "蘇生"], "早すぎた埋葬": ["sp", "蘇生"], "リビングデッドの呼び声": ["tr", "蘇生"], "次元融合": ["sp", "蘇生・帰還"], "超融合": ["sp", "召喚補助"], "未来融合－フューチャー・フュージョン": ["sp", "召喚補助"], "血の代償": ["tr", "召喚補助"], "心変わり": ["sp", "コントロール奪取"], "強奪": ["sp", "コントロール奪取"], "洗脳－ブレインコントロール": ["sp", "コントロール奪取"], "精神操作": ["sp", "コントロール奪取"], "光の護封剣": ["sp", "攻撃の防御"], "闇の護封剣": ["sp", "攻撃の防御"], "威嚇する咆哮": ["tr", "攻撃の防御"], "和睦の使者": ["tr", "攻撃の防御"], "攻撃の無力化": ["tr", "攻撃の防御"], "魔法の筒": ["tr", "攻撃の防御"], "王宮のお触れ": ["tr", "ロック"], "スキルドレイン": ["tr", "ロック"], "平和の使者": ["sp", "ロック"], "グラヴィティ・バインド－超重力の網－": ["tr", "ロック"], "レベル制限B地区": ["sp", "ロック"], "生贄封じの仮面": ["tr", "ロック"], "魔封じの芳香": ["sp", "ロック"], "禁じられた聖杯": ["sp", "効果無効"], "我が身を盾に": ["tr", "効果無効"], "墓穴の指名者": ["sp", "効果無効"], "抹殺の指名者": ["sp", "効果無効"], "月の書": ["sp", "妨害"], "収縮": ["sp", "強化"], "突進": ["sp", "強化"], "団結の力": ["sp", "強化"], "魔導師の力": ["sp", "強化"], "リミッター解除": ["sp", "強化"], "悪夢の蜃気楼": ["sp", "ドロー"], "第六感": ["tr", "ドロー"], "押収": ["sp", "手札・デッキ破壊"], "強引な番兵": ["sp", "手札・デッキ破壊"], "いたずら好きな双子悪魔": ["sp", "手札・デッキ破壊"], "突然変異": ["sp", "召喚補助"], "遺言状": ["sp", "召喚補助"], "現世と冥界の逆転": ["tr", "墓地操作"], "王宮の勅命": ["tr", "ロック"], "刻の封印": ["tr", "ロック"], "王家の神殿": ["tr", "その他"], "蝶の短剣－エルマ": ["sp", "その他"], "ラストバトル！": ["sp", "その他"], "高等儀式術": ["sp", "召喚補助"], "オーバーロード・フュージョン": ["sp", "召喚補助"], "魔法石の採掘": ["sp", "墓地操作"], "転生の予言": ["tr", "墓地操作"], "スケープ・ゴート": ["sp", "攻撃の防御"], "光の護封壁": ["tr", "攻撃の防御"], "おジャマトリオ": ["tr", "ロック"], "巨大化": ["sp", "強化"], "死のデッキ破壊ウイルス": ["tr", "手札・デッキ破壊"], "ダスト・シュート": ["tr", "手札・デッキ破壊"], "マインドクラッシュ": ["tr", "手札・デッキ破壊"], "連鎖爆撃": ["tr", "バーン"], "停戦協定": ["tr", "バーン"], "キラー・トマト": ["mo", "サーチ・展開"], "巨大ネズミ": ["mo", "サーチ・展開"], "ピラミッド・タートル": ["mo", "サーチ・展開"], "カオス・ソルジャー －開闢の使者－": ["mo", "切り札"], "混沌帝龍 －終焉の使者－": ["mo", "切り札"], "カオス・ソーサラー": ["mo", "切り札"], "ヴィクトリー・ドラゴン": ["mo", "切り札"], "魔導戦士 ブレイカー": ["mo", "除去・妨害"], "同族感染ウィルス": ["mo", "除去・妨害"], "サウザンド・アイズ・サクリファイス": ["mo", "除去・妨害"], "異次元の女戦士": ["mo", "除去・妨害"], "深淵の暗殺者": ["mo", "除去・妨害"], "風帝ライザー": ["mo", "除去・妨害"], "スナイプストーカー": ["mo", "除去・妨害"], "魂を削る死霊": ["mo", "除去・妨害"], "黒き森のウィッチ": ["mo", "サーチ・展開"], "聖なる魔術師": ["mo", "サーチ・展開"], "魔導サイエンティスト": ["mo", "サーチ・展開"], "デビル・フランケン": ["mo", "サーチ・展開"], "キラー・スネーク": ["mo", "サーチ・展開"], "処刑人-マキュラ": ["mo", "サーチ・展開"], "クリッター": ["mo", "サーチ・展開"], "ダンディライオン": ["mo", "サーチ・展開"], "黄泉ガエル": ["mo", "サーチ・展開"], "冥府の使者ゴーズ": ["mo", "サーチ・展開"], "森の番人グリーン・バブーン": ["mo", "サーチ・展開"], "ドル・ドラ": ["mo", "サーチ・展開"], "サイバーポッド": ["mo", "リバース・ドロー"], "ファイバーポッド": ["mo", "リバース・ドロー"], "八汰烏": ["mo", "ロック"], "月読命": ["mo", "ロック"], "カードガンナー": ["mo", "ドロー・回収"], "メタモルポット": ["mo", "ドロー・回収"], "混沌の黒魔術師": ["mo", "ドロー・回収"], "マシュマロン": ["mo", "壁"], "暗黒のマンティコア": ["mo", "展開・妨害"], "ネクロフェイス": ["mo", "展開・妨害"], "光と闇の竜": ["mo", "展開・妨害"]};
@@ -4829,7 +4834,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
       var c=el('span','card '+(d.type==='tr'?'tr':d.type==='mo'?'mo':'sp')+' dyn');c.appendChild(document.createTextNode(String(d.name)+' '));
       if(d.after){c.appendChild(el('span','after','後'));}c.appendChild(el('span','nw','🆕'));
       catBox(tkey,String(d.cat||'その他')).appendChild(c);});
-    Object.keys(TIER).forEach(function(l){var n=[].filter.call(TIER[l].querySelectorAll('.card'),function(c){return !c.hidden;}).length;heads[l].el.textContent=heads[l].text.replace(/(\d+)枚）\s*$/,n+'枚）');});
+    Object.keys(TIER).forEach(function(l){var n=[].filter.call(TIER[l].querySelectorAll('.card'),function(c){return !c.hidden;}).length;heads[l].el.textContent=heads[l].text.replace(/(\d+)枚）\s*$/,n+'枚）');TIER[l].hidden=n===0;});
     [].forEach.call(document.querySelectorAll('#list .cat,#mlist .cat'),function(c){c.hidden=![].some.call(c.querySelectorAll('.card'),function(x){return !x.hidden;});});
     $('ll-note').hidden=!docs.length;
     var hist=$('ll-hist');hist.innerHTML='';
@@ -4864,7 +4869,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     var doc={from:prevK,name:n.slice(0,60),level:lv,type:$('ll-type').value,cat:(cat||'').slice(0,20),after:$('ll-after').checked,sum:$('ll-sum').value.trim().slice(0,200),addedAt:Date.now()};
     $('ll-btn').disabled=true;st.className='status';st.textContent='反映しています…';
     col.add(doc).then(function(){
-      var RK={free:0,semi:1,lim:2,ban:3,out:4},LB={free:'無制限',semi:'準制限',lim:'制限',ban:'禁止',out:'完全使用不可'},to=lv;if(doc.type==='mo'&&to==='ban')to='out';if(doc.type!=='mo'&&to==='semi')to='lim';
+      var RK={free:0,semi:1,lim:2,ban:3,out:4},LB={free:'無制限',semi:'準制限',lim:'制限',ban:'禁止',out:'完全使用不可'},to=lv;if(doc.type==='mo'&&to==='ban')to='out';
       var dir=RK[to]<RK[prevK]?'🔓 規制緩和':RK[to]>RK[prevK]?'🔒 規制強化':'📝 規制リストの分類を変更';doc.dir=dir;
       var txt=dir+'：「'+n+'」'+(RK[to]===RK[prevK]?'（'+LB[to]+'・'+doc.cat+'）':LB[prevK]+' → '+LB[to]+(lv!=='free'?'（'+doc.cat+'）':''));
       return Y.db.collection('changelog').add({text:txt,createdAt:Date.now()});
@@ -5016,7 +5021,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     if(window.YGO_LL&&window.YGO_LL.owner()){adm.hidden=false;var ty=c.classList.contains('mo')?'mo':'st';
       adm.appendChild(Object.assign(document.createElement('b'),{textContent:'🛠️ 管理者：この規制を設定し直す'}));
       var row=document.createElement('div');row.className='cp-adm-row';var sel=document.createElement('select');
-      (ty==='mo'?[['out','⛔ 完全使用不可'],['lim','☝️ 制限'],['semi','✌️ 準制限'],['free','🔓 リストから外す']]:[['out','⛔ 完全使用不可'],['ban','❌ 禁止'],['lim','☝️ 制限'],['free','🔓 リストから外す']]).forEach(function(o){var op=document.createElement('option');op.value=o[0];op.textContent=o[1];sel.appendChild(op);});
+      (ty==='mo'?[['out','⛔ 完全使用不可'],['lim','☝️ 制限'],['semi','✌️ 準制限'],['free','🔓 リストから外す']]:[['out','⛔ 完全使用不可'],['ban','❌ 禁止'],['lim','☝️ 制限'],['semi','✌️ 準制限'],['free','🔓 リストから外す']]).forEach(function(o){var op=document.createElement('option');op.value=o[0];op.textContent=o[1];sel.appendChild(op);});
       var curK=tier?(tier.classList.contains('t-out')?'out':tier.classList.contains('t-ban')?'ban':tier.classList.contains('t-semi')?'semi':'lim'):'lim';sel.value=curK;
       var go=document.createElement('button');go.type='button';go.className='btn-sub';go.textContent='この規制にする';
       go.addEventListener('click',function(){if(sel.value===curK){go.textContent='いまと同じです';setTimeout(function(){go.textContent='この規制にする';},1500);return;}go.disabled=true;window.YGO_LL.set(n,sel.value);setTimeout(close,300);});
@@ -5403,7 +5408,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
   function items(max){var out=[];
     /* 規制リストの変更：前の規制と比べて「規制強化」「規制緩和」を判定 */
     var prev={};DATA.ll.slice().sort(function(a,b){return (a.addedAt||0)-(b.addedAt||0);}).forEach(function(d){var k=nm(d.name);var to=d.level==='free'?'free':d.level;var sl=staticLv(d.name);var from=prev[k]||(d.from&&d.from in RANK?d.from:(sl!==to?sl:'free'));
-      if(d.type==='mo'&&to==='ban')to='out';if(d.type!=='mo'&&to==='semi')to='lim';prev[k]=to;if(!(to in RANK))return;
+      if(d.type==='mo'&&to==='ban')to='out';prev[k]=to;if(!(to in RANK))return;
       var dir=RANK[to]<RANK[from]?'up':RANK[to]>RANK[from]?'down':'same';
       var head=dir==='up'?'🔓 規制緩和':dir==='down'?'🔒 規制強化':'📝 規制リスト';var body='「'+d.name+'」'+(dir==='same'?'の分類を変更（'+LV[to]+'）':LV[from]+' → '+LV[to]);
       out.push({t:d.addedAt||0,h:head,b:body,cls:dir,go:d.type==='mo'?'mlist':'list',card:d.name});});
@@ -5746,8 +5751,8 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
   function send(formId,stId){var s=$(stId);s.className='status';s.textContent='';var f=$(formId);if(f.requestSubmit)f.requestSubmit();else f.dispatchEvent(new Event('submit',{cancelable:true}));return waitSt(stId);}
 
   /* --- 汎用 魔法・罠／モンスター --- */
-  var LV={st:[['lim','☝️ 制限'],['ban','❌ 禁止'],['free','🔓 外す']],mo:[['semi','✌️ 準制限'],['lim','☝️ 制限'],['out','⛔ 使用不可'],['free','🔓 外す']]};
-  function initLL(m){var b=$('cr-ll-lv');b.innerHTML='';b.className='cr-seg'+(m==='mo'?' four':'');LV[m].forEach(function(x){var e=el('button','',x[1]);e.type='button';e.setAttribute('data-v',x[0]);b.appendChild(e);});seg('cr-ll-lv',m==='mo'?'lim':'lim');
+  var LV={st:[['semi','✌️ 準制限'],['lim','☝️ 制限'],['ban','❌ 禁止'],['free','🔓 外す']],mo:[['semi','✌️ 準制限'],['lim','☝️ 制限'],['out','⛔ 使用不可'],['free','🔓 外す']]};
+  function initLL(m){var b=$('cr-ll-lv');b.innerHTML='';b.className='cr-seg four';LV[m].forEach(function(x){var e=el('button','',x[1]);e.type='button';e.setAttribute('data-v',x[0]);b.appendChild(e);});seg('cr-ll-lv',m==='mo'?'lim':'lim');
     $('cr-ll-ty-w').hidden=m==='mo';seg('cr-ll-ty','sp');$('cr-ll-name').value='';$('cr-ll-sum').value='';$('cr-ll-after').checked=false;$('cr-ll-hint').textContent='';copyCats('');}
   function copyCats(v){var s=$('cr-ll-cat'),src=$('ll-cat');s.innerHTML=src?src.innerHTML:'';if(![].some.call(s.options,function(o){return o.value==='__new';}))s.appendChild(new Option('＋ 新しい分類…','__new'));s.value=v||s.value;$('cr-ll-newcat-w').hidden=s.value!=='__new';}
   $('cr-ll-cat').addEventListener('change',function(){$('cr-ll-newcat-w').hidden=this.value!=='__new';});
