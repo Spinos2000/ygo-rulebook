@@ -1853,6 +1853,8 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
 .cr-in{border-radius:20px 20px 0 0!important}
 .cr-m{box-shadow:var(--sh)!important}
 .cr-m:disabled{box-shadow:none!important}
+.dv-play .adds{grid-template-columns:repeat(5,1fr)!important;gap:5px!important}
+.dv-play .adds button{font-size:14px!important;padding:0 2px}
 </style>
 </head>
 <body>
@@ -3239,7 +3241,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     <div class="calc">
       <div class="amt"><output id="amt">0</output><button type="button" id="amt-c" aria-label="入力を消す">C</button></div>
       <div class="adds">
-        <button type="button" data-a="100">+100</button><button type="button" data-a="500">+500</button><button type="button" data-a="1000">+1000</button><button type="button" data-a="2000">+2000</button>
+        <button type="button" data-a="50">+50</button><button type="button" data-a="100">+100</button><button type="button" data-a="500">+500</button><button type="button" data-a="1000">+1000</button><button type="button" data-a="2000">+2000</button>
       </div>
       <div class="apply"><button type="button" class="dmg" id="dmg-btn">💥 ダメージ −</button><button type="button" class="hel" id="heal-btn">💚 回復</button></div>
     </div>
@@ -4311,6 +4313,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-11-01-plus50',createdAt:1793536832446,text:'🧮 電卓に「+50」を追加。50単位のダメージや回復も入力できるようになりました'},
       {id:'auto-2026-10-26-st-semi',createdAt:1793002587083,text:'✌️ 汎用魔法・罠にも「準制限（2枚まで）」を設定できるように。規制リストに準制限の段を追加しました'},
       {id:'auto-2026-10-26-room-clean',createdAt:1793002313274,text:'🧹 リンク対戦の途中でアプリを閉じたときなどに残る通信の記録を、次にサイトを開いたとき自動で片付けるように（操作は不要です）'},
       {id:'auto-2026-10-25-design',createdAt:1792899989907,text:'🎨 デザインを一新：3寮カラー×アメコミをそのままに、色・角の丸み・線と影・ボタンを整理して見やすく。下のメニューもすっきり'},
