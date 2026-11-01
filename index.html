@@ -1855,6 +1855,33 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
 .cr-m:disabled{box-shadow:none!important}
 .dv-play .adds{grid-template-columns:repeat(5,1fr)!important;gap:5px!important}
 .dv-play .adds button{font-size:14px!important;padding:0 2px}
+/* ===== デッキの回し方 ===== */
+.gd{position:fixed;inset:0;z-index:70;background:color-mix(in srgb,#1b2235 55%,transparent);display:flex;align-items:flex-end;justify-content:center}
+.gd[hidden]{display:none}
+.gd-in{width:100%;max-width:520px;max-height:94vh;overflow-y:auto;background:var(--bg);color:var(--ink);border:2px solid var(--edge);border-bottom:0;border-radius:20px 20px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
+.gd-head{gap:8px}.gd-head b{flex:1;min-width:0;overflow-wrap:anywhere}
+.gd-head .x[hidden]{display:none}
+.gd-body{display:flex;flex-direction:column;gap:12px}
+.gd-body .note{margin:0}
+.gd-q{font:inherit;font-size:16px;padding:10px 12px;border:2px solid var(--line);background:var(--surface);color:var(--ink)}
+.gd-list{display:flex;flex-direction:column;gap:8px}
+.gd-row{display:flex;align-items:center;gap:10px;font:inherit;text-align:left;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:10px 12px;cursor:pointer;min-height:54px}
+.gd-row.has{border:2px solid var(--edge);box-shadow:var(--sh)}
+.gd-rt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.4}
+.gd-rt b{font-size:15px;overflow-wrap:anywhere}
+.gd-rt small{font-size:12px;color:var(--muted)}
+.gd-row i{font-style:normal;font-size:12px;font-weight:900;color:var(--obelisk);white-space:nowrap}
+.gd-row:not(.has) i{color:var(--muted)}
+.gd-who{margin:0;font-size:13px;font-weight:700;color:var(--muted)}
+.gd-empty{background:var(--surface2);border-radius:12px;padding:16px;font-size:14px;color:var(--muted)}
+.gd-sec{background:var(--surface);border:2px solid var(--edge);border-radius:16px;box-shadow:var(--sh);padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.gd-sec b{font-family:var(--display);font-size:15px;color:var(--obelisk)}
+.gd-sec p{margin:0;white-space:pre-wrap;font-size:15px;line-height:1.8}
+.gd-edit{margin-top:4px}
+.gd-chip,.gd-ow{font:inherit;cursor:pointer}
+.gd-chip.has{border-color:var(--obelisk)!important;color:var(--obelisk)}
+.topbar .tb.gd-btn{height:36px;font-size:13px!important;padding:0 10px!important;border:2px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);margin-left:auto}
+.topbar .gd-btn + .tb.end{margin-left:0!important}
 </style>
 </head>
 <body>
@@ -2158,6 +2185,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
   <label class="field" for="ow-q">🔎 名前・テーマで検索<input type="search" id="ow-q" placeholder="例：ドラゴン、やまだ"></label>
   <div class="ow-list" id="ow-list"></div>
 
+  <p class="note">📖 テーマを押すと、そのデッキの<strong>回し方</strong>が読めます（書くのは「⚙️ アカウント設定」のテーマ横の「📖 回し方」から）。</p>
   <p class="note">➕ ログインして「👤 プロフィール」にテーマを保存すると、ここに<strong>自動で載ります</strong>。</p>
 </section>
 
@@ -3077,6 +3105,12 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     <button type="button" class="start-btn cr-go" id="cr-go" hidden>登録する</button>
   </div>
 </div>
+<div class="gd" id="gd" hidden role="dialog" aria-modal="true" aria-label="デッキの回し方">
+  <div class="gd-in">
+    <div class="dv-head gd-head"><button type="button" class="x" id="gd-back" aria-label="戻る" hidden>‹</button><b id="gd-title">📖 デッキの回し方</b><button type="button" class="x" id="gd-x" aria-label="閉じる">✕</button></div>
+    <div class="gd-body" id="gd-body"></div>
+  </div>
+</div>
 <div class="inv-ban" id="inv-ban" hidden role="alertdialog" aria-live="assertive"><b id="inv-ban-t">対戦の招待</b><div><button type="button" id="inv-ok">⚔️ 受ける</button><button type="button" id="inv-no">ことわる</button></div></div>
 <div class="duel" id="duel" hidden role="dialog" aria-modal="true" aria-label="デュエル">
 
@@ -3198,6 +3232,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
   <div class="dv dv-play" id="dv-play" hidden>
     <div class="topbar">
       <button type="button" class="sync-pill" id="link-dot" aria-label="同期の状態"><i></i><span id="sync-l">ひとりで使用中</span></button>
+      <button type="button" class="tb gd-btn" id="gd-open" aria-label="デッキの回し方を見る">📖 回し方</button>
       <button type="button" class="tb end" id="end-btn">🏁 終了</button>
     </div>
 
@@ -3430,7 +3465,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
       kb.addEventListener('click',function(){if(draft.kinds[t]==='ryu')delete draft.kinds[t];else draft.kinds[t]='ryu';renderThemes();markDirty();});tag.appendChild(kb);
       var x=el('button','','×');x.type='button';x.setAttribute('aria-label',t+'を削除');
       x.addEventListener('click',function(){if(!x.classList.contains('confirm')){x.classList.add('confirm');setTimeout(function(){x.classList.remove('confirm');},3000);return;}draft.themes.splice(i,1);delete draft.kinds[t];renderThemes();markDirty();});
-      var cn=(draft.ctr&&draft.ctr[t]||[]).length,cb=el('button','ctr-tb'+(cn?' on':''),cn?'🔢 '+cn:'🔢 なし');cb.type='button';cb.title='このデッキで使うカウンター';cb.addEventListener('click',function(){openCtr(t);});tag.appendChild(cb);
+      var cn=(draft.ctr&&draft.ctr[t]||[]).length,cb=el('button','ctr-tb'+(cn?' on':''),cn?'🔢 '+cn:'🔢 なし');cb.type='button';cb.title='このデッキで使うカウンター';cb.addEventListener('click',function(){openCtr(t);});tag.appendChild(cb);var gb=el('button','ctr-tb gd-tb','📖 回し方');gb.type='button';gb.title='このデッキの回し方を書く';gb.addEventListener('click',function(){if(window.YGO_GUIDE)YGO_GUIDE.edit(t);});tag.appendChild(gb);
       tag.appendChild(x);box.appendChild(tag);});
     renderCtrEdit();
   }
@@ -4227,6 +4262,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
   $('ow-tab-p').addEventListener('click',function(){setTab('p');});
   $('ow-tab-t').addEventListener('click',function(){setTab('t');});
   q.addEventListener('input',render);
+  document.addEventListener('ygo:data',function(){if(rows.length)render();});
   function render(){
     var f=key(q.value);listEl.innerHTML='';
     if(!rows.length){msg(owner?'まだ登録がありません。下のフォームから登録できます。':'まだ登録がありません。');return;}
@@ -4236,7 +4272,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
       rows.forEach(function(r){
         var themes=(r.themes||[]);if(f&&key(r.name).indexOf(f)<0&&!themes.some(function(t){return key(t).indexOf(f)>=0;}))return;shown++;
         var card=el('div','ow-card');var top=el('div','ow-top');top.appendChild(el('b','','👤 '+r.name));top.appendChild(el('span','note',themes.length+'テーマ'+(r.ach?'　🏆'+r.ach:'')));card.appendChild(top);
-        var box=el('div','ow-themes');themes.forEach(function(t){var dup=count[key(t)]>1;var c=el('span','ow-t'+(dup?' dup':''),t+(dup?' ⚠️':''));if(dup)c.title='他の人も使っています';if(r.kinds&&r.kinds[t]==='ryu'){c.appendChild(document.createTextNode(' '));c.appendChild(el('span','ryu','🌏 留学生'));}box.appendChild(c);});card.appendChild(box);
+        var box=el('div','ow-themes');themes.forEach(function(t){var dup=count[key(t)]>1;var hb=window.YGO_GUIDE&&YGO_GUIDE.has(r.id,t);var c=el('button','ow-t gd-ow'+(dup?' dup':''),(hb?'📖 ':'')+t+(dup?' ⚠️':''));c.type='button';c.addEventListener('click',function(){if(window.YGO_GUIDE)YGO_GUIDE.view(r.id,t);});if(dup)c.title='他の人も使っています';if(r.kinds&&r.kinds[t]==='ryu'){c.appendChild(document.createTextNode(' '));c.appendChild(el('span','ryu','🌏 留学生'));}box.appendChild(c);});card.appendChild(box);
         if(false){var acts=el('div','ow-acts');var ed=el('button','del','編集');ed.type='button';ed.addEventListener('click',function(){$('ow-name').value=r.name;$('ow-themes').value=themes.join('、');$('ow-form').scrollIntoView({behavior:'smooth',block:'center'});});
           var dl=el('button','del','削除');dl.type='button';dl.addEventListener('click',function(){if(!dl.classList.contains('confirm')){dl.classList.add('confirm');dl.textContent='本当に削除';setTimeout(function(){dl.classList.remove('confirm');dl.textContent='削除';},4000);return;}col.doc(r.id).delete().catch(function(){});});
           acts.appendChild(ed);acts.appendChild(dl);card.appendChild(acts);}
@@ -4313,6 +4349,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-11-01-deck-guide',createdAt:1793538065885,text:'📖 デッキの「回し方」を書けるように（アカウント設定のテーマ横「📖 回し方」）。人のデッキを借りるときは、プレイヤー・テーマ一覧・デュエル中の「📖 回し方」から読めます'},
       {id:'auto-2026-11-01-plus50',createdAt:1793536832446,text:'🧮 電卓に「+50」を追加。50単位のダメージや回復も入力できるようになりました'},
       {id:'auto-2026-10-26-st-semi',createdAt:1793002587083,text:'✌️ 汎用魔法・罠にも「準制限（2枚まで）」を設定できるように。規制リストに準制限の段を追加しました'},
       {id:'auto-2026-10-26-room-clean',createdAt:1793002313274,text:'🧹 リンク対戦の途中でアプリを閉じたときなどに残る通信の記録を、次にサイトを開いたとき自動で片付けるように（操作は不要です）'},
@@ -4661,7 +4698,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     if(!Y.db)return;
     Y.db.collection('reports').orderBy('createdAt','desc').onSnapshot(function(s){Y.reports=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
     if(!u)return;
-    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{}};});Y.members=m;fillLists();fire('ygo:data');},function(){});
+    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={guides:(x.guides&&typeof x.guides==='object')?x.guides:{},name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{}};});Y.members=m;fillLists();fire('ygo:data');},function(){});
     Y.db.collection('results').where('oppUid','==',u.uid).onSnapshot(function(s){Y.ratedMe=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
   });
 
@@ -5222,7 +5259,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     if(st>0)f.appendChild(document.createTextNode('…'));f.appendChild(document.createTextNode(text.slice(st,a)));f.appendChild(el('mark','',text.slice(a,z)));f.appendChild(document.createTextNode(text.slice(z,en)));if(en<text.length)f.appendChild(document.createTextNode('…'));return f;}
   function flash(n){if(!n)return;requestAnimationFrame(function(){siv.call(n,{block:'center',behavior:reduce?'auto':'smooth'});n.classList.add('hit-flash');setTimeout(function(){n.classList.remove('hit-flash');},2200);});}
   /* 候補の集め方 */
-  var FEAT=[{t:'⚔️ デュエルを始める',s:'ライフ計算・リンク対戦・先攻後攻の抽選',k:'デュエル 開始 始める ライフ 計算 リンク 対戦 抽選 先攻 後攻 コイン サイコロ',run:function(){go('life',{push:true});var d=$('duel-open');if(d)d.click();}}];
+  var FEAT=[{t:'📖 デッキの回し方',s:'人のデッキを借りて使うときの説明。自分のデッキの回し方も書ける',k:'回し方 デッキ 使い方 借りる 説明 コンボ 勝ち筋',run:function(){if(window.YGO_GUIDE)YGO_GUIDE.list();}},{t:'⚔️ デュエルを始める',s:'ライフ計算・リンク対戦・先攻後攻の抽選',k:'デュエル 開始 始める ライフ 計算 リンク 対戦 抽選 先攻 後攻 コイン サイコロ',run:function(){go('life',{push:true});var d=$('duel-open');if(d)d.click();}}];
   function collect(ws){var G={page:[],card:[],text:[]},listed={};
     FEAT.forEach(function(f){var m=hit(f.t+' '+f.k,ws);if(m)G.page.push({icon:'',title:f.t,sub:f.s,m:hit(f.t,ws),score:hit(f.t,ws)?2:1,run:f.run});});
     Object.keys(SEC).forEach(function(id){var s=$(id);if(!s||id==='home-hub'||(id==='admin'&&s.hidden))return;
@@ -5482,8 +5519,8 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     var h=el('div','pl-h'),t=el('b','','👤 '+m.name);if(sel===me())t.appendChild(el('span','pl-me','あなた'));h.appendChild(t);
     var x=el('button','del','✕ 閉じる');x.type='button';x.addEventListener('click',function(){sel=null;renderList();renderDetail();});h.appendChild(x);det.appendChild(h);
     var s1=el('div','pl-sec');s1.appendChild(el('h3','','🃏 使うデッキ'));var c1=el('div','pl-chips');
-    if(m.themes.length)m.themes.forEach(function(th){c1.appendChild(el('span','pl-chip',th+((m.kinds||{})[th]==='ryu'?'（🌏 留学生）':'（🏫 在校生）')));});else c1.appendChild(el('span','note','まだ登録がありません'));
-    s1.appendChild(c1);det.appendChild(s1);
+    if(m.themes.length)m.themes.forEach(function(th){(function(){var hb=window.YGO_GUIDE&&YGO_GUIDE.has(sel,th),cb2=el('button','pl-chip gd-chip'+(hb?' has':''),(hb?'📖 ':'')+th+((m.kinds||{})[th]==='ryu'?'（🌏 留学生）':'（🏫 在校生）'));cb2.type='button';cb2.title='回し方を見る';var su=sel;cb2.addEventListener('click',function(){if(window.YGO_GUIDE)YGO_GUIDE.view(su,th);});c1.appendChild(cb2);})();});else c1.appendChild(el('span','note','まだ登録がありません'));
+    s1.appendChild(c1);s1.appendChild(el('span','note','📖 テーマを押すと、デッキの回し方が読めます。'));det.appendChild(s1);
     var A=window.YGO_ACH||[],got=m.achAt||{},s2=el('div','pl-sec');s2.appendChild(el('h3','','🏆 実績 '+Object.keys(got).length+'/'+(A.length||30)));var c2=el('div','pl-chips');
     A.forEach(function(a){if(got[a[0]])c2.appendChild(el('span','pl-chip',a[1]+' '+a[2]));});if(!c2.children.length)c2.appendChild(el('span','note','まだ解除した実績はありません'));s2.appendChild(c2);det.appendChild(s2);
     if(sel!==me()){var v=vsData(sel),g=v.games,w=0,l=0,d=0;g.forEach(function(x){if(x.res==='win')w++;else if(x.res==='lose')l++;else d++;});
@@ -5815,6 +5852,68 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
   $('cr-see').addEventListener('click',function(){close();if(lastSec){location.hash='#'+lastSec;}});
   var ob=$('cr-open');if(ob)ob.addEventListener('click',open);
   window.YGO_CR=open;
+})();
+</script>
+<script>
+/* ===== デッキの回し方（テーマごとに持ち主が書き、だれでも読める。users/{uid}.guides に保存） ===== */
+(function(){
+  var Y=window.YGO;function $(i){return document.getElementById(i);}
+  function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;}
+  var M=$('gd');if(!M||!Y)return;
+  var F=[['win','🎯 勝ち筋（目指す形）','例：エースの〇〇を出して、△△で守りながら殴りきる'],
+         ['open','🃏 序盤の動き（1〜3ターン目）','例：1ターン目は□□をセット。手札に◇◇があれば先にサーチ'],
+         ['key','🔑 キーカードと使いどころ','例：〇〇は相手の伏せが2枚以上のときに使う'],
+         ['tip','⚠️ 注意点・よくあるミス','例：××は自分のモンスターも巻き込むので注意']];
+  var stack=[],cur=null;
+  function members(){return Y.members||{};}
+  function guideOf(uid,theme){var m=members()[uid];var g=m&&m.guides&&m.guides[theme];return g&&typeof g==='object'?g:null;}
+  function hasText(g){return !!(g&&F.some(function(f){return String(g[f[0]]||'').trim();}));}
+  function fmt(ms){try{return new Date(ms).toLocaleDateString('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'numeric',day:'numeric'});}catch(e){return '';}}
+  function me(){return Y.user&&Y.user.uid;}
+  function open(){M.hidden=false;document.documentElement.style.overflow='hidden';}
+  function close(){M.hidden=true;stack=[];cur=null;if(!document.querySelector('.duel:not([hidden])'))document.documentElement.style.overflow='';}
+  function show(view,push){if(push!==false&&cur)stack.push(cur);cur=view;$('gd-back').hidden=!stack.length;var b=$('gd-body');b.innerHTML='';M.querySelector('.gd-in').scrollTop=0;
+    if(view.k==='list')renderList(b);else if(view.k==='view')renderView(b,view.uid,view.t);else renderEdit(b,view.t);}
+  $('gd-back').addEventListener('click',function(){var v=stack.pop();if(v)show(v,false);});
+  $('gd-x').addEventListener('click',close);
+  M.addEventListener('click',function(e){if(e.target===M)close();});
+  /* 一覧（だれのどのテーマに回し方があるか） */
+  function renderList(b){$('gd-title').textContent='📖 デッキの回し方';
+    if(!Y.user){b.appendChild(el('p','note','🔑 ログインすると、メンバーのデッキの回し方が読めます。'));return;}
+    b.appendChild(el('p','note','人のデッキを借りて使うときに。テーマを押すと回し方が読めます。自分のテーマは「✏️ 書く」から書けます。'));
+    var q=el('input');q.type='search';q.placeholder='🔎 テーマ名・名前で探す';q.className='gd-q';b.appendChild(q);
+    var box=el('div','gd-list');b.appendChild(box);
+    function draw(){box.innerHTML='';var f=q.value.replace(/\s+/g,'').toLowerCase(),M2=members(),n=0;
+      var ids=Object.keys(M2).sort(function(a,b){return (a===me()?-1:b===me()?1:0)||String(M2[a].name).localeCompare(String(M2[b].name),'ja');});
+      ids.forEach(function(u){var m=M2[u];(m.themes||[]).forEach(function(t){if(f&&(t+m.name).replace(/\s+/g,'').toLowerCase().indexOf(f)<0)return;n++;
+        var g=guideOf(u,t),r=el('button','gd-row'+(hasText(g)?' has':''));r.type='button';
+        var tx=el('span','gd-rt');tx.appendChild(el('b','',t));tx.appendChild(el('small','',(u===me()?'👤 あなた':'👤 '+m.name)+(hasText(g)?'・'+fmt(g.at)+' 更新':'')));r.appendChild(tx);
+        r.appendChild(el('i','',hasText(g)?'📖 読む':(u===me()?'✏️ 書く':'まだ')));
+        r.addEventListener('click',function(){if(u===me()&&!hasText(g))show({k:'edit',t:t});else show({k:'view',uid:u,t:t});});box.appendChild(r);});});
+      if(!n)box.appendChild(el('p','note','見つかりませんでした。'));}
+    q.addEventListener('input',draw);draw();}
+  /* 読む */
+  function renderView(b,uid,t){var m=members()[uid]||{},g=guideOf(uid,t);$('gd-title').textContent='📖 '+t;
+    var who=el('p','gd-who',(uid===me()?'👤 あなたのデッキ':'👤 '+(m.name||'だれか')+' さんのデッキ')+(hasText(g)?'・'+fmt(g.at)+' 更新':''));b.appendChild(who);
+    if(!hasText(g)){b.appendChild(el('div','gd-empty',uid===me()?'まだ書いていません。下の「✏️ 書く」から書けます。':'まだ回し方が書かれていません。'+(m.name||'持ち主')+' さんに書いてもらいましょう。'));}
+    else F.forEach(function(f){var v=String(g[f[0]]||'').trim();if(!v)return;var s=el('div','gd-sec');s.appendChild(el('b','',f[1]));s.appendChild(el('p','',v));b.appendChild(s);});
+    if(uid===me()){var e=el('button','start-btn gd-edit',hasText(g)?'✏️ 書き直す':'✏️ 書く');e.type='button';e.addEventListener('click',function(){show({k:'edit',t:t});});b.appendChild(e);}}
+  /* 書く（自分のテーマだけ） */
+  function renderEdit(b,t){$('gd-title').textContent='✏️ '+t+' の回し方';
+    if(!Y.user||!Y.db){b.appendChild(el('p','note','🔑 回し方を書くにはログインしてください。'));return;}
+    var g=guideOf(me(),t)||{},inp={};
+    b.appendChild(el('p','note','このデッキを人に貸したときに読んでもらう説明です。書いたところだけ表示されます（全部埋めなくてOK）。'));
+    F.forEach(function(f){var l=el('label','cr-f');l.appendChild(document.createTextNode(f[1]));var a=el('textarea');a.rows=3;a.maxLength=600;a.placeholder=f[2];a.value=String(g[f[0]]||'');l.appendChild(a);b.appendChild(l);inp[f[0]]=a;});
+    var st=el('p','status');b.appendChild(st);
+    var sv=el('button','start-btn','💾 保存する');sv.type='button';b.appendChild(sv);
+    sv.addEventListener('click',function(){var d={at:Date.now()};F.forEach(function(f){d[f[0]]=inp[f[0]].value.trim().slice(0,600);});var o={};o[t]=d;
+      sv.disabled=true;st.className='status';st.textContent='保存しています…';
+      Y.db.collection('users').doc(me()).set({guides:o},{merge:true}).then(function(){var mm=members()[me()];if(mm){mm.guides=mm.guides||{};mm.guides[t]=d;}st.className='status ok';st.textContent='💾 保存しました！';
+        setTimeout(function(){stack.pop();show({k:'view',uid:me(),t:t},false);},600);},function(){st.className='status err';st.textContent='保存できませんでした。通信状態を確認してください。';}).then(function(){sv.disabled=false;});});}
+  window.YGO_GUIDE={list:function(){open();stack=[];cur=null;show({k:'list'});},view:function(uid,t){open();stack=[];cur=null;show({k:'view',uid:uid,t:t});},
+    edit:function(t){open();stack=[];cur=null;show({k:'edit',t:t});},has:function(uid,t){return hasText(guideOf(uid,t));}};
+  document.addEventListener('ygo:data',function(){if(!M.hidden&&cur&&cur.k!=='edit')show(cur,false);});
+  var pb=$('gd-open');if(pb)pb.addEventListener('click',function(){window.YGO_GUIDE.list();});
 })();
 </script>
 </body>
