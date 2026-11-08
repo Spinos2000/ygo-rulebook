@@ -1889,6 +1889,27 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
 .hacc-p.build{display:grid!important;grid-template-columns:repeat(6,1fr);gap:8px}
 .hacc-p.build[hidden]{display:none!important}
 .hacc-p.build .hp-cap{grid-column:1/-1;margin:2px 0 -2px;font-size:12px;font-weight:900;color:var(--muted);line-height:1.4}
+/* プロフィールのアイコン */
+.av{flex:none;display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--ra) center/cover no-repeat;border:1.5px solid var(--edge);font-family:var(--display);font-weight:900;font-size:14px;color:var(--edge);line-height:1;overflow:hidden;vertical-align:middle}
+.av.emo{background-color:var(--surface2)}
+.av.img{color:transparent}
+.av-sm{width:26px;height:26px;font-size:13px}.av-sm.emo{font-size:16px}
+.av-md{width:40px;height:40px;font-size:19px;border-width:2px}.av-md.emo{font-size:23px}
+.av-lg{width:76px;height:76px;font-size:34px;border-width:2px;box-shadow:3px 3px 0 var(--edge)}.av-lg.emo{font-size:42px}
+.me-av.av{width:44px;height:44px;font-size:20px;border-width:2px;cursor:pointer;padding:0;font-family:var(--display)}
+.me-av.av.emo{font-size:25px}
+.me-av.av:active{transform:translate(1px,1px)}
+.pl-nr{display:flex;align-items:center;gap:7px;min-width:0}
+.pl-hn{display:flex;align-items:center;gap:10px}
+.pf-icon .pfi-row{display:flex;align-items:center;gap:14px;margin-top:4px}
+.pfi-act{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.pfi-up{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:var(--display);font-weight:900;font-size:14px;background:var(--obelisk);color:#fff;border:2px solid var(--edge);border-radius:var(--r2);box-shadow:var(--sh);padding:8px 14px}
+.pfi-up:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--edge)}
+.pfi-reset{font:inherit;font-size:12.5px;background:none;border:1.5px dashed var(--line);border-radius:var(--r3);color:var(--muted);padding:4px 10px;cursor:pointer}
+.pfi-emo{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:5px;margin-top:10px}
+.pfi-emo button{font-size:20px;line-height:1;aspect-ratio:1;border:1.5px solid var(--line);background:var(--surface);border-radius:var(--r3);cursor:pointer;padding:0}
+.pfi-emo button[aria-pressed="true"]{border:2px solid var(--edge);background:var(--ra)}
+.pf-icon.off .pfi-up,.pf-icon.off .pfi-emo{opacity:.45;pointer-events:none}
 /* ホーム：プロフィールを一番上に（名前＋アイコン） */
 .me-card .acct-l.in{display:flex;align-items:center;gap:10px;min-width:0}
 .me-av{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--ra);border:2px solid var(--edge);font-family:var(--display);font-weight:900;font-size:19px;color:var(--edge);line-height:1}
@@ -2001,6 +2022,14 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
 })();
 </script>
 
+<script>
+/* ===== プロフィールのアイコン（写真・絵文字・頭文字）。users/{uid}.icon に保存 ===== */
+window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('span');e.className='av'+(size?' av-'+size:'')+(box?' '+(box.dataset.base!=null?box.dataset.base:(box.dataset.base=box.className.split(/\s+/).filter(function(c){return c&&!/^(av|av-\w+|img|emo)$/.test(c);}).join(' '))):'');
+  e.textContent='';e.style.backgroundImage='';var ic=String(m.icon||'');
+  if(/^data:image\//.test(ic)){e.classList.add('img');e.style.backgroundImage='url("'+ic+'")';e.setAttribute('aria-hidden','true');}
+  else{e.classList.remove('img');e.textContent=ic&&ic.length<=16?ic:(Array.from(String(m.name||'?'))[0]||'👤');if(ic&&ic.length<=16)e.classList.add('emo');else e.classList.remove('emo');}
+  return e;};
+</script>
 <div class="wrap">
 
 <header class="hd">
@@ -2071,6 +2100,12 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     <summary><span>👤 プロフィール（<span id="pf-sum-name">未登録</span>）</span></summary>
     <div class="fold-body">
     <div class="pf-guest" id="pf-guest" hidden><span>💡 ログインすると、どの端末でも同じプロフィール・記録が使えて、テーマ一覧にも自動で載ります。</span><button type="button" class="acct-btn" data-login>🔑 Googleでログイン</button></div>
+    <div class="field pf-icon" id="pf-icon"><span>アイコン</span>
+      <div class="pfi-row"><span class="pfi-prev" id="pfi-prev"></span>
+        <div class="pfi-act"><label class="pfi-up">📷 写真を選ぶ<input type="file" id="pfi-file" accept="image/*" hidden></label><button type="button" class="pfi-reset" id="pfi-reset">頭文字に戻す</button></div></div>
+      <div class="pfi-emo" id="pfi-emo" role="group" aria-label="絵文字のアイコン"></div>
+      <p class="status" id="pfi-st" role="status"></p>
+    </div>
     <div class="pf-cur"><span>いま使っている人</span><b id="pf-cur-name">未登録</b><button type="button" class="chip" id="pf-switch">🔄 切り替え・追加</button></div>
     <label class="field" for="pf-name">ニックネーム<span class="note">苗字を<strong>ひらがな</strong>で入れてください（例：やまだ）。みんなの一覧や対戦相手の選択で、だれかすぐわかります</span><input type="text" id="pf-name" maxlength="20" placeholder="例：やまだ" autocomplete="off"></label>
     <p class="note" id="pf-name-hint" hidden>💡 苗字をひらがなで入れると、ほかのメンバーが見分けやすくなります（例：やまだ）</p>
@@ -4658,9 +4693,9 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
   Y.ready.then(function(u){
     var l=$('acct-l');l.textContent='';
     if(!Y.ok){l.textContent='⚠️ サーバーに接続できませんでした。ページを開き直してください。';return;}
-    if(u){var av=el('span','me-av'),nm=el('span','me-nm'),nb=el('b'),ns=el('small');nm.appendChild(nb);nm.appendChild(ns);l.appendChild(av);l.appendChild(nm);l.classList.add('in');
+    if(u){var av=el('button','me-av'),nm=el('span','me-nm'),nb=el('b'),ns=el('small');nm.appendChild(nb);nm.appendChild(ns);av.type='button';av.title='アイコンを変える';av.setAttribute('aria-label','プロフィールのアイコンを変える');av.addEventListener('click',function(){location.hash='#account';setTimeout(function(){var f=document.getElementById('pf-icon');if(f)f.scrollIntoView({block:'center',behavior:'smooth'});},350);});l.appendChild(av);l.appendChild(nm);l.classList.add('in');
       var paint=function(){var m=(Y.members||{})[u.uid],n=(m&&m.name)||u.displayName||String(u.email||'').split('@')[0]||'ログイン中';
-        nb.textContent=n;av.textContent=Array.from(n)[0]||'👤';ns.textContent=(Y.isAdmin?'🛡️ 管理者・':'')+(m&&m.themes&&m.themes.length?'🃏 '+m.themes.slice(0,2).join('・')+(m.themes.length>2?' ほか':''):'✅ ログイン中');};
+        nb.textContent=n;window.YGO_AV(m||{name:n},'',av);ns.textContent=(Y.isAdmin?'🛡️ 管理者・':'')+(m&&m.themes&&m.themes.length?'🃏 '+m.themes.slice(0,2).join('・')+(m.themes.length>2?' ほか':''):'✅ ログイン中');};
       paint();document.addEventListener('ygo:data',paint);
       $('acct-out').hidden=false;$('rl-where').textContent='デッキの見直しに。あなたのアカウントに保存された記録です';}
     else{l.textContent='👤 ログインすると、記録がアカウントに保存され、リンク対戦やボードへの登録ができます';$('acct-in').hidden=false;
@@ -4736,7 +4771,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     if(!Y.db)return;
     Y.db.collection('reports').orderBy('createdAt','desc').onSnapshot(function(s){Y.reports=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
     if(!u)return;
-    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={guides:(x.guides&&typeof x.guides==='object')?x.guides:{},name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{}};});Y.members=m;fillLists();fire('ygo:data');},function(){});
+    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={guides:(x.guides&&typeof x.guides==='object')?x.guides:{},name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{},icon:typeof x.icon==='string'&&x.icon.length<90000?x.icon:''};});Y.members=m;fillLists();fire('ygo:data');},function(){});
     Y.db.collection('results').where('oppUid','==',u.uid).onSnapshot(function(s){Y.ratedMe=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
   });
 
@@ -5548,7 +5583,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     if(!Y.user){list.appendChild(el('div','al-empty','ログインすると、ほかのプレイヤーのプロフィールが見られます。'));return;}
     var ids=Object.keys(M).sort(function(a,b){return (a===me()?-1:b===me()?1:0)||String(M[a].name).localeCompare(String(M[b].name),'ja');});
     if(!ids.length){list.appendChild(el('div','al-empty','まだプレイヤーがいません。'));return;}
-    ids.forEach(function(u){var m=M[u],b=el('button','pl-card'+(u===sel?' on':''));b.type='button';var n=el('b','',m.name);if(u===me())n.appendChild(el('span','pl-me','あなた'));b.appendChild(n);
+    ids.forEach(function(u){var m=M[u],b=el('button','pl-card'+(u===sel?' on':''));b.type='button';var n=el('b','',m.name);if(u===me())n.appendChild(el('span','pl-me','あなた'));var nr=el('span','pl-nr');nr.appendChild(window.YGO_AV(m,'sm'));nr.appendChild(n);b.appendChild(nr);
       b.appendChild(el('small','','🃏 '+(m.themes.length?m.themes.slice(0,3).join('、')+(m.themes.length>3?' ほか':''):'テーマ未登録')));
       b.appendChild(el('small','','🏆 実績 '+(m.ach||0)+'/'+((window.YGO_ACH||[]).length||30)));
       b.addEventListener('click',function(){sel=u;renderList();renderDetail();det.scrollIntoView({block:'start',behavior:'smooth'});});list.appendChild(b);});}
@@ -5557,7 +5592,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     var theirs=(Y.ratedMe||[]).filter(function(r){return r.uid===u;});
     return {src:'相手の記録から',games:theirs.map(function(r){return {at:r.at||r.createdAt||0,res:r.result==='win'?'lose':r.result==='lose'?'win':'draw',my:r.oppTheme||'',op:r.myTheme||''};})};}
   function renderDetail(){var M=Y.members||{},m=sel&&M[sel];det.innerHTML='';if(!m){det.hidden=true;return;}det.hidden=false;
-    var h=el('div','pl-h'),t=el('b','','👤 '+m.name);if(sel===me())t.appendChild(el('span','pl-me','あなた'));h.appendChild(t);
+    var h=el('div','pl-h'),t=el('b','pl-hn');t.appendChild(window.YGO_AV(m,'md'));t.appendChild(document.createTextNode(m.name));if(sel===me())t.appendChild(el('span','pl-me','あなた'));h.appendChild(t);
     var x=el('button','del','✕ 閉じる');x.type='button';x.addEventListener('click',function(){sel=null;renderList();renderDetail();});h.appendChild(x);det.appendChild(h);
     var s1=el('div','pl-sec');s1.appendChild(el('h3','','🃏 使うデッキ'));var c1=el('div','pl-chips');
     if(m.themes.length)m.themes.forEach(function(th){(function(){var hb=window.YGO_GUIDE&&YGO_GUIDE.has(sel,th),cb2=el('button','pl-chip gd-chip'+(hb?' has':''),(hb?'📖 ':'')+th+((m.kinds||{})[th]==='ryu'?'（🌏 留学生）':'（🏫 在校生）'));cb2.type='button';cb2.title='回し方を見る';var su=sel;cb2.addEventListener('click',function(){if(window.YGO_GUIDE)YGO_GUIDE.view(su,th);});c1.appendChild(cb2);})();});else c1.appendChild(el('span','note','まだ登録がありません'));
@@ -5898,6 +5933,33 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
   $('cr-see').addEventListener('click',function(){close();if(lastSec){location.hash='#'+lastSec;}});
   var ob=$('cr-open');if(ob)ob.addEventListener('click',open);
   window.YGO_CR=open;
+})();
+</script>
+<script>
+/* ===== アイコンを変える（アカウント設定） ===== */
+(function(){
+  var Y=window.YGO;function $(i){return document.getElementById(i);}
+  var box=$('pf-icon');if(!box||!Y)return;
+  var EMO=['🐉','🧙‍♂️','🧙‍♀️','⚔️','🛡️','🃏','👾','🦸','🔥','⚡','🌙','⭐','👑','🐺','🦅','💀','🤖','🍀'];
+  function me(){return Y.user&&Y.user.uid;}
+  function mine(){var u=me();return (u&&Y.members&&Y.members[u])||{name:($('pf-name')&&$('pf-name').value)||'?'};}
+  function st(t,c){var x=$('pfi-st');x.className='status'+(c?' '+c:'');x.textContent=t||'';}
+  function paint(){window.YGO_AV(mine(),'lg',$('pfi-prev'));var cur=String(mine().icon||'');
+    [].forEach.call($('pfi-emo').children,function(b){b.setAttribute('aria-pressed',String(b.textContent===cur));});
+    var off=!me()||!Y.db;$('pfi-file').disabled=off;$('pfi-reset').disabled=off||!cur;[].forEach.call($('pfi-emo').children,function(b){b.disabled=off;});
+    box.classList.toggle('off',off);if(off)st('🔑 アイコンを変えるにはログインしてください');else if(/ログイン/.test($('pfi-st').textContent))st('');}
+  EMO.forEach(function(e){var b=document.createElement('button');b.type='button';b.textContent=e;b.addEventListener('click',function(){save(e);});$('pfi-emo').appendChild(b);});
+  function save(v){if(!me()||!Y.db)return;var m=Y.members&&Y.members[me()];if(!m){st('先にニックネームを入れて「💾 プロフィールを保存」を押してください','err');return;}
+    st('保存しています…');Y.db.collection('users').doc(me()).set({icon:v||''},{merge:true}).then(function(){m.icon=v||'';paint();document.dispatchEvent(new Event('ygo:data'));st(v?'✅ アイコンを変えました':'✅ 頭文字に戻しました','ok');},function(){st('保存できませんでした。通信状態を確認してください。','err');});}
+  $('pfi-reset').addEventListener('click',function(){save('');});
+  /* 写真：まん中を正方形に切り抜いて、小さく（160px）してから保存 */
+  $('pfi-file').addEventListener('change',function(){var f=this.files&&this.files[0];this.value='';if(!f)return;if(!/^image\//.test(f.type)){st('画像ファイルを選んでください','err');return;}
+    st('写真を読み込んでいます…');var url=URL.createObjectURL(f),img=new Image();
+    img.onload=function(){var S=160,c=document.createElement('canvas');c.width=c.height=S;var x=c.getContext('2d'),w=img.naturalWidth,h=img.naturalHeight,k=Math.min(w,h);
+      x.fillStyle='#fffdf8';x.fillRect(0,0,S,S);x.drawImage(img,(w-k)/2,(h-k)/2,k,k,0,0,S,S);URL.revokeObjectURL(url);
+      var d=c.toDataURL('image/jpeg',0.82);if(d.length>80000)d=c.toDataURL('image/jpeg',0.6);save(d);};
+    img.onerror=function(){URL.revokeObjectURL(url);st('この画像は読み込めませんでした（別の写真を選んでください）','err');};img.src=url;});
+  document.addEventListener('ygo:data',paint);if(Y.ready)Y.ready.then(paint);paint();
 })();
 </script>
 <script>
