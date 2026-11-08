@@ -1882,6 +1882,17 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
 .gd-chip.has{border-color:var(--obelisk)!important;color:var(--obelisk)}
 .topbar .tb.gd-btn{height:36px;font-size:13px!important;padding:0 10px!important;border:2px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);margin-left:auto}
 .topbar .gd-btn + .tb.end{margin-left:0!important}
+/* ホーム：デッキ構築の中に規制をはっきり */
+.hacc-p.two .hb.wide{grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;min-height:52px}
+.hacc-p.two .hb.wide small{margin-left:auto;text-align:right}
+.hb.dk{background:color-mix(in srgb,var(--obelisk) 14%,var(--surface))!important}
+.hacc-p.build{display:grid!important;grid-template-columns:repeat(6,1fr);gap:8px}
+.hacc-p.build[hidden]{display:none!important}
+.hacc-p.build .hp-cap{grid-column:1/-1;margin:2px 0 -2px;font-size:12px;font-weight:900;color:var(--muted);line-height:1.4}
+.hacc-p.build .hb.r{grid-column:span 2;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:64px;padding:6px 4px!important;text-align:center;border:2px solid var(--edge)!important;box-shadow:var(--sh)!important}
+.hacc-p.build .hb.r b{font-size:12.5px;line-height:1.3}
+.hacc-p.build .hb.r span{font-size:20px}
+.hacc-p.build .hb.b{grid-column:span 3}
 </style>
 </head>
 <body>
@@ -2017,11 +2028,16 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     <div class="hacc-p two" id="hp-reg" data-g="reg" hidden>
       <a href="#reg-mo" data-go="reg-mo" class="hb mo"><span>👾</span><b>モンスター</b><small>規制リスト・許可・見直し候補</small></a>
       <a href="#reg-st" data-go="reg-st" class="hb st"><span>🪄</span><b>魔法・罠</b><small>規制リスト・許可・見直し候補</small></a>
+      <a href="#board" data-go="board" class="hb dk wide"><span>🃏</span><b>デッキごとの規制</b><small>テーマ専用カードの規制（規制報告ボード）</small></a>
     </div>
-    <div class="hacc-p three" id="hp-build" data-g="build" hidden>
-      <a href="#deck" data-go="deck" class="hb"><span>📖</span><b>構築ルール</b></a>
-      <a href="#owners" data-go="owners" class="hb"><span>👥</span><b>テーマ一覧</b></a>
-      <a href="#board" data-go="board" class="hb"><span>📋</span><b>規制報告</b></a>
+    <div class="hacc-p build" id="hp-build" data-g="build" hidden>
+      <p class="hp-cap">🚨 まず規制をチェック</p>
+      <a href="#reg-mo" data-go="reg-mo" class="hb r mo"><span>👾</span><b>モンスターの規制</b></a>
+      <a href="#reg-st" data-go="reg-st" class="hb r st"><span>🪄</span><b>魔法・罠の規制</b></a>
+      <a href="#board" data-go="board" class="hb r dk"><span>🃏</span><b>デッキごとの規制</b></a>
+      <p class="hp-cap">🛠️ 組むときに</p>
+      <a href="#deck" data-go="deck" class="hb b"><span>📖</span><b>構築ルール</b></a>
+      <a href="#owners" data-go="owners" class="hb b"><span>👥</span><b>テーマ一覧</b></a>
     </div>
     <div class="hacc-p two" id="hp-rule" data-g="rule" hidden>
       <a href="#why" data-go="why" class="hb"><span>📜</span><b>ルールを読む</b></a>
@@ -2192,7 +2208,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
 
 <!-- 規制報告ボード -->
 <section id="board">
-  <div class="sec-h"><span>REPORT BOARD</span><h2>📋 規制報告ボード</h2><p class="note">デッキごとの規制の記録。新しい順に表示</p></div>
+  <div class="sec-h"><span>REPORT BOARD</span><h2>🃏 デッキごとの規制</h2><p class="note">テーマ専用カードの規制（規制報告ボード）。新しい順に表示</p></div>
   <label for="rb-q" class="rb-search">🔎 テーマ名・使用者名・カード名で検索
     <input type="search" id="rb-q" placeholder="例：ドラゴン族、やまだ、増援">
   </label>
@@ -5179,7 +5195,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     {k:'home',i:'🏠',l:'ホーム',subs:[['home-hub','🏠 ホーム']]},
     {k:'duel',i:'⚔️',l:'デュエル',subs:[['life','🧮 デュエル']]},
     {k:'rec',i:'📊',l:'戦績',subs:[['results','📊 戦績・リザルト'],['players','🧑‍🤝‍🧑 プレイヤー'],['ach','🏆 実績']]},
-    {k:'rules',i:'📜',l:'ルール',subs:[['reg-mo','👾 モンスターの規制',{show:['mlist','allow','watch'],kind:'mo'}],['reg-st','🪄 魔法・罠の規制',{show:['list','allow','watch'],kind:'st'}],['deck','🛠️ デッキ構築'],['owners','👥 テーマ一覧'],['board','📋 報告ボード'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['faq','❓ よくある質問']]},
+    {k:'rules',i:'📜',l:'ルール',subs:[['reg-mo','👾 モンスターの規制',{show:['mlist','allow','watch'],kind:'mo'}],['reg-st','🪄 魔法・罠の規制',{show:['list','allow','watch'],kind:'st'}],['deck','🛠️ デッキ構築'],['owners','👥 テーマ一覧'],['board','🃏 デッキごとの規制'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['faq','❓ よくある質問']]},
     {k:'more',i:'⚙️',l:'設定ほか',subs:[['account','⚙️ アカウント設定'],['app','📲 アプリとして使う'],['log','🗒️ 更新履歴'],['data','💾 データ'],['admin','🛠️ 管理者']]}
   ];
   var SEC={},LAST={};
