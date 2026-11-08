@@ -1889,6 +1889,15 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
 .hacc-p.build{display:grid!important;grid-template-columns:repeat(6,1fr);gap:8px}
 .hacc-p.build[hidden]{display:none!important}
 .hacc-p.build .hp-cap{grid-column:1/-1;margin:2px 0 -2px;font-size:12px;font-weight:900;color:var(--muted);line-height:1.4}
+/* ホーム：プロフィールを一番上に（名前＋アイコン） */
+.me-card .acct-l.in{display:flex;align-items:center;gap:10px;min-width:0}
+.me-av{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--ra);border:2px solid var(--edge);font-family:var(--display);font-weight:900;font-size:19px;color:var(--edge);line-height:1}
+.me-nm{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.me-nm b{font-family:var(--display);font-size:17px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.me-nm small{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#home-hub .cr-open{min-height:48px!important;padding:6px 12px!important}
+#home-hub .cr-open .cr-tx b{font-size:17px}
+#home-hub .cr-open .cr-ic,#home-hub .cr-open i{font-size:22px}
 .hacc-p.build .hb.r{grid-column:span 2;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:64px;padding:6px 4px!important;text-align:center;border:2px solid var(--edge)!important;box-shadow:var(--sh)!important}
 .hacc-p.build .hb.r b{font-size:12.5px;line-height:1.3}
 .hacc-p.build .hb.r span{font-size:20px}
@@ -1996,18 +2005,10 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
 
 <header class="hd">
   <h1 class="sr-only">あのころ遊戯王 独自環境ルール</h1>
-  <button type="button" class="cr-open" id="cr-open"><span class="cr-ic">📋</span><span class="cr-tx"><b>カード規制</b><small>汎用の規制・デッキごとの規制をここから登録</small></span><i>›</i></button>
   <p class="hd-sub"><span class="hd-chip">独自環境ルール</span><span class="hd-upd">📅 <span id="last-upd">2026年10月19日</span> 更新</span></p>
 </header>
 
 <section id="home-hub" class="hub" aria-label="ホーム">
-  <div class="srch" id="srch" role="search">
-    <div class="srch-box"><button type="button" class="srch-back" id="srch-back" aria-label="1つ前のページに戻る" hidden>←</button><span aria-hidden="true">🔎</span><input type="search" id="srch-q" placeholder="カード・ルール・機能を検索" autocomplete="off" aria-label="ルールブック内を検索"><button type="button" id="srch-x" aria-label="検索をクリア" hidden>✕</button></div>
-    <div class="srch-pop" id="srch-pop" hidden>
-      <p class="srch-n" id="srch-n" role="status"></p>
-      <div class="srch-r" id="srch-r"></div>
-    </div>
-  </div>
   <div class="me-card">
     <div class="acct" id="acct"><span class="acct-l" id="acct-l">🔄 ログイン状態を確認中…</span><button type="button" class="acct-btn" id="acct-in" hidden>🔑 Googleでログイン</button><button type="button" class="acct-out" id="acct-out" hidden>ログアウト</button><p class="acct-err" id="acct-err" role="status"></p></div>
     <p class="me-stats" id="me-stats" aria-live="polite"></p>
@@ -2019,6 +2020,13 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     </nav>
   </div>
   <button type="button" class="tile big" data-go="duel-open"><span class="i">⚔️</span><span><b>デュエルを始める</b><br><small>ライフ計算・リンク対戦・先攻後攻の抽選</small></span></button>
+  <div class="srch" id="srch" role="search">
+    <div class="srch-box"><button type="button" class="srch-back" id="srch-back" aria-label="1つ前のページに戻る" hidden>←</button><span aria-hidden="true">🔎</span><input type="search" id="srch-q" placeholder="カード・ルール・機能を検索" autocomplete="off" aria-label="ルールブック内を検索"><button type="button" id="srch-x" aria-label="検索をクリア" hidden>✕</button></div>
+    <div class="srch-pop" id="srch-pop" hidden>
+      <p class="srch-n" id="srch-n" role="status"></p>
+      <div class="srch-r" id="srch-r"></div>
+    </div>
+  </div>
   <div class="hacc" id="hacc">
     <div class="hacc-row">
       <button type="button" class="hacc-b" data-g="reg" aria-expanded="false" aria-controls="hp-reg"><span>🚨</span><b>規制</b><i aria-hidden="true">▾</i></button>
@@ -2044,6 +2052,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
       <a href="#faq" data-go="faq" class="hb"><span>❓</span><b>よくある質問</b></a>
     </div>
   </div>
+  <button type="button" class="cr-open" id="cr-open"><span class="cr-ic">📋</span><span class="cr-tx"><b>カード規制を登録</b><small>汎用の規制・デッキごとの規制をここから</small></span><i>›</i></button>
   <div class="news" aria-roledescription="ニュースのティッカー">
     <div class="news-head"><h2 class="news-ttl">📰<span>ニュース</span></h2><span class="news-dots" id="news-dots"></span><button type="button" class="news-more" id="news-more">すべて見る ›</button></div>
     <ul class="news-list" id="news-list"></ul>
@@ -4647,7 +4656,10 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
   Y.ready.then(function(u){
     var l=$('acct-l');l.textContent='';
     if(!Y.ok){l.textContent='⚠️ サーバーに接続できませんでした。ページを開き直してください。';return;}
-    if(u){l.appendChild(document.createTextNode('✅ '));l.appendChild(el('b','',u.email||u.displayName||'ログイン中'));l.appendChild(document.createTextNode(' でログイン中'+(Y.isAdmin?'（管理者）':'')));
+    if(u){var av=el('span','me-av'),nm=el('span','me-nm'),nb=el('b'),ns=el('small');nm.appendChild(nb);nm.appendChild(ns);l.appendChild(av);l.appendChild(nm);l.classList.add('in');
+      var paint=function(){var m=(Y.members||{})[u.uid],n=(m&&m.name)||u.displayName||String(u.email||'').split('@')[0]||'ログイン中';
+        nb.textContent=n;av.textContent=Array.from(n)[0]||'👤';ns.textContent=(Y.isAdmin?'🛡️ 管理者・':'')+(m&&m.themes&&m.themes.length?'🃏 '+m.themes.slice(0,2).join('・')+(m.themes.length>2?' ほか':''):'✅ ログイン中');};
+      paint();document.addEventListener('ygo:data',paint);
       $('acct-out').hidden=false;$('rl-where').textContent='デッキの見直しに。あなたのアカウントに保存された記録です';}
     else{l.textContent='👤 ログインすると、記録がアカウントに保存され、リンク対戦やボードへの登録ができます';$('acct-in').hidden=false;
       $('rl-where').textContent='デッキの見直しに。いまはこのスマホに保存された記録です（ログインでアカウントに保存）';}
@@ -5227,7 +5239,10 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
     /* 前へ・次へ（ルールとその他） */
     var ix=subs.map(function(s){return s[0];}).indexOf(id);
     if(subs.length>1&&e){step.innerHTML='';if(ix>0)step.appendChild(stepBtn(subs[ix-1],false));if(ix<subs.length-1)step.appendChild(stepBtn(subs[ix+1],true));e.insertAdjacentElement('afterend',step);step.hidden=false;}else step.hidden=true;
-    if(header.nextElementSibling!==srch)header.insertAdjacentElement('afterend',srch);
+    /* 検索：ホームではプロフィール・デュエルの下、ほかのページでは一番上 */
+    var hd=t.k==='home'&&document.querySelector('#home-hub > .tile.big');
+    if(hd){if(hd.nextElementSibling!==srch)hd.insertAdjacentElement('afterend',srch);}
+    else if(header.nextElementSibling!==srch)header.insertAdjacentElement('afterend',srch);
     [].forEach.call(bar.children,function(b){if(b.dataset.tab===t.k)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     var hash='#'+id;if(t.k==='home')hash=location.pathname+location.search;
     try{if(o.push){if(location.hash!=='#'+id&&!(t.k==='home'&&!location.hash)){history.pushState({rt:id},'',hash);DEPTH++;}}else history.replaceState({rt:id},'',hash);}catch(err){}
