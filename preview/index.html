@@ -3539,7 +3539,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   }
   /* テーマ登録のとき：カウンターやターンを数えるカードを使うか聞く */
   var CTRS=[['mag','🔮 魔力カウンター'],['サイレント・マジシャン LV4','🔮 サイレント・マジシャン LV4'],['Aカウンター','👽 Aカウンター（エーリアン）'],['幽獄の時計塔','🕰️ 幽獄の時計塔（時計カウンター）'],['ヴェノムカウンター','🐍 ヴェノムカウンター']];
-  var TURNS=[['光の護封剣','⏳ 光の護封剣'],['闇の護封剣','⏳ 闇の護封剣'],['大進化薬','⏳ 大進化薬'],['封印の黄金櫃','⏳ 封印の黄金櫃'],['タイムカプセル','⏳ タイムカプセル']];
+  var TURNS=[['光の護封剣','⏳ 光の護封剣'],['闇の護封剣','⏳ 闇の護封剣'],['大進化薬','⏳ 大進化薬'],['闇のデッキ破壊ウイルス','⏳ 闇のデッキ破壊ウイルス'],['封印の黄金櫃','⏳ 封印の黄金櫃'],['タイムカプセル','⏳ タイムカプセル']];
   var ctrFor=null;
   function openCtr(t){ctrFor=t;renderCtrEdit();var e=$('pf-ctr');if(e)e.scrollIntoView({block:'nearest',behavior:'smooth'});}
   function renderCtrEdit(){var e=$('pf-ctr');if(!e)return;e.innerHTML='';if(!ctrFor||draft.themes.indexOf(ctrFor)<0){e.hidden=true;return;}e.hidden=false;
@@ -5638,6 +5638,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     {g:'mag',n:'サイレント・マジシャン LV4',k:'mag',v:0,max:5,auto:false,oppDraw:true,d:'相手のドローで＋1・上限5',full:'サイレント・マジシャン LV4：魔力カウンターが5つ！このスタンバイフェイズに墓地へ送って、LV8を特殊召喚できます'},
     {g:'turn',n:'光の護封剣',k:'turn',v:3,when:'oppEnd',d:'相手のエンドで−1（3ターン）',msg:'光の護封剣が破壊されます（墓地へ）'},
     {g:'turn',n:'闇の護封剣',k:'turn',v:2,when:'oppEnd',d:'相手のエンドで−1（2ターン）',msg:'闇の護封剣が破壊されます（墓地へ）'},
+    {g:'turn',n:'闇のデッキ破壊ウイルス',k:'turn',v:3,when:'oppEnd',d:'相手のエンドで−1（3ターン）・相手のドローを確認',msg:'闇のデッキ破壊ウイルスの効果が終わります（相手のドローの確認はここまで）'},
     {g:'turn',n:'大進化薬',k:'turn',v:3,when:'oppEnd',d:'相手のエンドで−1（3ターン）',msg:'大進化薬が破壊されます（墓地へ）'},
     {g:'free',n:'幽獄の時計塔',k:'free',v:0,up:'oppStart',d:'相手のスタンバイで＋1（4つで効果）',at:4,full:'幽獄の時計塔：時計カウンターが4つ！自分への戦闘ダメージは0に。このカードが破壊されて墓地へ送られたとき、手札・デッキから「D－HERO ドレッドガイ」を特殊召喚します'},
     {g:'turn',n:'封印の黄金櫃',k:'turn',v:2,when:'myStart',d:'自分のスタンバイで−1（2ターン）',msg:'封印の黄金櫃：除外したカードを手札に加えます'},
