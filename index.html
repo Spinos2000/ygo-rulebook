@@ -3539,7 +3539,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   }
   /* テーマ登録のとき：カウンターやターンを数えるカードを使うか聞く */
   var CTRS=[['mag','🔮 魔力カウンター'],['サイレント・マジシャン LV4','🔮 サイレント・マジシャン LV4'],['Aカウンター','👽 Aカウンター（エーリアン）'],['幽獄の時計塔','🕰️ 幽獄の時計塔（時計カウンター）'],['ヴェノムカウンター','🐍 ヴェノムカウンター']];
-  var TURNS=[['光の護封剣','⏳ 光の護封剣'],['闇の護封剣','⏳ 闇の護封剣'],['大進化薬','⏳ 大進化薬'],['封印の黄金櫃','⏳ 封印の黄金櫃'],['タイムカプセル','⏳ タイムカプセル']];
+  var TURNS=[['光の護封剣','⏳ 光の護封剣'],['闇の護封剣','⏳ 闇の護封剣'],['大進化薬','⏳ 大進化薬'],['闇のデッキ破壊ウイルス','⏳ 闇のデッキ破壊ウイルス'],['封印の黄金櫃','⏳ 封印の黄金櫃'],['タイムカプセル','⏳ タイムカプセル']];
   var ctrFor=null;
   function openCtr(t){ctrFor=t;renderCtrEdit();var e=$('pf-ctr');if(e)e.scrollIntoView({block:'nearest',behavior:'smooth'});}
   function renderCtrEdit(){var e=$('pf-ctr');if(!e)return;e.innerHTML='';if(!ctrFor||draft.themes.indexOf(ctrFor)<0){e.hidden=true;return;}e.hidden=false;
@@ -4417,6 +4417,8 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-11-10-sound-fix',createdAt:1794282879897,text:'🔊 スマホで音楽を流していても効果音が鳴るように修正（止まっても自動で復帰）。デュエル中のボタンを押すと「ポチッ」、ログ・電卓・カード盤を切り替えると「シュッ」と鳴るように'},
+      {id:'auto-2026-11-10-ctr-virus',createdAt:1794282879896,text:'⏳ カード盤に「闇のデッキ破壊ウイルス」を追加（相手のエンドで−1・3ターン）'},
       {id:'auto-2026-11-10-avatar',createdAt:1794278785180,text:'🖼️ プロフィールのアイコンを変えられるように。写真・絵文字・頭文字から選べます（ホームの丸いアイコンを押すと設定へ）。ホームとプレイヤー一覧に表示されます'},
       {id:'auto-2026-11-10-ctr-clock',createdAt:1794278785179,text:'⏳ カード盤に「大進化薬」（相手のエンドで−1・3ターン）と「🕰️ 幽獄の時計塔」（相手のスタンバイで時計カウンター＋1、4つで知らせる）を追加。光の護封剣と同じようにターンで自動で数えます'},
       {id:'auto-2026-11-10-reg-lim2',createdAt:1794278785178,text:'🚨 規制追加：メタル・リフレクト・スライム、デビルズ・サンクチュアリを制限に'},
@@ -5004,7 +5006,10 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   try{var s=JSON.parse(localStorage.getItem(K));if(s){S.se=s.se!==false;S.bgm=(s.bgm==='own'||/^acct:/.test(s.bgm||''))?s.bgm:'orig';}}catch(e){}
   function saveS(){try{localStorage.setItem(K,JSON.stringify(S));}catch(e){}}
   var ac=null,master=null,verb=null,shaper=null;
-  function ctx(){if(!ac){var C=window.AudioContext||window.webkitAudioContext;if(!C)return null;ac=new C();
+  /* スマホで音楽を流していても鳴るように：ほかのアプリの音と「重ねて」鳴らす設定（iPhone）＋止められたら自動で復帰 */
+  function mixOn(){try{if(navigator.audioSession&&navigator.audioSession.type!=='ambient')navigator.audioSession.type='ambient';}catch(e){}}
+  function ctx(){if(ac&&ac.state==='closed')ac=null;if(!ac){var C=window.AudioContext||window.webkitAudioContext;if(!C)return null;mixOn();ac=new C();nb=null;
+      try{ac.onstatechange=function(){if(ac&&ac.state!=='running'&&ac.state!=='closed'&&document.visibilityState==='visible')wake();};}catch(e){}
       var comp=ac.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;comp.attack.value=.003;comp.release.value=.25;comp.connect(ac.destination);
       master=ac.createGain();master.gain.value=.65;master.connect(comp);
       // 残響（ホールのような響き）
@@ -5012,7 +5017,14 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       var cv=ac.createConvolver();cv.buffer=ir;verb=ac.createGain();verb.gain.value=.32;verb.connect(cv);cv.connect(master);
       // 歪み（衝撃に重さを出す）
       shaper=ac.createWaveShaper();var n=2048,cu=new Float32Array(n);for(var j=0;j<n;j++){var x=j*2/n-1;cu[j]=Math.tanh(x*3.2);}shaper.curve=cu;shaper.connect(master);}
-    if(ac.state==='suspended')ac.resume();return ac;}
+    if(ac.state!=='running'){mixOn();try{var rp=ac.resume();if(rp&&rp.catch)rp.catch(function(){});}catch(e){}}return ac;}
+  /* 止まった音を戻す：resumeで戻らなければ作り直す */
+  var waking=false;function wake(){if(!ac||waking)return;if(ac.state==='running')return;if(ac.state==='closed'){ac=null;ctx();return;}waking=true;mixOn();
+    var done=function(){waking=false;if(ac&&ac.state!=='running'){try{if(ac.state!=='closed'){var cp=ac.close();if(cp&&cp.catch)cp.catch(function(){});}}catch(e){}ac=null;ctx();}};
+    try{var p=ac.resume();if(p&&p.then)p.then(function(){setTimeout(done,120);},done);else setTimeout(done,120);}catch(e){done();}}
+  document.addEventListener('pointerdown',function(){if(ac&&ac.state!=='running')wake();},{passive:true,capture:true});
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&ac&&ac.state!=='running')wake();});
+  window.addEventListener('pageshow',function(){if(ac&&ac.state!=='running')wake();});
   // iPhone対策：最初のタップで音を使えるようにする
   document.addEventListener('pointerdown',function un(){var c=ctx();if(c){var b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0);}document.removeEventListener('pointerdown',un);},{passive:true});
   function out(node,dest,wet){node.connect(dest||master);if(wet&&verb){var w=ac.createGain();w.gain.value=wet;node.connect(w);w.connect(verb);}}
@@ -5094,6 +5106,14 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       else if(/^bounce/.test(d.ev)){var k=d.ev==='bounce0'?1:d.ev==='bounce1'?.7:.45;voice('sine',170,70,t,.14,.45*k,{glide:.08});noise(t,.05,.18*k,{type:'bandpass',f:1800,q:1.5});noise(t+.03,.04,.08*k,{type:'bandpass',f:3200,q:2});}
       else if(d.ev==='win'){[1568,2093,2637].forEach(function(f,j){partial(f,t+j*.08,.7,.07,{env:[[.005,1],[.5,.08]],wet:.4});});}}
   });
+  /* 電卓：ボタンを押した音（ポチッ）と、画面を切り替えた音（シュッ） */
+  SE.tap=function(lo){var c=ctx();if(!c)return;var t=c.currentTime+.005,k=lo?.75:1;
+    partial(1480*k,t,.045,.07,{env:[[.004,1],[.04,.05]]});partial(740*k,t,.05,.05,{env:[[.004,1],[.045,.05]]});noise(t,.018,.06,{type:'bandpass',f:3200*k,q:1.4});voice('sine',220*k,110*k,t,.05,.1,{glide:.04});};
+  SE.swipe=function(dir){var c=ctx();if(!c)return;var t=c.currentTime+.005,a=dir<0?3600:900,b=dir<0?900:3600;
+    noise(t,.22,.16,{type:'bandpass',f:a,f1:b,q:1.1,wet:.25});partial(dir<0?660:880,t+.03,.14,.035,{f0:dir<0?880:660,glide:.1,env:[[.02,1],[.13,.05]],wet:.3});};
+  document.addEventListener('click',function(e){if(!S.se)return;var d=document.getElementById('duel');if(!d||d.hidden)return;var b=e.target.closest&&e.target.closest('#duel button,#duel [role=button],#duel .bd-p');if(!b||b.disabled||b.closest('#ftabs'))return;
+    SE.tap(/dmg|heal|go|end|yes|ok/i.test((b.className||'')+' '+(b.id||'')+' '+(b.getAttribute('data-a')||'')));},true);
+  document.addEventListener('ygo:swipe',function(e){if(S.se)SE.swipe((e.detail&&e.detail.dir)||1);});
   /* カウントのお知らせ・招待：ピロン */
   document.addEventListener('ygo:ping',function(){if(!S.se)return;var c=ctx();if(!c)return;var t=c.currentTime+.02;partial(1318.5,t,.45,.13,{env:[[.01,1],[.35,.1]],wet:.3});partial(1760,t+.13,.7,.13,{env:[[.01,1],[.6,.08]],wet:.35});});
   document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};var a=d.amt||0;if(d.zero)SE.zero(a);else if(d.kind==='heal')SE.heal(a);else if(d.kind==='cost')SE.cost(a);else SE.dmg(a);});
@@ -5638,6 +5658,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     {g:'mag',n:'サイレント・マジシャン LV4',k:'mag',v:0,max:5,auto:false,oppDraw:true,d:'相手のドローで＋1・上限5',full:'サイレント・マジシャン LV4：魔力カウンターが5つ！このスタンバイフェイズに墓地へ送って、LV8を特殊召喚できます'},
     {g:'turn',n:'光の護封剣',k:'turn',v:3,when:'oppEnd',d:'相手のエンドで−1（3ターン）',msg:'光の護封剣が破壊されます（墓地へ）'},
     {g:'turn',n:'闇の護封剣',k:'turn',v:2,when:'oppEnd',d:'相手のエンドで−1（2ターン）',msg:'闇の護封剣が破壊されます（墓地へ）'},
+    {g:'turn',n:'闇のデッキ破壊ウイルス',k:'turn',v:3,when:'oppEnd',d:'相手のエンドで−1（3ターン）・相手のドローを確認',msg:'闇のデッキ破壊ウイルスの効果が終わります（相手のドローの確認はここまで）'},
     {g:'turn',n:'大進化薬',k:'turn',v:3,when:'oppEnd',d:'相手のエンドで−1（3ターン）',msg:'大進化薬が破壊されます（墓地へ）'},
     {g:'free',n:'幽獄の時計塔',k:'free',v:0,up:'oppStart',d:'相手のスタンバイで＋1（4つで効果）',at:4,full:'幽獄の時計塔：時計カウンターが4つ！自分への戦闘ダメージは0に。このカードが破壊されて墓地へ送られたとき、手札・デッキから「D－HERO ドレッドガイ」を特殊召喚します'},
     {g:'turn',n:'封印の黄金櫃',k:'turn',v:2,when:'myStart',d:'自分のスタンバイで−1（2ターン）',msg:'封印の黄金櫃：除外したカードを手札に加えます'},
@@ -5666,7 +5687,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   /* ---- 電卓⇔カード盤（表と裏） ---- */
   var face='calc';
   var FACES=['log','calc','board'];
-  function setFace(f){face=f;FACES.forEach(function(k){$('face-'+k).hidden=k!==f;});$('dv-play').classList.toggle('on-board',f!=='calc');
+  function setFace(f){if(f!==face){try{document.dispatchEvent(new CustomEvent('ygo:swipe',{detail:{dir:FACES.indexOf(f)>FACES.indexOf(face)?1:-1}}));}catch(e){}}face=f;FACES.forEach(function(k){$('face-'+k).hidden=k!==f;});$('dv-play').classList.toggle('on-board',f!=='calc');
     [].forEach.call(document.querySelectorAll('#ftabs button'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-f')===f));});
     if(f==='log'&&window.YGO_LOG)YGO_LOG();render();}
   window.YGO_FACE=setFace;
