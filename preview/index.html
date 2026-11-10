@@ -5004,7 +5004,10 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   try{var s=JSON.parse(localStorage.getItem(K));if(s){S.se=s.se!==false;S.bgm=(s.bgm==='own'||/^acct:/.test(s.bgm||''))?s.bgm:'orig';}}catch(e){}
   function saveS(){try{localStorage.setItem(K,JSON.stringify(S));}catch(e){}}
   var ac=null,master=null,verb=null,shaper=null;
-  function ctx(){if(!ac){var C=window.AudioContext||window.webkitAudioContext;if(!C)return null;ac=new C();
+  /* スマホで音楽を流していても鳴るように：ほかのアプリの音と「重ねて」鳴らす設定（iPhone）＋止められたら自動で復帰 */
+  function mixOn(){try{if(navigator.audioSession&&navigator.audioSession.type!=='ambient')navigator.audioSession.type='ambient';}catch(e){}}
+  function ctx(){if(ac&&ac.state==='closed')ac=null;if(!ac){var C=window.AudioContext||window.webkitAudioContext;if(!C)return null;mixOn();ac=new C();nb=null;
+      try{ac.onstatechange=function(){if(ac&&ac.state!=='running'&&ac.state!=='closed'&&document.visibilityState==='visible')wake();};}catch(e){}
       var comp=ac.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=4;comp.attack.value=.003;comp.release.value=.25;comp.connect(ac.destination);
       master=ac.createGain();master.gain.value=.65;master.connect(comp);
       // 残響（ホールのような響き）
@@ -5012,7 +5015,14 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       var cv=ac.createConvolver();cv.buffer=ir;verb=ac.createGain();verb.gain.value=.32;verb.connect(cv);cv.connect(master);
       // 歪み（衝撃に重さを出す）
       shaper=ac.createWaveShaper();var n=2048,cu=new Float32Array(n);for(var j=0;j<n;j++){var x=j*2/n-1;cu[j]=Math.tanh(x*3.2);}shaper.curve=cu;shaper.connect(master);}
-    if(ac.state==='suspended')ac.resume();return ac;}
+    if(ac.state!=='running'){mixOn();try{var rp=ac.resume();if(rp&&rp.catch)rp.catch(function(){});}catch(e){}}return ac;}
+  /* 止まった音を戻す：resumeで戻らなければ作り直す */
+  var waking=false;function wake(){if(!ac||waking)return;if(ac.state==='running')return;if(ac.state==='closed'){ac=null;ctx();return;}waking=true;mixOn();
+    var done=function(){waking=false;if(ac&&ac.state!=='running'){try{if(ac.state!=='closed'){var cp=ac.close();if(cp&&cp.catch)cp.catch(function(){});}}catch(e){}ac=null;ctx();}};
+    try{var p=ac.resume();if(p&&p.then)p.then(function(){setTimeout(done,120);},done);else setTimeout(done,120);}catch(e){done();}}
+  document.addEventListener('pointerdown',function(){if(ac&&ac.state!=='running')wake();},{passive:true,capture:true});
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&ac&&ac.state!=='running')wake();});
+  window.addEventListener('pageshow',function(){if(ac&&ac.state!=='running')wake();});
   // iPhone対策：最初のタップで音を使えるようにする
   document.addEventListener('pointerdown',function un(){var c=ctx();if(c){var b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0);}document.removeEventListener('pointerdown',un);},{passive:true});
   function out(node,dest,wet){node.connect(dest||master);if(wet&&verb){var w=ac.createGain();w.gain.value=wet;node.connect(w);w.connect(verb);}}
@@ -5094,6 +5104,14 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       else if(/^bounce/.test(d.ev)){var k=d.ev==='bounce0'?1:d.ev==='bounce1'?.7:.45;voice('sine',170,70,t,.14,.45*k,{glide:.08});noise(t,.05,.18*k,{type:'bandpass',f:1800,q:1.5});noise(t+.03,.04,.08*k,{type:'bandpass',f:3200,q:2});}
       else if(d.ev==='win'){[1568,2093,2637].forEach(function(f,j){partial(f,t+j*.08,.7,.07,{env:[[.005,1],[.5,.08]],wet:.4});});}}
   });
+  /* 電卓：ボタンを押した音（ポチッ）と、画面を切り替えた音（シュッ） */
+  SE.tap=function(lo){var c=ctx();if(!c)return;var t=c.currentTime+.005,k=lo?.75:1;
+    partial(1480*k,t,.045,.07,{env:[[.004,1],[.04,.05]]});partial(740*k,t,.05,.05,{env:[[.004,1],[.045,.05]]});noise(t,.018,.06,{type:'bandpass',f:3200*k,q:1.4});voice('sine',220*k,110*k,t,.05,.1,{glide:.04});};
+  SE.swipe=function(dir){var c=ctx();if(!c)return;var t=c.currentTime+.005,a=dir<0?3600:900,b=dir<0?900:3600;
+    noise(t,.22,.16,{type:'bandpass',f:a,f1:b,q:1.1,wet:.25});partial(dir<0?660:880,t+.03,.14,.035,{f0:dir<0?880:660,glide:.1,env:[[.02,1],[.13,.05]],wet:.3});};
+  document.addEventListener('click',function(e){if(!S.se)return;var d=document.getElementById('duel');if(!d||d.hidden)return;var b=e.target.closest&&e.target.closest('#duel button,#duel [role=button],#duel .bd-p');if(!b||b.disabled||b.closest('#ftabs'))return;
+    SE.tap(/dmg|heal|go|end|yes|ok/i.test((b.className||'')+' '+(b.id||'')+' '+(b.getAttribute('data-a')||'')));},true);
+  document.addEventListener('ygo:swipe',function(e){if(S.se)SE.swipe((e.detail&&e.detail.dir)||1);});
   /* カウントのお知らせ・招待：ピロン */
   document.addEventListener('ygo:ping',function(){if(!S.se)return;var c=ctx();if(!c)return;var t=c.currentTime+.02;partial(1318.5,t,.45,.13,{env:[[.01,1],[.35,.1]],wet:.3});partial(1760,t+.13,.7,.13,{env:[[.01,1],[.6,.08]],wet:.35});});
   document.addEventListener('ygo:lp',function(e){if(!S.se)return;var d=e.detail||{};var a=d.amt||0;if(d.zero)SE.zero(a);else if(d.kind==='heal')SE.heal(a);else if(d.kind==='cost')SE.cost(a);else SE.dmg(a);});
@@ -5667,7 +5685,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   /* ---- 電卓⇔カード盤（表と裏） ---- */
   var face='calc';
   var FACES=['log','calc','board'];
-  function setFace(f){face=f;FACES.forEach(function(k){$('face-'+k).hidden=k!==f;});$('dv-play').classList.toggle('on-board',f!=='calc');
+  function setFace(f){if(f!==face){try{document.dispatchEvent(new CustomEvent('ygo:swipe',{detail:{dir:FACES.indexOf(f)>FACES.indexOf(face)?1:-1}}));}catch(e){}}face=f;FACES.forEach(function(k){$('face-'+k).hidden=k!==f;});$('dv-play').classList.toggle('on-board',f!=='calc');
     [].forEach.call(document.querySelectorAll('#ftabs button'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-f')===f));});
     if(f==='log'&&window.YGO_LOG)YGO_LOG();render();}
   window.YGO_FACE=setFace;
