@@ -225,9 +225,13 @@ const FX = {
   /* ライトニング・ボルテックス：嵐の中、相手のモンスターに次々と雷が落ちる */
   vortex(S) {
     at(S, 250, () => { S.dark = .8; S.storm = 1; });
-    S.dest.forEach((c, i) => at(S, 700 + i * 260, () => { S.bolts.push({ x: c.x, y: c.y, t: S.t }); impact(S, c.x, c.y, .8, '#bfe4ff'); explode(S, c, '#bfe4ff'); }));
-    const tEnd = 700 + S.dest.length * 260;
-    at(S, tEnd + 200, () => { S.bolts.push(...S.dest.map(c => ({ x: c.x, y: c.y, t: S.t, after: 1 }))); });
+    // 黄色の雷が、相手のモンスター全部に一気に落ちる
+    at(S, 750, () => {
+      S.dest.forEach(c => { S.bolts.push({ x: c.x, y: c.y, t: S.t, gold: 1 }); impact(S, c.x, c.y, .9, '#ffe08a'); explode(S, c, '#ffe08a'); });
+      S.flash = 1; S.flashC = '255,236,150'; S.freeze = 140;
+    });
+    const tEnd = 750;
+    at(S, tEnd + 200, () => { S.bolts.push(...S.dest.map(c => ({ x: c.x, y: c.y, t: S.t, after: 1, gold: 1 }))); });
     at(S, tEnd + 600, () => { S.storm = 0; });
     S.end = tEnd + 1300;
   },
@@ -622,7 +626,7 @@ function draw(S) {
   S.bolts.forEach(b => {
     const el = t - b.t, life = b.after ? 400 : 220;
     if (el >= life) return;
-    if (b.after) { if (Math.random() < .5) bolt(b.x + (Math.random() - .5) * 40, b.y - 30, b.x + (Math.random() - .5) * 40, b.y + 30, '#bfe4ff', 1.5, .8); }
+    if (b.after) { if (Math.random() < .5) bolt(b.x + (Math.random() - .5) * 40, b.y - 30, b.x + (Math.random() - .5) * 40, b.y + 30, b.gold ? '#ffe08a' : '#bfe4ff', 1.5, .8); }
     else { bolt(b.x + (Math.random() - .5) * 20, -20, b.x, b.y, b.gold ? '#ffe08a' : '#bfe4ff', (b.gold ? 9 : 6) * U, 1 - el / life, 1); glow(b.x, b.y, 90 * U, b.gold ? '#ffe08a' : '#bfe4ff', 1 - el / life); }
   });
   if (S.wave) {
