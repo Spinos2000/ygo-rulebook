@@ -19,7 +19,11 @@ function backSvg() {
   }
   const s = 1.6, e = (rx, ry) => 'cx="29.5" cy="43" rx="' + (rx * s).toFixed(2) + '" ry="' + (ry * s).toFixed(2) + '"';
   const mid = '<ellipse ' + e(13.5, 18) + ' fill="#2a170a" opacity=".45"/><ellipse ' + e(11.6, 15.6) + ' fill="#0f0905" stroke="#d9a35a" stroke-width=".9"/><ellipse ' + e(10.1, 13.9) + ' fill="none" stroke="#5a3418" stroke-width=".45"/>';
-  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 59 86" preserveAspectRatio="none"><rect width="59" height="86" fill="#5e3517"/>' + arms + thin + mid + '</svg>';
+  // 茶色い枠：渦のまわりを囲む縁（外側のこげ茶の線・明るい面取り・内側の影）
+  const frame = '<path fill-rule="evenodd" d="M0 0H59V86H0Z M3.4 3.4V82.6H55.6V3.4Z" fill="#8a5a2b"/>'
+    + '<rect x="1.2" y="1.2" width="56.6" height="83.6" rx="1.6" fill="none" stroke="#c08a4e" stroke-width=".5" opacity=".8"/>'
+    + '<rect x="3.4" y="3.4" width="52.2" height="79.2" fill="none" stroke="#2a170a" stroke-width=".8"/>';
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 59 86" preserveAspectRatio="none"><rect width="59" height="86" fill="#5e3517"/>' + arms + thin + mid + frame + '</svg>';
   return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
 }
 export const CSS = `
