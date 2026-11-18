@@ -108,7 +108,9 @@ function queueBattleFx(prev, next) {
   (async () => {
     for (const j of jobs) {
       const hide = j.hide.map(el => { el.style.visibility = 'hidden'; return el; });
+      const brd = j.sig ? ROOT.querySelector('#board') : null; if (brd) brd.classList.add('skin-on');
       try { await (j.sig ? playSignature(ROOT, j.info) : playBattle(ROOT, j.info)); } catch (e) { console.error(e); }
+      if (brd) brd.classList.remove('skin-on');
       hide.forEach(el => { el.style.visibility = ''; });
     }
     fxN = Math.max(0, fxN - 1);
@@ -159,6 +161,13 @@ function playPendingSummons() {
 /* ---------- カードごとの専用演出：発動したカード・破壊されるカード・盤面の位置を集める ---------- */
 const sigSkip = new Set();
 const matRects = new Map(); // 融合・儀式の素材が元あった場所（召喚の演出で、そこから渦へ集める）   // 専用演出で壊した（飛ばした）カード。いつもの移動の演出はしない
+/** 盤面の地の柄を描くキャンバス（カードを置く枠より下） */
+function matCanvas() {
+  const b = ROOT.querySelector('#board'); if (!b) return null;
+  let c = b.querySelector('.mat-skin');
+  if (!c) { c = document.createElement('canvas'); c.className = 'mat-skin'; b.prepend(c); }
+  return c;
+}
 function sigInfo(prev, next, x, fresh) {
   if (!x.act || !prev.cards[x.uid]) return null;
   const d = defOf(prev, x.uid), key = sigKey(d.name);
@@ -203,7 +212,7 @@ function sigInfo(prev, next, x, fresh) {
   return {
     sig: true, seq: x.seq, skip,
     hide: [self, ...dest, att].filter(Boolean).map(c => c.el),
-    info: { key, name: d.name, kind: d.kind, subtype: d.subtype, me, speed: fxMode() === 'short' ? 2 : 1, board,
+    info: { key, name: d.name, kind: d.kind, subtype: d.subtype, me, speed: fxMode() === 'short' ? 2 : 1, board, mat: matCanvas(),
       self, dest, att, target, opp, mons, traps, drawn: drawn.length, land,
       deck: center(pileEl(p, 'deck')), gy: center(pileEl(tgtOwner, 'gy')), hand: center(q(`#hand${p}`)) },
   };

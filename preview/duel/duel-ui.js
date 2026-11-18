@@ -408,6 +408,13 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* カウンターの帯がカードの幅より長い時（5つの玉など）は、はみ出して見せる */
 .zone .card:has(> .ctr) { overflow: visible }
 
+/* ---------- 演出に合わせたプレイマットの柄（盤面の地だけが変わり、カードを置く枠は残る） ---------- */
+#board { position: relative }
+#board .row { position: relative; z-index: 1 }
+.mat-skin { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 14px; pointer-events: none; z-index: 0 }
+#board .zone { transition: background .35s }
+#board.skin-on .zone:not(.void) { background: rgba(0, 0, 0, .16); border-color: rgba(255, 255, 255, .45) }
+
 `;
 
 export const MARKUP = `

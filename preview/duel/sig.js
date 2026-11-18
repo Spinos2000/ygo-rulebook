@@ -98,8 +98,8 @@ export function playSignature(root, info) {
     cv.style.display = 'block';
     const step = now => {
       if (S.done) return;
-      tick(S, now);
-      if (S.t > S.end) { S.done = true; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; resolve(); return; }
+      tick(S, now); drawMat(S);
+      if (S.t > S.end) { S.done = true; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; if (S.mat) S.mat.ctx.clearRect(0, 0, S.mat.w, S.mat.h); resolve(); return; }
       requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -112,6 +112,7 @@ function setup(I) {
     cards: [], tints: [], zaps: [], parts: [], rings: [], ev: [], hooks: [], shards: [], cracks: [], fire: [], bolts: [],
     shake: 0, flash: 0, flashC: '255,255,255', dark: 0, invert: 0, freeze: 0, chroma: 0, title: null };
   S.dir = I.me ? -1 : 1; // 相手の方向（画面の上が相手なら -1）
+  if (I.mat && MAT[I.key]) { S.mat = { cv: I.mat, ctx: I.mat.getContext('2d'), fn: MAT[I.key] }; sizeMat(S); }
   S.self = mk(I.self);
   if (!S.self) {
     // 手札から直接発動した時など、フィールドに見当たらない時は手札の辺りから出す
@@ -547,6 +548,102 @@ function zigzag(x0, y0, x1, y1, seg, jit) { const pts = [[x0, y0]]; for (let i =
 function domePt(D, u) { const a = D.up ? Math.PI + u * Math.PI : u * Math.PI; return { x: D.cx + Math.cos(a) * D.R, y: D.cy + Math.sin(a) * D.Ry }; }
 function domeArc(D, r, ry) { ctx.beginPath(); ctx.ellipse(D.cx, D.cy, r, ry, 0, D.up ? Math.PI : 0, D.up ? TAU : Math.PI); }
 
+
+/* ---------- プレイマットの柄：演出の間だけ、盤面の地をカードに合わせた柄に変える（カードを置く枠は盤面の上に残る） ---------- */
+/** 盤面の中に置いたキャンバス（info.mat）を、盤面の大きさに合わせる */
+function sizeMat(S) {
+  const m = S.mat, r = m.cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  m.w = r.width; m.h = r.height; m.cv.width = Math.max(1, r.width * dpr); m.cv.height = Math.max(1, r.height * dpr);
+  m.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  m.ox = r.left; m.oy = r.top; // 画面上の位置（演出の座標を盤面の中の座標に直す）
+  m.seed = Array.from({ length: 140 }, () => [Math.random(), Math.random(), Math.random()]);
+}
+/** 柄の濃さ：始まりで現れ、終わりで消える */
+function matAlpha(S) { const t = S.t; return Math.min(1, Math.max(0, (t - 150) / 450)) * (t > S.end - 650 ? Math.max(0, (S.end - t) / 650) : 1); }
+function drawMat(S) {
+  const m = S.mat; if (!m) return;
+  const x = m.ctx, al = matAlpha(S);
+  x.clearRect(0, 0, m.w, m.h);
+  if (al <= 0) return;
+  x.save(); x.globalAlpha = al; m.fn(S, x, m.w, m.h, S.t); x.restore();
+}
+const MAT = {
+  /* ブラック・ホール：宇宙。星が渦を巻いて中心の穴へ流れ込む */
+  hole(S, x, w, h, t) {
+    const m = S.mat, cx = S.B.cx - m.ox, cy = S.B.cy - m.oy, R = Math.hypot(w, h) / 2;
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, R);
+    g.addColorStop(0, '#000000'); g.addColorStop(.16, '#1d0636'); g.addColorStop(.5, '#4a1688'); g.addColorStop(.8, '#2a0d55'); g.addColorStop(1, '#120826');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    // 渦の腕：紫と橙のもやがゆっくり回る
+    x.save(); x.translate(cx, cy); x.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 3; k++) {
+      x.rotate(TAU / 3); x.save(); x.rotate(t / 1400);
+      x.strokeStyle = k % 2 ? 'rgba(255,150,80,.38)' : 'rgba(200,130,255,.45)'; x.lineWidth = 22;
+      x.beginPath(); for (let a = 0; a < 4.5; a += .08) { const r = 14 + a * R * .16; x.lineTo(Math.cos(a) * r, Math.sin(a) * r * .75); } x.stroke(); x.restore();
+    }
+    // 星：中心へ渦を巻きながら吸い込まれる
+    m.seed.forEach(([a0, r0, sp]) => {
+      const f = ((t / 2600) * (0.6 + sp) + r0) % 1, r = (1 - f) * R, ang = a0 * TAU + f * 5;
+      const px = Math.cos(ang) * r, py = Math.sin(ang) * r * .75;
+      x.fillStyle = `rgba(255,255,255,${.45 + .55 * f})`; x.beginPath(); x.arc(px, py, 1 + 2 * f, 0, TAU); x.fill();
+    });
+    x.restore();
+  },
+  /* ライトニング・ボルテックス：嵐の雲。黄色い稲妻の筋が走り、一斉に落ちた瞬間に強く光る */
+  vortex(S, x, w, h, t) {
+    const m = S.mat, g = x.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, '#1b1840'); g.addColorStop(.5, '#2e2a62'); g.addColorStop(1, '#16143a');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    // ゆっくり流れる雲
+    m.seed.slice(0, 18).forEach(([a, b, c], i) => {
+      const px = ((a * w + t * (.02 + c * .03)) % (w + 160)) - 80, py = b * h, rr2 = 50 + c * 70;
+      const cg = x.createRadialGradient(px, py, 0, px, py, rr2); cg.addColorStop(0, 'rgba(120,112,190,.6)'); cg.addColorStop(1, 'rgba(120,112,190,0)');
+      x.fillStyle = cg; x.fillRect(px - rr2, py - rr2, rr2 * 2, rr2 * 2);
+    });
+    // 黄色い稲妻の筋（ときどき）と、落ちた瞬間の光
+    x.globalCompositeOperation = 'lighter';
+    const flick = Math.sin(t / 37) * Math.sin(t / 53);
+    if (flick > .2 || S.flash > .3) {
+      x.strokeStyle = `rgba(255,224,110,${S.flash > .3 ? .95 : .7})`; x.lineWidth = 2.2;
+      for (let k = 0; k < 3; k++) { let px = (m.seed[k + 20][0]) * w, py = 0; x.beginPath(); x.moveTo(px, py); while (py < h) { px += (Math.random() - .5) * 26; py += 10 + Math.random() * 14; x.lineTo(px, py); } x.stroke(); }
+    }
+    if (S.flash > .05) { x.fillStyle = `rgba(255,236,150,${S.flash * .35})`; x.fillRect(0, 0, w, h); }
+  },
+  /* 激流葬：深い海。光のゆらめきと泡が、波の向きへ流れる */
+  torrent(S, x, w, h, t) {
+    const m = S.mat, up = S.I.me, g = x.createLinearGradient(0, up ? h : 0, 0, up ? 0 : h);
+    g.addColorStop(0, '#062a55'); g.addColorStop(.6, '#0f5c96'); g.addColorStop(1, '#1d8fc4');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    x.globalCompositeOperation = 'lighter';
+    // 水の中の光のゆらめき（網の目のような筋が流れる）
+    const dir = up ? -1 : 1;
+    x.lineWidth = 1.4;
+    for (let k = 0; k < 9; k++) {
+      x.strokeStyle = `rgba(150,225,255,${.25 + .08 * (k % 3)})`; x.beginPath();
+      for (let px = 0; px <= w; px += 8) { const py = ((k / 9) * h + dir * t * .09 + Math.sin(px / 30 + t / 400 + k) * 9 + h * 2) % h; px === 0 ? x.moveTo(px, py) : x.lineTo(px, py); }
+      x.stroke();
+    }
+    // 泡
+    m.seed.slice(0, 40).forEach(([a, b, c]) => { const py = ((b * h - dir * -1 * 0) + dir * t * (.05 + c * .08) + h * 3) % h, px = a * w + Math.sin(t / 300 + c * 9) * 6; x.strokeStyle = 'rgba(200,240,255,.45)'; x.lineWidth = 1; x.beginPath(); x.arc(px, py, 1 + c * 2.5, 0, TAU); x.stroke(); });
+  },
+  /* ミラーフォース：薄い青の光の結晶。六角の網目が光り、跳ね返す瞬間に白く輝く */
+  mirror(S, x, w, h, t) {
+    const D = S.dome, pulse = D && D.pulse ? Math.max(0, 1 - (t - D.pulse) / 800) : 0;
+    const g = x.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, '#7fb6e0'); g.addColorStop(.5, '#a9d6f5'); g.addColorStop(1, '#6fa7d6');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    // 六角の網目
+    const hs = 14; x.strokeStyle = `rgba(255,255,255,${.28 + .5 * pulse})`; x.lineWidth = 1;
+    for (let row = 0, yy = -hs; yy < h + hs; row++, yy += hs * 1.5) for (let xx = -hs + (row % 2) * hs * .87; xx < w + hs; xx += hs * 1.73) { x.beginPath(); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + Math.PI / 6; x.lineTo(xx + Math.cos(a) * hs, yy + Math.sin(a) * hs); } x.closePath(); x.stroke(); }
+    // 斜めに走る白い光
+    x.globalCompositeOperation = 'lighter';
+    const sw = ((t / 1500) % 1) * (w + h) * 1.4 - h * .7, bg = x.createLinearGradient(sw - 60, 0, sw + 60, h * .4);
+    bg.addColorStop(0, 'rgba(255,255,255,0)'); bg.addColorStop(.5, 'rgba(255,255,255,.35)'); bg.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = bg; x.fillRect(0, 0, w, h);
+    if (pulse > 0) { x.fillStyle = `rgba(255,255,255,${.55 * pulse})`; x.fillRect(0, 0, w, h); }
+  },
+};
+
 /* ---------- 1コマ進める ---------- */
 function tick(S, now) {
   const dt = Math.min(32, now - (S.last || now)) * S.speed; S.last = now;
@@ -622,7 +719,7 @@ function draw(S) {
   const t = S.t, B = S.B, U = S.U;
   ctx.save(); ctx.clearRect(-50, -50, W + 100, H + 100);
   ctx.translate((Math.random() - .5) * S.shake, (Math.random() - .5) * S.shake);
-  if (S.dark > .01) { ctx.fillStyle = `rgba(0,0,0,${S.dark * .65})`; ctx.fillRect(-50, -50, W + 100, H + 100); }
+  if (S.dark > .01) { ctx.fillStyle = `rgba(0,0,0,${S.dark * .65})`; ctx.beginPath(); ctx.rect(-50, -50, W + 100, H + 100); if (S.mat && matAlpha(S) > .5) rr(ctx, S.mat.ox, S.mat.oy, S.mat.w, S.mat.h, 14); ctx.fill('evenodd'); }
   if (S.storm || S.rain) { ctx.strokeStyle = 'rgba(180,200,230,.35)'; ctx.lineWidth = 1; for (let i = 0; i < 60; i++) { const rx = (i * 53 + t * .9) % (W + 40) - 20, ry = (i * 97 + t * 1.6) % H; ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 6, ry + 16); ctx.stroke(); } }
   if (S.crack) { const k = Math.min(1, (t - S.crack.t) / 300); ctx.strokeStyle = 'rgba(30,15,5,.85)'; ctx.lineWidth = 2.5; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; ctx.beginPath(); ctx.moveTo(S.crack.x, S.crack.y); ctx.lineTo(S.crack.x + Math.cos(a) * 70 * U * k, S.crack.y + Math.sin(a) * 22 * U * k); ctx.stroke(); } }
   // 色を変えたカード（洗脳・スキルドレイン・お触れ）
