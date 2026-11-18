@@ -367,6 +367,10 @@ export function backImg() {
   rr(x, 1, 1, CW - 2, CH - 2, 6); x.fillStyle = '#5e3517'; x.fill(); x.save(); x.clip();
   for (let k = 0; k < 14; k++) { x.strokeStyle = ['#b5743a', '#6e3f1c', '#d0914c', '#4a2a10'][k % 4]; x.lineWidth = 7; x.beginPath(); for (let t = 0; t < 14; t += .2) { const r = 1 + t * 4.5, a = t + k * .45; x.lineTo(CW / 2 + Math.cos(a) * r * .8, CH / 2 + Math.sin(a) * r); } x.stroke(); }
   x.restore(); x.fillStyle = '#0f0905'; x.strokeStyle = '#d9a35a'; x.lineWidth = 1.2; x.beginPath(); x.ellipse(CW / 2, CH / 2, 18, 25, 0, 0, TAU); x.fill(); x.stroke();
+  // 茶色い枠（画面の裏面と同じ）
+  const fw = CW * 3.4 / 59; x.beginPath(); x.rect(0, 0, CW, CH); x.rect(fw, CH - fw, CW - fw * 2, -(CH - fw * 2)); x.fillStyle = '#8a5a2b'; x.fill('evenodd');
+  x.strokeStyle = 'rgba(192,138,78,.8)'; x.lineWidth = .7; x.strokeRect(1.6, 1.6, CW - 3.2, CH - 3.2);
+  x.strokeStyle = '#2a170a'; x.lineWidth = 1.1; x.strokeRect(fw, fw, CW - fw * 2, CH - fw * 2);
   x.strokeStyle = '#24150b'; x.lineWidth = 1.6; rr(x, 1, 1, CW - 2, CH - 2, 6); x.stroke();
   return (BACK = o);
 }
