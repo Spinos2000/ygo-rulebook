@@ -66,6 +66,7 @@ export function ritualSummon(x     , spec            )       {
   });
   if (spec.materials === 'deckNormal') { log(s, `${pl(p)}：デッキから儀式召喚の素材を墓地へ送る`); sendToGy(s, pick, 'effect'); }
   else release(s, pick, 'release');
+  s.animMats = [...pick]; // 演出用：儀式の素材
   newStep(s); // 素材にする処理と儀式召喚は同時に行われない
   specialSummon(x, [monster], { how: 'ritual' });
 }
@@ -120,6 +121,7 @@ export function fusionSummon(x     , spec             = HAND_FIELD)       {
   if (spec.move === 'banish') banish(s, chosen, 'material');
   else if (spec.move === 'deck') returnToDeck(s, chosen, 'material');
   else sendToGy(s, chosen, 'material');
+  s.animMats = [...chosen]; // 演出用：融合の素材
   newStep(s); // 素材にする処理と融合召喚は同時に行われない
   specialSummon(x, [fusion], { how: 'fusion' });
 }

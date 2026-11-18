@@ -584,6 +584,11 @@ export function effectDamage(s           , p          , amount        )       {
   log(s, `${pl(p)}に${amount}の効果ダメージ（LP ${s.players[p].lp}）`);
   checkLp(s);
 }
+/** 画面の演出用の記録を足す（ルールの処理には使わない） */
+export function pushAnim(s           , a                         )       {
+  (s.anim ??= []).push({ ...(a          ), seq: (s.animSeq = (s.animSeq ?? 0) + 1) }         );
+  if (s.anim.length > 8) s.anim.shift();
+}
 export function addLingering(s           , l           )       { s.lingering.push(l); }
 
 /** 特殊召喚できるか（召喚条件・正規の召喚・置き場所） */
@@ -642,6 +647,8 @@ export function specialSummon(x     , uids          , opt                       
   if (done.length) {
     log(s, `${pl(p)}：${done.map(u => s.cards[u].faceUp ? nameOf(s, u) : '裏側守備表示のモンスター').join('、')}を${how === 'ritual' ? '儀式召喚' : how === 'fusion' ? '融合召喚' : '特殊召喚'}`);
     for (const u of done) emit(s, { type: 'summoned', uid: u, player: p, how: how === 'ignore' ? 'special' : how, from: fromZones[u] });
+    for (const u of done) pushAnim(s, { kind: 'summon', uid: u, how: !s.cards[u].faceUp ? 'set' : how === 'ignore' ? 'special' : how, mats: s.animMats ?? [], from: fromZones[u] });
+    s.animMats = undefined;
   }
   return done;
 }
@@ -1191,6 +1198,8 @@ function completeSummon(s           , uid        , how                          
   newStep(s);
   log(s, `${pl(p)}：${nameOf(s, uid)}の${how === 'flip' ? '反転召喚' : how === 'advance' ? 'アドバンス召喚' : how === 'special' ? '特殊召喚' : '召喚'}に成功`);
   if (how === 'flip') emit(s, { type: 'flipped', uid }); // リバースした（「リバースした場合」の効果）
+  pushAnim(s, { kind: 'summon', uid, how, mats: how === 'advance' ? (s.animMats ?? []) : [] });
+  s.animMats = undefined;
   emit(s, { type: 'summoned', uid, player: p, how });
   // 召喚成功時には、お互いに効果を発動できない（オシリスの天空竜）
   s.lockStep = how !== 'flip' && scriptOf(s, uid).summonLock ? s.step : null;
@@ -1210,6 +1219,7 @@ function performMain(s           , a        )       {
       if (!zones.includes(zone)) throw new RuleError('そのモンスターゾーンには出せません');
       newStep(s);
       if (a.tributes.length) release(s, a.tributes, 'release');
+      s.animMats = [...a.tributes];
       const setting = a.type === 'setMonster';
       newStep(s);
       moveCard(s, a.card, 'mzone', { index: zone, faceUp: !setting, position: setting ? 'def' : 'atk', controller: p });
@@ -1217,6 +1227,8 @@ function performMain(s           , a        )       {
       if (setting) {
         log(s, `${pl(p)}：モンスターをセット`);
         emit(s, { type: 'set', uid: a.card, player: p });
+        pushAnim(s, { kind: 'summon', uid: a.card, how: 'set', mats: s.animMats ?? [] });
+        s.animMats = undefined;
         s.chainCont = { type: 'none' };
         s.queue.push({ type: 'settle', chained: false });
       } else {
@@ -1389,9 +1401,8 @@ function battleProc(s           , step            )       {
         if (b.destroyed.length) log(s, `${b.destroyed.map(u => nameOf(s, u)).join('、')}は戦闘で破壊される`);
       }
       // 画面の演出用：この戦闘の記録（攻撃したモンスター・攻撃対象・破壊されるモンスター・戦闘ダメージ）
-      (s.anim ??= []).push({ seq: (s.animSeq = (s.animSeq ?? 0) + 1), kind: 'battle', attacker: b.attacker, target: b.target, destroyed: [...b.destroyed],
+      pushAnim(s, { kind: 'battle', attacker: b.attacker, target: b.target, destroyed: [...b.destroyed],
         damage: s.events.filter(e => e.type === 'damage' && e.battle && e.step === s.step).map(e => ({ player: (e                        ).player, amount: (e                      ).amount })) });
-      if (s.anim.length > 6) s.anim.shift();
       checkLp(s);
       return next('afterCalc');
     }

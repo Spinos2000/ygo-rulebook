@@ -2,7 +2,7 @@
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
 import { cpuDecide } from './ai/cpu.js';
 import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js';
-import { playBattle } from './fx.js';
+import { playBattle, playSummon } from './fx.js';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
@@ -73,16 +73,19 @@ function commit(next) {
 /* ---------- 攻撃の演出：演出の間は画面の更新とCPUの手番を止め、終わったら続ける ---------- */
 let fxBusy = false;
 const fxMode = () => ($('#fxMode') && $('#fxMode').value) || 'full';
+let pendingSummons = [];   // 画面を更新した後に再生する召喚の演出
 function queueBattleFx(prev, next) {
   if (fxMode() === 'none' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const fresh = (next.anim || []).filter(x => x.seq > (prev.animSeq ?? 0));
   if (!fresh.length) return;
-  // 演出に使うのは、まだ画面に残っている前の状態の盤面（カードの位置）
-  const jobs = fresh.map(x => battleInfo(prev, next, x)).filter(Boolean);
-  if (!jobs.length) return;
+  // 攻撃：まだ画面に残っている前の状態の盤面（カードの位置）で再生する
+  const battles = fresh.filter(x => x.kind === 'battle').map(x => battleInfo(prev, next, x)).filter(Boolean);
+  // 召喚：素材のカードの位置は今のうちに覚えておき、召喚されたカードの位置は画面を更新してから調べる
+  pendingSummons.push(...fresh.filter(x => x.kind === 'summon').map(x => summonInfo(prev, next, x)).filter(Boolean));
+  if (!battles.length) return;
   fxBusy = true;
   (async () => {
-    for (const j of jobs) {
+    for (const j of battles) {
       const hide = j.hide.map(el => { el.style.visibility = 'hidden'; return el; });
       try { await playBattle(ROOT, j.info); } catch (e) { console.error(e); }
       hide.forEach(el => { el.style.visibility = ''; });
@@ -90,6 +93,39 @@ function queueBattleFx(prev, next) {
     fxBusy = false;
     render();
   })();
+}
+function summonInfo(prev, next, x) {
+  const c = next.cards[x.uid];
+  if (!c || !['mzone', 'emz'].includes(c.zone)) return null;
+  // 相手の裏側のカードは中身を見せない
+  const faceDown = !c.faceUp || x.how === 'set';
+  const mats = (x.mats || []).map(u => {
+    const el = ROOT.querySelector(`[data-uid="${u}"]`);
+    if (!el || !prev.cards[u] || el.classList.contains('back')) return null;
+    return { rect: el.getBoundingClientRect(), d: defOf(prev, u), atk: currentAtk(prev, u), def: currentDef(prev, u) };
+  }).filter(Boolean);
+  return { uid: x.uid, how: x.how, faceDown: faceDown && x.how !== 'flip', d: defOf(next, x.uid), mats };
+}
+/** 画面を更新した後：召喚されたカードの場所で、召喚の演出を順に再生する */
+function playPendingSummons() {
+  if (!pendingSummons.length || fxBusy) return false;
+  const jobs = pendingSummons; pendingSummons = [];
+  fxBusy = true;
+  (async () => {
+    for (const j of jobs) {
+      const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`);
+      if (!el) continue;
+      el.style.visibility = 'hidden';
+      const flipFace = j.how === 'flip';
+      try {
+        await playSummon(ROOT, { rect: el.getBoundingClientRect(), d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, speed: fxMode() === 'short' ? 2 : 1 });
+      } catch (e) { console.error(e); }
+      el.style.visibility = '';
+    }
+    fxBusy = false;
+    render();
+  })();
+  return true;
 }
 function battleInfo(prev, next, x) {
   const elOf = uid => ROOT.querySelector(`#board [data-uid="${uid}"]`);
@@ -579,6 +615,8 @@ function render() {
   renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets();
   $('#result').hidden = S.winner === null;
   if (S.winner !== null) $('#result').textContent = S.winner === 'draw' ? `引き分け：${S.winReason}` : `${NAME(S.winner)}の勝利：${S.winReason}`;
+  // 召喚の演出があれば、それが終わるまでCPUの手番と自動パスを待つ
+  if (playPendingSummons()) { saveSoon(); return; }
   scheduleCpu();
   scheduleAutoPass();
   saveSoon();

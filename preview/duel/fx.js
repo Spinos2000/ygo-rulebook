@@ -354,3 +354,139 @@ function drawGod(S, t) {
   if (S.pillar > 0) { const pw = 90 * U, gr = ctx.createLinearGradient(D.x - pw, 0, D.x + pw, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.5, hexA(c, .8)); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = S.pillar; ctx.fillStyle = gr; ctx.fillRect(D.x - pw, -60, pw * 2, D.y + 120); ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fillRect(D.x - 10, -60, 20, D.y + 120); ctx.globalAlpha = 1; }
   if (S.dome != null) { const de = (t - S.dome) / 900; if (de < 1) { const rad = (40 + 260 * ease(de)) * U; glow(D.x, D.y, rad, c, (1 - de) * .9); glow(D.x, D.y, rad * .5, '#ffffff', 1 - de); } }
 }
+
+/* =====================================================================
+ * 召喚の演出：通常・セット・アドバンス・特殊・反転・儀式・融合・神
+ * info = { rect（召喚されたカードの場所）, d（カード）, atk, def, how, faceDown, mats: [{rect, d, atk, def}], speed }
+ * ===================================================================== */
+let BACK = null;
+function backImg() {
+  if (BACK) return BACK;
+  const CW = 78, CH = 114, o = document.createElement('canvas'); o.width = CW * 2; o.height = CH * 2;
+  const x = o.getContext('2d'); x.scale(2, 2);
+  rr(x, 1, 1, CW - 2, CH - 2, 6); x.fillStyle = '#5e3517'; x.fill(); x.save(); x.clip();
+  for (let k = 0; k < 14; k++) { x.strokeStyle = ['#b5743a', '#6e3f1c', '#d0914c', '#4a2a10'][k % 4]; x.lineWidth = 7; x.beginPath(); for (let t = 0; t < 14; t += .2) { const r = 1 + t * 4.5, a = t + k * .45; x.lineTo(CW / 2 + Math.cos(a) * r * .8, CH / 2 + Math.sin(a) * r); } x.stroke(); }
+  x.restore(); x.fillStyle = '#0f0905'; x.strokeStyle = '#d9a35a'; x.lineWidth = 1.2; x.beginPath(); x.ellipse(CW / 2, CH / 2, 18, 25, 0, 0, TAU); x.fill(); x.stroke();
+  x.strokeStyle = '#24150b'; x.lineWidth = 1.6; rr(x, 1, 1, CW - 2, CH - 2, 6); x.stroke();
+  return (BACK = o);
+}
+const SUMMON_COLOR = { normal: '#ffe08a', set: '#d9a35a', advance: '#ffd27a', special: '#9fe6ff', flip: '#ffffff', ritual: '#7fb2ff', fusion: '#c9a7ff', god: '#ffc93d' };
+const SUMMON_LAND = { normal: 420, set: 300, advance: 900, special: 1100, flip: 500, ritual: 1800, fusion: 1800, god: 2700 };
+
+export function playSummon(root, info) {
+  ensureCanvas(root); fit();
+  return new Promise(resolve => {
+    const r = info.rect, U = Math.max(.6, Math.min(1.3, r.width / 78));
+    let how = info.how;
+    if (!info.faceDown && (info.d.race === '幻神獣族' || info.d.race === '創造神族') && how !== 'set') how = 'god';
+    if (info.faceDown) how = how === 'flip' ? 'flip' : 'set';
+    const S = { how, c: SUMMON_COLOR[how] || '#9fe6ff', U, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height,
+      img: info.faceDown && how !== 'flip' ? backImg() : cardImg(info.d, info.atk, info.def), parts: [], rings: [], shake: 0, flash: 0, dark: 0, quake: 0, t: 0, last: 0,
+      speed: info.speed || 1, L: SUMMON_LAND[how] || 600, hit: false, bolt: null, done: false,
+      mats: (info.mats || []).map(m => ({ x: m.rect.left + m.rect.width / 2, y: m.rect.top + m.rect.height / 2, w: m.rect.width, h: m.rect.height, img: cardImg(m.d, m.atk, m.def), a: 1, s: 1 })) };
+    S.end = S.L + (how === 'god' ? 900 : how === 'set' ? 250 : 650);
+    cv.style.display = 'block';
+    const step = now => {
+      if (S.done) return;
+      const dt = Math.min(32, now - (S.last || now)) * S.speed; S.last = now; S.t += dt;
+      summonTick(S); summonDraw(S);
+      if (S.t > S.end) { S.done = true; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; resolve(); return; }
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+function SP(S, o) { o.max = o.life; o.drag = o.drag || .96; o.grav = o.grav || 0; o.sz = o.sz || 3; if (S.parts.length < 1200) S.parts.push(o); }
+function sburst(S, x, y, n, cols, sp, life, sz, flat) { for (let i = 0; i < n; i++) { const a = Math.random() * TAU, s = sp * (.3 + Math.random()); SP(S, { x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s * (flat ? .35 : 1), life: life * (.6 + Math.random() * .7), sz: sz * (.5 + Math.random()), c: cols[i % cols.length], drag: .92, grav: flat ? 0 : .04 }); } }
+const easeIn = x => x * x * x;
+function summonTick(S) {
+  const t = S.t, k = S.how, c = S.c, x = S.x, y = S.y, L = S.L, U = S.U;
+  if (k === 'advance' && t < 800) S.mats.forEach(m => {
+    m.a = Math.max(0, 1 - t / 600);
+    if (t < 600) for (let i = 0; i < 4; i++) SP(S, { x: m.x + (Math.random() - .5) * m.w, y: m.y + (Math.random() - .5) * m.h, vx: (x - m.x) * .02 + (Math.random() - .5), vy: (y - m.y) * .02 - 1, life: 40, sz: 2.4, c: Math.random() < .5 ? c : '#ffffff', drag: .97 });
+  });
+  if (k === 'fusion' || k === 'ritual') S.mats.forEach(m => {
+    const p = Math.min(1, t / (L * .8)), ang = Math.atan2(m.y - y, m.x - x) + p * 6, d0 = Math.hypot(m.x - x, m.y - y), r = d0 * (1 - easeIn(p));
+    m.dx = x + Math.cos(ang) * r; m.dy = y + Math.sin(ang) * r * .7; m.a = 1 - Math.max(0, (p - .7) / .3); m.s = 1 - .5 * p;
+    if (Math.random() < .6) SP(S, { x: m.dx, y: m.dy, vx: 0, vy: 0, life: 18, sz: 3, c, drag: .9 });
+  });
+  if (k === 'ritual' && t > 200 && t < L) for (let q = 0; q < 6; q++) { const a = q / 6 * TAU + t / 600; SP(S, { x: x + Math.cos(a) * 100 * U, y: y + S.h * .35 + Math.sin(a) * 34 * U, vx: (Math.random() - .5) * .6, vy: -2 - Math.random() * 2.5, life: 30, sz: 3.6, c: Math.random() < .5 ? c : '#d6ecff', drag: .98, grav: -.02 }); }
+  if (k === 'special' && t > 150 && t < L) for (let s = 0; s < 5; s++) SP(S, { x: x + (Math.random() - .5) * 60 * U, y: y + S.h * .45, vx: 0, vy: -4 - Math.random() * 4, life: 28, sz: 2.6, c: Math.random() < .5 ? c : '#ffffff', drag: .99 });
+  if (k === 'god') {
+    S.dark = Math.min(.85, t / 700);
+    if (t > 600 && t < L && Math.random() < .25) S.bolt = { t, x: x + (Math.random() - .5) * 240 };
+    if (t > 1400 && t < L) for (let g = 0; g < 8; g++) SP(S, { x: x + (Math.random() - .5) * 90 * U, y: -10, vx: 0, vy: 8 + Math.random() * 6, life: 60, sz: 2.4, c: Math.random() < .5 ? c : '#fff1b0', drag: 1 });
+    S.quake = t < L ? Math.min(1, t / 1200) * 3 : 0;
+  }
+  if (k === 'ritual' || k === 'fusion') S.dark = Math.min(.55, t / 600);
+  if (t > L + 200) S.dark *= .9;
+  if (!S.hit && t >= L) {
+    S.hit = true;
+    const big = k === 'god' ? 1 : k === 'advance' || k === 'ritual' || k === 'fusion' ? .75 : k === 'set' ? .1 : .45;
+    S.flash = big; S.shake = k === 'set' ? 1 : 18 * big;
+    S.rings.push({ x, y: y + S.h / 2 - 4, r: S.w * .5, v: k === 'set' ? 2 : (9 * big + 3) * U, a: 1, c: k === 'normal' || k === 'advance' ? '#e8d2a8' : c });
+    if (k !== 'set') sburst(S, x, y + S.h / 2 - 6, k === 'normal' ? 36 : 70 * big + 20, k === 'normal' ? ['#d8c3a0', '#bfa27c', '#ffffff'] : [c, '#ffffff'], (k === 'normal' ? 5 : 8 * big + 3) * U, 40, 3, k === 'normal');
+    if (k === 'god') { for (let i = 0; i < 3; i++) S.rings.push({ x, y, r: 20 + i * 20, v: (14 - i * 3) * U, a: 1, c: i ? c : '#ffffff' }); sburst(S, x, y, 120, [c, '#fff1b0', '#ffffff'], 11 * U, 60, 3.5); }
+  }
+  S.parts.forEach(p => { p.x += p.vx; p.y += p.vy; p.vx *= p.drag; p.vy = p.vy * p.drag + p.grav; p.life--; }); S.parts = S.parts.filter(p => p.life > 0);
+  S.rings.forEach(r => { r.r += r.v; r.v *= .96; r.a *= .94; }); S.rings = S.rings.filter(r => r.a > .03);
+  S.shake *= .85; S.flash *= .88;
+}
+function sImg(S, img, x, y, s, a, sx) { ctx.save(); ctx.translate(x, y); ctx.scale(s * (sx == null ? 1 : sx), s); ctx.globalAlpha = Math.max(0, Math.min(1, a)); ctx.drawImage(img, -S.w / 2, -S.h / 2, S.w, S.h); ctx.restore(); }
+function summonDraw(S) {
+  const t = S.t, k = S.how, c = S.c, x = S.x, y = S.y, L = S.L, U = S.U, sh = S.shake + S.quake;
+  const dpr = cv.width / W; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H); ctx.save();
+  ctx.translate((Math.random() - .5) * sh, (Math.random() - .5) * sh);
+  if (S.dark > .01) { ctx.fillStyle = `rgba(0,0,0,${S.dark * .6})`; ctx.fillRect(-30, -30, W + 60, H + 60); }
+  ctx.globalCompositeOperation = 'lighter';
+  if (k === 'special' && t < L + 300) {
+    const o = Math.min(1, t / 250), fa = t > L ? 1 - (t - L) / 300 : 1;
+    ctx.save(); ctx.translate(x, y + S.h * .45); ctx.scale(1, .32); ctx.strokeStyle = hexA(c, .9 * fa); ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 70 * o * U, 0, TAU); ctx.stroke(); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 52 * o * U, 0, TAU); ctx.stroke(); ctx.restore();
+    const gr = ctx.createLinearGradient(x - 50 * U, 0, x + 50 * U, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.5, hexA(c, .5 * fa * o)); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.fillRect(x - 50 * U, y - 260, 100 * U, 260 + S.h * .5);
+  }
+  if (k === 'ritual' && t < L + 600) {
+    const o = Math.min(1, t / 400), fa = t > L ? Math.max(0, 1 - (t - L) / 600) : 1, cy = y + S.h * .35;
+    ctx.save(); ctx.translate(x, cy); ctx.scale(1, .34); ctx.rotate(t / 1200); ctx.strokeStyle = hexA(c, .9 * fa); ctx.lineWidth = 3; const R1 = 110 * o * U, R2 = 92 * o * U;
+    ctx.beginPath(); ctx.arc(0, 0, R1, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, R2, 0, TAU); ctx.stroke();
+    for (let i = 0; i < 2; i++) { ctx.beginPath(); for (let j = 0; j <= 3; j++) { const a = j / 3 * TAU + i * Math.PI / 3 - 1.57; ctx.lineTo(Math.cos(a) * R2, Math.sin(a) * R2); } ctx.stroke(); }
+    ctx.restore(); for (let q = 0; q < 6; q++) { const a = q / 6 * TAU + t / 600; glow(x + Math.cos(a) * 100 * U, cy + Math.sin(a) * 34 * U, 16 * U, c, .9 * fa); }
+  }
+  if (k === 'fusion' && t < L + 400) {
+    const fa = t > L ? Math.max(0, 1 - (t - L) / 400) : Math.min(1, t / 300);
+    for (let v = 0; v < 4; v++) { ctx.strokeStyle = c; ctx.globalAlpha = fa * (.7 - v * .13); ctx.lineWidth = 4 - v * .7; ctx.beginPath(); for (let a = 0; a < TAU * 2.2; a += .12) { const r3 = (6 + a * 11 + v * 7) * U, xx = x + Math.cos(a - t / 120 + v) * r3, yy = y + Math.sin(a - t / 120 + v) * r3 * .6; if (a) ctx.lineTo(xx, yy); else ctx.moveTo(xx, yy); } ctx.stroke(); }
+    ctx.globalAlpha = 1; glow(x, y, 70 * U, c, .7 * fa);
+  }
+  if (k === 'god') {
+    if (S.bolt && t - S.bolt.t < 120) {
+      const b = S.bolt, pts = [[b.x, -10]];
+      while (pts[pts.length - 1][1] < y - 60) { const l = pts[pts.length - 1]; pts.push([l[0] + (Math.random() - .5) * 34, l[1] + 20 + Math.random() * 14]); }
+      [[8, .4, c], [2.5, 1, '#ffffff']].forEach(l => { ctx.strokeStyle = l[2]; ctx.lineWidth = l[0]; ctx.globalAlpha = (1 - (t - b.t) / 120) * l[1]; ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.stroke(); });
+      ctx.globalAlpha = 1;
+    }
+    if (t > 1300) {
+      const fa = Math.min(1, (t - 1300) / 400) * (t > L + 500 ? Math.max(0, 1 - (t - L - 500) / 400) : 1), gr = ctx.createLinearGradient(x - 80 * U, 0, x + 80 * U, 0);
+      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.5, hexA(c, .7 * fa)); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.fillRect(x - 80 * U, -20, 160 * U, y + S.h);
+      ctx.fillStyle = `rgba(255,255,255,${.6 * fa})`; ctx.fillRect(x - 8 * U, -20, 16 * U, y + S.h);
+    }
+  }
+  S.rings.forEach(r => { ctx.strokeStyle = r.c; ctx.globalAlpha = r.a; ctx.lineWidth = 5 * r.a + 1; ctx.beginPath(); ctx.ellipse(r.x, r.y, r.r, r.r * .32, 0, 0, TAU); ctx.stroke(); }); ctx.globalAlpha = 1;
+  S.parts.forEach(p => { ctx.globalAlpha = Math.min(1, p.life / p.max * 1.6); const rad = p.sz * 2.6; ctx.drawImage(spr(p.c), p.x - rad, p.y - rad, rad * 2, rad * 2); }); ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+  S.mats.forEach(m => { if (m.a > 0) { ctx.save(); ctx.translate(m.dx ?? m.x, m.dy ?? m.y); ctx.scale(m.s, m.s); ctx.globalAlpha = m.a; ctx.drawImage(m.img, -m.w / 2, -m.h / 2, m.w, m.h); ctx.restore(); } });
+  const img = S.img;
+  if (k === 'normal' || k === 'advance') { if (!(k === 'advance' && t < 300)) { const p = Math.min(1, t / L), s = 1 + 1.1 * (1 - easeIn(p)); sImg(S, img, x, y - 160 * U * (1 - easeIn(p)), s, Math.min(1, t / 150)); } }
+  else if (k === 'set') { const p = Math.min(1, t / L); sImg(S, img, x - (1 - ease(p)) * 120 * U, y, 1, p); }
+  else if (k === 'special') { if (t > 200) { const p = Math.min(1, (t - 200) / (L - 200)); ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, y + S.h / 2); ctx.clip(); sImg(S, img, x, y + S.h * (1 - ease(p)), 1, 1); ctx.restore(); } }
+  else if (k === 'flip') { const p = Math.min(1, t / L), sx = Math.cos(p * Math.PI); sImg(S, sx > 0 ? backImg() : img, x, y - 10 * Math.sin(p * Math.PI), 1 + .15 * Math.sin(p * Math.PI), 1, Math.abs(sx)); }
+  else if (k === 'ritual') { if (t > L * .5) { const p = Math.min(1, (t - L * .5) / (L * .5)); sImg(S, img, x, y - 40 * U * (1 - ease(p)), .6 + .4 * ease(p), p); } }
+  else if (k === 'fusion') { if (t > L * .8) { const p = Math.min(1, (t - L * .8) / (L * .2)); sImg(S, img, x, y - 20 * (1 - p), .3 + .7 * ease(p), p); } }
+  else if (k === 'god') { if (t > 1700) { const p = Math.min(1, (t - 1700) / (L - 1700)); sImg(S, img, x, y - 220 * (1 - easeIn(p)), 1.6 - .6 * ease(p), Math.min(1, p * 3)); } }
+  if (t >= L && t < L + 500 && k !== 'set') { ctx.globalCompositeOperation = 'lighter'; glow(x, y, 130 * U, c, .5 * (1 - (t - L) / 500)); ctx.globalCompositeOperation = 'source-over'; }
+  ctx.restore();
+  if (S.flash > .01) { ctx.fillStyle = `rgba(255,255,255,${S.flash * .4})`; ctx.fillRect(0, 0, W, H); }
+  if (k === 'god') {
+    const bh = 44 * Math.min(1, t / 400) * (t > S.end - 400 ? Math.max(0, (S.end - t) / 400) : 1);
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+    if (bh > 20) { ctx.fillStyle = '#fff1b0'; ctx.font = '700 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('― 神 の 降 臨 ―', W / 2, bh - 16); ctx.textAlign = 'left'; }
+  }
+}
