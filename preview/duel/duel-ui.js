@@ -108,10 +108,18 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .pstrip.acting { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent) }
 
 /* ---------- 手札 ---------- */
-.hand { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 6px; min-height: 0; scrollbar-width: thin }
-.hand .card { flex: 0 0 auto; width: 84px; font-size: 10px }
-.hand.opp { min-height: 34px }
-.hand.opp .card { width: 28px; font-size: 0 }
+/* 手札はトランプアプリのように扇形に重ねる。位置（--tx・--ty・--rot）は app.js の fanOut() が決める */
+.hand { position: relative; --cw: 84px; --ch: calc(var(--cw) * 86 / 59); height: calc(var(--ch) * .84 + 28px); margin-bottom: calc(var(--ch) * -.16) }
+.hand .card { position: absolute; left: 50%; bottom: 0; width: var(--cw); margin-left: calc(var(--cw) / -2); font-size: 10px; z-index: var(--z, 1);
+  transform-origin: 50% 160%; transform: translate(var(--tx, 0px), var(--ty, 0px)) rotate(var(--rot, 0deg)); transition: transform .18s ease-out, box-shadow .12s }
+.hand.me .card:not(.sel):not(.picked):hover { transform: translate(var(--tx, 0px), calc(var(--ty, 0px) - 10px)) rotate(var(--rot, 0deg)) }
+/* 押したカードはまっすぐ立って持ち上がる */
+.hand.me .card.sel, .hand.me .card.picked { transform: translate(var(--tx, 0px), -24px) rotate(0deg) scale(1.1); z-index: 40 }
+.hand .empty { position: absolute; left: 0; right: 0; top: 35%; text-align: center }
+/* 相手の手札：画面の上に、裏面を逆向きの扇形で小さく */
+.hand.opp { --cw: 40px; height: calc(var(--ch) * .62); margin-bottom: 0 }
+.hand.opp .card { bottom: auto; top: calc(var(--ch) * -.38); font-size: 0; transform-origin: 50% -60%; transform: translate(var(--tx, 0px), calc(var(--ty, 0px) * -1)) rotate(calc(var(--rot, 0deg) * -1)) }
+.pstrip.me { position: relative; z-index: 5 }
 .empty { font-size: 12px; color: var(--sub); align-self: center; padding: 4px }
 
 /* ---------- デュエルマット ---------- */
@@ -164,7 +172,6 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .card.mini { width: 60%; pointer-events: none }
 .badge { position: absolute; top: 1px; right: 1px; background: var(--accent); color: var(--accent-ink); border-radius: 4px; font-size: 9px; padding: 0 3px; font-weight: 700; z-index: 1 }
 .badge.eq { top: auto; bottom: 1px; background: #2f5f8f; color: #fff }
-.hand .card:not(.back):hover { transform: translateY(-3px) }
 
 /* ---------- チェーン ---------- */
 #chain { border-color: var(--accent); background: var(--accent-soft) }
@@ -243,7 +250,9 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   #phases li button, #phases li span { min-width: 0; padding: 4px 7px }
   .pstrip { padding: 5px 10px }
   .pstrip .lp { font-size: 22px }
-  .hand .card { width: 70px; font-size: 8.5px }
+  .hand { --cw: 70px }
+  .hand .card { font-size: 8.5px }
+  .hand.opp { --cw: 34px }
   .hand .card .st i, .pilelist .card .st i { display: none }
   .hand .card .st { font-size: .9em; letter-spacing: -.05em; padding: 0 1px }
   #board { padding: 5px; gap: 4px; border-radius: 12px; max-width: none }
@@ -279,7 +288,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   #closeDuel .long { display: none }
 }
 @media (min-width: 861px) { #scrim { display: none } }
-@media (prefers-reduced-motion: reduce) { .card, .btn, .sheet, .pstrip .lp { transition: none; animation: none } }
+@media (prefers-reduced-motion: reduce) { .card, .hand .card, .btn, .sheet, .pstrip .lp { transition: none; animation: none } }
 `;
 
 export const MARKUP = `

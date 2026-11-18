@@ -212,6 +212,23 @@ function renderSide() {
   });
   $('#hand0').innerHTML = renderHand(0);
   $('#hand1').innerHTML = renderHand(1);
+  fanOut($('#hand0')); fanOut($('#hand1'));
+}
+/** 手札を扇形に並べる：少しずつ重ね、両端ほど傾けて下げる。枚数が増えたら重なりを深くして横幅に収める */
+function fanOut(el) {
+  const cs = [...el.querySelectorAll('.card')], n = cs.length;
+  if (!n) return;
+  const W = parseFloat(getComputedStyle(el).getPropertyValue('--cw')) || 84;
+  const opp = el.classList.contains('opp');
+  const step = n > 1 ? Math.min(W * (opp ? 0.5 : 0.66), (el.clientWidth - W - 12) / (n - 1)) : 0;
+  const spread = Math.min(30, n * 4.5);
+  cs.forEach((c, i) => {
+    const t = n === 1 ? 0 : i / (n - 1) - 0.5;
+    c.style.setProperty('--tx', (t * step * (n - 1)).toFixed(1) + 'px');
+    c.style.setProperty('--ty', (t * t * 40 * W / 84).toFixed(1) + 'px');
+    c.style.setProperty('--rot', (t * spread).toFixed(1) + 'deg');
+    c.style.setProperty('--z', String(i + 1));
+  });
 }
 
 /* ---------- フェイズ（上の帯） ---------- */
@@ -563,13 +580,15 @@ renderSoundBtn();
 try { const v = localStorage.getItem('gx-duel-cpu-speed'); if (v) $('#cpuSpeed').value = v; } catch { /* 保存できない環境 */ }
 $('#cpuSpeed').onchange = () => { try { localStorage.setItem('gx-duel-cpu-speed', $('#cpuSpeed').value); } catch { /* 保存できない環境 */ } };
 matchMedia('(max-width: 860px)').addEventListener('change', () => S && render());
+// 画面の幅が変わったら、手札の扇を並べ直す
+if (window.ResizeObserver) { const ro = new ResizeObserver(() => { fanOut($('#hand0')); fanOut($('#hand1')); }); ro.observe($('#hand0')); ro.observe($('#hand1')); }
 }
 function togglePick(u) {
   const r = S.pending.request;
   if (pick.includes(u)) pick = pick.filter(x => x !== u);
   else if (r.max === 1) pick = [u];
   else if (pick.length < r.max) pick = [...pick, u];
-  renderDetail(); renderBoard();
+  renderDetail(); renderBoard(); renderSide();
 }
 function renderSoundBtn() { const on = soundEnabled(); $('#soundBtn').textContent = on ? '音 オン' : '音 オフ'; $('#soundBtn').setAttribute('aria-pressed', String(on)); }
 
