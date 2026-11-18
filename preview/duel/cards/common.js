@@ -1,9 +1,10 @@
 // カード効果で共通して使う処理
                                                                                 
+import { RuleError } from '../engine/types.js';
                                                         
 import {
   defOf, choose, chooseOne, canSpecialSummon, specialSummon, release, sendToGy, newStep, monstersOf, hasLevelCombo,
-  extraSummonZone, freeMZones, scriptOf, log, pl, opp, isFaceUpMonster, banish, moveCard, emit, shuffleDeck, cleanupOrphans, FIELD_ZONES,
+  extraSummonZone, freeMZones, scriptOf, targetable, log, pl, opp, isFaceUpMonster, banish, moveCard, emit, shuffleDeck, cleanupOrphans, FIELD_ZONES,
 } from '../engine/game.js';
 
 export const nameIs = (s           , uid        , name        ) => defOf(s, uid).name === name;
@@ -16,6 +17,8 @@ export const level = (s           , u        ) => defOf(s, u).level ?? 0;
 
 /** 発動時に対象を1つ選んでチェーンブロックに記録する */
 export function target(x     , prompt        , options          )         {
+  options = options.filter(u => targetable(x.s, u));
+  if (!options.length) throw new RuleError('対象にできるカードがありません');
   const t = chooseOne(x, prompt, options) ;
   x.link .targets.push(t);
   return t;

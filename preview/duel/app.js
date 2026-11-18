@@ -344,6 +344,11 @@ function counterHtml(uid) {
     if (S.turn < t1) { const n = ownTurnsUntil(p, t1); out.push(`<span class="ctr turns" title="あと${n}回目の自分のスタンバイで素材を墓地へ">⏳<b>${n}</b><small>素材</small></span>`); }
     else if (S.turn < t2) { const n = ownTurnsUntil(p, t2); out.push(`<span class="ctr turns ready" title="あと${n}回目の自分のスタンバイで融合召喚">⏳<b>${n}</b><small>融合</small></span>`); }
   }
+  // 幽獄の時計塔：時計カウンター（4つ以上で戦闘ダメージを受けない）
+  if (d.name === '幽獄の時計塔' && c.faceUp) {
+    const n = k.clock ?? 0;
+    out.push(`<span class="ctr turns${n >= 4 ? ' ready' : ''}" title="時計カウンター ${n}（4つ以上で戦闘ダメージを受けない）">🕰<b>${n}</b><small>時計</small></span>`);
+  }
   return out.join('');
 }
 /** 封印の黄金櫃で除外したカード：除外の置き場に「あと何回目のスタンバイで手札に戻るか」 */
