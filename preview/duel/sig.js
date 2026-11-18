@@ -326,19 +326,34 @@ const FX = {
 
   /* 大嵐：竜巻が横切り、魔法・罠を巻き上げて砕く */
   storm(S) {
-    const B = S.B;
-    at(S, 300, () => { S.dark = .75; S.tornado = { x: B.left - 60 * S.U }; S.rain = 1; });
+    const B = S.B, U = S.U, cx = B.cx, cy = B.cy, SPIN = 450, PULL = 1350;
+    at(S, 250, () => { S.dark = .75; S.shake = 6; S.eye = { x: cx, y: cy, t: S.t }; });
+    S.dest.forEach((c, i) => { c.st = { x0: c.x, y0: c.y, a0: Math.atan2(c.y - cy, c.x - cx), r0: Math.hypot(c.x - cx, c.y - cy), start: PULL + i * 140, spin: 0 }; });
+    const last = PULL + Math.max(0, S.dest.length - 1) * 140 + 800;
     hook(S, t => {
-      if (!S.tornado) return t < 300;
-      S.tornado.x += (B.right - B.left) / 70; S.shake = Math.max(S.shake, 6);
-      for (let i = 0; i < 18; i++) { const a = Math.random() * TAU, h = Math.random(); P(S, { x: S.tornado.x + Math.cos(a) * (10 + h * 70) * S.U, y: B.top + h * (B.bottom - B.top), vx: Math.sin(a) * 6, vy: -3, life: 18, sz: 2 * S.U, c: Math.random() < .6 ? '#d8eaff' : '#9fb8d8', drag: .95, k: 'streak' }); }
-      if (Math.random() < .12) S.bolts.push({ x: S.tornado.x + (Math.random() - .5) * 60, y: B.cy + (Math.random() - .5) * 150, t });
-      S.dest.forEach(c => { if (!c.gone && Math.abs(c.x - S.tornado.x) < 36 * S.U) { c.gone = 1; move(S, c, { x: c.x + 40, y: c.y - 120 * S.U }, 300, { rot: 6, s: 1.3 }); at(S, S.t + 300, () => { impact(S, c.x, c.y, .5, '#9fb8d8'); explode(S, c, '#d8eaff'); }); } });
-      if (S.tornado.x > B.right + 80 * S.U) { S.tornado = null; S.rain = 0; return false; }
-      return true;
+      if (!S.eye) return t < 250;
+      S.shake = Math.max(S.shake, 5 * U);
+      // 渦に乗って飛ぶがれきと雨粒
+      for (let i = 0; i < 10; i++) { const ang = Math.random() * TAU, d = (120 + Math.random() * 260) * U; P(S, { x: 0, y: 0, orbit: { cx, cy, a: ang, d, sp: .05 + Math.random() * .05, decay: .992 }, life: 50, sz: (1.4 + Math.random() * 1.6) * U, c: Math.random() < .6 ? '#d8eaff' : '#8aa0b8' }); }
+      for (const c of S.dest) {
+        const s = c.st; if (c.a <= 0) continue;
+        if (t < s.start) {
+          // その場で回り始め、だんだん速くなる
+          const k = Math.max(0, Math.min(1, (t - SPIN) / (s.start - SPIN)));
+          s.spin += .02 + .32 * k * k; c.rot = s.spin; c.x = s.x0 + (Math.random() - .5) * 3 * k; c.y = s.y0 + (Math.random() - .5) * 3 * k; c.s = 1 + .08 * k;
+          if (k > .4 && Math.random() < .5) P(S, { x: c.x + (Math.random() - .5) * c.w, y: c.y + (Math.random() - .5) * c.h, vx: -Math.sin(s.a0) * 3, vy: Math.cos(s.a0) * 2, life: 24, sz: 1.6 * U, c: '#ffffff', drag: .96, k: 'streak' });
+          continue;
+        }
+        // 渦に巻き込まれて、回りながら弧を描いて飛ばされ、砕ける
+        const q = Math.min(1, (t - s.start) / 800), ang = s.a0 + q * 2.4, r = s.r0 * (1 + .25 * Math.sin(q * Math.PI));
+        s.spin += .45; c.rot = s.spin; c.x = cx + Math.cos(ang) * r; c.y = cy + Math.sin(ang) * r * .75; c.s = 1.08 + .25 * Math.sin(q * Math.PI);
+        if (q >= 1) { impact(S, c.x, c.y, .55, '#9fb8d8'); explode(S, c, '#d8eaff'); }
+      }
+      return t < last + 400;
     });
-    finishRest(S, 2600, '#d8eaff');
-    S.end = 3200;
+    at(S, last + 450, () => { if (S.eye) S.eye.fade = S.t; });
+    finishRest(S, last + 500, '#d8eaff');
+    S.end = last + 1400;
   },
 
   /* サイクロン：自分のカードを中心に竜巻が巻き起こり、その頂点から雷が一瞬で落ちて対象を撃ち砕く */
@@ -657,10 +672,24 @@ function matSwirl(x, cx, cy, R, t, col, n = 5, sp = 600) { x.strokeStyle = col; 
 Object.assign(MAT, {
   /* 大嵐：灰色の嵐。斜めに叩きつける雨と、渦を巻く風 */
   storm(S, x, w, h, t) {
-    matFill(x, w, h, ['#2a3240', '#3c4a5e', '#222a36']);
-    x.strokeStyle = 'rgba(200,220,245,.35)'; x.lineWidth = 1.2;
-    S.mat.seed.forEach(([a, b]) => { const px = (a * w * 1.4 + t * .6) % (w + 60) - 30, py = (b * h + t * 1.1) % (h + 40) - 20; x.beginPath(); x.moveTo(px, py); x.lineTo(px - 7, py + 18); x.stroke(); });
-    x.globalCompositeOperation = 'lighter'; matSwirl(x, w / 2, h / 2, Math.min(w, h) * .55, t, 'rgba(200,225,255,.22)', 6, 350);
+    const cx = S.B.cx - S.mat.ox, cy = S.B.cy - S.mat.oy, R = Math.hypot(w, h) * .9;
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, R);
+    g.addColorStop(0, '#0d1220'); g.addColorStop(.08, '#26334a'); g.addColorStop(.35, '#4e6280'); g.addColorStop(.7, '#3a4a62'); g.addColorStop(1, '#232e40');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    // 渦を巻く雲の帯：中心ほど速く回り、外へ大きくはみ出す
+    x.save(); x.translate(cx, cy);
+    for (let k = 0; k < 9; k++) {
+      x.save(); x.rotate(-t / (500 + k * 120) + k * TAU / 9);
+      x.strokeStyle = k % 2 ? 'rgba(220,232,250,.5)' : 'rgba(140,160,190,.55)'; x.lineWidth = 12 + (k % 3) * 7; x.lineCap = 'round';
+      x.beginPath(); for (let q = 0; q < 1; q += .02) { const r = 18 + q * R, ang = q * 4; x.lineTo(Math.cos(ang) * r, Math.sin(ang) * r * .75); } x.stroke();
+      x.restore();
+    }
+    // 竜巻の目
+    const eg = x.createRadialGradient(0, 0, 0, 0, 0, 34); eg.addColorStop(0, 'rgba(5,8,16,1)'); eg.addColorStop(1, 'rgba(5,8,16,0)'); x.fillStyle = eg; x.beginPath(); x.arc(0, 0, 34, 0, TAU); x.fill();
+    // 渦に流される雨粒
+    x.strokeStyle = 'rgba(220,235,255,.4)'; x.lineWidth = 1.2;
+    S.mat.seed.forEach(([a0, b, s]) => { const ang = a0 * TAU - t / (300 + s * 500), r = 30 + b * R * .8; const px = Math.cos(ang) * r, py = Math.sin(ang) * r * .75; x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.sin(ang) * 10, py - Math.cos(ang) * 7.5); x.stroke(); });
+    x.restore();
   },
   /* サイクロン：緑の風。発動したカードを中心に、風の輪が渦を巻く */
   cyclone(S, x, w, h, t) {
@@ -792,7 +821,7 @@ function tick(S, now) {
   }
   if (S.drain) (S.I.mons || []).forEach(m => { if (!m.rect || Math.random() > .5) return; const x = m.rect.left + m.rect.width / 2 + (Math.random() - .5) * 40, y = m.rect.top + m.rect.height / 2 + (Math.random() - .5) * 50; P(S, { x, y, vx: (S.self.x - x) * .03, vy: (S.self.y - y) * .03, life: 40, sz: 2.6 * S.U, c: '#b45cff', drag: 1 }); });
   S.parts.forEach(p => {
-    if (p.orbit) { const o = p.orbit; o.a += o.sp; o.d *= .93; p.x = o.cx + Math.cos(o.a) * o.d; p.y = o.cy + Math.sin(o.a) * o.d * .6; }
+    if (p.orbit) { const o = p.orbit; o.a += o.sp; o.d *= o.decay ?? .93; p.x = o.cx + Math.cos(o.a) * o.d; p.y = o.cy + Math.sin(o.a) * o.d * .6; }
     else { p.x += p.vx; p.y += p.vy; p.vx *= p.drag; p.vy = p.vy * p.drag + p.grav; }
     if (p.k === 'smoke') p.sz *= 1.02; p.life--;
   });
@@ -1022,6 +1051,19 @@ function draw(S) {
     [[z.w * 5, .18, '#bfe9ff'], [z.w * 2, .55, '#bfe9ff'], [z.w * .8, 1, '#ffffff']].forEach(l => { ctx.strokeStyle = l[2]; ctx.globalAlpha = al * l[1]; ctx.lineWidth = l[0]; ctx.beginPath(); z.pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.stroke(); });
     ctx.globalAlpha = 1;
   });
+  if (S.eye) {
+    const e2 = S.eye, fa = Math.min(1, (t - e2.t) / 400) * (e2.fade ? Math.max(0, 1 - (t - e2.fade) / 600) : 1), Rm = Math.hypot(W, H) * .75;
+    if (fa > 0) {
+      ctx.save(); ctx.translate(e2.x, e2.y);
+      for (let k = 0; k < 5; k++) {
+        ctx.save(); ctx.rotate(-t / 900 + k * TAU / 5);
+        ctx.strokeStyle = `rgba(210,228,250,${.16 * fa})`; ctx.lineWidth = 26 * U; ctx.lineCap = 'round';
+        ctx.beginPath(); for (let q = 0; q < 1; q += .02) { const r = 40 * U + q * Rm, ang = q * 3.2; ctx.lineTo(Math.cos(ang) * r, Math.sin(ang) * r * .75); } ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+  }
   if (S.tornado) { const tx = S.tornado.x, hh = (B.bottom - B.top) / 10; for (let l = 0; l < 10; l++) { ctx.strokeStyle = `rgba(216,234,255,${.3 + l * .05})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(tx + Math.sin(t / 80 + l) * 8, B.top + l * hh + hh / 2, (16 + l * 9) * U, (6 + l * 2) * U, 0, 0, TAU); ctx.stroke(); } }
   if (S.slashes) S.slashes.forEach(s => { const el = t - s.t; if (el < 0 || el > 260) return; const p = Math.min(1, el / 90), fa = 1 - Math.max(0, (el - 100) / 160); ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.ang); [[14, .35, '#ff7ac0'], [4, 1, '#ffffff']].forEach(l => { ctx.strokeStyle = l[2]; ctx.globalAlpha = fa * l[1]; ctx.lineWidth = l[0] * U; ctx.beginPath(); ctx.moveTo(-50 * U, 0); ctx.lineTo((-50 + 100 * p) * U, 0); ctx.stroke(); }); ctx.restore(); ctx.globalAlpha = 1; });
   if (S.shot) { const k6 = Math.min(1, (t - S.shot.t) / 110), sx = S.shot.from.x + (S.shot.to.x - S.shot.from.x) * k6, sy = S.shot.from.y + (S.shot.to.y - S.shot.from.y) * k6; ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 4 * U; ctx.beginPath(); ctx.moveTo(S.shot.from.x, S.shot.from.y); ctx.lineTo(sx, sy); ctx.stroke(); glow(sx, sy, 26 * U, '#ffd27a', 1); glow(S.shot.from.x, S.shot.from.y, 50 * U, '#ffb05a', 1 - k6); }
