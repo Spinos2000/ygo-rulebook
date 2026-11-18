@@ -394,7 +394,8 @@ export function playSummon(root, info) {
     if (info.faceDown) how = how === 'flip' ? 'flip' : 'set';
     // レベル7以上（＝2体以上のリリースが必要なモンスター）は、エースとして特別な登場にする。儀式・融合・神は専用の演出のまま
     if (!info.faceDown && ['normal', 'advance', 'special', 'flip'].includes(how) && (info.d.level ?? 0) >= 7) how = 'ace';
-    const S = { how, c: how === 'ace' ? (ACE_COLOR[info.d.attribute] || '#ffd27a') : SUMMON_COLOR[how] || '#9fe6ff', U, d: info.d, atk: info.atk, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height,
+    const fr = info.fromRect;
+    const S = { soul: how === 'ace' && fr ? { x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 } : null, how, c: how === 'ace' ? (ACE_COLOR[info.d.attribute] || '#ffd27a') : SUMMON_COLOR[how] || '#9fe6ff', U, d: info.d, atk: info.atk, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height,
       img: info.faceDown && how !== 'flip' ? backImg() : cardImg(info.d, info.atk, info.def), parts: [], rings: [], shake: 0, flash: 0, dark: 0, quake: 0, t: 0, last: 0,
       speed: (info.speed || 1) * (window.__fxSlow || 1), L: SUMMON_LAND[how] || 600, hit: false, bolt: null, done: false,
       mats: (info.mats || []).map(m => ({ x: m.rect.left + m.rect.width / 2, y: m.rect.top + m.rect.height / 2, w: m.rect.width, h: m.rect.height, img: cardImg(m.d, m.atk, m.def), a: 1, s: 1 })) };
@@ -459,6 +460,8 @@ function aceTick(S) {
     m.a = Math.max(0, 1 - t / 700); m.s = 1 + .15 * (t / 700);
     if (t < 700) for (let i = 0; i < 5; i++) SP(S, { x: m.x + (Math.random() - .5) * m.w, y: m.y + (Math.random() - .5) * m.h, vx: (sky.x - m.x) * .022 + (Math.random() - .5), vy: (sky.y - m.y) * .022, life: 50, sz: 2.6, c: Math.random() < .5 ? c : '#ffffff', drag: .985 });
   });
+  // 墓地（除外）から：魂が置き場から抜け出して上空へ昇る
+  if (S.soul && t < ACE.drop) { const p = ease(t / ACE.drop), sx = lerp(S.soul.x, x, p), sy = lerp(S.soul.y, sky.y, p) - Math.sin(p * Math.PI) * 40 * U; S.soul.cx = sx; S.soul.cy = sy; for (let i = 0; i < 4; i++) SP(S, { x: sx + (Math.random() - .5) * S.w * .6, y: sy + (Math.random() - .5) * S.h * .5, vx: (Math.random() - .5) * .8, vy: .6 + Math.random(), life: 36, sz: 2.6, c: Math.random() < .5 ? c : '#ffffff', drag: .97 }); }
   // 魔法陣から光が立ちのぼる
   if (t > ACE.circle && t < L) for (let q = 0; q < 5; q++) { const a = Math.random() * TAU, r = (60 + Math.random() * 50) * U; SP(S, { x: x + Math.cos(a) * r, y: y + S.h * .35 + Math.sin(a) * r * .32, vx: 0, vy: -2.5 - Math.random() * 3, life: 34, sz: 2.8, c: Math.random() < .5 ? c : '#ffffff', drag: .99, grav: -.02 }); }
   // 天から光が降り注ぐ
@@ -582,6 +585,11 @@ function summonDraw(S) {
     else if (t > FU.born + 250) { const p = Math.min(1, (t - FU.born - 250) / (L - FU.born - 250)); sImg(S, img, lerp(C.x, x, ease(p)), lerp(C.y, y, easeIn(p)), 1.25 - .25 * ease(p), 1); }
   }
   else if (k === 'ace') {
+    if (S.soul && t < ACE.drop && S.soul.cx != null) {
+      // 墓地から抜け出した魂（半透明のカード）が上空へ
+      const p = t / ACE.drop; ctx.globalCompositeOperation = 'lighter'; glow(S.soul.cx, S.soul.cy, 60 * U, c, .7); ctx.globalCompositeOperation = 'source-over';
+      sImg(S, img, S.soul.cx, S.soul.cy, .7 + 1.1 * ease(p), .35 + .3 * Math.sin(p * Math.PI));
+    }
     if (t > ACE.drop) {
       // 上空から大きく降りてくる（残像つき）
       const p = Math.min(1, (t - ACE.drop) / (L - ACE.drop)), top = Math.max(30, y - 230 * U);
