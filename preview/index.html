@@ -2370,6 +2370,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       <span>① <strong>汎用魔法・罠</strong><br><span class="note">→ GX以降のカードも、どのデッキも使える（枚数は<a href="#list">汎用規制リスト</a>に従う）</span></span>
       <span>② <strong>汎用モンスター</strong><br><span class="note">→ <a href="#allow">許可リスト</a>にあるカードだけ。弱いデッキが1枚まで</span></span>
       <span>③ <strong>弱いデッキの救済</strong><br><span class="note">→ 専用の魔法・罠強化カードを1種類だけ（最大2枚）</span></span>
+      <span>④ <strong>アニメで登場済みのカード</strong><br><span class="note">→ オシリスの天空竜・オベリスクの巨神兵のように、GXまでのアニメに登場していて、カード化が2008年4月以降になった<strong>汎用</strong>カード。テーマの専用カードはこの例外に入りません</span></span>
     </div>
   </div>
   <div class="principles stack">
@@ -2380,9 +2381,9 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   <p>そのため<strong>シンクロ・エクシーズ・リンク・ペンデュラム</strong>のモンスターは存在せず、<span class="red">使用できません。</span></p>
   <div class="principles stack">
     <b>📖「汎用」と「専用」の見分け方</b>
-    <span><span class="hlw"><span class="hl">テーマ名を含む</span></span>カード、または<span class="hlw"><span class="hl">テーマを参照する</span></span>カードは「専用」。</span>
-    <span>それ以外は「汎用」。</span>
-    <span class="note">・<strong>種族・属性・カードの種類だけ</strong>を参照するカード（例：「ドラゴン族」「炎属性」「融合モンスター」）は<strong>「汎用」</strong>。<br>・<strong>特定のカード名</strong>が書かれているカード（例：「青眼の白龍」を指定するカード）は、そのカードのテーマの<strong>「専用」</strong>。</span>
+    <span><span class="hlw"><span class="hl">効果テキストにテーマ名か特定のカード名が入っている</span></span>カードは「専用」。</span>
+    <span>それ以外は「汎用」（魔法・罠もモンスターも）。</span>
+    <span class="note">・判断は<strong>効果テキスト</strong>で行います。カード名にテーマ名が入っていても、効果テキストに入っていなければ<strong>「汎用」</strong>（例：帝王の烈旋）。<br>・<strong>特定のカード名</strong>が書かれているカード（例：「青眼の白龍」を指定するカード）は、そのカードのテーマの<strong>「専用」</strong>。<br>・「このカード名のカードは1ターンに1枚」のように、<strong>自分の名前</strong>だけが書かれているものは数えません。<br>・<strong>種族・属性・カードの種類だけ</strong>を参照するカード（例：「ドラゴン族」「炎属性」「融合モンスター」）は<strong>「汎用」</strong>。</span>
   </div>
   <div class="principles stack">
     <b>🟢 GX以降の汎用カード</b>
@@ -2794,6 +2795,17 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       <li>どうしても使いたい専用カードが、2008年4月以降のカードだったり、規制リストに引っかかったりする</li>
     </ul>
     <p>そんなデッキも、この環境に<span class="hlw"><span class="hl">遊びに来て大歓迎</span></span>です。<br>このルールやカード規制には沿っていなくても、<strong>環境のトップにならないように調整したデッキ</strong>を「<strong>🌏 留学生デッキ</strong>」と呼んで、アカデミアに迎えます。<br>このルールに沿ったデッキは「<strong>🏫 在校生デッキ</strong>」と呼びます。</p>
+    <div class="ryu-heart" id="ryu-rule">
+      <b>🧭 在校生・留学生の分け方</b>
+      <p style="margin:6px 0">次の<strong>どれか1つ</strong>にでも当てはまるデッキは「🌏 留学生デッキ」、どれにも当てはまらないデッキは「🏫 在校生デッキ」です。</p>
+      <ol>
+        <li><strong>2008年4月以降に始まったテーマのカード</strong>を使う（主軸でなくても、<strong>1枚でも</strong>入れたら当てはまる）</li>
+        <li>2008年3月までのテーマに、<strong>2008年4月以降のそのテーマの専用カード</strong>（モンスター・魔法・罠）を入れる<br><span class="note">※弱いデッキの救済（専用魔法・罠強化カード1種類・2枚まで）として入れた場合は、在校生のまま</span></li>
+        <li><strong>2008年4月以降の汎用モンスター</strong>を、<a href="#allow">許可リスト</a>にないのに入れる</li>
+        <li><strong>規制リスト</strong>に合っていない（完全使用不可のカードを入れる、制限・準制限の枚数をこえる）</li>
+      </ol>
+      <span class="note">・専用か汎用かは<strong>効果テキスト</strong>で決めます（くわしくは「📖「汎用」と「専用」の見分け方」）。<br>・2008年4月以降の<strong>汎用魔法・罠</strong>は、規制リストの枚数を守れば在校生のまま使えます。<br>・オシリスの天空竜・オベリスクの巨神兵のように、GXまでのアニメに登場していてカード化が2008年4月以降になった<strong>汎用</strong>カードは、在校生のまま使えます（テーマの専用カードは2.に当てはまります）。<br>・シンクロ・エクシーズ・リンク・ペンデュラムのモンスターは、<strong>留学生デッキでも使えません</strong>。</span>
+    </div>
     <ol class="steps seq">
       <li><span class="n">1</span><div><strong>対戦前に「留学生デッキです」とひとこと</strong><span class="note">相手が知っていれば、それで十分です</span></div></li>
       <li><span class="n">2</span><div><strong>強さの目標は、みんなと同じ6〜7</strong><span class="note">調整は本人におまかせ。まわりは口出しせず、アドバイスは本人から求められたときだけにしましょう。<br>自分で調整した内容（例：使いたいカード1枚だけ入れて、代わりにこれを抜いた）を残しておきたいときは、<a href="#board">📋 規制報告ボード</a>に自由に記録できます（記録は任意です）。</span></div></li>
