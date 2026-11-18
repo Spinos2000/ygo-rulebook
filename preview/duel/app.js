@@ -137,10 +137,34 @@ function cardHtml(uid, { hidden = false, field = false } = {}) {
   if (hidden || (!c.faceUp && !(c.zone === 'hand' || c.zone === 'extra' || c.zone === 'deck' || field))) return `<button class="card back ${cls}" data-uid="${uid}" aria-label="裏側のカード">${badge}</button>`;
   if (!c.faceUp && field && isCpu(c.controller)) return `<button class="card back ${cls}" data-uid="${uid}" aria-label="裏側のカード">${badge}</button>`;
   if (!c.faceUp && field) return `<button class="card back ${cls}" data-uid="${uid}" aria-label="裏側：${esc(d.name)}"><span class="bn">${esc(d.name)}</span>${badge}</button>`;
-  const stats = d.kind === 'monster' ? `<span class="st">${field ? currentAtk(S, uid) : d.atk}<i>/</i>${field ? currentDef(S, uid) : d.def}</span>` : `<span class="st sub">${esc(d.subtype)}${d.kind === 'spell' ? '魔法' : '罠'}</span>`;
-  const lv = d.kind === 'monster' ? `<span class="lv">★${d.level}</span>` : '';
-  const mod = field && d.kind === 'monster' && (currentAtk(S, uid) !== d.atk || currentDef(S, uid) !== d.def) ? ' mod' : '';
-  return `<button class="card f-${frameOf(d)} ${cls}${mod}" data-uid="${uid}" aria-label="${esc(d.name)}"><span class="nm">${esc(d.name)}</span>${lv}${stats}${badge}</button>`;
+  return `<button class="card f-${frameOf(d)} ${cls}" data-uid="${uid}" aria-label="${esc(d.name)}">${faceHtml(uid, d, field)}${badge}</button>`;
+}
+/* ---------- カードの表面：カード名と属性／レベル（魔法・罠は種類）／種族の一文字／種族と種類／攻撃力・守備力 ---------- */
+const ATTR_COLOR = { 闇: '#534ab7', 光: '#b8902a', 地: '#8a6a3a', 水: '#2f6fb0', 炎: '#c4473a', 風: '#2e8b57', 神: '#a9841f' };
+const RACE_CHAR = { ドラゴン族: '竜', 魔法使い族: '魔', 機械族: '機', 戦士族: '戦', 悪魔族: '悪', 天使族: '天', アンデット族: '屍', 獣族: '獣', 獣戦士族: '獣', 鳥獣族: '鳥', 爬虫類族: '爬', 恐竜族: '恐', 水族: '水', 海竜族: '海', 魚族: '魚', 炎族: '炎', 雷族: '雷', 岩石族: '岩', 植物族: '植', 昆虫族: '虫', 幻神獣族: '神' };
+const SPELL_MARK = { 通常: '✦', 速攻: '➶', 永続: '∞', 装備: '⚔', フィールド: '◈', 儀式: '✧' };
+const TRAP_MARK = { 通常: '◆', 永続: '∞', カウンター: '↺' };
+const FRAME_NAME = { normal: '通常', effect: '効果', ritual: '儀式', fusion: '融合' };
+function faceHtml(uid, d, field) {
+  const name = `<span class="n">${esc(d.name)}</span>`;
+  if (d.kind !== 'monster') {
+    const spell = d.kind === 'spell';
+    const at = `<b class="at" style="background:${spell ? '#0f6e56' : '#993556'}">${spell ? '魔' : '罠'}</b>`;
+    const mark = (spell ? SPELL_MARK : TRAP_MARK)[d.subtype] || (spell ? '✦' : '◆');
+    const text = String(d.text || '').replace(/^[①-⑳]：/, '').replace(/\s+/g, '');
+    return `<span class="nm">${name}${at}</span><span class="sp">${esc(d.subtype)}${spell ? '魔法' : '罠'}</span><span class="art">${mark}</span><span class="ty">${esc(text.slice(0, 16))}</span>`;
+  }
+  const at = `<b class="at" style="background:${ATTR_COLOR[d.attribute] || '#6a6e7e'}">${esc(d.attribute || '？')}</b>`;
+  const lvl = d.level ?? 0;
+  const stars = lvl <= 8 ? '★'.repeat(lvl) : `★×${lvl}`;
+  const race = d.race || '';
+  const ch = RACE_CHAR[race] || race.charAt(0) || '？';
+  const kind = FRAME_NAME[d.frame] || '効果';
+  const atk = field ? currentAtk(S, uid) : d.atk, def = field ? currentDef(S, uid) : d.def;
+  // フィールドで数値が上がっていれば緑、下がっていれば赤
+  const cls = (now, base) => (!field || now === base ? '' : now > base ? ' class="up"' : ' class="dn"');
+  return `<span class="nm">${name}${at}</span><span class="lv">${stars}</span><span class="art">${esc(ch)}</span><span class="ty">${esc(race)}／${kind}</span>`
+    + `<span class="st"><span${cls(atk, d.atk)}><i>攻</i>${atk}</span><span${cls(def, d.def)}><i>守</i>${def}</span></span>`;
 }
 function zone(uid, label, cls = '') {
   return `<div class="zone ${cls}">${uid !== null && uid !== undefined ? cardHtml(uid, { field: true }) : `<span class="zl">${label}</span>`}</div>`;

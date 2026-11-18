@@ -1,6 +1,29 @@
 // 対戦画面の見た目（CSS）と骨組み（HTML）。Shadow DOM の中に入れるので、置き場所のページのスタイルとぶつからない。
 // 色は置き場所のページが --d-* で渡す（単独のページ index.html、ルールページのどちらでも）。渡されない色は下の既定値になる。
+/** 裏面の絵：面全体の渦（22本の腕が中心へ絞られていく）と、金の縁取りの黒い楕円 */
+function backSvg() {
+  const cx = 29.5, cy = 43, N = 22, cols = ['#b5743a', '#6e3f1c', '#d0914c', '#55300f', '#a2652f', '#84502a', '#c4823f', '#4a2a10'];
+  const pt = (r, a) => [cx + r * Math.cos(a) * 0.8, cy + r * Math.sin(a)];
+  let arms = '', thin = '';
+  for (let k = 0; k < N; k++) {
+    const ph = k * 2 * Math.PI / N, L = [], R = [], P = [];
+    for (let t = 0; t <= 6.4 * Math.PI; t += 0.16) {
+      const r = 0.35 * Math.exp(0.24 * t); if (r > 95) break;
+      const a = t + ph, w = r * 0.36, [x, y] = pt(r, a), nx = Math.cos(a), ny = Math.sin(a);
+      L.push((x - nx * w / 2).toFixed(1) + ' ' + (y - ny * w / 2).toFixed(1));
+      R.unshift((x + nx * w / 2).toFixed(1) + ' ' + (y + ny * w / 2).toFixed(1));
+      const [x2, y2] = pt(r, a + 0.07); P.push(x2.toFixed(1) + ' ' + y2.toFixed(1));
+    }
+    arms += '<path d="M' + L.join(' L') + ' L' + R.join(' L') + 'Z" fill="' + cols[k % cols.length] + '" opacity="' + (0.7 + 0.3 * ((k * 37) % 10) / 10).toFixed(2) + '"/>';
+    if (k % 2 === 0) thin += '<path d="M' + P.join(' L') + '" fill="none" stroke="#eab067" stroke-width=".3" opacity=".6"/>';
+  }
+  const s = 1.6, e = (rx, ry) => 'cx="29.5" cy="43" rx="' + (rx * s).toFixed(2) + '" ry="' + (ry * s).toFixed(2) + '"';
+  const mid = '<ellipse ' + e(13.5, 18) + ' fill="#2a170a" opacity=".45"/><ellipse ' + e(11.6, 15.6) + ' fill="#0f0905" stroke="#d9a35a" stroke-width=".9"/><ellipse ' + e(10.1, 13.9) + ' fill="none" stroke="#5a3418" stroke-width=".45"/>';
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 59 86" preserveAspectRatio="none"><rect width="59" height="86" fill="#5e3517"/>' + arms + thin + mid + '</svg>';
+  return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
+}
 export const CSS = `
+.droot { --back-img: ${backSvg()} }
 /* レイアウト：デュエルマットを中心に、相手（上）→マット→自分（下）→操作ドック（画面下に固定）。
    PCでは右にカード詳細・ログの列。スマホではカード詳細とログは下から出るシートになる */
 :host { display: block }
@@ -21,8 +44,9 @@ export const CSS = `
   --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--panel));
   --opp: var(--d-opp, #b4544a);
   --bad: var(--d-bad, #b23a3a);
-  --f-normal: var(--d-f-normal, #e6cf7c); --f-effect: var(--d-f-effect, #d9875a); --f-ritual: var(--d-f-ritual, #7c9fe0);
-  --f-fusion: var(--d-f-fusion, #9d7cc9); --f-spell: var(--d-f-spell, #3a9c86); --f-trap: var(--d-f-trap, #b8577f);
+  --f-normal: var(--d-f-normal, #f1d98a); --f-effect: var(--d-f-effect, #e9a36f); --f-ritual: var(--d-f-ritual, #9cb8ec);
+  --f-fusion: var(--d-f-fusion, #b9a3e0); --f-spell: var(--d-f-spell, #5dbfa1); --f-trap: var(--d-f-trap, #d98bb2);
+  --num: var(--d-num, var(--display));
   --card-ink: #1b1508;
   --back: #6b4a2a; --back2: #553a20;
   --shadow: var(--d-shadow, 0 10px 30px rgba(10, 30, 20, .18));
@@ -85,7 +109,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 
 /* ---------- 手札 ---------- */
 .hand { display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px 6px; min-height: 0; scrollbar-width: thin }
-.hand .card { flex: 0 0 auto; width: 64px; font-size: 10px }
+.hand .card { flex: 0 0 auto; width: 84px; font-size: 10px }
 .hand.opp { min-height: 34px }
 .hand.opp .card { width: 28px; font-size: 0 }
 .empty { font-size: 12px; color: var(--sub); align-self: center; padding: 4px }
@@ -105,25 +129,40 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .r0 .zone:not(.void), .r1 .zone:not(.void) { border-color: color-mix(in srgb, var(--mat-line) 60%, var(--opp) 40%) }
 
 /* ---------- カード ---------- */
-.card { position: relative; width: 72%; aspect-ratio: 59 / 86; border-radius: 4px; border: 1px solid rgba(0,0,0,.35); padding: 2px 3px; display: flex; flex-direction: column; justify-content: space-between; text-align: left;
-  color: var(--card-ink); font-size: clamp(7px, 1.05vw, 10px); line-height: 1.2; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.4); transition: transform .12s, box-shadow .12s }
-.card .nm { font-weight: 700; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all }
-.card .lv { font-size: .9em; opacity: .8 }
-.card .st { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; overflow: hidden }
-.card .st i { font-style: normal; opacity: .5 }
-.card .st.sub { font-weight: 500; color: #fff }
+.card { position: relative; width: 72%; aspect-ratio: 59 / 86; border-radius: 5px; border: 1.5px solid #2c3244; padding: .3em; display: flex; flex-direction: column; gap: 2px; text-align: left;
+  color: #262b3a; font-family: var(--body); font-size: clamp(7px, 1.05vw, 10px); line-height: 1.15; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.35); transition: transform .12s, box-shadow .12s }
+/* 上の帯：カード名と属性 */
+.card .nm { display: flex; gap: 2px; align-items: flex-start; background: rgba(255,255,255,.62); border-radius: 3px; padding: 1px 2px; font-weight: 700; flex: none }
+.card .nm .n { flex: 1; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all }
+.card .at { flex: none; width: 1.5em; height: 1.5em; border-radius: 50%; font-size: .92em; line-height: 1.5em; text-align: center; color: #fff; font-style: normal; font-weight: 700; border: 1px solid rgba(0,0,0,.3) }
+/* レベル（★）・魔法と罠の種類 */
+.card .lv { flex: none; font-size: .9em; letter-spacing: -.08em; color: #a9841f; text-align: right; white-space: nowrap; overflow: hidden; line-height: 1.1 }
+.card .sp { flex: none; font-size: .9em; text-align: right; font-weight: 700; line-height: 1.1 }
+/* 中央：イラストの代わりに種族の一文字（魔法・罠は記号） */
+.card .art { flex: 1; min-height: 0; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 2.8em; line-height: 1; background: rgba(255,255,255,.28); color: rgba(38,43,58,.26); border: 1px solid rgba(0,0,0,.12) }
+/* 下：種族と種類、攻撃力・守備力 */
+.card .ty { flex: none; font-size: .9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.card .st { flex: none; display: flex; justify-content: space-between; gap: 2px; font-family: var(--num); font-weight: 700; background: rgba(255,255,255,.62); border-radius: 3px; padding: 0 2px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden }
+.card .st i { font-style: normal; font-family: var(--body); font-size: .85em; color: #6a6e7e; margin-right: 1px }
+.card .st .up { color: #0f6e56 }
+.card .st .dn { color: #a32d2d }
+.f-normal { background: var(--f-normal) } .f-effect { background: var(--f-effect) } .f-ritual { background: var(--f-ritual) }
+.f-fusion { background: var(--f-fusion) } .f-spell { background: var(--f-spell) } .f-trap { background: var(--f-trap) }
+.f-spell .sp, .f-spell .ty { color: #04342c } .f-spell .art { color: rgba(4,52,44,.3) }
+.f-trap .sp, .f-trap .ty { color: #4b1528 } .f-trap .art { color: rgba(75,21,40,.3) }
+/* フィールドでは小さいので、カード名・属性・攻守だけにする */
+.zone .card .lv, .zone .card .ty, .zone .card .sp, .zone .card .st i { display: none }
+.zone .card .art { font-size: 2.2em }
+.zone .card .st { font-size: .82em; letter-spacing: -.04em; padding: 0 1px }
 .card.def { transform: rotate(90deg) }
 .card.sel { outline: 3px solid var(--accent); outline-offset: 2px }
 .card.can { box-shadow: 0 0 0 2px var(--accent), 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent) }
 .card.picked { outline: 3px solid var(--accent); outline-offset: 1px }
-.card.mod .st { color: #0b6b3a }
-.f-spell.mod .st, .f-trap.mod .st { color: inherit }
-.f-normal { background: var(--f-normal) } .f-effect { background: var(--f-effect) } .f-ritual { background: var(--f-ritual) }
-.f-fusion { background: var(--f-fusion) } .f-spell { background: var(--f-spell); color: #f4fffb } .f-trap { background: var(--f-trap); color: #fff4f9 }
-.card.back { background: repeating-linear-gradient(45deg, var(--back) 0 5px, var(--back2) 5px 10px); color: #f0dcc4 }
-.card.back .bn { font-size: .85em; opacity: .75; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all }
+/* 裏面：面全体の渦と、中央の黒い楕円 */
+.card.back { background: var(--back-img) center / 100% 100% no-repeat, #5e3517; color: #f0dcc4; border-color: #24150b }
+.card.back .bn { margin-top: auto; background: rgba(15,9,5,.75); border-radius: 3px; padding: 1px 2px; font-size: .85em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all }
 .card.mini { width: 60%; pointer-events: none }
-.badge { position: absolute; top: 1px; right: 1px; background: var(--accent); color: var(--accent-ink); border-radius: 4px; font-size: 9px; padding: 0 3px; font-weight: 700 }
+.badge { position: absolute; top: 1px; right: 1px; background: var(--accent); color: var(--accent-ink); border-radius: 4px; font-size: 9px; padding: 0 3px; font-weight: 700; z-index: 1 }
 .badge.eq { top: auto; bottom: 1px; background: #2f5f8f; color: #fff }
 .hand .card:not(.back):hover { transform: translateY(-3px) }
 
@@ -190,7 +229,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .menu-note { font-size: 12px; color: var(--sub); margin: 12px 0 0 }
 .check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 12px }
 .pilelist { display: flex; flex-wrap: wrap; gap: 6px }
-.pilelist .card { width: 64px }
+.pilelist .card { width: 84px; font-size: 10px }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + 24px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); border-radius: 10px; padding: 9px 16px; max-width: min(520px, calc(100vw - 32px)); box-shadow: var(--shadow); z-index: 40; font-weight: 500 }
 #toast[data-bad="1"] { background: var(--bad); color: #fff }
 
@@ -204,7 +243,9 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   #phases li button, #phases li span { min-width: 0; padding: 4px 7px }
   .pstrip { padding: 5px 10px }
   .pstrip .lp { font-size: 22px }
-  .hand .card { width: 56px }
+  .hand .card { width: 70px; font-size: 8.5px }
+  .hand .card .st i, .pilelist .card .st i { display: none }
+  .hand .card .st { font-size: .9em; letter-spacing: -.05em; padding: 0 1px }
   #board { padding: 5px; gap: 4px; border-radius: 12px; max-width: none }
   #board .row { gap: 4px }
   .zone .zl { font-size: 8px }
