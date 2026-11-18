@@ -265,17 +265,25 @@ const FX = {
 
   /* 激流葬：激流が画面を横切り、モンスターを全て押し流して砕く */
   torrent(S) {
-    const B = S.B;
-    at(S, 400, () => { S.dark = .6; S.wave = { x: B.left - 160 * S.U }; });
+    // 発動した人の側から相手の側へ、炎のようにとがった激しい波が駆け上がる（相手が発動した時は上から下へ）
+    const B = S.B, U = S.U, up = S.I.me, START = 380, CROSS = 1150;
+    const y0 = up ? B.bottom + 70 * U : B.top - 70 * U, y1 = up ? B.top - 160 * U : B.bottom + 160 * U;
+    at(S, 250, () => { S.dark = .65; S.shake = 6; });
+    at(S, START, () => { S.surge = { t0: S.t, up, y0, y1, front: y0, fade: null }; });
     hook(S, t => {
-      if (!S.wave) return t < 400;
-      S.wave.x += (B.right - B.left) / 38; S.shake = Math.max(S.shake, 8);
-      for (let i = 0; i < 26; i++) P(S, { x: S.wave.x + Math.random() * 40, y: B.top + Math.random() * (B.bottom - B.top), vx: 7 + Math.random() * 5, vy: -4 - Math.random() * 6, life: 30, sz: 3.4 * S.U, c: Math.random() < .5 ? '#7fd6ff' : '#ffffff', drag: .97, grav: .3 });
-      S.dest.forEach(c => { if (c.a > 0 && !c.hit && c.x < S.wave.x + 30) { c.hit = 1; impact(S, c.x, c.y, .55, '#4fb6ff'); explode(S, c, '#7fd6ff'); } });
-      if (S.wave.x > B.right + 160 * S.U) { S.wave = null; return false; }
+      const w = S.surge; if (!w) return t < START;
+      const p = Math.min(1, (t - w.t0) / CROSS);
+      w.front = y0 + (y1 - y0) * (p * (1.15 - .15 * p));
+      S.shake = Math.max(S.shake, p < 1 ? 9 * U : 0);
+      // 波の先から、しぶきが前へ跳ねる
+      if (p < 1) for (let i = 0; i < 30; i++) { const x = B.left - 20 + Math.random() * (B.right - B.left + 40); P(S, { x, y: w.front, vx: (Math.random() - .5) * 4, vy: (up ? -1 : 1) * (5 + Math.random() * 8), life: 26, sz: (2 + Math.random() * 2.4) * U, c: ['#bff3ff', '#ffffff', '#4fb6ff', '#2a6fd6'][i % 4], drag: .95, grav: (up ? 1 : -1) * .25 }); }
+      // 波の先が届いたカードから、呑まれて砕ける
+      S.dest.forEach(c => { if (c.a > 0 && !c.hit && (up ? c.y > w.front - 12 * U : c.y < w.front + 12 * U)) { c.hit = 1; impact(S, c.x, c.y, .6, '#4fb6ff'); explode(S, c, '#7fd6ff'); } });
+      if (p >= 1 && w.fade === null) w.fade = t;
+      if (w.fade !== null && t - w.fade > 600) { S.surge = null; return false; }
       return true;
     });
-    S.end = 2800;
+    S.end = START + CROSS + 1100;
   },
 
   /* 聖なるバリア －ミラーフォース－：虹色の波が広がってドームになり、攻撃を受け止めて跳ね返す */
@@ -615,6 +623,39 @@ function draw(S) {
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(h.x, h.y, h.r * 1.6, 0, TAU); ctx.fill();
   }
   S.cards.forEach(c => { drawCard(c); if (c.burn && c.a > 0) { ctx.save(); ctx.translate(c.x, c.y); ctx.rotate((c.rot || 0) + (c.base || 0)); ctx.scale(c.s, c.s * c.sy); ctx.globalAlpha = Math.min(.85, c.burn) * c.a; ctx.fillStyle = '#1a0628'; ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h); ctx.restore(); } });
+  if (S.surge) {
+    const w = S.surge, up = w.up, sgn = up ? -1 : 1, fa = w.fade !== null ? Math.max(0, 1 - (t - w.fade) / 600) : 1;
+    const L0 = B.left, R0 = B.right, band = 240 * U, back = w.front - sgn * band;
+    // 盤面の中だけに描く
+    ctx.save(); rr(ctx, B.left, B.top, B.right - B.left, B.bottom - B.top, 16); ctx.clip();
+    // 波の帯：先が濃く、後ろほど透ける
+    const g = ctx.createLinearGradient(0, w.front, 0, back);
+    g.addColorStop(0, 'rgba(11,37,71,.92)'); g.addColorStop(.45, 'rgba(16,70,120,.6)'); g.addColorStop(1, 'rgba(16,70,120,0)');
+    ctx.globalAlpha = fa; ctx.fillStyle = g; ctx.fillRect(L0, Math.min(w.front, back), R0 - L0, band);
+    // 炎の舌のような波頭：幅・高さ・傾きがばらばらで、先が揺らぐ。明るい層ほど前へ伸びる
+    w.layers = w.layers || [[0, '#d8f8ff', .95, 58], [12, '#5cc8f0', .95, 48], [26, '#1f7fbf', 1, 38], [40, '#0d3466', 1, 28]].map(([off, col, al, tall], li) => {
+      const sp = []; let x = L0 - 20;
+      while (x < R0 + 20) { const ww = (10 + Math.random() * 18) * U; sp.push({ x, w: ww, h: tall * (.45 + Math.random() * .75), ph: Math.random() * TAU, lean: (Math.random() - .5) * 1.2 }); x += ww * (.55 + Math.random() * .35); }
+      return { off, col, al, sp };
+    });
+    w.layers.forEach((ly, li) => {
+      const fy = w.front - sgn * ly.off * U;
+      ctx.beginPath(); ctx.moveTo(L0 - 30, fy - sgn * 20 * U);
+      ly.sp.forEach(q => {
+        const flick = .75 + .25 * Math.sin(t / 55 + q.ph), h = q.h * U * flick, lean = (q.lean + .35 * Math.sin(t / 80 + q.ph)) * q.w;
+        ctx.lineTo(q.x, fy);
+        ctx.quadraticCurveTo(q.x + q.w * .2, fy + sgn * h * .65, q.x + q.w * .5 + lean, fy + sgn * h);
+        ctx.quadraticCurveTo(q.x + q.w * .78 + lean * .3, fy + sgn * h * .3, q.x + q.w, fy);
+      });
+      ctx.lineTo(R0 + 30, fy - sgn * 20 * U); ctx.lineTo(R0 + 30, fy - sgn * 40 * U); ctx.lineTo(L0 - 30, fy - sgn * 40 * U); ctx.closePath();
+      ctx.globalAlpha = fa * ly.al; ctx.fillStyle = ly.col; ctx.fill();
+      if (li === 0) { ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = 1.6 * U; ctx.stroke(); }
+    });
+    // うねる筋（水の中の流れ）
+    ctx.globalAlpha = fa * .4; ctx.strokeStyle = '#bff3ff'; ctx.lineWidth = 1.4 * U;
+    for (let k = 0; k < 5; k++) { const yy = w.front - sgn * (55 + k * 36) * U; ctx.beginPath(); for (let x = L0; x <= R0; x += 10) ctx.lineTo(x, yy + Math.sin(x / 22 + t / 50 + k) * 5 * U); ctx.stroke(); }
+    ctx.restore();
+  }
   S.shards.forEach(s => {
     ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot); ctx.globalAlpha = Math.max(0, s.a);
     ctx.beginPath(); s.pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
@@ -671,7 +712,7 @@ function draw(S) {
     if (b.after) { if (Math.random() < .5) bolt(b.x + (Math.random() - .5) * 40, b.y - 30, b.x + (Math.random() - .5) * 40, b.y + 30, b.gold ? '#ffe08a' : '#bfe4ff', 1.5, .8); }
     else { bolt(b.x + (Math.random() - .5) * 20, -20, b.x, b.y, b.gold ? '#ffe08a' : '#bfe4ff', (b.gold ? 9 : 6) * U, 1 - el / life, 1); glow(b.x, b.y, 90 * U, b.gold ? '#ffe08a' : '#bfe4ff', 1 - el / life); }
   });
-  if (S.wave) {
+  if (S.wave && false) {
     const wx = S.wave.x, gr = ctx.createLinearGradient(wx - 200 * U, 0, wx + 30, 0);
     gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.7, 'rgba(30,110,200,.55)'); gr.addColorStop(1, 'rgba(160,225,255,.9)'); ctx.fillStyle = gr;
     ctx.beginPath(); ctx.moveTo(wx - 200 * U, B.bottom); for (let y = B.bottom; y > B.top; y -= 10) ctx.lineTo(wx + Math.sin(y / 20 + t / 60) * 12, y); ctx.lineTo(wx - 200 * U, B.top); ctx.closePath(); ctx.fill();
