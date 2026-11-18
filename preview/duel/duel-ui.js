@@ -189,12 +189,18 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .dock-status { min-width: 0 }
 #actor { font-weight: 700; display: block }
 #actorHint { display: block; font-size: 12px; color: var(--sub) }
-#phaseBtns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end }
+/* 下の段：左に発動などのボタン、右下に場面を先に進める「進む」ボタン（いつも同じ場所） */
+.dock-acts { grid-column: 1 / -1; display: flex; gap: 8px; align-items: stretch }
+#phaseBtns { flex: 1; min-width: 0; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end }
+.btn.go { flex: none; width: clamp(150px, 34%, 240px); min-height: 52px; font-size: 16px; white-space: normal; line-height: 1.25; flex-direction: column; gap: 0 }
+.btn.go small { display: block; font-size: 11px; font-weight: 500; opacity: .8 }
+#stopBtn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
 #phaseBtns .btn { white-space: normal; text-align: center; line-height: 1.3 }
 #soundBtn[aria-pressed="false"] { color: var(--sub); text-decoration: line-through }
 .dock .thinking::after { content: "…"; display: inline-block; animation: dots 1.2s steps(4) infinite; width: 1.2em; overflow: hidden; vertical-align: bottom }
 @keyframes dots { from { width: 0 } to { width: 1.2em } }
-.dock-extra { display: none }
+.dock-extra { display: flex; gap: 6px; justify-content: flex-end }
+#logBtn { display: none }
 #result { padding: 10px 14px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 700; text-align: center }
 
 /* ---------- カード詳細・選択 ---------- */
@@ -265,10 +271,11 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .table { padding-bottom: 150px }
   .dock { position: fixed; left: 0; right: 0; bottom: 0; margin: 0;
     padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); grid-template-columns: minmax(0, 1fr) auto; border-inline: none; border-bottom: none }
-  #phaseBtns { grid-column: 1 / -1; justify-content: stretch }
-  #phaseBtns:empty { display: none }
+  #phaseBtns { justify-content: stretch }
   #phaseBtns .btn { flex: 1 }
-  .dock-extra { display: flex; gap: 6px; grid-column: 2; grid-row: 1 }
+  .btn.go { width: 42% }
+  #logBtn { display: inline-flex }
+  .dock-extra { grid-column: 2; grid-row: 1 }
   .pstrip { flex-wrap: wrap; row-gap: 2px }
   .pstrip .meta { font-size: 11px }
   /* 狭いので、空いているモンスター・魔法＆罠ゾーンの文字は出さない（並びで分かる） */
@@ -315,8 +322,8 @@ export const MARKUP = `
     <div class="pstrip me" id="side0"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="meta"></span></div>
     <div class="dock" id="dock">
       <div class="dock-status"><span id="actor"></span><span id="actorHint"></span></div>
-      <div class="dock-extra"><button class="btn small" id="logBtn">ログ</button></div>
-      <div id="phaseBtns"></div>
+      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できるタイミングで、必ず止めて聞く">✋ 次で止める</button><button class="btn small" id="logBtn">ログ</button></div>
+      <div class="dock-acts"><div id="phaseBtns"></div><button class="btn primary go" id="goBtn"></button></div>
     </div>
   </main>
   <aside class="sidecol">
@@ -340,6 +347,7 @@ export const MARKUP = `
       <label for="deck1">相手のデッキ（P2）<select id="deck1"></select></label>
       <label for="mode">対戦相手<select id="mode"><option value="cpu">CPU</option><option value="hot">2人で交互に操作</option></select></label>
       <label for="first">先攻<select id="first"><option value="0">P1（あなた）</option><option value="1">P2</option><option value="r">ランダム</option></select></label>
+      <label for="chainMode">チェーンの確認<select id="chainMode"><option value="auto">おまかせ（相手が動いた時だけ聞く）</option><option value="always">いつも聞く</option><option value="never">聞かない（「次で止める」の時だけ）</option></select></label>
       <label for="cpuSpeed">CPUの速さ<select id="cpuSpeed"><option value="slow">ゆっくり</option><option value="normal" selected>ふつう</option><option value="fast">はやい</option></select></label>
     </div>
     <label class="check" id="hideOppRow"><input type="checkbox" id="hideOpp"> 手番でない側の手札を伏せる</label>
