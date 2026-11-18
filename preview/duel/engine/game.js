@@ -561,6 +561,7 @@ export function addToHand(s           , uids          , reason         = 'effect
     const c = s.cards[u]; const from = c.zone; const before = structuredClone(c);
     moveCard(s, u, 'hand');
     emit(s, { type: 'toHand', uid: u, from, reason });
+    if (from === 'deck') pushAnim(s, { kind: 'search', uid: u, player: s.cards[u].owner }); // 演出用：デッキから手札に加えた
     if (FIELD_ZONES.includes(from)) { emit(s, { type: 'leftField', uid: u, from, reason, wasFaceUp: before.faceUp }); befores.push(before); }
   }
   if (uids.length) log(s, `${uids.map(u => nameOf(s, u)).join('、')}を手札に加える`);

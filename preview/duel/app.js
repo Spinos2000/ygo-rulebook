@@ -82,6 +82,7 @@ function queueBattleFx(prev, next) {
   const battles = fresh.filter(x => x.kind === 'battle').map(x => battleInfo(prev, next, x)).filter(Boolean);
   // 召喚：素材のカードの位置は今のうちに覚えておき、召喚されたカードの位置は画面を更新してから調べる
   pendingSummons.push(...fresh.filter(x => x.kind === 'summon').map(x => summonInfo(prev, next, x)).filter(Boolean));
+  pendingSummons.push(...fresh.filter(x => x.kind === 'search' && isCpu(x.player)).map(x => ({ search: true, uid: x.uid, p: x.player, d: defOf(next, x.uid) })));
   if (!battles.length) return;
   fxBusy = true;
   (async () => {
@@ -113,6 +114,7 @@ function playPendingSummons() {
   fxBusy = true;
   (async () => {
     for (const j of jobs) {
+      if (j.search) { try { await cpuSearchFx(j); } catch (e) { console.error(e); } continue; }
       const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`);
       if (!el) continue;
       el.style.visibility = 'hidden';
@@ -577,6 +579,11 @@ function renderChoice() {
 function renderDetail() {
   const el = $('#detail');
   if (S.pending && isCpu(S.pending.request.player)) { el.innerHTML = `<h3>CPUが選んでいます</h3><p class="prompt">${esc(S.pending.request.prompt)}</p>`; return; }
+  if (S.pending && isDeckPick(S.pending.request)) {
+    el.innerHTML = `<h3>あなたの選択</h3><p class="prompt">${esc(S.pending.request.prompt)}</p><p class="tl">広げた山札から選んでください。</p>`;
+    openFan();
+    return;
+  }
   if (S.pending) { el.innerHTML = renderChoice(); return; }
   if (selected === null) {
     el.innerHTML = `<h3>カードを押してください</h3><p class="tl">押したカードの効果と、今できる操作がここに出ます。光っているカードは今発動できます。次のフェイズへは、下のボタンか上の「BP・M2・EP」で進めます。</p>`;
@@ -594,10 +601,154 @@ function renderLog() {
   el.scrollTop = el.scrollHeight;
 }
 
+
+/* ---------- デッキから選ぶ時：山札を扇形に広げて、カードを直接選ぶ ---------- */
+let fan = null;           // { key, layer, sel, req }
+const fanDur = ms => (fxMode() === 'short' ? ms / 2 : ms);
+/** デッキの中から選ぶ選択か（演出が「なし」の時は、今までどおり文字の一覧） */
+function isDeckPick(r) {
+  return fxMode() !== 'none' && r && r.kind === 'cards' && r.options.length > 0 && r.options.every(u => S.cards[u].zone === 'deck' && S.cards[u].owner === r.player);
+}
+const rectOf = el => el.getBoundingClientRect();
+const centerOf = r => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+function pileEl(p, kind) { return ROOT.querySelector(`[data-pile="${p}:${kind}"]`); }
+/** 山札の並びが分からないように、種類と名前の順に並べる */
+function sortForFan(list) {
+  const rank = u => ({ monster: 0, spell: 1, trap: 2 }[defOf(S, u).kind] ?? 3);
+  return [...list].sort((a, b) => rank(a) - rank(b) || defOf(S, a).name.localeCompare(defOf(S, b).name, 'ja') || a - b);
+}
+function fanCardHtml(uid, back) {
+  const d = defOf(S, uid);
+  if (back) return `<span class="card back" data-fanb="${uid}"></span>`;
+  return `<span class="card f-${frameOf(d)}" data-fan="${uid}">${faceHtml(uid, d, false)}</span>`;
+}
+/** カードを扇形（何段か）に並べる位置を決める */
+function layoutFan(area, els) {
+  const W = area.clientWidth, cw = narrow() ? 64 : 80, ch = cw * 86 / 59, n = els.length;
+  const perRow = Math.max(5, Math.floor((W - cw) / (cw * .62)) + 1), rows = Math.ceil(n / perRow);
+  els.forEach((el, i) => {
+    const row = Math.floor(i / perRow), first = row * perRow, m = Math.min(perRow, n - first), idx = i - first;
+    const t = m > 1 ? idx / (m - 1) - .5 : 0, step = m > 1 ? Math.min(cw * .7, (W - cw - 8) / (m - 1)) : 0;
+    const x = W / 2 + t * step * (m - 1), y = row * ch * .66 + ch / 2 + 16 + t * t * 34, rot = t * 16;
+    el.style.width = cw + 'px'; el.style.left = (x - cw / 2) + 'px'; el.style.top = (y - ch / 2) + 'px';
+    el.style.setProperty('--rot', rot.toFixed(1) + 'deg'); el.style.zIndex = String(i + 1);
+    el.dataset.rot = rot.toFixed(1);
+  });
+  area.style.height = (rows * ch * .66 + ch * .45 + 40) + 'px';
+}
+/** 山札の場所から、扇の位置へ飛び出す */
+function flyIn(els, from) {
+  return Promise.all(els.map((el, i) => {
+    const r = rectOf(el), c = centerOf(r), dx = from.x - c.x, dy = from.y - c.y;
+    return el.animate([{ transform: `translate(${dx}px,${dy}px) scale(.6) rotate(0deg)`, opacity: .3 }, { transform: `rotate(${el.dataset.rot}deg)`, opacity: 1 }],
+      { duration: fanDur(420), delay: fanDur(Math.min(i * 28, 700)), easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }).finished;
+  }));
+}
+/** 指定の場所へ飛んでいく（残りのカードは山札へ戻る） */
+function flyTo(el, to, opts = {}) {
+  const c = centerOf(rectOf(el)), dx = to.x - c.x, dy = to.y - c.y;
+  const a = el.animate([{ transform: el.classList.contains('picked') ? 'translateY(-20px) scale(1.12)' : `rotate(${el.dataset.rot || 0}deg)`, opacity: 1 },
+    { transform: `translate(${dx}px,${dy}px) scale(${opts.scale ?? .5}) rotate(${opts.rot ?? 0}deg)`, opacity: opts.fade ? .2 : 1 }],
+  { duration: fanDur(opts.dur ?? 420), delay: fanDur(opts.delay ?? 0), easing: opts.ease ?? 'cubic-bezier(.5,0,.3,1)', fill: 'forwards' });
+  return a.finished;
+}
+function shakePile(p) {
+  const el = pileEl(p, 'deck');
+  if (el) el.animate([{ transform: 'none' }, { transform: 'translateX(-5px) rotate(-6deg)' }, { transform: 'translateX(5px) rotate(6deg)' }, { transform: 'translateX(-3px) rotate(-3deg)' }, { transform: 'none' }], { duration: fanDur(480) });
+}
+function glowPile(p) {
+  const el = pileEl(p, 'deck');
+  if (el) el.animate([{ boxShadow: '0 0 0 0 rgba(255,224,138,0)' }, { boxShadow: '0 0 0 3px #ffe08a, 0 0 26px 8px rgba(255,224,138,.8)' }, { boxShadow: '0 0 0 0 rgba(255,224,138,0)' }], { duration: fanDur(650) });
+}
+function closeFan() { if (fan) { fan.layer.remove(); fan = null; } }
+function openFan() {
+  const r = S.pending.request, key = JSON.stringify([S.step, r.prompt, r.options, S.pending.answers.length]);
+  if (fan && fan.key === key) return;
+  closeFan();
+  const p = r.player, all = sortForFan(S.players[p].deck);
+  const layer = document.createElement('div');
+  layer.className = 'fan-layer';
+  const range = r.min === r.max ? `${r.min}枚選ぶ` : `${r.min}〜${r.max}枚選ぶ`;
+  layer.innerHTML = `<div class="fan-head"><b>${esc(r.prompt)}</b><span>山札 ${all.length}枚から${range}（明るいカードが選べます）</span></div><div class="fan-area"></div>`
+    + `<div class="fan-btns">${r.min === 0 ? '<button class="btn" data-fanskip>選ばない</button>' : ''}${r.max > 1 ? '<button class="btn primary" data-fanok disabled>決定</button>' : ''}</div>`;
+  $('.droot').appendChild(layer);
+  const area = layer.querySelector('.fan-area');
+  area.innerHTML = all.map(u => fanCardHtml(u, false)).join('');
+  const els = [...area.children];
+  els.forEach(el => { if (!r.options.includes(Number(el.dataset.fan))) el.classList.add('dim'); });
+  layoutFan(area, els);
+  fan = { key, layer, sel: [], req: r, p };
+  glowPile(p);
+  const pile = pileEl(p, 'deck');
+  if (pile) flyIn(els, centerOf(rectOf(pile)));
+}
+function fanPick(u) {
+  if (!fan || !fan.req.options.includes(u)) return;
+  const r = fan.req;
+  if (r.max === 1) { fanFinish([u]); return; }
+  fan.sel = fan.sel.includes(u) ? fan.sel.filter(x => x !== u) : fan.sel.length < r.max ? [...fan.sel, u] : fan.sel;
+  fan.layer.querySelectorAll('[data-fan]').forEach(el => el.classList.toggle('picked', fan.sel.includes(Number(el.dataset.fan))));
+  const ok = fan.layer.querySelector('[data-fanok]');
+  if (ok) ok.disabled = !(fan.sel.length >= r.min && fan.sel.length <= r.max);
+}
+/** 選んだカードを行き先（手札・墓地・場）へ飛ばし、残りを山札に戻してから答える */
+async function fanFinish(sel) {
+  if (!fan || fan.busy) return;
+  fan.busy = true;
+  const r = fan.req, p = fan.p, layer = fan.layer;
+  layer.classList.add('done');
+  const dest = /除外/.test(r.prompt) ? pileEl(p, 'banished') : /墓地/.test(r.prompt) ? pileEl(p, 'gy') : /特殊召喚|フィールド/.test(r.prompt) ? $('#board') : $(`#hand${p}`);
+  const to = dest ? centerOf(rectOf(dest)) : { x: innerWidth / 2, y: innerHeight };
+  const pile = pileEl(p, 'deck'), back = pile ? centerOf(rectOf(pile)) : to;
+  const els = [...layer.querySelectorAll('[data-fan]')];
+  const picked = els.filter(el => sel.includes(Number(el.dataset.fan)));
+  picked.forEach(el => { el.classList.add('picked'); el.style.zIndex = '100'; });
+  await new Promise(res => setTimeout(res, fanDur(200)));
+  const rest = els.filter(el => !sel.includes(Number(el.dataset.fan)));
+  rest.forEach((el, i) => flyTo(el, back, { dur: 360, delay: Math.min(i * 12, 300), fade: true, scale: .5, ease: 'ease-in' }));
+  await Promise.all(picked.map(el => flyTo(el, to, { dur: 460, scale: .55, rot: -8 })));
+  shakePile(p);
+  closeFan();
+  run({ type: 'answer', value: sel });
+}
+
+/* ---------- CPUのサーチ：裏面の扇から1枚を見せて、手札へ ---------- */
+async function cpuSearchFx(j) {
+  const pile = pileEl(j.p, 'deck'), hand = $(`#hand${j.p}`);
+  if (!pile || !hand) return;
+  const layer = document.createElement('div');
+  layer.className = 'fan-layer cpu';
+  layer.innerHTML = `<div class="fan-head"><b>${esc(NAME(j.p))}がデッキからカードを探しています</b></div><div class="fan-area"></div>`;
+  $('.droot').appendChild(layer);
+  const area = layer.querySelector('.fan-area');
+  area.innerHTML = Array.from({ length: 9 }, () => '<span class="card back"></span>').join('');
+  const els = [...area.children];
+  layoutFan(area, els);
+  glowPile(j.p);
+  await flyIn(els, centerOf(rectOf(pile)));
+  await new Promise(res => setTimeout(res, fanDur(350)));
+  const pick = els[4];
+  pick.style.zIndex = '100';
+  const rest = els.filter(el => el !== pick);
+  rest.forEach((el, i) => flyTo(el, centerOf(rectOf(pile)), { dur: 340, delay: i * 15, fade: true, ease: 'ease-in' }));
+  // くるりと表に返して、相手に見せる
+  await pick.animate([{ transform: 'rotate(0deg) scale(1.3)' }, { transform: 'rotate(0deg) scale(1.3) scaleX(0)' }], { duration: fanDur(180), fill: 'forwards' }).finished;
+  const d = j.d;
+  pick.className = `card f-${frameOf(d)}`;
+  pick.innerHTML = faceHtml(j.uid, d, false);
+  layer.querySelector('.fan-head b').textContent = `${NAME(j.p)}が「${d.name}」を手札に加えます`;
+  await pick.animate([{ transform: 'rotate(0deg) scale(1.3) scaleX(0)' }, { transform: 'rotate(0deg) scale(1.3)' }], { duration: fanDur(180), fill: 'forwards' }).finished;
+  await new Promise(res => setTimeout(res, fanDur(900)));
+  pick.dataset.rot = '0';
+  await flyTo(pick, centerOf(rectOf(hand)), { dur: 420, scale: .4, fade: true });
+  shakePile(j.p);
+  layer.remove();
+}
+
 /* ---------- シート（スマホ） ---------- */
 function renderSheets() {
   const humanChoice = S.pending && !isCpu(S.pending.request.player);
-  const detailOpen = narrow() && ((humanChoice && !peek) || (sheet === 'detail' && selected !== null));
+  const detailOpen = narrow() && ((humanChoice && !peek && !fan) || (sheet === 'detail' && selected !== null));
   const logOpen = narrow() && sheet === 'log' && !detailOpen;
   $('#detailSheet').classList.toggle('open', detailOpen);
   $('#logSheet').classList.toggle('open', logOpen);
@@ -610,7 +761,8 @@ function closeSheets() {
 }
 
 function render() {
-  if (fxBusy) { renderSheets(); return; } // 攻撃の演出が終わってから画面を更新する（開いていたシートは先に閉じる）
+  if (fxBusy) { renderSheets(); return; }
+  if (fan && !(S.pending && !isCpu(S.pending.request.player) && isDeckPick(S.pending.request))) closeFan(); // 攻撃の演出が終わってから画面を更新する（開いていたシートは先に閉じる）
   canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
   renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets();
   $('#result').hidden = S.winner === null;
@@ -670,6 +822,10 @@ function surrender() {
 function wire(root) {
 root.addEventListener('click', e => {
   const t = e.target;
+  if (t.closest('[data-fanok]')) { if (fan) fanFinish(fan.sel); return; }
+  if (t.closest('[data-fanskip]')) { fanFinish([]); return; }
+  const fanEl = t.closest('[data-fan]');
+  if (fanEl) { fanPick(Number(fanEl.dataset.fan)); return; }
   if (t.closest('#again') || t.closest('[data-again="1"]')) { newDuel(); return; }
   if (t.closest('[data-reopen="1"]')) { peek = false; render(); return; }
   if (t.closest('#stopBtn')) { stopNext = !stopNext; renderDock(); return; }

@@ -243,6 +243,22 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 12px }
 .pilelist { display: flex; flex-wrap: wrap; gap: 6px }
 .pilelist .card { width: 84px; font-size: 10px }
+/* デッキから選ぶ時の扇（山札を広げた画面） */
+.fan-layer { position: fixed; inset: 0; z-index: 28; background: rgba(6,20,14,.74); display: flex; flex-direction: column; align-items: center; overflow-y: auto;
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 12px calc(env(safe-area-inset-bottom, 0px) + 16px) }
+.fan-layer.cpu { background: rgba(6,20,14,.38); pointer-events: none; justify-content: center }
+.fan-layer.done { pointer-events: none }
+.fan-head { color: #fff; text-align: center; display: flex; flex-direction: column; gap: 2px; margin: 6px 0 4px; max-width: 640px }
+.fan-head b { font-family: var(--display); font-weight: 400; font-size: 16px; line-height: 1.4 }
+.fan-head span { font-size: 12px; opacity: .8 }
+.fan-area { position: relative; width: min(980px, 100%); flex: none }
+.fan-area .card { position: absolute; font-size: 10px; cursor: pointer; transform: rotate(var(--rot, 0deg)); transition: transform .18s ease-out, filter .2s, box-shadow .18s }
+.fan-area .card.dim { filter: grayscale(.85) brightness(.5); cursor: default }
+.fan-area .card:not(.dim):not(.back):hover { transform: translateY(-10px) rotate(0deg) scale(1.06); z-index: 80 !important }
+.fan-area .card.picked { transform: translateY(-20px) scale(1.12); z-index: 90 !important; box-shadow: 0 0 0 3px var(--accent), 0 0 22px 6px color-mix(in srgb, var(--accent) 70%, transparent) }
+.fan-btns { display: flex; gap: 10px; margin: 8px 0 }
+.fan-btns:empty { display: none }
+@media (max-width: 860px) { .fan-area .card { font-size: 8.5px } }
 /* 攻撃の演出を描く全画面のキャンバス（押した操作は下の画面に通す） */
 .fx-layer { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 26; display: none }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + 24px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); border-radius: 10px; padding: 9px 16px; max-width: min(520px, calc(100vw - 32px)); box-shadow: var(--shadow); z-index: 40; font-weight: 500 }
