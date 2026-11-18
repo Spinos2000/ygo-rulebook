@@ -2,6 +2,7 @@
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
 import { cpuDecide } from './ai/cpu.js';
 import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js';
+import { playBattle } from './fx.js';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
@@ -61,11 +62,58 @@ function soundsFor(prev, next) {
   }
   return out;
 }
-/** 状態を進めて、起きたことに合わせて効果音を鳴らす */
+/** 状態を進めて、起きたことに合わせて効果音を鳴らし、攻撃があれば演出を再生する */
 function commit(next) {
   const prev = S;
   S = next;
   if (prev) play(soundsFor(prev, next));
+  if (prev) queueBattleFx(prev, next);
+}
+
+/* ---------- 攻撃の演出：演出の間は画面の更新とCPUの手番を止め、終わったら続ける ---------- */
+let fxBusy = false;
+const fxMode = () => ($('#fxMode') && $('#fxMode').value) || 'full';
+function queueBattleFx(prev, next) {
+  if (fxMode() === 'none' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const fresh = (next.anim || []).filter(x => x.seq > (prev.animSeq ?? 0));
+  if (!fresh.length) return;
+  // 演出に使うのは、まだ画面に残っている前の状態の盤面（カードの位置）
+  const jobs = fresh.map(x => battleInfo(prev, next, x)).filter(Boolean);
+  if (!jobs.length) return;
+  fxBusy = true;
+  (async () => {
+    for (const j of jobs) {
+      const hide = j.hide.map(el => { el.style.visibility = 'hidden'; return el; });
+      try { await playBattle(ROOT, j.info); } catch (e) { console.error(e); }
+      hide.forEach(el => { el.style.visibility = ''; });
+    }
+    fxBusy = false;
+    render();
+  })();
+}
+function battleInfo(prev, next, x) {
+  const elOf = uid => ROOT.querySelector(`#board [data-uid="${uid}"]`);
+  const aEl = elOf(x.attacker);
+  if (!aEl || !prev.cards[x.attacker]) return null;
+  const stats = uid => ({ atk: currentAtk(prev, uid), def: currentDef(prev, uid) });
+  const atkP = prev.cards[x.attacker].controller, defP = 1 - atkP;
+  const a = { rect: aEl.getBoundingClientRect(), d: defOf(next, x.attacker), ...stats(x.attacker) };
+  let t, tEl = null;
+  if (x.target === null) {
+    const strip = $(`#side${defP}`);
+    t = { rect: strip.getBoundingClientRect() };
+  } else {
+    tEl = elOf(x.target);
+    if (!tEl) return null;
+    t = { rect: tEl.getBoundingClientRect(), d: defOf(next, x.target), ...stats(x.target) };
+  }
+  const dmg = x.damage.reduce((m, d) => Math.max(m, d.amount), 0);
+  const hurt = x.damage.length ? x.damage[0].player : defP;
+  const r = hurt === atkP ? a.rect : t.rect;
+  return {
+    hide: [aEl, tEl].filter(Boolean),
+    info: { a, t, destroyed: { a: x.destroyed.includes(x.attacker), t: x.target !== null && x.destroyed.includes(x.target) }, dmg, dmgAt: { x: r.left + r.width / 2 + 40, y: r.top + 10 }, speed: fxMode() === 'short' ? 2 : 1 },
+  };
 }
 
 /* ---------- CPU の手番（速さはメニューで選べる） ---------- */
@@ -526,6 +574,7 @@ function closeSheets() {
 }
 
 function render() {
+  if (fxBusy) { renderSheets(); return; } // 攻撃の演出が終わってから画面を更新する（開いていたシートは先に閉じる）
   canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
   renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets();
   $('#result').hidden = S.winner === null;
@@ -637,6 +686,9 @@ $('#soundBtn').onclick = () => { setSoundEnabled(!soundEnabled()); renderSoundBt
 renderSoundBtn();
 // CPUの速さは、この端末に覚えておく
 try { const v = localStorage.getItem('gx-duel-cpu-speed'); if (v) $('#cpuSpeed').value = v; } catch { /* 保存できない環境 */ }
+// 攻撃の演出も、この端末に覚えておく
+try { const v = localStorage.getItem('gx-duel-fx'); if (v) $('#fxMode').value = v; } catch { /* 保存できない環境 */ }
+$('#fxMode').onchange = () => { try { localStorage.setItem('gx-duel-fx', $('#fxMode').value); } catch { /* 保存できない環境 */ } };
 // チェーンの確認も、この端末に覚えておく
 try { const v = localStorage.getItem('gx-duel-chain-mode'); if (v) $('#chainMode').value = v; } catch { /* 保存できない環境 */ }
 $('#chainMode').onchange = () => { try { localStorage.setItem('gx-duel-chain-mode', $('#chainMode').value); } catch { /* 保存できない環境 */ } if (S) render(); };

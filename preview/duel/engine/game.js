@@ -1388,6 +1388,10 @@ function battleProc(s           , step            )       {
         }
         if (b.destroyed.length) log(s, `${b.destroyed.map(u => nameOf(s, u)).join('、')}は戦闘で破壊される`);
       }
+      // 画面の演出用：この戦闘の記録（攻撃したモンスター・攻撃対象・破壊されるモンスター・戦闘ダメージ）
+      (s.anim ??= []).push({ seq: (s.animSeq = (s.animSeq ?? 0) + 1), kind: 'battle', attacker: b.attacker, target: b.target, destroyed: [...b.destroyed],
+        damage: s.events.filter(e => e.type === 'damage' && e.battle && e.step === s.step).map(e => ({ player: (e                        ).player, amount: (e                      ).amount })) });
+      if (s.anim.length > 6) s.anim.shift();
       checkLp(s);
       return next('afterCalc');
     }
