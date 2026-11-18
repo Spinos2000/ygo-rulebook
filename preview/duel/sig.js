@@ -71,6 +71,18 @@ function mk(c) {
     rot: 0, base: def ? Math.PI / 2 : 0, s: 1, sy: 1, a: 1, flip: 1, glow: 0, gc: '#fff', def };
 }
 
+
+/* ---------- 演出はプレイマット（盤面）の中だけに描く：描いた後、盤面の外を消す ---------- */
+let clipR = null;
+function setClip(root) { const b = root.querySelector('#board'); clipR = b ? b.getBoundingClientRect() : null; }
+function maskToBoard() {
+  if (!clipR) return;
+  const dpr = cv.width / (window.innerWidth || 1);
+  ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalCompositeOperation = 'destination-in';
+  ctx.fillStyle = '#000'; rr(ctx, clipR.left, clipR.top, clipR.width, clipR.height, 14); ctx.fill();
+  ctx.restore();
+}
+
 /* ---------- キャンバス ---------- */
 let cv = null, ctx = null, W = 0, H = 0;
 function ensureCanvas(root) {
@@ -92,13 +104,13 @@ function ensureCanvas(root) {
  *          board: {left, top, right, bottom, cx, cy, myMonY, oppMonY, myStY}, deck, gy, hand（それぞれ {x, y}）, drawn（ドローした枚数） }
  */
 export function playSignature(root, info) {
-  ensureCanvas(root);
+  ensureCanvas(root); setClip(root);
   return new Promise(resolve => {
     const S = setup(info);
     cv.style.display = 'block';
     const step = now => {
       if (S.done) return;
-      tick(S, now); drawMat(S);
+      tick(S, now); maskToBoard(); drawMat(S);
       if (S.t > S.end) { S.done = true; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; if (S.mat) S.mat.ctx.clearRect(0, 0, S.mat.w, S.mat.h); resolve(); return; }
       requestAnimationFrame(step);
     };

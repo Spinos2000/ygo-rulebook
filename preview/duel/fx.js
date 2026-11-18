@@ -121,6 +121,18 @@ export function cardImg(d, atk, def, full = false) {
 }
 
 
+
+/* ---------- 演出はプレイマット（盤面）の中だけに描く：描いた後、盤面の外を消す ---------- */
+let clipR = null;
+function setClip(root) { const b = root.querySelector('#board'); clipR = b ? b.getBoundingClientRect() : null; }
+function maskToBoard() {
+  if (!clipR) return;
+  const dpr = cv.width / (window.innerWidth || 1);
+  ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalCompositeOperation = 'destination-in';
+  ctx.fillStyle = '#000'; rr(ctx, clipR.left, clipR.top, clipR.width, clipR.height, 14); ctx.fill();
+  ctx.restore();
+}
+
 /* ---------- キャンバス ---------- */
 let cv = null, ctx = null, W = 0, H = 0;
 function ensureCanvas(root) {
@@ -141,14 +153,14 @@ function fit() {
  *          destroyed: { a: bool, t: bool }, dmg: number, speed: 1 | 2 }
  */
 export function playBattle(root, info) {
-  ensureCanvas(root); fit();
+  ensureCanvas(root); fit(); setClip(root);
   const god = godKind(info.a.d);
   return new Promise(resolve => {
     const S = setup(info, god);
     cv.style.display = 'block';
     const step = now => {
       if (S.done) return;
-      frame(S, now);
+      frame(S, now); maskToBoard();
       if (S.t > S.end) { S.done = true; ctx.clearRect(0, 0, W, H); cv.style.display = 'none'; resolve(); return; }
       requestAnimationFrame(step);
     };
@@ -455,7 +467,7 @@ const FU_COLS = ['#c9a7ff', '#7f77dd', '#ff8ad8', '#6bd0ff', '#ffffff', '#b45cff
 const lerp = (a, b, k) => a + (b - a) * k;
 
 export function playSummon(root, info) {
-  ensureCanvas(root); fit();
+  ensureCanvas(root); fit(); setClip(root);
   return new Promise(resolve => {
     const r = info.rect, U = Math.max(.6, Math.min(1.3, r.width / 78));
     let how = info.how;
@@ -475,7 +487,7 @@ export function playSummon(root, info) {
     const step = now => {
       if (S.done) return;
       const dt = Math.min(32, now - (S.last || now)) * S.speed; S.last = now; S.t += dt;
-      summonTick(S); summonDraw(S);
+      summonTick(S); summonDraw(S); maskToBoard();
       if (S.t > S.end) { S.done = true; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; resolve(); return; }
       requestAnimationFrame(step);
     };
