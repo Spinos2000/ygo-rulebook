@@ -2724,6 +2724,245 @@ export const SCRIPTS                             = {
       resolve: x => { const t = x.link .targets[0]; if (targetValid(x.s, x.link ) && isFaceUpMonster(x.s, t) && x.s.cards[t].controller !== x.player) takeControl(x.s, t, x.player); },
     }],
   },
+  /* ================= デッキ dno10（墓守デッキ）で追加 ================= */
+  /* 墓守の長 */
+  '5515': {
+    uniqueOnField: true,
+    shieldsOwnGy: true,
+    effects: [{
+      id: 'e1', label: '墓地の「墓守の」モンスター1体を特殊召喚', type: 'trigger', ss: 1,
+      trigger: { mandatory: false, when: true, match: (s, self, ev) => ev.type === 'summoned' && ev.uid === self && ev.how === 'advance' },
+      can: x => gkGy(x).length > 0,
+      resolve: x => { const u = chooseOne(x, '特殊召喚する「墓守の」モンスターを選んでください', gkGy(x)); if (u !== null) specialSummon(x, [u]); },
+    }],
+  },
+  /* 守護者スフィンクス */
+  '5422': {
+    effects: [{
+      id: 'e1', label: 'このカードを裏側守備表示にする（1ターンに1度）', type: 'ignition', ss: 1, opt: 'card',
+      resolve: x => { if (isFaceUpMonster(x.s, x.self) && sameCard(x.s, x.self, x.link .serial)) setFaceDown(x.s, [x.self]); },
+    }, {
+      id: 'e2', label: '相手フィールドのモンスターを全て手札に戻す', type: 'trigger', ss: 1,
+      trigger: { mandatory: true, when: false, match: (s, self, ev) => ev.type === 'summoned' && ev.uid === self && ev.how === 'flip' },
+      resolve: x => { const t = monstersOf(x.s, opp(x.player)); if (t.length) addToHand(x.s, t); },
+    }],
+  },
+  /* 墓守の審神者 */
+  '10920': {
+    altTribute: [{ count: 3, ok: () => true }, { count: 1, ok: (s, u) => isGk(s, u) }],
+    effects: [{
+      id: 'e1', label: '①：リリースした「墓守」の数まで効果を選んで発動', type: 'trigger', ss: 1,
+      trigger: { mandatory: false, when: true, match: (s, self, ev) => ev.type === 'summoned' && ev.uid === self && ev.how === 'advance' && (s.cards[self].tributedWith ?? []).some(u => isGk(s, u)) },
+      activate: x => {
+        const s = x.s, n = (s.cards[x.self].tributedWith ?? []).filter(u => isGk(s, u)).length;
+        const names = ['攻撃力をリリースしたモンスターのレベルの合計×100アップ', '相手の裏側表示モンスターを全て破壊', '相手のモンスターの攻撃力・守備力を2000ダウン'];
+        const chosen           = [];
+        for (let i = 0; i < Math.min(n, 3); i++) {
+          const rest = [0, 1, 2].filter(v => !chosen.includes(v));
+          const opts = i === 0 ? rest.map(v => names[v]) : ['（ここまでにする）', ...rest.map(v => names[v])];
+          const k = choose(x, { kind: 'option', prompt: `発動する効果を選んでください（${i + 1}つ目）`, options: opts });
+          if (i > 0 && k === 0) break;
+          chosen.push(rest[i === 0 ? k : k - 1]);
+        }
+        x.link .data.modes = chosen;
+      },
+      resolve: x => {
+        const s = x.s, modes = x.link .data.modes            ;
+        if (modes.includes(0) && isFaceUpMonster(s, x.self)) {
+          const lv = (s.cards[x.self].tributedWith ?? []).reduce((a, u) => a + level(s, u), 0);
+          addStatMod(s, x.self, lv * 100, 0);
+        }
+        if (modes.includes(1)) { const t = monstersOf(s, opp(x.player)).filter(u => !s.cards[u].faceUp); if (t.length) destroy(s, t, 'effect'); }
+        if (modes.includes(2)) for (const u of monstersOf(s, opp(x.player)).filter(u => isFaceUpMonster(s, u))) addStatMod(s, u, -2000, -2000);
+      },
+    }],
+  },
+  /* 墓守の召喚師 */
+  '9282': {
+    effects: [{
+      id: 'e1', label: 'デッキから守備力1500以下の「墓守の」モンスターを手札に加える', type: 'trigger', ss: 1, zones: ['gy'], damageStep: true,
+      trigger: { mandatory: true, when: true, match: (s, self, ev) => leftFieldTo(ev, self) && s.cards[self].zone === 'gy' && s.cards[self].owner === s.cards[self].controller },
+      resolve: x => {
+        const s = x.s;
+        const u = chooseOne(x, '手札に加える「墓守の」モンスターを選んでください', deckOf(s, x.player).filter(u => isGk(s, u) && defOf(s, u).kind === 'monster' && !defOf(s, u).defUnknown && (defOf(s, u).def ?? 0) <= 1500));
+        if (u !== null) addToHand(s, [u]);
+      },
+    }],
+  },
+  /* 墓守の司令官 */
+  '7106': {
+    effects: [{
+      id: 'e1', label: 'このカードを捨て、デッキから「王家の眠る谷－ネクロバレー」を手札に加える', type: 'ignition', ss: 1, zones: ['hand'],
+      can: x => deckOf(x.s, x.player).some(u => defOf(x.s, u).name === '王家の眠る谷－ネクロバレー'),
+      activate: x => { log(x.s, `${pl(x.player)}：${nameOf(x.s, x.self)}を捨てる`); sendToGy(x.s, [x.self], 'discard'); },
+      resolve: x => { const u = chooseOne(x, '手札に加えるカードを選んでください', deckOf(x.s, x.player).filter(u => defOf(x.s, u).name === '王家の眠る谷－ネクロバレー')); if (u !== null) addToHand(x.s, [u]); },
+    }],
+  },
+  /* 墓守の大神官 */
+  '8638': {
+    altTribute: { count: 1, ok: (s, u) => defOf(s, u).name.startsWith('墓守の') },
+    statAdd: (s, self) => ({ atk: gyOf(s, s.cards[self].controller).filter(u => defOf(s, u).kind === 'monster' && defOf(s, u).name.startsWith('墓守の')).length * 200, def: 0 }),
+    destroyReplaceHand: (s, self) => handOf(s, s.cards[self].controller).filter(u => defOf(s, u).kind === 'monster' && defOf(s, u).name.startsWith('墓守の')),
+  },
+  /* 墓守の偵察者 */
+  '5509': {
+    effects: [{
+      id: 'e1', label: 'リバース：デッキから攻撃力1500以下の「墓守の」モンスターを特殊召喚', type: 'trigger', ss: 1, damageStep: true,
+      trigger: { mandatory: true, when: false, match: (s, self, ev) => ev.type === 'flipped' && ev.uid === self },
+      resolve: x => {
+        const s = x.s;
+        const u = chooseOne(x, '特殊召喚する「墓守の」モンスターを選んでください', deckOf(s, x.player).filter(u => defOf(s, u).kind === 'monster' && defOf(s, u).name.startsWith('墓守の') && !defOf(s, u).atkUnknown && (defOf(s, u).atk ?? 0) <= 1500 && canSpecialSummon(s, u, x.player)));
+        if (u !== null) specialSummon(x, [u]);
+      },
+    }],
+  },
+  /* 墓守の番兵 */
+  '5511': {
+    effects: [{
+      id: 'e1', label: 'リバース：相手モンスター1体を手札に戻す', type: 'trigger', ss: 1, damageStep: true,
+      trigger: { mandatory: true, when: false, match: (s, self, ev) => ev.type === 'flipped' && ev.uid === self },
+      activate: x => { const o = monstersOf(x.s, opp(x.player)).filter(u => targetable(x.s, u)); if (o.length) target(x, '手札に戻す相手モンスターを選んでください', o); },
+      resolve: x => { const t = x.link .targets[0]; if (t !== undefined && targetValid(x.s, x.link ) && isMonsterZone(x.s.cards[t])) addToHand(x.s, [t]); },
+    }],
+  },
+  /* 墓守の末裔 */
+  '8639': {
+    effects: [{
+      id: 'e1', label: '他の「墓守の」モンスターをリリースし、相手フィールドのカード1枚を破壊', type: 'ignition', ss: 1,
+      can: x => relMons(x.s, x.player).some(u => u !== x.self && isFaceUpMonster(x.s, u) && defOf(x.s, u).name.startsWith('墓守の')) && fieldCards(x.s, opp(x.player)).length > 0,
+      activate: x => {
+        const u = chooseOne(x, 'リリースする「墓守の」モンスターを選んでください（コスト）', relMons(x.s, x.player).filter(u => u !== x.self && isFaceUpMonster(x.s, u) && defOf(x.s, u).name.startsWith('墓守の'))) ;
+        release(x.s, [u], 'cost');
+        target(x, '破壊する相手のカードを選んでください', fieldCards(x.s, opp(x.player)));
+      },
+      resolve: x => { const t = x.link .targets[0]; if (targetValid(x.s, x.link ) && isOnField(x.s.cards[t])) destroy(x.s, [t], 'effect'); },
+    }],
+  },
+  /* グリモの魔導書 */
+  '10187': {
+    effects: [{
+      id: 'e1', label: 'デッキから「グリモの魔導書」以外の「魔導書」カードを手札に加える', type: 'card', ss: 1, hardOpt: true,
+      can: x => grimoires(x).length > 0,
+      resolve: x => { const u = chooseOne(x, '手札に加える「魔導書」カードを選んでください', grimoires(x)); if (u !== null) addToHand(x.s, [u]); },
+    }],
+  },
+  /* 王家の眠る谷－ネクロバレー */
+  '5533': {
+    necroValley: true,
+    effects: [{ id: 'e1', label: '発動する', type: 'card', ss: 1, resolve: () => {} }],
+    // ①：フィールドの「墓守」モンスターの攻撃力・守備力は500アップ（自分のモンスターも相手のモンスターも）
+    aura: (s, _self, t) => (isGk(s, t) ? { atk: 500, def: 500 } : null),
+  },
+  /* ネクロバレーの玉座 */
+  '13942': {
+    effects: [{
+      id: 'e1', label: '「墓守」モンスターを手札に加えるか、手札の「墓守」モンスターを召喚する', type: 'card', ss: 1, hardOpt: true,
+      can: x => throneModes(x).length > 0,
+      activate: x => {
+        const modes = throneModes(x);
+        x.link .data.mode = modes.length > 1 ? modes[choose(x, { kind: 'option', prompt: 'どちらの効果を発動しますか？', options: modes.map(v => (v === 0 ? 'デッキから「墓守」モンスターを手札に加える' : '手札の「墓守」モンスターを召喚する')) })] : modes[0];
+      },
+      resolve: x => {
+        const s = x.s;
+        if (x.link .data.mode === 0) { const u = chooseOne(x, '手札に加える「墓守」モンスターを選んでください', deckOf(s, x.player).filter(u => isGk(s, u))); if (u !== null) addToHand(s, [u]); return; }
+        const u = chooseOne(x, '召喚する「墓守」モンスターを選んでください', throneSummonable(x));
+        if (u !== null) summonByEffect(x, u);
+      },
+    }],
+  },
+  /* 墓守の石版：「王家の眠る谷－ネクロバレー」の効果では無効化されない */
+  '8667': {
+    ignoresNecroValley: true,
+    effects: [{
+      id: 'e1', label: '墓地の「墓守の」モンスター2体を手札に加える', type: 'card', ss: 1,
+      can: x => gyOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'monster' && defOf(x.s, u).name.startsWith('墓守の')).length >= 2,
+      activate: x => {
+        const t = choose(x, { kind: 'cards', prompt: '手札に加える「墓守の」モンスターを2体選んでください', options: gyOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'monster' && defOf(x.s, u).name.startsWith('墓守の')), min: 2, max: 2 });
+        x.link .targets.push(...t);
+      },
+      resolve: x => { const ok = x.link .targets.filter((t, i) => targetValid(x.s, x.link , i) && x.s.cards[t].zone === 'gy'); if (ok.length) addToHand(x.s, ok); },
+    }],
+  },
+  /* ルドラの魔導書 */
+  '13101': {
+    effects: [{
+      id: 'e1', label: '「魔導書」カードか魔法使い族モンスターを墓地へ送り、2枚ドロー', type: 'card', ss: 1, hardOpt: true,
+      can: x => x.s.players[x.player].deck.length >= 2 && rudraCosts(x).length > 0,
+      resolve: x => {
+        const u = chooseOne(x, '墓地へ送るカードを選んでください', rudraCosts(x));
+        if (u === null) return;
+        sendToGy(x.s, [u], 'effect');
+        if (x.s.cards[u].zone === 'gy') drawCards(x.s, x.player, 2);
+      },
+    }],
+  },
+  /* 降霊の儀式：このカードの発動は「王家の眠る谷－ネクロバレー」によっては制限されない */
+  '5548': {
+    ignoresNecroValley: true,
+    effects: [{
+      id: 'e1', label: '墓地の「墓守の」モンスター1体を特殊召喚', type: 'card', ss: 2,
+      can: x => gyOf(x.s, x.player).some(u => defOf(x.s, u).name.startsWith('墓守の') && canSpecialSummon(x.s, u, x.player, 'special', [], x.self)),
+      activate: x => { target(x, '特殊召喚する「墓守の」モンスターを選んでください', gyOf(x.s, x.player).filter(u => defOf(x.s, u).name.startsWith('墓守の') && canSpecialSummon(x.s, u, x.player, 'special', [], x.self))); },
+      resolve: x => { const t = x.link .targets[0]; if (targetValid(x.s, x.link ) && x.s.cards[t].zone === 'gy') specialSummon(x, [t]); },
+    }],
+  },
+  /* アヌビスの裁き */
+  '5232': {
+    effects: [{
+      id: 'e1', label: '手札を1枚捨て、魔法・罠を破壊する相手の魔法カードの発動を無効にし破壊', type: 'card', ss: 3,
+      can: x => {
+        const top = x.s.chain[x.s.chain.length - 1];
+        return !!top && top.cardActivation && top.cardKind === 'spell' && top.player === opp(x.player) && !top.negated && destroysSpellTrap(x.s, top.uid) && x.s.players[x.player].hand.length > 0;
+      },
+      activate: x => {
+        x.link .data.index = x.s.chain.length - 1;
+        const c = chooseOne(x, '捨てる手札を選んでください（コスト）', handOf(x.s, x.player)) ;
+        log(x.s, `${pl(x.player)}：${nameOf(x.s, c)}を捨てる`);
+        sendToGy(x.s, [c], 'discard');
+      },
+      resolve: x => {
+        const s = x.s;
+        negateActivation(s, s.chain[x.link .data.index          ]);
+        const o = monstersOf(s, opp(x.player)).filter(u => isFaceUpMonster(s, u));
+        if (!o.length || !choose(x, { kind: 'yesno', prompt: '相手の表側表示モンスター1体を破壊し、その攻撃力分のダメージを与えますか？' })) return;
+        newStep(s);
+        const t = chooseOne(x, '破壊するモンスターを選んでください', o) ;
+        const atk = currentAtk(s, t);
+        if (destroy(s, [t], 'effect').length) effectDamage(s, opp(x.player), atk);
+      },
+    }],
+  },
+  /* アヌビスの呪い */
+  '6067': {
+    effects: [{
+      id: 'e1', label: '攻撃表示の効果モンスターを全て守備表示にし、元々の守備力を0にする', type: 'card', ss: 2,
+      can: x => anubisTargets(x.s).length > 0 && !(x.s.battle && ['dsStart', 'beforeCalc', 'afterCalc', 'dsEnd', 'end'].includes(x.s.battle.step)),
+      resolve: x => {
+        const s = x.s;
+        for (const u of anubisTargets(s)) {
+          if (isImmune(s, u)) continue;
+          changePositionByEffect(s, u, 'def');
+          // このターン、元々の守備力は0になり、表示形式を変更できない
+          addStatMod(s, u, 0, -(defOf(s, u).def ?? 0), true);
+          addLingering(s, { type: 'noPositionChange', uid: u, serial: s.cards[u].serial, turn: s.turn });
+        }
+      },
+    }],
+  },
+  /* ネクロバレーの王墓 */
+  '10962': {
+    effects: [{
+      id: 'e1', label: '効果モンスターの効果・魔法・罠カードの発動を無効にし破壊', type: 'card', ss: 3, hardOpt: true,
+      can: x => {
+        const s = x.s, top = s.chain[s.chain.length - 1];
+        if (!top || top.negated || !(top.cardKind === 'monster' || top.cardActivation)) return false;
+        const all = [...fieldCards(s, 0), ...fieldCards(s, 1)];
+        return all.some(u => isFaceUpMonster(s, u) && isGk(s, u)) && all.some(u => s.cards[u].faceUp && defOf(s, u).name === '王家の眠る谷－ネクロバレー');
+      },
+      activate: x => { x.link .data.index = x.s.chain.length - 1; },
+      resolve: x => { negateActivation(x.s, x.s.chain[x.link .data.index          ]); },
+    }],
+  },
 };
 
 /* ---------- サイバーダーク用の補助 ---------- */
@@ -3116,3 +3355,34 @@ const rengekiMonsters = (x     ) => handOf(x.s, x.player).filter(u => {
   return d.kind === 'monster' && d.frame !== 'ritual' && d.frame !== 'fusion' && !scriptOf(x.s, u).cannotNormalSummon && n > 0 && relMons(x.s, x.player).length >= n;
 });
 const brainTargets = (x     ) => monstersOf(x.s, opp(x.player)).filter(u => isFaceUpMonster(x.s, u) && normalSummonable(x.s, u));
+
+/* ---------- デッキ dno10（墓守デッキ）の共通処理 ---------- */
+const isGk = (s           , u        ) => defOf(s, u).kind === 'monster' && defOf(s, u).name.includes('墓守');
+const gkGy = (x     ) => gyOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'monster' && defOf(x.s, u).name.startsWith('墓守の') && canSpecialSummon(x.s, u, x.player));
+const grimoires = (x     ) => deckOf(x.s, x.player).filter(u => defOf(x.s, u).name.includes('魔導書') && defOf(x.s, u).name !== 'グリモの魔導書');
+const rudraCosts = (x     ) => [
+  ...handOf(x.s, x.player).filter(u => u !== x.self && defOf(x.s, u).name.includes('魔導書') && defOf(x.s, u).name !== 'ルドラの魔導書'),
+  ...spellTrapsOf(x.s, x.player).filter(u => u !== x.self && x.s.cards[u].faceUp && defOf(x.s, u).name.includes('魔導書') && defOf(x.s, u).name !== 'ルドラの魔導書'),
+  ...monstersOf(x.s, x.player).filter(u => isFaceUpMonster(x.s, u) && defOf(x.s, u).race === '魔法使い族'),
+];
+/** ネクロバレーの玉座：手札から召喚できる「墓守」モンスター（リリースが要らないもの） */
+const throneSummonable = (x     ) => handOf(x.s, x.player).filter(u => isGk(x.s, u) && normalSummonable(x.s, u) && tributesFor(x.s, u) === 0 && freeMZones(x.s, x.player).length > 0);
+function throneModes(x     )           {
+  const res           = [];
+  if (deckOf(x.s, x.player).some(u => isGk(x.s, u))) res.push(0);
+  if (throneSummonable(x).length) res.push(1);
+  return res;
+}
+/** 効果で手札のモンスターを召喚する（通常召喚の回数は使わない。ネクロバレーの玉座） */
+function summonByEffect(x     , u        )       {
+  const s = x.s, z = freeMZones(s, x.player);
+  if (!z.length || s.cards[u].zone !== 'hand') return;
+  moveCard(s, u, 'mzone', { index: z[0], faceUp: true, position: 'atk', controller: x.player });
+  const c = s.cards[u]; c.summonedHow = 'normal'; c.summonedTurn = s.turn;
+  log(s, `${pl(x.player)}：${nameOf(s, u)}を召喚`);
+  pushAnim(s, { kind: 'summon', uid: u, how: 'normal', mats: [] });
+  emit(s, { type: 'summoned', uid: u, player: x.player, how: 'normal' });
+}
+/** 「フィールドの魔法・罠カードを破壊する」効果を持つ魔法カードか（アヌビスの裁き） */
+const destroysSpellTrap = (s           , u        ) => /魔法・罠カード[^。]*破壊|魔法・罠[^。]*全て破壊/.test(defOf(s, u).text || '');
+const anubisTargets = (s           ) => allMonsters(s).filter(u => isFaceUpMonster(s, u) && s.cards[u].position === 'atk' && defOf(s, u).frame === 'effect');
