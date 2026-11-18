@@ -375,7 +375,11 @@ export function backImg() {
   return (BACK = o);
 }
 const SUMMON_COLOR = { normal: '#ffe08a', set: '#d9a35a', advance: '#ffd27a', special: '#9fe6ff', flip: '#ffffff', ritual: '#7fb2ff', fusion: '#c9a7ff', god: '#ffc93d' };
-const SUMMON_LAND = { normal: 420, set: 300, advance: 900, special: 1100, flip: 500, ritual: 1800, fusion: 2700, god: 2700 };
+const SUMMON_LAND = { normal: 420, set: 300, advance: 900, special: 1100, flip: 500, ritual: 1800, fusion: 2700, god: 2700, ace: 2300 };
+/* エース（2体以上のリリースが必要なモンスター・レベル7以上）：
+   暗転と黒帯 → リリースした素材が光になって天へ → 魔法陣と光の柱 → 上空から大きく降臨して着地 → 名前と攻撃力の帯 */
+const ACE_COLOR = { 闇: '#b07cff', 光: '#ffd75a', 地: '#e0b47a', 水: '#6bd0ff', 炎: '#ff7a4a', 風: '#7aff9a' };
+const ACE = { circle: 350, pillar: 900, drop: 1350 };
 /* 融合：素材が渦の中心へ集まる → 渦に巻き込まれて回りながら混ざる → 光って融合モンスターが現れる → 自分のマスへ降りる */
 const FU = { gather: 450, mix: 1750, born: 1950 };
 const FU_COLS = ['#c9a7ff', '#7f77dd', '#ff8ad8', '#6bd0ff', '#ffffff', '#b45cff'];
@@ -388,11 +392,14 @@ export function playSummon(root, info) {
     let how = info.how;
     if (!info.faceDown && (info.d.race === '幻神獣族' || info.d.race === '創造神族') && how !== 'set') how = 'god';
     if (info.faceDown) how = how === 'flip' ? 'flip' : 'set';
-    const S = { how, c: SUMMON_COLOR[how] || '#9fe6ff', U, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height,
+    // レベル7以上（＝2体以上のリリースが必要なモンスター）は、エースとして特別な登場にする。儀式・融合・神は専用の演出のまま
+    if (!info.faceDown && ['normal', 'advance', 'special', 'flip'].includes(how) && (info.d.level ?? 0) >= 7) how = 'ace';
+    const fr = info.fromRect;
+    const S = { soul: how === 'ace' && fr ? { x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 } : null, how, c: how === 'ace' ? (ACE_COLOR[info.d.attribute] || '#ffd27a') : SUMMON_COLOR[how] || '#9fe6ff', U, d: info.d, atk: info.atk, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height,
       img: info.faceDown && how !== 'flip' ? backImg() : cardImg(info.d, info.atk, info.def), parts: [], rings: [], shake: 0, flash: 0, dark: 0, quake: 0, t: 0, last: 0,
       speed: (info.speed || 1) * (window.__fxSlow || 1), L: SUMMON_LAND[how] || 600, hit: false, bolt: null, done: false,
       mats: (info.mats || []).map(m => ({ x: m.rect.left + m.rect.width / 2, y: m.rect.top + m.rect.height / 2, w: m.rect.width, h: m.rect.height, img: cardImg(m.d, m.atk, m.def), a: 1, s: 1 })) };
-    S.end = S.L + (how === 'god' ? 900 : how === 'set' ? 250 : 650);
+    S.end = S.L + (how === 'god' ? 900 : how === 'ace' ? 1100 : how === 'set' ? 250 : 650);
     // 融合の渦の中心：召喚するマスと画面の中央の間
     if (how === 'fusion') S.C = { x: (S.x + W / 2) / 2, y: (S.y + H / 2) / 2 };
     cv.style.display = 'block';
@@ -416,6 +423,7 @@ function summonTick(S) {
     if (t < 600) for (let i = 0; i < 4; i++) SP(S, { x: m.x + (Math.random() - .5) * m.w, y: m.y + (Math.random() - .5) * m.h, vx: (x - m.x) * .02 + (Math.random() - .5), vy: (y - m.y) * .02 - 1, life: 40, sz: 2.4, c: Math.random() < .5 ? c : '#ffffff', drag: .97 });
   });
   if (k === 'fusion') fusionTick(S);
+  if (k === 'ace') aceTick(S);
   if (k === 'ritual') S.mats.forEach(m => {
     const p = Math.min(1, t / (L * .8)), ang = Math.atan2(m.y - y, m.x - x) + p * 6, d0 = Math.hypot(m.x - x, m.y - y), r = d0 * (1 - easeIn(p));
     m.dx = x + Math.cos(ang) * r; m.dy = y + Math.sin(ang) * r * .7; m.a = 1 - Math.max(0, (p - .7) / .3); m.s = 1 - .5 * p;
@@ -433,7 +441,7 @@ function summonTick(S) {
   if (t > L + 200) S.dark *= .9;
   if (!S.hit && t >= L) {
     S.hit = true;
-    const big = k === 'god' ? 1 : k === 'advance' || k === 'ritual' || k === 'fusion' ? .75 : k === 'set' ? .1 : .45;
+    const big = k === 'god' || k === 'ace' ? 1 : k === 'advance' || k === 'ritual' || k === 'fusion' ? .75 : k === 'set' ? .1 : .45;
     S.flash = big; S.shake = k === 'set' ? 1 : 18 * big;
     S.rings.push({ x, y: y + S.h / 2 - 4, r: S.w * .5, v: k === 'set' ? 2 : (9 * big + 3) * U, a: 1, c: k === 'normal' || k === 'advance' ? '#e8d2a8' : c });
     if (k !== 'set') sburst(S, x, y + S.h / 2 - 6, k === 'normal' ? 36 : 70 * big + 20, k === 'normal' ? ['#d8c3a0', '#bfa27c', '#ffffff'] : [c, '#ffffff'], (k === 'normal' ? 5 : 8 * big + 3) * U, 40, 3, k === 'normal');
@@ -442,6 +450,30 @@ function summonTick(S) {
   S.parts.forEach(p => { p.x += p.vx; p.y += p.vy; p.vx *= p.drag; p.vy = p.vy * p.drag + p.grav; p.life--; }); S.parts = S.parts.filter(p => p.life > 0);
   S.rings.forEach(r => { r.r += r.v; r.v *= .96; r.a *= .94; }); S.rings = S.rings.filter(r => r.a > .03);
   S.shake *= .85; S.flash *= .88;
+}
+function aceTick(S) {
+  const t = S.t, x = S.x, y = S.y, U = S.U, c = S.c, L = S.L, sky = { x, y: Math.max(30, y - 230 * U) };
+  S.dark = t < L + 500 ? Math.min(.78, t / 500) : S.dark * .9;
+  S.bars = t < L + 600 ? Math.min(1, t / 400) : Math.max(0, 1 - (t - L - 600) / 400);
+  // リリースした素材：光の粒になって天へ昇る
+  S.mats.forEach(m => {
+    m.a = Math.max(0, 1 - t / 700); m.s = 1 + .15 * (t / 700);
+    if (t < 700) for (let i = 0; i < 5; i++) SP(S, { x: m.x + (Math.random() - .5) * m.w, y: m.y + (Math.random() - .5) * m.h, vx: (sky.x - m.x) * .022 + (Math.random() - .5), vy: (sky.y - m.y) * .022, life: 50, sz: 2.6, c: Math.random() < .5 ? c : '#ffffff', drag: .985 });
+  });
+  // 墓地（除外）から：魂が置き場から抜け出して上空へ昇る
+  if (S.soul && t < ACE.drop) { const p = ease(t / ACE.drop), sx = lerp(S.soul.x, x, p), sy = lerp(S.soul.y, sky.y, p) - Math.sin(p * Math.PI) * 40 * U; S.soul.cx = sx; S.soul.cy = sy; for (let i = 0; i < 4; i++) SP(S, { x: sx + (Math.random() - .5) * S.w * .6, y: sy + (Math.random() - .5) * S.h * .5, vx: (Math.random() - .5) * .8, vy: .6 + Math.random(), life: 36, sz: 2.6, c: Math.random() < .5 ? c : '#ffffff', drag: .97 }); }
+  // 魔法陣から光が立ちのぼる
+  if (t > ACE.circle && t < L) for (let q = 0; q < 5; q++) { const a = Math.random() * TAU, r = (60 + Math.random() * 50) * U; SP(S, { x: x + Math.cos(a) * r, y: y + S.h * .35 + Math.sin(a) * r * .32, vx: 0, vy: -2.5 - Math.random() * 3, life: 34, sz: 2.8, c: Math.random() < .5 ? c : '#ffffff', drag: .99, grav: -.02 }); }
+  // 天から光が降り注ぐ
+  if (t > ACE.pillar && t < L) for (let g = 0; g < 6; g++) SP(S, { x: x + (Math.random() - .5) * 70 * U, y: sky.y - 40, vx: 0, vy: 7 + Math.random() * 5, life: 40, sz: 2.2, c: Math.random() < .5 ? c : '#ffffff', drag: 1 });
+  S.quake = t > ACE.pillar && t < L ? 1.5 : 0;
+  // 着地の瞬間：大きな衝撃波と地割れ
+  if (!S.aceHit && t >= L) {
+    S.aceHit = true;
+    for (let i = 0; i < 3; i++) S.rings.push({ x, y: y + S.h / 2 - 4, r: S.w * .5 + i * 14, v: (15 - i * 3) * U, a: 1, c: i ? c : '#ffffff' });
+    sburst(S, x, y, 90, [c, '#ffffff', '#fff1b0'], 11 * U, 55, 3.4);
+    S.cracks = []; for (let i = 0; i < 9; i++) { const a = Math.random() * TAU, pts = [[x, y + S.h * .45]]; let px = x, py = y + S.h * .45; for (let j = 0; j < 4; j++) { const aa = a + (Math.random() - .5) * .7; px += Math.cos(aa) * 26 * U; py += Math.sin(aa) * 9 * U; pts.push([px, py]); } S.cracks.push(pts); }
+  }
 }
 function fusionTick(S) {
   const t = S.t, C = S.C, U = S.U, n = Math.max(1, S.mats.length), R0 = 115 * U;
@@ -490,6 +522,24 @@ function summonDraw(S) {
     for (let i = 0; i < 2; i++) { ctx.beginPath(); for (let j = 0; j <= 3; j++) { const a = j / 3 * TAU + i * Math.PI / 3 - 1.57; ctx.lineTo(Math.cos(a) * R2, Math.sin(a) * R2); } ctx.stroke(); }
     ctx.restore(); for (let q = 0; q < 6; q++) { const a = q / 6 * TAU + t / 600; glow(x + Math.cos(a) * 100 * U, cy + Math.sin(a) * 34 * U, 16 * U, c, .9 * fa); }
   }
+  if (k === 'ace') {
+    const cy = y + S.h * .35, o = Math.min(1, Math.max(0, (t - ACE.circle) / 450)), fa = t > L + 300 ? Math.max(0, 1 - (t - L - 300) / 500) : 1;
+    if (o > 0 && fa > 0) {
+      // 二重の魔法陣（回る輪と星形）
+      ctx.save(); ctx.translate(x, cy); ctx.scale(1, .32); ctx.rotate(t / 900); ctx.strokeStyle = hexA(c, .95 * fa);
+      const R1 = 120 * o * U, R2 = 100 * o * U, R3 = 70 * o * U;
+      ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, R1, 0, TAU); ctx.stroke();
+      ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, R2, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, R3, 0, TAU); ctx.stroke();
+      ctx.beginPath(); for (let j = 0; j <= 5; j++) { const a = j * 2 / 5 * TAU - 1.57; ctx.lineTo(Math.cos(a) * R2, Math.sin(a) * R2); } ctx.stroke();
+      for (let j = 0; j < 12; j++) { const a = j / 12 * TAU; ctx.beginPath(); ctx.moveTo(Math.cos(a) * R2, Math.sin(a) * R2); ctx.lineTo(Math.cos(a) * R1, Math.sin(a) * R1); ctx.stroke(); }
+      ctx.restore(); glow(x, cy, 110 * o * U, c, .55 * fa);
+    }
+    if (t > ACE.pillar && t < L + 500) {
+      const pa = Math.min(1, (t - ACE.pillar) / 300) * (t > L ? Math.max(0, 1 - (t - L) / 500) : 1), pw = 70 * U, gr = ctx.createLinearGradient(x - pw, 0, x + pw, 0);
+      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.5, hexA(c, .65 * pa)); gr.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gr; ctx.fillRect(x - pw, -20, pw * 2, y + S.h);
+      ctx.fillStyle = `rgba(255,255,255,${.5 * pa})`; ctx.fillRect(x - 6 * U, -20, 12 * U, y + S.h);
+    }
+  }
   if (k === 'fusion' && t < FU.born + 500) {
     const C = S.C, fa = Math.min(1, t / 350) * (t > FU.mix ? Math.max(0, 1 - (t - FU.mix) / 500) : 1);
     const p = Math.min(1, t / FU.mix), spin = t / 1000 * (2 + p * 9);
@@ -534,10 +584,34 @@ function summonDraw(S) {
     if (t > FU.mix && t <= FU.born + 250) { const p = Math.min(1, (t - FU.mix) / (FU.born + 250 - FU.mix)); sImg(S, img, C.x, C.y, .2 + 1.05 * ease(p), Math.min(1, p * 2)); }
     else if (t > FU.born + 250) { const p = Math.min(1, (t - FU.born - 250) / (L - FU.born - 250)); sImg(S, img, lerp(C.x, x, ease(p)), lerp(C.y, y, easeIn(p)), 1.25 - .25 * ease(p), 1); }
   }
+  else if (k === 'ace') {
+    if (S.soul && t < ACE.drop && S.soul.cx != null) {
+      // 墓地から抜け出した魂（半透明のカード）が上空へ
+      const p = t / ACE.drop; ctx.globalCompositeOperation = 'lighter'; glow(S.soul.cx, S.soul.cy, 60 * U, c, .7); ctx.globalCompositeOperation = 'source-over';
+      sImg(S, img, S.soul.cx, S.soul.cy, .7 + 1.1 * ease(p), .35 + .3 * Math.sin(p * Math.PI));
+    }
+    if (t > ACE.drop) {
+      // 上空から大きく降りてくる（残像つき）
+      const p = Math.min(1, (t - ACE.drop) / (L - ACE.drop)), top = Math.max(30, y - 230 * U);
+      for (let g = 3; g >= 1; g--) { const q = Math.max(0, p - g * .07); if (p < 1) sImg(S, img, x, lerp(top, y, easeIn(q)), 1.8 - .8 * ease(q), .18 * (4 - g) / 4); }
+      sImg(S, img, x, lerp(top, y, easeIn(p)), 1.8 - .8 * ease(p), Math.min(1, p * 4));
+    }
+    if (S.cracks && t >= L) { ctx.strokeStyle = `rgba(255,255,255,${Math.max(0, .8 - (t - L) / 900)})`; ctx.lineWidth = 2; S.cracks.forEach(pts => { ctx.beginPath(); pts.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]))); ctx.stroke(); }); }
+  }
   else if (k === 'god') { if (t > 1700) { const p = Math.min(1, (t - 1700) / (L - 1700)); sImg(S, img, x, y - 220 * (1 - easeIn(p)), 1.6 - .6 * ease(p), Math.min(1, p * 3)); } }
   if (t >= L && t < L + 500 && k !== 'set') { ctx.globalCompositeOperation = 'lighter'; glow(x, y, 130 * U, c, .5 * (1 - (t - L) / 500)); ctx.globalCompositeOperation = 'source-over'; }
   ctx.restore();
   if (S.flash > .01) { ctx.fillStyle = `rgba(255,255,255,${S.flash * .4})`; ctx.fillRect(0, 0, W, H); }
+  if (k === 'ace') {
+    const bh = 40 * S.bars; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+    if (t > L - 150) {
+      const k2 = Math.min(1, (t - L + 150) / 220), fo = Math.max(0, Math.min(1, (S.end - 250 - t) / 300)), yb = H * .62;
+      ctx.globalAlpha = k2 * fo; ctx.save(); ctx.translate((1 - k2) * -60, 0); ctx.transform(1, 0, -.2, 1, 0, 0);
+      ctx.fillStyle = 'rgba(10,10,14,.88)'; ctx.fillRect(-40, yb - 26, W + 120, 52); ctx.fillStyle = S.c; ctx.fillRect(-40, yb - 26, W + 120, 3); ctx.fillRect(-40, yb + 23, W + 120, 3);
+      ctx.restore(); ctx.textAlign = 'center'; ctx.fillStyle = S.c; ctx.font = '700 11px sans-serif'; ctx.fillText(`★${S.d.level}  ${S.d.attribute || ''}属性  ${S.d.race || ''}`, W / 2, yb - 8);
+      ctx.fillStyle = '#fff'; ctx.font = `700 ${Math.min(22, Math.max(15, W / 22))}px sans-serif`; ctx.fillText(`${S.d.name}　ATK ${S.atk}`, W / 2, yb + 15); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    }
+  }
   if (k === 'god') {
     const bh = 44 * Math.min(1, t / 400) * (t > S.end - 400 ? Math.max(0, (S.end - t) / 400) : 1);
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);

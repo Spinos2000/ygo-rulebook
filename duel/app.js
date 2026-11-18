@@ -129,7 +129,9 @@ function summonInfo(prev, next, x) {
     if (!el && !saved) return null;
     return { rect: saved || el.getBoundingClientRect(), d: defOf(prev, u), atk: currentAtk(prev, u), def: currentDef(prev, u) };
   }).filter(Boolean);
-  return { uid: x.uid, how: x.how, faceDown: faceDown && x.how !== 'flip', d: defOf(next, x.uid), mats };
+  // 墓地・除外から特殊召喚した時は、その置き場の位置も渡す（そこから魂が昇る）
+  const pc = prev.cards[x.uid], fromEl = pc && (x.from === 'gy' || x.from === 'banished') ? pileEl(pc.owner, x.from) : null;
+  return { uid: x.uid, how: x.how, faceDown: faceDown && x.how !== 'flip', d: defOf(next, x.uid), mats, from: x.from, fromRect: fromEl ? fromEl.getBoundingClientRect() : null };
 }
 /** 画面を更新した後：召喚されたカードの場所で、召喚の演出を順に再生する */
 function playPendingSummons() {
@@ -145,7 +147,7 @@ function playPendingSummons() {
       el.style.visibility = 'hidden';
       const flipFace = j.how === 'flip';
       try {
-        await playSummon(ROOT, { rect: el.getBoundingClientRect(), d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, speed: fxMode() === 'short' ? 2 : 1 });
+        await playSummon(ROOT, { rect: el.getBoundingClientRect(), d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, from: j.from, fromRect: j.fromRect, speed: fxMode() === 'short' ? 2 : 1 });
       } catch (e) { console.error(e); }
       el.style.visibility = '';
     }
