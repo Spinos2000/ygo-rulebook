@@ -137,7 +137,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .r0 .zone:not(.void), .r1 .zone:not(.void) { border-color: color-mix(in srgb, var(--mat-line) 60%, var(--opp) 40%) }
 
 /* ---------- カード ---------- */
-.card { position: relative; width: 72%; aspect-ratio: 59 / 86; border-radius: 5px; border: 1.5px solid #2c3244; padding: .3em; display: flex; flex-direction: column; gap: 2px; text-align: left;
+.card { position: relative; width: 72%; aspect-ratio: 59 / 86; border-radius: 5px; border: 1.5px solid #24150b; /* 枠は裏面と同じこげ茶 */ padding: .3em; display: flex; flex-direction: column; gap: 2px; text-align: left;
   color: #262b3a; font-family: var(--body); font-size: clamp(7px, 1.05vw, 10px); line-height: 1.15; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.35); transition: transform .12s, box-shadow .12s }
 /* 上の帯：カード名と属性 */
 .card .nm { display: flex; gap: 2px; align-items: flex-start; background: rgba(255,255,255,.62); border-radius: 3px; padding: 1px 2px; font-weight: 700; flex: none }

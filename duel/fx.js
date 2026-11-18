@@ -40,7 +40,7 @@ const ATTR = { 闇: '#534ab7', 光: '#b8902a', 地: '#8a6a3a', 水: '#2f6fb0', �
 export function cardImg(d, atk, def) {
   const CW = 78, CH = 114, o = document.createElement('canvas'); o.width = CW * 2; o.height = CH * 2;
   const x = o.getContext('2d'); x.scale(2, 2);
-  rr(x, 1, 1, CW - 2, CH - 2, 6); x.fillStyle = FRAME[d.frame] || '#e9a36f'; x.fill(); x.lineWidth = 1.6; x.strokeStyle = '#2c3244'; x.stroke();
+  rr(x, 1, 1, CW - 2, CH - 2, 6); x.fillStyle = FRAME[d.frame] || '#e9a36f'; x.fill(); x.lineWidth = 1.6; x.strokeStyle = '#24150b'; x.stroke();
   x.fillStyle = 'rgba(255,255,255,.62)'; rr(x, 5, 5, CW - 10, 22, 3); x.fill();
   x.fillStyle = '#262b3a'; x.font = '700 9px sans-serif'; x.fillText(d.name.slice(0, 7), 8, 15); x.fillText(d.name.slice(7, 14), 8, 25);
   x.fillStyle = ATTR[d.attribute] || '#6a6e7e'; x.beginPath(); x.arc(CW - 13, 13, 6.5, 0, TAU); x.fill();
