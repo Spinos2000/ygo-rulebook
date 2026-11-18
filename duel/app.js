@@ -299,12 +299,52 @@ function cardHtml(uid, { hidden = false, field = false, style = '' } = {}) {
   const st = style ? ` style="${style}"` : '';
   const d = defOf(S, uid);
   const cls = [uid === selected ? 'sel' : '', field && c.position === 'def' ? 'def' : '', canAct.has(uid) ? 'can' : '', pick.includes(uid) ? 'picked' : ''].join(' ');
-  const badge = [c.counters && c.counters.magic ? `<span class="badge">魔${c.counters.magic}</span>` : '', c.equippedTo !== null ? '<span class="badge eq">装備</span>' : ''].join('');
+  const badge = [field ? counterHtml(uid) : '', c.equippedTo !== null ? '<span class="badge eq">装備</span>' : ''].join('');
   if (hidden || (!c.faceUp && !(c.zone === 'hand' || c.zone === 'extra' || c.zone === 'deck' || field))) return `<button class="card back ${cls}" data-uid="${uid}"${st} aria-label="裏側のカード">${badge}</button>`;
   if (!c.faceUp && field && isCpu(c.controller)) return `<button class="card back ${cls}" data-uid="${uid}"${st} aria-label="裏側のカード">${badge}</button>`;
   if (!c.faceUp && field) return `<button class="card back ${cls}" data-uid="${uid}"${st} aria-label="裏側：${esc(d.name)}"><span class="bn">${esc(d.name)}</span>${badge}</button>`;
   return `<button class="card f-${frameOf(d)} ${cls}" data-uid="${uid}"${st} aria-label="${esc(d.name)}">${faceHtml(uid, d, field)}${badge}</button>`;
 }
+/* ---------- カウンター・ターン数：カードの上に、今いくつ／あと何ターンかを見て分かるように出す ---------- */
+const MAGIC_MAX = { '熟練の黒魔術師': 3, 'サイレント・マジシャン LV４': 5, '漆黒のパワーストーン': 3 };
+/** あるターンのターンプレイヤー */
+const tpAt = t => (t % 2 === 1 ? S.firstPlayer : 1 - S.firstPlayer);
+/** 今のターンから数えて、プレイヤー p の n 回目のスタンバイフェイズまでの自分のターン数（今がそのスタンバイ前なら今のターンも数える） */
+function ownTurnsUntil(p, target) { let n = 0; for (let t = S.turn + 1; t <= target; t++) if (tpAt(t) === p) n++; return n; }
+function counterHtml(uid) {
+  const c = S.cards[uid], d = defOf(S, uid), k = c.counters || {}, out = [];
+  // 魔力カウンター：最大数ぶんの玉を並べ、溜まった数だけ光らせる
+  if (k.magic !== undefined || MAGIC_MAX[d.name]) {
+    const n = k.magic ?? 0, max = Math.max(n, MAGIC_MAX[d.name] ?? n);
+    if (max > 0) {
+      const orbs = Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('');
+      let note = '';
+      // サイレント・マジシャン LV４：5つ溜まったら、次の自分のターンにLV８へ
+      if (d.name === 'サイレント・マジシャン LV４' && n >= 5) note = '<small>→LV8</small>';
+      out.push(`<span class="ctr magic${note ? ' ready' : ''}" title="魔力カウンター ${n}/${max}${note ? '（次の自分のターンでLV８に）' : ''}"><span class="orbs">${orbs}</span><b>${n}</b>${note}</span>`);
+    }
+  }
+  // 光の護封剣：相手ターンで数えて3ターン目のエンドフェイズに破壊
+  if (d.name === '光の護封剣' && c.faceUp) {
+    const left = 3 - (k.swordTurns ?? 0);
+    out.push(`<span class="ctr turns" title="相手のエンドフェイズであと${left}回で破壊">⚔<b>${left}</b><small>相手T</small></span>`);
+  }
+  // 未来融合：発動から2ターン後のスタンバイで素材を墓地へ、4ターン後のスタンバイで融合召喚
+  if (d.name === '未来融合－フューチャー・フュージョン' && c.faceUp && k.ffTurn !== undefined) {
+    const p = c.controller, t1 = k.ffTurn + 2, t2 = k.ffTurn + 4;
+    if (S.turn < t1) { const n = ownTurnsUntil(p, t1); out.push(`<span class="ctr turns" title="あと${n}回目の自分のスタンバイで素材を墓地へ">⏳<b>${n}</b><small>素材</small></span>`); }
+    else if (S.turn < t2) { const n = ownTurnsUntil(p, t2); out.push(`<span class="ctr turns ready" title="あと${n}回目の自分のスタンバイで融合召喚">⏳<b>${n}</b><small>融合</small></span>`); }
+  }
+  return out.join('');
+}
+/** 封印の黄金櫃で除外したカード：除外の置き場に「あと何回目のスタンバイで手札に戻るか」 */
+function sarcoHtml(p) {
+  const ls = (S.lingering || []).filter(l => l.type === 'returnAtStandby' && l.player === p && S.cards[l.uid] && S.cards[l.uid].zone === 'banished');
+  if (!ls.length) return '';
+  const n = Math.min(...ls.map(l => l.turnsLeft ?? 1));
+  return `<span class="ctr turns sarco" title="封印の黄金櫃：あと${n}回目の自分のスタンバイで手札へ">🔒<b>${n}</b><small>櫃</small></span>`;
+}
+
 /* ---------- カードの表面：カード名と属性／レベル（魔法・罠は種類）／種族の一文字／種族と種類／攻撃力・守備力 ---------- */
 const ATTR_COLOR = { 闇: '#534ab7', 光: '#b8902a', 地: '#8a6a3a', 水: '#2f6fb0', 炎: '#c4473a', 風: '#2e8b57', 神: '#a9841f' };
 const RACE_CHAR = { ドラゴン族: '竜', 魔法使い族: '魔', 機械族: '機', 戦士族: '戦', 悪魔族: '悪', 天使族: '天', アンデット族: '屍', 獣族: '獣', 獣戦士族: '獣', 鳥獣族: '鳥', 爬虫類族: '爬', 恐竜族: '恐', 水族: '水', 海竜族: '海', 魚族: '魚', 炎族: '炎', 雷族: '雷', 岩石族: '岩', 植物族: '植', 昆虫族: '虫', 幻神獣族: '神' };
@@ -343,8 +383,9 @@ function pile(p, kind) {
   const n = Math.min(7, Math.ceil(list.length / 6)), open = kind === 'gy' || kind === 'banished';
   const edges = Array.from({ length: n }, (_, k) => `${((k + 1) * .6).toFixed(1)}px ${((k + 1) * .9).toFixed(1)}px 0 ${open ? (k % 2 ? '#bdb5a3' : '#e6dfcf') : (k % 2 ? '#2a170a' : '#7a5634')}`);
   const stack = `box-shadow: ${[...edges, `${(n * .6 + 1).toFixed(1)}px ${(n * .9 + 2).toFixed(1)}px 4px rgba(0,0,0,.45)`].join(', ')}; translate: ${(-n * .3).toFixed(1)}px ${(-n * .45).toFixed(1)}px`;
-  const face = open && top !== null ? cardHtml(top, { style: stack }) : list.length ? `<span class="card back mini" style="${stack}"></span>` : '';
-  return `<button class="zone pile" data-pile="${p}:${kind}" aria-label="${NAME(p)}の${label}（${list.length}枚）">${face}<span class="pl">${label}</span><span class="cnt">${list.length}</span></button>`;
+  // 置き場のボタンの中にボタンは入れられない（ブラウザが外側のボタンを閉じてしまう）ので、一番上のカードは span にする
+  const face = open && top !== null ? cardHtml(top, { style: stack }).replace(/^<button/, '<span').replace(/<\/button>$/, '</span>') : list.length ? `<span class="card back mini" style="${stack}"></span>` : '';
+  return `<button class="zone pile" data-pile="${p}:${kind}" aria-label="${NAME(p)}の${label}（${list.length}枚）" title="長押しで一覧">${face}<span class="pl">${label}</span><span class="cnt">${list.length}</span>${kind === 'banished' ? sarcoHtml(p) : ''}</button>`;
 }
 function renderBoard() {
   const p1 = S.players[0], p2 = S.players[1];
@@ -1128,7 +1169,28 @@ function surrender() {
 
 /* ---------- イベント（boot から呼ぶ） ---------- */
 function wire(root) {
+/* 墓地・除外・デッキ・EX：長押し（パソコンは右クリックでも）で中身の一覧。スマホでは普通に押すと一番上のカードの説明 */
+let pressT = null, pressEl = null, pressXY = null, pressFired = false;
+function pressEnd() { clearTimeout(pressT); pressT = null; if (pressEl) pressEl.classList.remove('pressing'); pressEl = null; }
+root.addEventListener('pointerdown', e => {
+  pressFired = false; // 前の長押しの後に「押した」が来なかった時のため、押し始めで戻す
+  const el = e.target.closest && e.target.closest('#board [data-pile]');
+  if (!el || e.button > 0) return;
+  pressEnd(); pressEl = el; pressXY = [e.clientX, e.clientY];
+  el.classList.add('pressing');
+  pressT = setTimeout(() => { const [p, k] = el.dataset.pile.split(':'); pressFired = true; pressEnd(); if (navigator.vibrate) try { navigator.vibrate(15); } catch { /* 振動できない端末 */ } showPile(Number(p), k); }, 450);
+});
+root.addEventListener('pointermove', e => { if (pressT && pressXY && Math.hypot(e.clientX - pressXY[0], e.clientY - pressXY[1]) > 10) pressEnd(); });
+['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => root.addEventListener(ev, () => { if (pressT) pressEnd(); }));
+root.addEventListener('contextmenu', e => {
+  const el = e.target.closest && e.target.closest('#board [data-pile]');
+  if (!el) return;
+  e.preventDefault();
+  if (!pressFired) { const [p, k] = el.dataset.pile.split(':'); showPile(Number(p), k); }
+});
 root.addEventListener('click', e => {
+  // 長押しで一覧を開いた直後の「押した」は無視する
+  if (pressFired) { pressFired = false; e.preventDefault(); return; }
   const t = e.target;
   if (t.closest('[data-fanok]')) { if (fan) fanFinish(fan.sel); return; }
   if (t.closest('[data-fanskip]')) { fanFinish([]); return; }
@@ -1152,6 +1214,9 @@ root.addEventListener('click', e => {
   if (optEl) { togglePick(Number(optEl.dataset.opt)); return; }
   if (t.closest('#confirmPick')) { run({ type: 'answer', value: pick }); return; }
   if (t.closest('#pileClose') || t.id === 'pileDlg') { $('#pileDlg').hidden = true; return; }
+  // パソコン（広い画面）では、置き場を押すと一覧。スマホでは一番上のカードの説明（一覧は長押し）
+  const pileHit = t.closest('#board [data-pile]');
+  if (pileHit && !narrow() && !(S.pending && S.pending.request.kind === 'cards')) { const [p, k] = pileHit.dataset.pile.split(':'); showPile(Number(p), k); return; }
   const cardEl = t.closest('[data-uid]');
   if (cardEl) {
     const u = Number(cardEl.dataset.uid);

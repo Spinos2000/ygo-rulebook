@@ -33,29 +33,31 @@ export const CSS = `
 :host { display: block }
 /* 色の名前は .droot の中だけで使う（:host に置くと、置き場所のページの同じ名前の色と循環してしまう） */
 .droot {
-  --bg: var(--d-bg, #e9eeea);
-  --panel: var(--d-panel, #fbfcfb);
-  --panel-2: var(--d-panel-2, #f1f5f2);
-  --ink: var(--d-ink, #17211c);
-  --sub: var(--d-sub, #5a6a61);
-  --line: var(--d-line, #ccd7d0);
+  --bg: var(--d-bg, #f5f2eb);
+  --panel: var(--d-panel, #fffdf8);
+  --panel-2: var(--d-panel-2, #f3eee4);
+  --ink: var(--d-ink, #262b3a);
+  --sub: var(--d-sub, #6a6e7e);
+  --line: var(--d-line, #e2dbcd);
+  --edge: var(--d-edge, #2c3244);      /* 外側の箱の濃い線と、ずらした影 */
+  --me: var(--d-me, #3e6fd0);          /* 自分：オベリスクの青（主のボタンも） */
   --mat: var(--d-mat, #1d4737);
   --mat-2: var(--d-mat-2, #163a2c);
   --mat-line: var(--d-mat-line, #5c8c78);
   --mat-ink: var(--d-mat-ink, #d6ece1);
-  --accent: var(--d-accent, #c48a22);
-  --accent-ink: var(--d-accent-ink, #1d1405);
+  --accent: var(--d-accent, #f1c95b);  /* 強調：ラーの黄色 */
+  --accent-ink: var(--d-accent-ink, #262b3a);
   --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--panel));
-  --opp: var(--d-opp, #b4544a);
+  --opp: var(--d-opp, #d75a5f);        /* 相手：オシリスの赤 */
   --bad: var(--d-bad, #b23a3a);
   --f-normal: var(--d-f-normal, #f1d98a); --f-effect: var(--d-f-effect, #e9a36f); --f-ritual: var(--d-f-ritual, #9cb8ec);
   --f-fusion: var(--d-f-fusion, #b9a3e0); --f-spell: var(--d-f-spell, #5dbfa1); --f-trap: var(--d-f-trap, #d98bb2);
-  --num: var(--d-num, var(--display));
+  --num: var(--d-num, "Fredoka", var(--display));
   --card-ink: #1b1508;
   --back: #6b4a2a; --back2: #553a20;
   --shadow: var(--d-shadow, 0 10px 30px rgba(10, 30, 20, .18));
-  --display: var(--d-display, "Dela Gothic One", "Hiragino Sans", "Yu Gothic", sans-serif);
-  --body: var(--d-body, "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif);
+  --display: var(--d-display, "Zen Maru Gothic", "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Hiragino Sans", sans-serif);
+  --body: var(--d-body, "M PLUS Rounded 1c", "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif);
   --dock-h: 76px;
 }
 * { box-sizing: border-box }
@@ -136,6 +138,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .zone.emz { border-style: solid }
 .zone .zl, .pile .pl { font-size: 9px; color: var(--mat-ink); opacity: .55; text-align: center; line-height: 1.2 }
 .pile { border-style: solid; padding: 0; cursor: pointer }
+/* 長押し：スマホの長押しメニューや文字選択を出さず、押している間はリングが満ちていく */
+.pile { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation }
+.pile.pressing::after { content: ""; position: absolute; inset: -3px; border-radius: 9px; border: 3px solid var(--accent); clip-path: inset(0 100% 0 0); animation: pressFill .45s linear forwards; pointer-events: none }
+@keyframes pressFill { to { clip-path: inset(0 0 0 0) } }
 .pile .pl { position: absolute; bottom: 2px; left: 0; right: 0 }
 .pile .cnt { position: absolute; top: -6px; right: -4px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; font-size: 10px; padding: 0 5px; font-variant-numeric: tabular-nums }
 .r0 .zone:not(.void), .r1 .zone:not(.void) { border-color: color-mix(in srgb, var(--mat-line) 60%, var(--opp) 40%) }
@@ -331,6 +337,77 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 }
 @media (min-width: 861px) { #scrim { display: none } }
 @media (prefers-reduced-motion: reduce) { .card, .hand .card, .btn, .sheet, .pstrip .lp { transition: none; animation: none } }
+/* ================= デザイン v5（ルールブックのサイトに合わせる） =================
+   外側の箱：濃い線＋右下にずらした影／中の箱：細い線・影なし／角丸 16・12・10／ボタンは主・副・控えめの3段階 */
+.btn { border: 2px solid var(--edge); border-radius: 12px; background: var(--panel); box-shadow: 2px 2px 0 var(--edge); transition: transform .08s, box-shadow .08s, background .15s }
+.btn:hover:not(:disabled) { border-color: var(--edge); background: var(--panel-2) }
+.btn:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--edge) }
+.btn.primary { background: var(--me); border-color: var(--edge); color: #fff; font-family: var(--display); box-shadow: 3px 3px 0 var(--edge) }
+.btn.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--me) 88%, #fff) }
+.btn.primary:active:not(:disabled) { transform: translate(3px, 3px) }
+.btn.ghost { background: transparent; border: 1.5px solid var(--line); box-shadow: none; color: var(--sub) }
+.btn.ghost:active:not(:disabled) { transform: scale(.97) }
+.btn.danger { border-color: var(--edge); color: var(--bad) }
+.btn.danger.armed { background: var(--bad); color: #fff }
+#stopBtn[aria-pressed="true"] { background: var(--accent); border-color: var(--edge); color: var(--accent-ink) }
+/* 見出し：サイトと同じ赤い斜めの帯 */
+.top { border-bottom: 2px solid var(--line) }
+.top h1 { font-weight: 700; font-size: 16px; color: #fff; background: var(--opp); border: 2px solid var(--edge); padding: 1px 12px; box-shadow: 3px 3px 0 var(--edge); transform: skewX(-8deg); margin-left: 4px }
+#phases li button, #phases li span { border-radius: 8px; border: 1.5px solid var(--line); font-family: var(--num); letter-spacing: .04em }
+#phases li.cur span { background: var(--accent); border: 2px solid var(--edge); color: var(--accent-ink); box-shadow: 2px 2px 0 var(--edge) }
+#phases li button { border: 1.5px dashed var(--edge) }
+/* プレイヤーの帯：左端に寮の色 */
+.pstrip { border: 2px solid var(--edge); border-left-width: 8px; border-left-color: var(--me); box-shadow: 3px 3px 0 var(--edge); border-radius: 12px }
+.pstrip.opp { border-left-color: var(--opp) }
+.pstrip .who::before { width: 12px; height: 12px; background: var(--me); border: 2px solid var(--edge) }
+.pstrip.opp .who::before { background: var(--opp) }
+.pstrip .lp { font-family: var(--num); font-weight: 600; letter-spacing: .02em }
+.pstrip .tag { background: var(--accent); border: 1.5px solid var(--edge); color: var(--accent-ink) }
+.pstrip.acting { border-color: var(--edge); border-left-color: var(--me); box-shadow: 3px 3px 0 var(--edge), 0 0 0 3px color-mix(in srgb, var(--accent) 70%, transparent) }
+.pstrip.opp.acting { border-left-color: var(--opp) }
+/* デュエルマット（緑のまま）を外枠で囲む */
+#board { border: 2px solid var(--edge); box-shadow: 4px 4px 0 var(--edge), inset 0 0 0 1px color-mix(in srgb, var(--mat-line) 40%, transparent) }
+.pile .cnt { border: 1.5px solid var(--edge); font-family: var(--num); font-weight: 600 }
+.badge { border: 1px solid var(--edge) }
+/* 操作ドック・パネル・メニュー */
+.dock { border: 2px solid var(--edge); border-bottom: none; box-shadow: 0 -2px 0 color-mix(in srgb, var(--edge) 25%, transparent) }
+.dock.mine { border-color: var(--edge) }
+.panel { border: 2px solid var(--edge); border-radius: 16px; box-shadow: 3px 3px 0 var(--edge) }
+#chain { border-color: var(--edge); background: color-mix(in srgb, var(--accent) 18%, var(--panel)) }
+#chain li { border-left-color: var(--me) }
+#chain li.opp { border-left-color: var(--opp) }
+#result { border: 2px solid var(--edge); box-shadow: 3px 3px 0 var(--edge) }
+.overlay .box { border: 2px solid var(--edge); box-shadow: 5px 5px 0 var(--edge) }
+.box-head h3 { font-family: var(--display); font-weight: 700 }
+.menu-grid select { border: 1.5px solid var(--line) }
+.opt { border: 1.5px solid var(--line) }
+.opt.on { border: 2px solid var(--edge); background: color-mix(in srgb, var(--accent) 30%, var(--panel)); box-shadow: 2px 2px 0 var(--edge) }
+.acts .act.go { background: var(--me); border-color: var(--edge); color: #fff }
+.acts .info { border: 1.5px solid var(--line) }
+#detail h3, .loghead h3, #chain h3 { font-family: var(--display); font-weight: 700 }
+#log li.turn { color: var(--me) }
+
+/* ---------- カウンター・ターン数の表示（カードの下寄りに重ねる） ---------- */
+.ctr { position: absolute; left: 50%; bottom: 14%; transform: translateX(-50%); z-index: 2; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;
+  background: rgba(22, 18, 40, .88); color: #fff; border: 1.5px solid var(--edge); border-radius: 9px; padding: 1px 5px; font-size: 9px; line-height: 1.3; box-shadow: 1px 1px 0 var(--edge); pointer-events: none; animation: ctrIn .35s ease-out }
+.ctr b { font-family: var(--num); font-weight: 600; font-size: 11px }
+.ctr small { font-size: 8px; opacity: .85 }
+.ctr em { position: absolute; top: calc(100% + 2px); left: 50%; transform: translateX(-50%); font-style: normal; font-size: 8px; background: var(--accent); color: var(--accent-ink); border: 1px solid var(--edge); border-radius: 6px; padding: 0 4px }
+.ctr .orbs { display: inline-flex; gap: 2px }
+.ctr .orbs i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, .18); border: 1px solid rgba(201, 167, 255, .55) }
+.ctr .orbs i.on { background: radial-gradient(circle at 35% 35%, #fff, #c9a7ff 55%, #7f57d8); border-color: #e9dcff; box-shadow: 0 0 5px #c9a7ff }
+.ctr.turns { background: color-mix(in srgb, var(--accent) 92%, #000); color: var(--accent-ink) }
+.ctr.magic.ready { animation: ctrIn .35s ease-out, ctrPulse2 1.2s ease-in-out infinite }
+@keyframes ctrPulse2 { 50% { box-shadow: 1px 1px 0 var(--edge), 0 0 10px #c9a7ff } }
+.ctr.turns.ready { background: #ff8ad8; color: #2a0b22; animation: ctrIn .35s ease-out, ctrPulse 1.4s ease-in-out infinite }
+.ctr.sarco { bottom: auto; top: 6px; background: #d9b44a; color: #2a1d04 }
+.card.def .ctr { transform: translateX(-50%) rotate(-90deg) }
+@keyframes ctrIn { from { transform: translateX(-50%) scale(.4); opacity: 0 } to { transform: translateX(-50%) scale(1); opacity: 1 } }
+@keyframes ctrPulse { 50% { box-shadow: 1px 1px 0 var(--edge), 0 0 10px #ff8ad8 } }
+.hand .ctr, .fan-area .ctr, .pilelist .ctr { display: none }
+/* カウンターの帯がカードの幅より長い時（5つの玉など）は、はみ出して見せる */
+.zone .card:has(> .ctr) { overflow: visible }
+
 `;
 
 export const MARKUP = `
