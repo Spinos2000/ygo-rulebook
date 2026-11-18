@@ -203,23 +203,50 @@ const FX = {
 
   /* ブラック・ホール：フィールドの中央に穴が開き、モンスターを全て吸い込んで爆ぜる */
   hole(S) {
-    const B = S.B, cx = B.cx, cy = B.cy;
-    at(S, 350, () => { S.dark = .85; S.hole = { r: 0, x: cx, y: cy }; S.shake = 10; });
+    const B = S.B, cx = B.cx, cy = B.cy, U = S.U, OPEN = 350, PULL = 950;
+    at(S, OPEN, () => { S.dark = .85; S.hole = { r: 0, x: cx, y: cy, t: S.t }; S.shake = 10; });
+    // 穴に近いカードから順に、渦を巻きながら引きずり込む（向き：穴の左右で逆回り）
+    const order = [...S.dest].sort((p, q) => Math.hypot(p.x - cx, p.y - cy) - Math.hypot(q.x - cx, q.y - cy));
+    order.forEach((c, i) => { c.pull = { a0: Math.atan2(c.y - cy, c.x - cx), r0: Math.hypot(c.x - cx, c.y - cy), x0: c.x, y0: c.y, start: PULL + i * 110, dur: 950, spin: c.x < cx ? 1 : -1 }; });
+    const last = PULL + (order.length - 1) * 110 + 950;
     hook(S, t => {
-      if (!S.hole) return t < 350;
-      S.hole.r = Math.min(58 * S.U, (t - 350) / 12 * S.U); S.shake = Math.max(S.shake, 3 + S.hole.r / 10);
-      for (let i = 0; i < 12; i++) { const a = Math.random() * TAU, d = (180 + Math.random() * 120) * S.U; P(S, { x: 0, y: 0, orbit: { cx, cy, a, d, sp: .08 + Math.random() * .06 }, life: 60, sz: 2.4 * S.U, c: Math.random() < .5 ? '#c27bff' : '#ffb05a' }); }
+      if (!S.hole) return t < OPEN;
+      const h = S.hole;
+      if (!h.collapse) h.r = Math.min(58 * U, (t - OPEN) / 12 * U);
+      S.shake = Math.max(S.shake, 3 + h.r / 9);
+      // 周りの光が渦を巻いて吸い込まれる
+      for (let i = 0; i < 14; i++) { const ang = Math.random() * TAU, d = (170 + Math.random() * 150) * U; P(S, { x: 0, y: 0, orbit: { cx, cy, a: ang, d, sp: .07 + Math.random() * .07 }, life: 60, sz: 2.4 * U, c: Math.random() < .5 ? '#c27bff' : '#ffb05a' }); }
       if (Math.random() < .4) S.arcs = (S.arcs || []).concat([{ a: Math.random() * TAU, t }]);
-      return t < 2000;
+      for (const c of order) {
+        const p = c.pull; if (c.a <= 0) continue;
+        if (t < p.start) {
+          // 引っ張られて震え、少しずつ穴の方へ傾く
+          const k = Math.max(0, Math.min(1, (t - OPEN - 150) / (p.start - OPEN - 150)));
+          c.x = p.x0 + (cx - p.x0) * .12 * k + (Math.random() - .5) * 3 * k; c.y = p.y0 + (cy - p.y0) * .12 * k + (Math.random() - .5) * 3 * k;
+          c.rot = Math.sin(t / 30) * .06 * k + (p.a0 + Math.PI / 2) * 0; c.sy = 1 + .15 * k;
+          // カードのふちが剥がれて、穴へ流れていく
+          if (k > .3 && Math.random() < .6) P(S, { x: c.x + (Math.random() - .5) * c.w, y: c.y + (Math.random() - .5) * c.h, vx: (cx - c.x) * .03, vy: (cy - c.y) * .03, life: 34, sz: 2 * U, c: Math.random() < .5 ? '#ffb05a' : '#ffffff', drag: 1 });
+          continue;
+        }
+        // 渦を巻いて落ちていく：近づくほど速く回り、穴へ向かって細長く引き伸ばされ、暗くなる
+        const q = Math.min(1, (t - p.start) / p.dur), r = p.r0 * (1 - q * q * (1.6 - .6 * q)), ang = p.a0 + p.spin * (q * 2.2 + q * q * 5);
+        c.x = cx + Math.cos(ang) * r; c.y = cy + Math.sin(ang) * r * .72;
+        c.rot = ang - Math.PI / 2; c.s = Math.max(.02, 1 - .92 * q); c.sy = 1 + 3.2 * q * q; c.a = q < .85 ? 1 : Math.max(0, 1 - (q - .85) / .15); c.burn = q;
+        for (let k2 = 0; k2 < 3; k2++) P(S, { x: c.x + (Math.random() - .5) * 10 * U, y: c.y + (Math.random() - .5) * 10 * U, vx: (cx - c.x) * .05, vy: (cy - c.y) * .05, life: 22, sz: 2.2 * U, c: Math.random() < .5 ? '#c27bff' : '#ff6bd6', drag: 1 });
+        if (q >= 1) { c.a = 0; S.shake = Math.max(S.shake, 9); S.rings.push({ x: cx, y: cy, r: h.r * .8, v: 3 * U, a: .9, c: '#c27bff', lw: 3 }); }
+      }
+      return t < last + 900;
     });
-    at(S, 800, () => S.dest.forEach((c, i) => move(S, c, { x: cx, y: cy }, 650 + i * 50, { s: .05, sy: 3.5, rot: 9, a: .4, inq: 1 })));
-    at(S, 1500, () => {
-      S.dest.forEach(c => { c.a = 0; });
+    // 全部呑み込むと、穴が縮んでから弾ける
+    at(S, last + 120, () => { S.hole.collapse = S.t; });
+    hook(S, t => { if (!S.hole || !S.hole.collapse) return t < last + 900; S.hole.r = Math.max(4 * U, S.hole.r * .86); return t < last + 380; });
+    at(S, last + 400, () => {
+      const r = S.hole.r; S.hole = null; S.arcs = [];
       impact(S, cx, cy, 1, '#c27bff');
-      burst(S, cx, cy, 160, ['#c27bff', '#ffb05a', '#ffffff', '#ff6bd6'], 16, 60, 3.4); burst(S, cx, cy, 40, ['#ffffff'], 20, 26, 2, 'streak');
+      burst(S, cx, cy, 170, ['#c27bff', '#ffb05a', '#ffffff', '#ff6bd6'], 16, 60, 3.4); burst(S, cx, cy, 40, ['#ffffff'], 20, 26, 2, 'streak');
+      for (let i = 0; i < 3; i++) S.rings.push({ x: cx, y: cy, r: r + i * 12, v: (16 - i * 4) * U, a: 1, c: i ? '#c27bff' : '#ffffff', lw: 5 });
     });
-    at(S, 1800, () => { S.hole = null; S.arcs = []; });
-    S.end = 2700;
+    S.end = last + 1300;
   },
 
   /* ライトニング・ボルテックス：嵐の中、相手のモンスターに次々と雷が落ちる */
@@ -581,7 +608,13 @@ function draw(S) {
     const k = Math.min(1, (t - g.t) / 300), r = g.r; ctx.fillStyle = hexA(g.c, .45 * k); rr(ctx, r.left, r.top, r.width, r.height, 5); ctx.fill();
     if (g.chain) { ctx.strokeStyle = `rgba(200,200,210,${k})`; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(r.left, r.top); ctx.lineTo(r.left + r.width, r.top + r.height); ctx.moveTo(r.left + r.width, r.top); ctx.lineTo(r.left, r.top + r.height); ctx.stroke(); ctx.setLineDash([]); }
   });
-  S.cards.forEach(drawCard);
+  // ブラック・ホール：何も映さない黒い中心と、まわりの光のゆがみ
+  if (S.hole && S.hole.r > 1) {
+    const h = S.hole, g = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.r * 1.6);
+    g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(.62, 'rgba(0,0,0,1)'); g.addColorStop(.8, 'rgba(40,0,60,.85)'); g.addColorStop(1, 'rgba(40,0,60,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(h.x, h.y, h.r * 1.6, 0, TAU); ctx.fill();
+  }
+  S.cards.forEach(c => { drawCard(c); if (c.burn && c.a > 0) { ctx.save(); ctx.translate(c.x, c.y); ctx.rotate((c.rot || 0) + (c.base || 0)); ctx.scale(c.s, c.s * c.sy); ctx.globalAlpha = Math.min(.85, c.burn) * c.a; ctx.fillStyle = '#1a0628'; ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h); ctx.restore(); } });
   S.shards.forEach(s => {
     ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot); ctx.globalAlpha = Math.max(0, s.a);
     ctx.beginPath(); s.pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath();
@@ -616,11 +649,20 @@ function draw(S) {
 
   ctx.globalCompositeOperation = 'lighter';
   if (S.hole) {
-    const hr = S.hole.r, hx = S.hole.x, hy = S.hole.y; glow(hx, hy, hr * 4, '#7a2bd6', .7);
-    ctx.save(); ctx.translate(hx, hy);
-    for (let i = 0; i < 4; i++) { ctx.rotate(t / 180 + i); ctx.strokeStyle = ['#c27bff', '#ffb05a', '#ff6bd6', '#ffffff'][i]; ctx.globalAlpha = .7; ctx.lineWidth = 4 - i * .6; ctx.beginPath(); ctx.ellipse(0, 0, hr * 2.6, hr * .75, 0, 0, TAU); ctx.stroke(); }
-    ctx.restore(); ctx.globalAlpha = 1;
-    (S.arcs || []).forEach(a => { if (t - a.t < 90) bolt(hx + Math.cos(a.a) * hr, hy + Math.sin(a.a) * hr * .6, hx + Math.cos(a.a) * hr * 2.8, hy + Math.sin(a.a) * hr * 1.2, '#c27bff', 2, 1 - (t - a.t) / 90); });
+    const hr = S.hole.r, hx = S.hole.x, hy = S.hole.y;
+    // まわりの紫のもや（中心は後で真っ黒に塗るので、外側だけが光って見える）
+    glow(hx, hy, hr * 4.2, '#7a2bd6', .55);
+    // 傾いた平たい光の円盤：流れる点線で、渦を巻いて流れ込んでいるように見せる
+    ctx.save(); ctx.translate(hx, hy); ctx.rotate(-.28);
+    [[2.9, .62, '#ffb05a', 5], [2.3, .5, '#ff6bd6', 4], [1.75, .4, '#ffe9c8', 3]].forEach(([rx, ry, c, w], i) => {
+      ctx.strokeStyle = c; ctx.globalAlpha = .75; ctx.lineWidth = w * U; ctx.setLineDash([14 * U, 9 * U]); ctx.lineDashOffset = -t / (6 + i * 3);
+      ctx.beginPath(); ctx.ellipse(0, 0, hr * rx, hr * ry, 0, 0, TAU); ctx.stroke();
+    });
+    ctx.setLineDash([]); ctx.restore(); ctx.globalAlpha = 1;
+    // 事象の地平線のふち：細い光の輪
+    ctx.strokeStyle = 'rgba(255,240,220,.95)'; ctx.lineWidth = 2 * U; ctx.beginPath(); ctx.arc(hx, hy, hr * 1.03, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,176,90,.6)'; ctx.lineWidth = 6 * U; ctx.beginPath(); ctx.arc(hx, hy, hr * 1.2, 0, TAU); ctx.stroke();
+    (S.arcs || []).forEach(q => { if (t - q.t < 90) bolt(hx + Math.cos(q.a) * hr * 1.1, hy + Math.sin(q.a) * hr * 1.1, hx + Math.cos(q.a) * hr * 2.6, hy + Math.sin(q.a) * hr * 1.4, '#c27bff', 2, 1 - (t - q.t) / 90); });
   }
   S.fire.forEach(f => { const el = t - f.t; if (el < 500) { if (f.rb) { glowH(f.x, f.y, (44 + el * .15) * U, el * .6, 1 - el / 500); glowH(f.x, f.y, 18 * U, 0, 1 - el / 500); } else { glow(f.x, f.y, (40 + el * .15) * U, '#ff8a3c', 1 - el / 500); glow(f.x, f.y, (18 + el * .05) * U, '#fff1c4', 1 - el / 500); } } });
   S.bolts.forEach(b => {
@@ -708,6 +750,11 @@ function draw(S) {
     else { const r = p.sz * 2.6; ctx.drawImage(spr(p.c), p.x - r, p.y - r, r * 2, r * 2); }
   });
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  if (S.hole && S.hole.r > 1) {
+    const h = S.hole, g = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.r);
+    g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(.85, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, TAU); ctx.fill();
+  }
   // 画面のひび
   S.cracks.forEach(c => {
     const fa = Math.max(0, 1 - (t - c.t) / 900); if (fa <= 0) return;
