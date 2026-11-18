@@ -149,29 +149,55 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* ---------- カード ---------- */
 .card { position: relative; width: 72%; aspect-ratio: 59 / 86; border-radius: 5px; border: 1.5px solid #24150b; /* 枠は裏面と同じこげ茶 */ padding: .3em; display: flex; flex-direction: column; gap: 2px; text-align: left;
   color: #262b3a; font-family: var(--body); font-size: clamp(7px, 1.05vw, 10px); line-height: 1.15; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.35); transition: transform .12s, box-shadow .12s }
-/* 上の帯：カード名と属性 */
-.card .nm { display: flex; gap: 2px; align-items: flex-start; background: rgba(255,255,255,.62); border-radius: 3px; padding: 1px 2px; font-weight: 700; flex: none }
-.card .nm .n { flex: 1; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all }
-.card .at { flex: none; width: 1.5em; height: 1.5em; border-radius: 50%; font-size: .92em; line-height: 1.5em; text-align: center; color: #fff; font-style: normal; font-weight: 700; border: 1px solid rgba(0,0,0,.3) }
-/* レベル（★）・魔法と罠の種類 */
-.card .lv { flex: none; font-size: .9em; letter-spacing: -.08em; color: #a9841f; text-align: right; white-space: nowrap; overflow: hidden; line-height: 1.1 }
-.card .sp { flex: none; font-size: .9em; text-align: right; font-weight: 700; line-height: 1.1 }
-/* 中央：イラストの代わりに種族の一文字（魔法・罠は記号） */
-.card .art { flex: 1; min-height: 0; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 2.8em; line-height: 1; background: rgba(255,255,255,.28); color: rgba(38,43,58,.26); border: 1px solid rgba(0,0,0,.12) }
-/* 下：種族と種類、攻撃力・守備力 */
-.card .ty { flex: none; font-size: .9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
-.card .st { flex: none; display: flex; justify-content: space-between; gap: 2px; font-family: var(--num); font-weight: 700; background: rgba(255,255,255,.62); border-radius: 3px; padding: 0 2px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden }
-.card .st i { font-style: normal; font-family: var(--body); font-size: .85em; color: #6a6e7e; margin-right: 1px }
-.card .st .up { color: #0f6e56 }
-.card .st .dn { color: #a32d2d }
-.f-normal { background: var(--f-normal) } .f-effect { background: var(--f-effect) } .f-ritual { background: var(--f-ritual) }
-.f-fusion { background: var(--f-fusion) } .f-spell { background: var(--f-spell) } .f-trap { background: var(--f-trap) }
-.f-spell .sp, .f-spell .ty { color: #04342c } .f-spell .art { color: rgba(4,52,44,.3) }
-.f-trap .sp, .f-trap .ty { color: #4b1528 } .f-trap .art { color: rgba(75,21,40,.3) }
-/* フィールドでは小さいので、カード名・属性・攻守だけにする */
-.zone .card .lv, .zone .card .ty, .zone .card .sp, .zone .card .st i { display: none }
-.zone .card .art { font-size: 2.2em }
-.zone .card .st { font-size: .82em; letter-spacing: -.04em; padding: 0 1px }
+/* 初期のカードの配置：上にカード名と属性、その下にレベルの星（魔法・罠は種類）、中央に正方形のイラスト枠、下に種族の行と攻撃力・守備力。
+   位置はカードの大きさに対する割合、文字はカードの文字の大きさ（em）で決める */
+.card:not(.back) { display: block; padding: 0; color: #1b1b1b }
+.card:not(.back)::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(135deg, rgba(255,255,255,.16), rgba(0,0,0,.14)), repeating-linear-gradient(45deg, rgba(0,0,0,.035) 0 2px, transparent 2px 5px) }
+.card .top { position: absolute; left: 5.5%; right: 5.5%; top: 3.6%; height: 8.6%; display: flex; align-items: center; gap: 2px; border: 1px solid rgba(0,0,0,.35); border-radius: 2px; padding: 0 .2em; background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(0,0,0,.08)) }
+.card .top .n { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.02em; font-size: .9em }
+.card .at { flex: none; width: 1.45em; height: 1.45em; border-radius: 50%; font-size: .8em; line-height: 1.45em; text-align: center; color: #fff; font-style: normal; font-weight: 700; border: 1px solid rgba(0,0,0,.4); box-shadow: inset 0 1px 1px rgba(255,255,255,.4) }
+.card .lv { position: absolute; right: 6%; top: 13.4%; height: 5.6%; display: flex; gap: 1px; align-items: center }
+.card .lv i { width: .78em; height: .78em; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffb35a, #d0451c); border: 1px solid #6a2208 }
+.card .sp { position: absolute; right: 6%; top: 12.8%; font-size: .72em; font-weight: 700; letter-spacing: .03em; white-space: nowrap }
+.card .art { position: absolute; left: 11%; right: 11%; top: 20.5%; aspect-ratio: 1; border: 1.5px solid rgba(0,0,0,.5); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.35); background: linear-gradient(160deg, #3a3f52, #1c2030);
+  display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 3.6em; line-height: 1; color: rgba(255,255,255,.22); overflow: hidden }
+.card .tb { position: absolute; left: 5.5%; right: 5.5%; top: 77.6%; bottom: 3.6%; border: 1px solid rgba(0,0,0,.35); border-radius: 2px; padding: .1em .3em; font-size: .7em; line-height: 1.25; color: #262626; overflow: hidden }
+.card .tb b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.card .tb .ad { position: absolute; left: .3em; right: .3em; bottom: .05em; border-top: 1px solid rgba(0,0,0,.6); display: flex; justify-content: flex-end; gap: .5em; font-family: var(--num); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap }
+.card .tb .ad i { font-style: normal; font-weight: 600 }
+.card .tb .ad .up { color: #0f6e56 } .card .tb .ad .dn { color: #a32d2d }
+.card .tb .kd { display: none }
+/* 種類ごとの元の色（枠）と、下の欄の色 */
+.f-normal { background: linear-gradient(160deg, #e3be72, #c99d4c) } .f-normal .tb { background: #f3e6c4 }
+.f-effect { background: linear-gradient(160deg, #d98a4e, #b4652e) } .f-effect .tb { background: #f1dfc8 }
+.f-ritual { background: linear-gradient(160deg, #86b4e6, #4f86c6) } .f-ritual .tb { background: #e4ecf6 }
+.f-fusion { background: linear-gradient(160deg, #a988d4, #7a5aac) } .f-fusion .tb { background: #ebe4f3 }
+.f-spell { background: linear-gradient(160deg, #2fae93, #127a64) } .f-spell .tb { background: #e2f0ea } .f-spell .sp, .f-spell .tb { color: #04342c }
+.f-trap { background: linear-gradient(160deg, #c46594, #963f6c) } .f-trap .tb { background: #f3e2ea } .f-trap .sp, .f-trap .tb { color: #4b1528 }
+/* フィールドでは小さいので：名前・イラスト・攻守（魔法・罠は種類）だけにして、イラストを大きく */
+.zone .card .lv, .zone .card .sp, .zone .card .tb b, .zone .card .tb .ad i { display: none }
+.zone .card .top { height: 19%; top: 3%; left: 4%; right: 4%; align-items: flex-start; padding-top: .12em }
+.zone .card .top .n { font-size: .74em; line-height: 1.08; white-space: normal; text-overflow: clip; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-all }
+.zone .card .at { width: 1.3em; height: 1.3em; line-height: 1.3em; font-size: .7em }
+.zone .card .art { top: 24%; left: 12%; right: 12%; font-size: 2.8em }
+.zone .card .tb { top: 80%; bottom: 3%; left: 4%; right: 4% }
+.zone .card .tb .ad { justify-content: space-between; border-top: none; bottom: 50%; transform: translateY(50%); font-size: 1.15em }
+.zone .card .tb .kd { display: block; text-align: center; font-weight: 700; font-size: 1.05em; white-space: nowrap; overflow: hidden }
+/* ---------- レア度：字レアは銀、ウルトラは金の名前と鈍く光るホロ、シークレットは虹がかった銀の名前と斜めの細かいホロ ---------- */
+.card.r-rare .top, .card.r-ur .top, .card.r-sec .top { background: linear-gradient(180deg, rgba(40,28,12,.74), rgba(18,12,5,.8)) } /* 金・銀の文字が読めるように、名前の枠は暗く */
+.card.r-rare .top .n, .card.r-ur .top .n, .card.r-sec .top .n { -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 .4px rgba(0,0,0,.9)) drop-shadow(0 1px 0 rgba(0,0,0,.7)); background-size: 260% 100%; animation: foil 5s ease-in-out infinite alternate }
+.card.r-rare .top .n { background-image: linear-gradient(100deg, #5a5f68 0%, #a9b0bb 20%, #eef2f7 34%, #ffffff 40%, #b9c0ca 52%, #6c727c 66%, #d4d9e0 82%, #61666f 100%) }
+.card.r-ur .top .n { background-image: linear-gradient(100deg, #6b4c12 0%, #b98d33 18%, #f2d98a 32%, #fff6d0 40%, #d7ad52 50%, #8c6520 64%, #e2c06a 80%, #7a5717 100%) }
+.card.r-sec .top .n { background-image: linear-gradient(100deg, #7d8696 0%, #c6cbd6 14%, #ffd6f0 24%, #d6f0ff 32%, #ffffff 40%, #f8f0c8 48%, #b9c0ca 58%, #d0e8ff 70%, #ffd8ec 82%, #7d8696 100%); background-size: 300% 100% }
+.card.r-ur .art::before, .card.r-sec .art::before { content: ""; position: absolute; inset: -40%; mix-blend-mode: overlay; pointer-events: none; animation: holo 6s ease-in-out infinite alternate }
+.card.r-ur .art::before { background: repeating-linear-gradient(115deg, hsla(0,70%,70%,0) 0 6px, hsla(40,80%,70%,.35) 9px, hsla(120,60%,65%,.3) 14px, hsla(200,70%,70%,.35) 19px, hsla(280,60%,70%,.3) 24px, hsla(0,70%,70%,0) 30px); opacity: .9 }
+.card.r-sec .art::before { background: repeating-linear-gradient(45deg, rgba(255,255,255,0) 0 2px, rgba(255,255,255,.45) 2.5px, rgba(255,255,255,0) 3.5px 5px), linear-gradient(115deg, hsla(330,80%,75%,.45), hsla(200,80%,75%,.45), hsla(60,80%,75%,.45), hsla(280,70%,75%,.45)); background-size: auto, 300% 100%; opacity: .95 }
+.card.r-ur .art::after, .card.r-sec .art::after { content: ""; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: soft-light; background: radial-gradient(circle at 30% 25%, rgba(255,255,240,.5), rgba(255,255,240,0) 45%), repeating-linear-gradient(0deg, rgba(255,255,255,.07) 0 1px, transparent 1px 3px); background-size: 200% 200%, auto; animation: holoLight 7s ease-in-out infinite alternate }
+.card.r-ur::after, .card.r-sec::after { content: ""; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: soft-light; background: linear-gradient(115deg, transparent 30%, rgba(255,250,225,.22) 45%, rgba(255,250,225,.05) 55%, transparent 70%); background-size: 250% 100%; animation: foil 5s ease-in-out infinite alternate }
+@keyframes foil { from { background-position: 0% 0 } to { background-position: 100% 0 } }
+@keyframes holo { from { transform: translateX(-12%) } to { transform: translateX(12%) } }
+@keyframes holoLight { from { background-position: 0% 0%, 0 0 } to { background-position: 100% 100%, 0 0 } }
+@media (prefers-reduced-motion: reduce) { .card.r-rare .top .n, .card.r-ur .top .n, .card.r-sec .top .n, .card.r-ur .art::before, .card.r-sec .art::before, .card.r-ur .art::after, .card.r-sec .art::after, .card.r-ur::after, .card.r-sec::after { animation: none } }
 .card.def { transform: rotate(90deg) }
 .card.sel { outline: 3px solid var(--accent); outline-offset: 2px }
 .card.can { box-shadow: 0 0 0 2px var(--accent), 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent) }
@@ -300,8 +326,6 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .hand { --cw: 70px }
   .hand .card { font-size: 8.5px }
   .hand.opp { --cw: 34px }
-  .hand .card .st i, .pilelist .card .st i { display: none }
-  .hand .card .st { font-size: .9em; letter-spacing: -.05em; padding: 0 1px }
   #board { padding: 5px; gap: 4px; border-radius: 12px; max-width: none }
   #board .row { gap: 4px }
   .zone .zl { font-size: 8px }

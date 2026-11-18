@@ -2,7 +2,7 @@
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
 import { cpuDecide } from './ai/cpu.js';
 import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js';
-import { playBattle, playSummon } from './fx.js';
+import { playBattle, playSummon, rarityOf } from './fx.js';
 import { playSignature, sigKey } from './sig.js';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
@@ -312,7 +312,7 @@ function cardHtml(uid, { hidden = false, field = false, style = '' } = {}) {
   if (hidden || (!c.faceUp && !(c.zone === 'hand' || c.zone === 'extra' || c.zone === 'deck' || field))) return `<button class="card back ${cls}" data-uid="${uid}"${st} aria-label="裏側のカード">${badge}</button>`;
   if (!c.faceUp && field && isCpu(c.controller)) return `<button class="card back ${cls}" data-uid="${uid}"${st} aria-label="裏側のカード">${badge}</button>`;
   if (!c.faceUp && field) return `<button class="card back ${cls}" data-uid="${uid}"${st} aria-label="裏側：${esc(d.name)}"><span class="bn">${esc(d.name)}</span>${badge}</button>`;
-  return `<button class="card f-${frameOf(d)} ${cls}" data-uid="${uid}"${st} aria-label="${esc(d.name)}">${faceHtml(uid, d, field)}${badge}</button>`;
+  return `<button class="${faceCls(d)} ${cls}" data-uid="${uid}"${st} aria-label="${esc(d.name)}">${faceHtml(uid, d, field)}${badge}</button>`;
 }
 /* ---------- カウンター・ターン数：カードの上に、今いくつ／あと何ターンかを見て分かるように出す ---------- */
 const MAGIC_MAX = { '熟練の黒魔術師': 3, 'サイレント・マジシャン LV４': 5, '漆黒のパワーストーン': 3 };
@@ -361,26 +361,29 @@ const SPELL_MARK = { 通常: '✦', 速攻: '➶', 永続: '∞', 装備: '⚔',
 const TRAP_MARK = { 通常: '◆', 永続: '∞', カウンター: '↺' };
 const FRAME_NAME = { normal: '通常', effect: '効果', ritual: '儀式', fusion: '融合' };
 function faceHtml(uid, d, field) {
+  // 初期のカードの配置：上にカード名と属性、レベルの星（魔法・罠は種類）、正方形のイラスト枠、下に種族の行と攻撃力・守備力
   const name = `<span class="n">${esc(d.name)}</span>`;
   if (d.kind !== 'monster') {
     const spell = d.kind === 'spell';
     const at = `<b class="at" style="background:${spell ? '#0f6e56' : '#993556'}">${spell ? '魔' : '罠'}</b>`;
     const mark = (spell ? SPELL_MARK : TRAP_MARK)[d.subtype] || (spell ? '✦' : '◆');
     const text = String(d.text || '').replace(/^[①-⑳]：/, '').replace(/\s+/g, '');
-    return `<span class="nm">${name}${at}</span><span class="sp">${esc(d.subtype)}${spell ? '魔法' : '罠'}</span><span class="art">${mark}</span><span class="ty">${esc(text.slice(0, 16))}</span>`;
+    return `<span class="top">${name}${at}</span><span class="sp">【${spell ? '魔法' : '罠'}カード】${esc(mark)}</span><span class="art">${mark}</span>`
+      + `<span class="tb"><b>${esc(text.slice(0, 24))}</b><span class="kd">${esc(d.subtype)}${spell ? '魔法' : '罠'}</span></span>`;
   }
   const at = `<b class="at" style="background:${ATTR_COLOR[d.attribute] || '#6a6e7e'}">${esc(d.attribute || '？')}</b>`;
-  const lvl = d.level ?? 0;
-  const stars = lvl <= 8 ? '★'.repeat(lvl) : `★×${lvl}`;
+  const lvl = Math.min(12, d.level ?? 0);
   const race = d.race || '';
   const ch = RACE_CHAR[race] || race.charAt(0) || '？';
   const kind = FRAME_NAME[d.frame] || '効果';
   const atk = field ? currentAtk(S, uid) : d.atk, def = field ? currentDef(S, uid) : d.def;
   // フィールドで数値が上がっていれば緑、下がっていれば赤
   const cls = (now, base) => (!field || now === base ? '' : now > base ? ' class="up"' : ' class="dn"');
-  return `<span class="nm">${name}${at}</span><span class="lv">${stars}</span><span class="art">${esc(ch)}</span><span class="ty">${esc(race)}／${kind}</span>`
-    + `<span class="st"><span${cls(atk, d.atk)}><i>攻</i>${atk}</span><span${cls(def, d.def)}><i>守</i>${def}</span></span>`;
+  return `<span class="top">${name}${at}</span><span class="lv">${'<i></i>'.repeat(lvl)}</span><span class="art">${esc(ch)}</span>`
+    + `<span class="tb"><b>【${esc(race)}／${kind}】</b><span class="ad"><span${cls(atk, d.atk)}><i>ATK/</i>${atk}</span><span${cls(def, d.def)}><i>DEF/</i>${def}</span></span></span>`;
 }
+/** カードの表側の class（種類の色とレア度） */
+function faceCls(d) { return `card f-${frameOf(d)} r-${rarityOf(d)}`; }
 function zone(uid, label, cls = '') {
   return `<div class="zone ${cls}">${uid !== null && uid !== undefined ? cardHtml(uid, { field: true }) : `<span class="zl">${label}</span>`}</div>`;
 }
@@ -759,7 +762,7 @@ function sortForFan(list) {
 function fanCardHtml(uid, back) {
   const d = defOf(S, uid);
   if (back) return `<span class="card back" data-fanb="${uid}"></span>`;
-  return `<span class="card f-${frameOf(d)}" data-fan="${uid}">${faceHtml(uid, d, false)}</span>`;
+  return `<span class="${faceCls(d)}" data-fan="${uid}">${faceHtml(uid, d, false)}</span>`;
 }
 /** カードを扇形（何段か）に並べる位置を決める */
 function layoutFan(area, els, big = false) {
@@ -863,7 +866,7 @@ async function handOpenFx(j) {
   layer.innerHTML = `<div class="fan-head"><b>${esc(NAME(j.p))}の手札</b></div><div class="fan-area"></div>`;
   $('.droot').appendChild(layer);
   const area = layer.querySelector('.fan-area');
-  const face = u => `<span class="card f-${frameOf(j.ds[u])}" data-fan="${u}">${faceHtml(u, j.ds[u], false)}</span>`;
+  const face = u => `<span class="${faceCls(j.ds[u])}" data-fan="${u}">${faceHtml(u, j.ds[u], false)}</span>`;
   area.innerHTML = j.hand.map(u => (j.faces ? face(u) : `<span class="card back" data-fanb="${u}"></span>`)).join('');
   const els = [...area.children];
   layoutFan(area, els, true);
@@ -875,7 +878,7 @@ async function handOpenFx(j) {
   if (!j.faces) await Promise.all(picked.map(async el => {
     const u = uidOf(el), rot = `rotate(${el.dataset.rot || 0}deg)`;
     await el.animate([{ transform: rot }, { transform: `${rot} scaleX(0)` }], { duration: fanDur(170), fill: 'forwards' }).finished;
-    el.className = `card f-${frameOf(j.ds[u])}`; el.innerHTML = faceHtml(u, j.ds[u], false);
+    el.className = faceCls(j.ds[u]); el.innerHTML = faceHtml(u, j.ds[u], false);
     await el.animate([{ transform: `${rot} scaleX(0)` }, { transform: rot }], { duration: fanDur(170), fill: 'forwards' }).finished;
   }));
   picked.forEach(el => { el.getAnimations().forEach(x => x.cancel()); el.classList.add('picked'); el.style.zIndex = '100'; });
@@ -910,7 +913,7 @@ async function cpuSearchFx(j) {
   // くるりと表に返して、相手に見せる
   await pick.animate([{ transform: 'rotate(0deg) scale(1.3)' }, { transform: 'rotate(0deg) scale(1.3) scaleX(0)' }], { duration: fanDur(180), fill: 'forwards' }).finished;
   const d = j.d;
-  pick.className = `card f-${frameOf(d)}`;
+  pick.className = faceCls(d);
   pick.innerHTML = faceHtml(j.uid, d, false);
   layer.querySelector('.fan-head b').textContent = `${NAME(j.p)}が「${d.name}」を手札に加えます`;
   await pick.animate([{ transform: 'rotate(0deg) scale(1.3) scaleX(0)' }, { transform: 'rotate(0deg) scale(1.3)' }], { duration: fanDur(180), fill: 'forwards' }).finished;
@@ -993,7 +996,7 @@ function flyLayer() {
 }
 function ghost(m, rect) {
   const el = document.createElement('span');
-  el.className = m.face ? `card f-${frameOf(m.d)}` : 'card back';
+  el.className = m.face ? faceCls(m.d) : 'card back';
   if (m.face) el.innerHTML = faceHtml(m.u, m.d, false);
   Object.assign(el.style, { position: 'fixed', left: rect.left + 'px', top: rect.top + 'px', width: rect.width + 'px', margin: 0, fontSize: Math.max(6, rect.width / 8.4) + 'px', zIndex: 2 });
   flyLayer().appendChild(el);
