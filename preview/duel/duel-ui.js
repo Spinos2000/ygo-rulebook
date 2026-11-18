@@ -125,7 +125,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* 相手の手札：画面の上に、裏面を逆向きの扇形で小さく */
 .hand.opp { --cw: 40px; height: calc(var(--ch) * .62); margin-bottom: 0 }
 .hand.opp .card { bottom: auto; top: calc(var(--ch) * -.38); font-size: 0; transform-origin: 50% -60%; transform: translate(var(--tx, 0px), calc(var(--ty, 0px) * -1)) rotate(calc(var(--rot, 0deg) * -1)) }
-.pstrip.me { position: relative; z-index: 5 }
+.pstrip.me, .pstrip.opp { position: relative; z-index: 5 }
 .empty { font-size: 12px; color: var(--sub); align-self: center; padding: 4px }
 
 /* ---------- デュエルマット ---------- */
@@ -338,13 +338,29 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .card { font-size: clamp(6px, 2vw, 9px) }
   .droot { padding-bottom: 0 }
   /* ドックは画面の一番下に固定し、その分だけ下に余白をとる */
-  .droot { --dock-h: 130px }
-  .table { padding-bottom: 150px }
+  .table { padding-bottom: calc(var(--dock-h) + 12px) }
+  /* 自分のLPは盤面のすぐ下に出す（手札の下だとドックに隠れやすい） */
+  #side1 { order: 1 } #hand1 { order: 2 } #board { order: 3 } #result { order: 4 } #chain { order: 5 } #side0 { order: 6 } #hand0 { order: 7 } .dock { order: 8 }
+  #hand0 { position: relative; z-index: 6; margin-top: 2px }
+  .hand.me { margin-bottom: 0 }
+  /* 見出しは1行に：タイトルは隠し、ボタンを小さく */
+  .top h1 { display: none }
+  .topbtns { margin-left: auto; gap: 4px }
+  .topbtns .btn { padding: 2px 8px; min-height: 32px; font-size: 13px }
+  .turn { order: 0; width: auto; flex: 1 1 auto; gap: 6px; justify-content: flex-start }
+  #turnInfo { font-size: 12px; white-space: nowrap }
+  #phases li button, #phases li span { padding: 3px 5px; font-size: 11px }
+  /* ドックを低く：説明は2行まで、進むボタンの小さい文字は1行 */
+  .dock { padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); row-gap: 6px }
+  #actor { font-size: 15px; line-height: 1.35 }
+  #actorHint { font-size: 11px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+  .btn.go { min-height: 46px; font-size: 15px }
+  .btn.go small { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100% }
   .dock { position: fixed; left: 0; right: 0; bottom: 0; margin: 0;
     padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); grid-template-columns: minmax(0, 1fr) auto; border-inline: none; border-bottom: none }
   #phaseBtns { justify-content: stretch }
   #phaseBtns .btn { flex: 1 }
-  .btn.go { width: 42% }
+  #goBtn { width: 42% }
   #logBtn { display: inline-flex }
   .dock-extra { grid-column: 2; grid-row: 1 }
   .pstrip { flex-wrap: wrap; row-gap: 2px }
@@ -366,6 +382,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   #closeDuel .long { display: none }
 }
 @media (min-width: 861px) { #scrim { display: none } }
+/* 縦が短いスマホ：手札を少し小さくして、1画面に収まりやすくする */
+@media (max-width: 860px) and (max-height: 720px) { .hand { --cw: 62px } .hand.opp { --cw: 30px } }
+#turnInfo .ts { display: none }
+@media (max-width: 520px) { .top { flex-wrap: nowrap } .turn { flex: 0 1 auto; flex-wrap: nowrap; gap: 4px } #phases li button, #phases li span { padding: 3px 4px } #actor { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis } .dock-extra .btn { padding: 2px 8px; min-height: 34px; font-size: 13px } #turnInfo .tl { display: none } #turnInfo .ts { display: inline } #turnInfo { font-family: var(--num); font-weight: 600 } .topbtns .bl { display: none } .topbtns .btn { min-width: 36px; font-size: 16px } }
 @media (prefers-reduced-motion: reduce) { .card, .hand .card, .btn, .sheet, .pstrip .lp { transition: none; animation: none } }
 /* ================= デザイン v5（ルールブックのサイトに合わせる） =================
    外側の箱：濃い線＋右下にずらした影／中の箱：細い線・影なし／角丸 16・12・10／ボタンは主・副・控えめの3段階 */
@@ -454,8 +474,8 @@ export const MARKUP = `
   <div class="turn"><span id="turnInfo"></span><ol id="phases" aria-label="フェイズ"></ol></div>
   <div class="topbtns">
     <button class="btn small ghost" id="soundBtn" aria-pressed="true" title="効果音のオン・オフ">音 オン</button>
-    <button class="btn small ghost" id="undo" title="Ctrl+Z">元に戻す</button>
-    <button class="btn small" id="menuBtn" aria-haspopup="dialog">メニュー</button>
+    <button class="btn small ghost" id="undo" title="元に戻す（Ctrl+Z）" aria-label="元に戻す"><span aria-hidden="true">↶</span><span class="bl"> 元に戻す</span></button>
+    <button class="btn small" id="menuBtn" aria-haspopup="dialog" aria-label="メニュー"><span aria-hidden="true">☰</span><span class="bl"> メニュー</span></button>
     <button class="btn small" id="closeDuel" hidden aria-label="ルールブックに戻る">✕<span class="long"> ルールブックに戻る</span></button>
   </div>
 </header>

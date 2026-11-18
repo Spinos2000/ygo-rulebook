@@ -487,7 +487,7 @@ function renderTop() {
     const cls = i === cur ? 'cur' : i < cur ? 'past' : '';
     return `<li class="${cls}">${a ? `<button data-act='${esc(JSON.stringify(a))}' title="${PHASE_LABEL[ph]}へ進む">${PH_SHORT[ph]}</button>` : `<span title="${PHASE_LABEL[ph]}">${PH_SHORT[ph]}</span>`}</li>`;
   }).join('');
-  $('#turnInfo').textContent = S.winner !== null ? '決着' : `ターン${S.turn}・${NAME(S.turnPlayer)}`;
+  $('#turnInfo').innerHTML = S.winner !== null ? '決着' : `<span class="tl">ターン</span><span class="ts">T</span>${S.turn}<span class="tl">・${esc(NAME(S.turnPlayer))}</span>`;
   $('#undo').disabled = history.length === 0;
 }
 
@@ -1299,7 +1299,7 @@ function togglePick(u) {
   else if (pick.length < r.max) pick = [...pick, u];
   renderDetail(); renderBoard(); renderSide();
 }
-function renderSoundBtn() { const on = soundEnabled(); $('#soundBtn').textContent = on ? '音 オン' : '音 オフ'; $('#soundBtn').setAttribute('aria-pressed', String(on)); }
+function renderSoundBtn() { const on = soundEnabled(); $('#soundBtn').innerHTML = on ? '<span aria-hidden="true">🔊</span><span class="bl"> 音 オン</span>' : '<span aria-hidden="true">🔇</span><span class="bl"> 音 オフ</span>'; $('#soundBtn').setAttribute('aria-label', on ? '効果音 オン' : '効果音 オフ'); $('#soundBtn').setAttribute('aria-pressed', String(on)); }
 
 /* ---------- 起動 ---------- */
 /**
@@ -1317,6 +1317,11 @@ export function boot(root, opts = {}) {
   for (const i of [0, 1]) $(`#deck${i}`).addEventListener('change', showDeckFmt);
   $('#closeDuel').hidden = !opts.onClose;
   wire(root);
+  // スマホでは下に固定したドックの実際の高さだけ、盤面の下を空ける
+  const dock = root.querySelector('#dock'), droot = root.querySelector('.droot') || root;
+  const setDockH = () => { if (dock) droot.style.setProperty('--dock-h', Math.ceil(dock.getBoundingClientRect().height) + 'px'); };
+  if (dock && typeof ResizeObserver !== 'undefined') new ResizeObserver(setDockH).observe(dock);
+  setDockH();
   const start = data => {
     if (data && data.mode) $('#mode').value = data.mode;
     if (data && data.d0 && DECKS[data.d0]) $('#deck0').value = data.d0;
