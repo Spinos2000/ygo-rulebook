@@ -334,7 +334,7 @@ const FX = {
       if (!S.eye) return t < 250;
       S.shake = Math.max(S.shake, 5 * U);
       // 渦に乗って飛ぶがれきと雨粒
-      for (let i = 0; i < 10; i++) { const ang = Math.random() * TAU, d = (120 + Math.random() * 260) * U; P(S, { x: 0, y: 0, orbit: { cx, cy, a: ang, d, sp: .05 + Math.random() * .05, decay: .992 }, life: 50, sz: (1.4 + Math.random() * 1.6) * U, c: Math.random() < .6 ? '#d8eaff' : '#8aa0b8' }); }
+      for (let i = 0; i < 10; i++) { const ang = Math.random() * TAU, d = (120 + Math.random() * 260) * U; P(S, { x: 0, y: 0, orbit: { cx, cy, a: ang, d, sp: .05 + Math.random() * .05, decay: .992 }, life: 50, sz: (1.4 + Math.random() * 1.6) * U, c: Math.random() < .6 ? '#9cc8ff' : '#3d6ea8' }); }
       for (const c of S.dest) {
         const s = c.st; if (c.a <= 0) continue;
         if (t < s.start) {
@@ -674,20 +674,20 @@ Object.assign(MAT, {
   storm(S, x, w, h, t) {
     const cx = S.B.cx - S.mat.ox, cy = S.B.cy - S.mat.oy, R = Math.hypot(w, h) * .9;
     const g = x.createRadialGradient(cx, cy, 0, cx, cy, R);
-    g.addColorStop(0, '#0d1220'); g.addColorStop(.08, '#26334a'); g.addColorStop(.35, '#4e6280'); g.addColorStop(.7, '#3a4a62'); g.addColorStop(1, '#232e40');
+    g.addColorStop(0, '#02040a'); g.addColorStop(.08, '#06101f'); g.addColorStop(.35, '#0f2442'); g.addColorStop(.7, '#091a33'); g.addColorStop(1, '#040b18');
     x.fillStyle = g; x.fillRect(0, 0, w, h);
     // 渦を巻く雲の帯：中心ほど速く回り、外へ大きくはみ出す
     x.save(); x.translate(cx, cy);
     for (let k = 0; k < 9; k++) {
       x.save(); x.rotate(-t / (500 + k * 120) + k * TAU / 9);
-      x.strokeStyle = k % 2 ? 'rgba(220,232,250,.5)' : 'rgba(140,160,190,.55)'; x.lineWidth = 12 + (k % 3) * 7; x.lineCap = 'round';
+      x.strokeStyle = k % 2 ? 'rgba(70,130,200,.55)' : 'rgba(2,6,16,.7)'; x.lineWidth = 12 + (k % 3) * 7; x.lineCap = 'round';
       x.beginPath(); for (let q = 0; q < 1; q += .02) { const r = 18 + q * R, ang = q * 4; x.lineTo(Math.cos(ang) * r, Math.sin(ang) * r * .75); } x.stroke();
       x.restore();
     }
     // 竜巻の目
     const eg = x.createRadialGradient(0, 0, 0, 0, 0, 34); eg.addColorStop(0, 'rgba(5,8,16,1)'); eg.addColorStop(1, 'rgba(5,8,16,0)'); x.fillStyle = eg; x.beginPath(); x.arc(0, 0, 34, 0, TAU); x.fill();
     // 渦に流される雨粒
-    x.strokeStyle = 'rgba(220,235,255,.4)'; x.lineWidth = 1.2;
+    x.strokeStyle = 'rgba(150,200,255,.45)'; x.lineWidth = 1.2;
     S.mat.seed.forEach(([a0, b, s]) => { const ang = a0 * TAU - t / (300 + s * 500), r = 30 + b * R * .8; const px = Math.cos(ang) * r, py = Math.sin(ang) * r * .75; x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.sin(ang) * 10, py - Math.cos(ang) * 7.5); x.stroke(); });
     x.restore();
   },
@@ -1054,10 +1054,10 @@ function draw(S) {
   if (S.eye) {
     const e2 = S.eye, fa = Math.min(1, (t - e2.t) / 400) * (e2.fade ? Math.max(0, 1 - (t - e2.fade) / 600) : 1), Rm = Math.hypot(W, H) * .75;
     if (fa > 0) {
-      ctx.save(); ctx.translate(e2.x, e2.y);
+      ctx.save(); ctx.globalCompositeOperation = 'source-over'; ctx.translate(e2.x, e2.y);
       for (let k = 0; k < 5; k++) {
         ctx.save(); ctx.rotate(-t / 900 + k * TAU / 5);
-        ctx.strokeStyle = `rgba(210,228,250,${.16 * fa})`; ctx.lineWidth = 26 * U; ctx.lineCap = 'round';
+        ctx.strokeStyle = k % 2 ? `rgba(8,18,40,${.45 * fa})` : `rgba(40,90,160,${.32 * fa})`; ctx.lineWidth = 26 * U; ctx.lineCap = 'round';
         ctx.beginPath(); for (let q = 0; q < 1; q += .02) { const r = 40 * U + q * Rm, ang = q * 3.2; ctx.lineTo(Math.cos(ang) * r, Math.sin(ang) * r * .75); } ctx.stroke();
         ctx.restore();
       }
