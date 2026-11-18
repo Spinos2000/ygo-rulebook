@@ -536,7 +536,7 @@ export function destroy(s           , uids          , reason        , opt       
     moveCard(s, u, opt.banish ? 'banished' : 'gy');
     // どの効果で破壊されたか（ユベル④「③の効果以外で破壊された時」の判定用）
     emit(s, { type: 'destroyed', uid: u, from, reason, srcUid: s.resolving?.uid ?? null, srcEffect: s.resolving?.effect ?? null });
-    if (reason !== 'battle') pushAnim(s, { kind: 'destroy', uid: u }); // 演出用：効果などによる破壊
+    if (reason !== 'battle') pushAnim(s, { kind: 'destroy', uid: u, src: s.resolving?.uid ?? null }); // 演出用：効果などによる破壊（src：どのカードの効果か）
     if (opt.banish) emit(s, { type: 'banished', uid: u, from: zone, reason });
     else emit(s, { type: 'toGy', uid: u, from, reason });
     if (!opt.summoning) emit(s, { type: 'leftField', uid: u, from: zone, reason, wasFaceUp: before.faceUp });
@@ -1059,6 +1059,7 @@ function resolveLink(s           )       {
     if (!link.effectNegated) {
       const eff = (scriptOf(s, link.uid).effects || []).find(e => e.id === link.effect) ;
       s.resolving = { uid: link.uid, player: link.player, kind: link.cardKind, effect: link.effect };
+      pushAnim(s, { kind: 'resolve', uid: link.uid, player: link.player, act: link.cardActivation, targets: [...link.targets] }); // 演出用：効果の処理（カードごとの専用演出）
       try {
         const rep = link.data.replacedDiscard                        ;
         if (rep !== undefined) {

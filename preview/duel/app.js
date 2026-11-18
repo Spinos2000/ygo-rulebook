@@ -3,6 +3,7 @@
 import { cpuDecide } from './ai/cpu.js';
 import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js';
 import { playBattle, playSummon } from './fx.js';
+import { playSignature, sigKey } from './sig.js';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
@@ -72,7 +73,7 @@ function commit(next) {
 }
 
 /* ---------- 攻撃の演出：演出の間は画面の更新とCPUの手番を止め、終わったら続ける ---------- */
-let fxBusy = false;
+let fxN = 0;   // 再生中の演出の数（0 になった時だけ画面を更新する。演出が重なっても途中で描き直さない）
 const fxMode = () => ($('#fxMode') && $('#fxMode').value) || 'full';
 let pendingSummons = [];   // 画面を更新した後に再生する召喚の演出
 function queueBattleFx(prev, next) {
@@ -80,19 +81,23 @@ function queueBattleFx(prev, next) {
   const fresh = (next.anim || []).filter(x => x.seq > (prev.animSeq ?? 0));
   if (!fresh.length) return;
   // 攻撃：まだ画面に残っている前の状態の盤面（カードの位置）で再生する
-  const battles = fresh.filter(x => x.kind === 'battle').map(x => battleInfo(prev, next, x)).filter(Boolean);
+  const battles = fresh.filter(x => x.kind === 'battle').map(x => { const j = battleInfo(prev, next, x); if (j) j.seq = x.seq; return j; }).filter(Boolean);
+  // カードごとの専用演出（ブラック・ホールなど）：これも前の状態の盤面で再生する
+  const sigs = fresh.filter(x => x.kind === 'resolve').map(x => sigInfo(prev, next, x, fresh)).filter(Boolean);
+  sigs.forEach(j => j.skip.forEach(u => sigSkip.add(u)));
+  const jobs = [...battles, ...sigs].sort((p, q) => p.seq - q.seq);
   // 召喚：素材のカードの位置は今のうちに覚えておき、召喚されたカードの位置は画面を更新してから調べる
   pendingSummons.push(...fresh.filter(x => x.kind === 'summon').map(x => summonInfo(prev, next, x)).filter(Boolean));
   pendingSummons.push(...fresh.filter(x => x.kind === 'search' && isCpu(x.player)).map(x => ({ search: true, uid: x.uid, p: x.player, d: defOf(next, x.uid) })));
-  if (!battles.length) return;
-  fxBusy = true;
+  if (!jobs.length) return;
+  fxN++;
   (async () => {
-    for (const j of battles) {
+    for (const j of jobs) {
       const hide = j.hide.map(el => { el.style.visibility = 'hidden'; return el; });
-      try { await playBattle(ROOT, j.info); } catch (e) { console.error(e); }
+      try { await (j.sig ? playSignature(ROOT, j.info) : playBattle(ROOT, j.info)); } catch (e) { console.error(e); }
       hide.forEach(el => { el.style.visibility = ''; });
     }
-    fxBusy = false;
+    fxN = Math.max(0, fxN - 1);
     render();
   })();
 }
@@ -110,9 +115,9 @@ function summonInfo(prev, next, x) {
 }
 /** 画面を更新した後：召喚されたカードの場所で、召喚の演出を順に再生する */
 function playPendingSummons() {
-  if (!pendingSummons.length || fxBusy) return false;
+  if (!pendingSummons.length || (fxN > 0)) return false;
   const jobs = pendingSummons; pendingSummons = [];
-  fxBusy = true;
+  fxN++;
   (async () => {
     for (const j of jobs) {
       if (j.search) { try { await cpuSearchFx(j); } catch (e) { console.error(e); } continue; }
@@ -125,10 +130,61 @@ function playPendingSummons() {
       } catch (e) { console.error(e); }
       el.style.visibility = '';
     }
-    fxBusy = false;
+    fxN = Math.max(0, fxN - 1);
     render();
   })();
   return true;
+}
+/* ---------- カードごとの専用演出：発動したカード・破壊されるカード・盤面の位置を集める ---------- */
+const sigSkip = new Set();   // 専用演出で壊した（飛ばした）カード。いつもの移動の演出はしない
+function sigInfo(prev, next, x, fresh) {
+  if (!x.act || !prev.cards[x.uid]) return null;
+  const d = defOf(prev, x.uid), key = sigKey(d.name);
+  if (!key) return null;
+  const q = sel => ROOT.querySelector(sel);
+  const elOf = u => q(`#board [data-uid="${u}"]`);
+  const cardOf = u => {
+    const el = elOf(u), c = prev.cards[u];
+    if (!el || !c) return null;
+    return { uid: u, el, rect: el.getBoundingClientRect(), d: defOf(prev, u), atk: currentAtk(prev, u), def: currentDef(prev, u),
+      faceUp: !el.classList.contains('back'), defPos: c.position === 'def' && (c.zone === 'mzone' || c.zone === 'emz') };
+  };
+  const center = el => { if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+  const p = x.player, me = p === 0, boardEl = q('#board');
+  if (!boardEl) return null;
+  const br = boardEl.getBoundingClientRect(), mid = q('#board .row.r2');
+  const rowY = cls => { const r = q(`#board .row.${cls}`); return r ? center(r).y : br.top + br.height / 2; };
+  const board = { left: br.left, top: br.top, right: br.right, bottom: br.bottom, cx: br.left + br.width / 2, cy: mid ? center(mid).y : br.top + br.height / 2,
+    myMonY: rowY(me ? 'r3' : 'r1'), oppMonY: rowY(me ? 'r1' : 'r3'), myStY: rowY(me ? 'r4' : 'r0') };
+  const fieldMons = [0, 1].flatMap(pp => prev.players[pp].mzone).concat(prev.emz).filter(u => u !== null && u !== undefined);
+  const destU = fresh.filter(y => y.kind === 'destroy' && y.src === x.uid).map(y => y.uid);
+  const dest = destU.map(cardOf).filter(Boolean);
+  const self = cardOf(x.uid);
+  if (self) self.faceUp = true; // セットしていたカードも、発動したら表を見せる
+  const att = key === 'mirror' && prev.battle ? cardOf(prev.battle.attacker) : null;
+  const tgtU = (x.targets || [])[0];
+  const target = tgtU !== undefined ? cardOf(tgtU) : null;
+  const tgtOwner = tgtU !== undefined && prev.cards[tgtU] ? prev.cards[tgtU].owner : p;
+  const mons = fieldMons.map(cardOf).filter(Boolean);
+  const opp = mons.filter(c => prev.cards[c.uid].controller !== p);
+  const traps = [0, 1].flatMap(pp => prev.players[pp].szone).filter(u => u !== null && u !== x.uid && (!prev.cards[u].faceUp || defOf(prev, u).kind === 'trap')).map(cardOf).filter(Boolean);
+  // 強欲な壺：ドローしたカードは壺から飛ばすので、いつもの移動はしない
+  const drawn = next.players[p].hand.filter(u => prev.cards[u] && prev.cards[u].zone === 'deck');
+  const skip = [...dest.map(c => c.uid), ...(key === 'greed' ? drawn : [])];
+  // 蘇生などで呼び出したモンスターが降りる場所（今の盤面の、そのマス）
+  let land = null;
+  const nt = tgtU !== undefined ? next.cards[tgtU] : null;
+  if (nt && nt.zone === 'mzone' && nt.index !== null) {
+    const nth = nt.controller === 0 ? nt.index + 2 : 6 - nt.index;
+    land = center(q(`#board .row.${nt.controller === 0 ? 'r3' : 'r1'} > :nth-child(${nth})`));
+  }
+  return {
+    sig: true, seq: x.seq, skip,
+    hide: [self, ...dest, att].filter(Boolean).map(c => c.el),
+    info: { key, name: d.name, kind: d.kind, subtype: d.subtype, me, speed: fxMode() === 'short' ? 2 : 1, board,
+      self, dest, att, target, opp, mons, traps, drawn: drawn.length, land,
+      deck: center(pileEl(p, 'deck')), gy: center(pileEl(tgtOwner, 'gy')), hand: center(q(`#hand${p}`)) },
+  };
 }
 function battleInfo(prev, next, x) {
   const elOf = uid => ROOT.querySelector(`#board [data-uid="${uid}"]`);
@@ -774,7 +830,7 @@ function linkKey(l) { return `${l.uid}:${l.serial}:${l.effect}`; }
 function queueMoves(prev, next) {
   if (fxMode() === 'none' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const fresh = (next.anim || []).filter(x => x.seq > (prev.animSeq ?? 0));
-  const skip = new Set(fanDoneUids); fanDoneUids = new Set();
+  const skip = new Set([...fanDoneUids, ...sigSkip]); fanDoneUids = new Set(); sigSkip.clear();
   for (const x of fresh) {
     if (x.kind === 'summon' || x.kind === 'search') skip.add(x.uid);
     if (x.kind === 'summon') (x.mats || []).forEach(m => { if (x.how === 'fusion' || x.how === 'ritual' || x.how === 'advance') skip.add(m); });
@@ -894,9 +950,9 @@ async function banner(text, cls, ms) {
 }
 /** 画面を更新した後：たまっている移動・発動・ターン・勝敗の演出を再生する */
 function playPendingMoves() {
-  if (!pendingMoves || fxBusy) return false;
+  if (!pendingMoves || (fxN > 0)) return false;
   const P = pendingMoves; pendingMoves = null;
-  fxBusy = true;
+  fxN++;
   (async () => {
     try {
       await Promise.all(P.moves.map((m, i) => flyOne(m, P, i)));
@@ -905,7 +961,7 @@ function playPendingMoves() {
       else if (P.turn !== null) await banner(cpuMode() ? (P.turn === 0 ? 'あなたのターン' : 'CPUのターン') : `${NAME(P.turn)}のターン`, P.turn === 0 ? 'me' : 'opp', 1000);
     } catch (e) { console.error(e); }
     const l = $('.fly-layer'); if (l) l.innerHTML = '';
-    fxBusy = false;
+    fxN = Math.max(0, fxN - 1);
     render();
   })();
   return true;
@@ -942,7 +998,7 @@ function closeSheets() {
 }
 
 function render() {
-  if (fxBusy) { renderSheets(); return; } // 演出が終わってから画面を更新する（開いていたシートは先に閉じる）
+  if ((fxN > 0)) { renderSheets(); return; } // 演出が終わってから画面を更新する（開いていたシートは先に閉じる）
   if (fan && !(S.pending && !isCpu(S.pending.request.player) && isDeckPick(S.pending.request))) closeFan();
   canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
   renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets();

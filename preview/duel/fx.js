@@ -37,7 +37,7 @@ function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w
 const FRAME = { normal: '#f1d98a', effect: '#e9a36f', ritual: '#9cb8ec', fusion: '#b9a3e0' };
 const ATTR = { 闇: '#534ab7', 光: '#b8902a', 地: '#8a6a3a', 水: '#2f6fb0', 炎: '#c4473a', 風: '#2e8b57', 神: '#a9841f' };
 /** カードの表面をキャンバスに描いた絵（演出の中で動かしたり、破片にしたりする） */
-function cardImg(d, atk, def) {
+export function cardImg(d, atk, def) {
   const CW = 78, CH = 114, o = document.createElement('canvas'); o.width = CW * 2; o.height = CH * 2;
   const x = o.getContext('2d'); x.scale(2, 2);
   rr(x, 1, 1, CW - 2, CH - 2, 6); x.fillStyle = FRAME[d.frame] || '#e9a36f'; x.fill(); x.lineWidth = 1.6; x.strokeStyle = '#2c3244'; x.stroke();
@@ -360,7 +360,7 @@ function drawGod(S, t) {
  * info = { rect（召喚されたカードの場所）, d（カード）, atk, def, how, faceDown, mats: [{rect, d, atk, def}], speed }
  * ===================================================================== */
 let BACK = null;
-function backImg() {
+export function backImg() {
   if (BACK) return BACK;
   const CW = 78, CH = 114, o = document.createElement('canvas'); o.width = CW * 2; o.height = CH * 2;
   const x = o.getContext('2d'); x.scale(2, 2);
