@@ -385,7 +385,7 @@ function pile(p, kind) {
   const stack = `box-shadow: ${[...edges, `${(n * .6 + 1).toFixed(1)}px ${(n * .9 + 2).toFixed(1)}px 4px rgba(0,0,0,.45)`].join(', ')}; translate: ${(-n * .3).toFixed(1)}px ${(-n * .45).toFixed(1)}px`;
   // 置き場のボタンの中にボタンは入れられない（ブラウザが外側のボタンを閉じてしまう）ので、一番上のカードは span にする
   const face = open && top !== null ? cardHtml(top, { style: stack }).replace(/^<button/, '<span').replace(/<\/button>$/, '</span>') : list.length ? `<span class="card back mini" style="${stack}"></span>` : '';
-  return `<button class="zone pile" data-pile="${p}:${kind}" aria-label="${NAME(p)}の${label}（${list.length}枚）">${face}<span class="pl">${label}</span><span class="cnt">${list.length}</span>${kind === 'banished' ? sarcoHtml(p) : ''}</button>`;
+  return `<button class="zone pile" data-pile="${p}:${kind}" aria-label="${NAME(p)}の${label}（${list.length}枚）" title="長押しで一覧">${face}<span class="pl">${label}</span><span class="cnt">${list.length}</span>${kind === 'banished' ? sarcoHtml(p) : ''}</button>`;
 }
 function renderBoard() {
   const p1 = S.players[0], p2 = S.players[1];
@@ -1169,7 +1169,28 @@ function surrender() {
 
 /* ---------- イベント（boot から呼ぶ） ---------- */
 function wire(root) {
+/* 墓地・除外・デッキ・EX：長押し（パソコンは右クリックでも）で中身の一覧。スマホでは普通に押すと一番上のカードの説明 */
+let pressT = null, pressEl = null, pressXY = null, pressFired = false;
+function pressEnd() { clearTimeout(pressT); pressT = null; if (pressEl) pressEl.classList.remove('pressing'); pressEl = null; }
+root.addEventListener('pointerdown', e => {
+  pressFired = false; // 前の長押しの後に「押した」が来なかった時のため、押し始めで戻す
+  const el = e.target.closest && e.target.closest('#board [data-pile]');
+  if (!el || e.button > 0) return;
+  pressEnd(); pressEl = el; pressXY = [e.clientX, e.clientY];
+  el.classList.add('pressing');
+  pressT = setTimeout(() => { const [p, k] = el.dataset.pile.split(':'); pressFired = true; pressEnd(); if (navigator.vibrate) try { navigator.vibrate(15); } catch { /* 振動できない端末 */ } showPile(Number(p), k); }, 450);
+});
+root.addEventListener('pointermove', e => { if (pressT && pressXY && Math.hypot(e.clientX - pressXY[0], e.clientY - pressXY[1]) > 10) pressEnd(); });
+['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => root.addEventListener(ev, () => { if (pressT) pressEnd(); }));
+root.addEventListener('contextmenu', e => {
+  const el = e.target.closest && e.target.closest('#board [data-pile]');
+  if (!el) return;
+  e.preventDefault();
+  if (!pressFired) { const [p, k] = el.dataset.pile.split(':'); showPile(Number(p), k); }
+});
 root.addEventListener('click', e => {
+  // 長押しで一覧を開いた直後の「押した」は無視する
+  if (pressFired) { pressFired = false; e.preventDefault(); return; }
   const t = e.target;
   if (t.closest('[data-fanok]')) { if (fan) fanFinish(fan.sel); return; }
   if (t.closest('[data-fanskip]')) { fanFinish([]); return; }
@@ -1193,6 +1214,9 @@ root.addEventListener('click', e => {
   if (optEl) { togglePick(Number(optEl.dataset.opt)); return; }
   if (t.closest('#confirmPick')) { run({ type: 'answer', value: pick }); return; }
   if (t.closest('#pileClose') || t.id === 'pileDlg') { $('#pileDlg').hidden = true; return; }
+  // パソコン（広い画面）では、置き場を押すと一覧。スマホでは一番上のカードの説明（一覧は長押し）
+  const pileHit = t.closest('#board [data-pile]');
+  if (pileHit && !narrow() && !(S.pending && S.pending.request.kind === 'cards')) { const [p, k] = pileHit.dataset.pile.split(':'); showPile(Number(p), k); return; }
   const cardEl = t.closest('[data-uid]');
   if (cardEl) {
     const u = Number(cardEl.dataset.uid);

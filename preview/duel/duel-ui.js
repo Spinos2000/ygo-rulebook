@@ -138,6 +138,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .zone.emz { border-style: solid }
 .zone .zl, .pile .pl { font-size: 9px; color: var(--mat-ink); opacity: .55; text-align: center; line-height: 1.2 }
 .pile { border-style: solid; padding: 0; cursor: pointer }
+/* 長押し：スマホの長押しメニューや文字選択を出さず、押している間はリングが満ちていく */
+.pile { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation }
+.pile.pressing::after { content: ""; position: absolute; inset: -3px; border-radius: 9px; border: 3px solid var(--accent); clip-path: inset(0 100% 0 0); animation: pressFill .45s linear forwards; pointer-events: none }
+@keyframes pressFill { to { clip-path: inset(0 0 0 0) } }
 .pile .pl { position: absolute; bottom: 2px; left: 0; right: 0 }
 .pile .cnt { position: absolute; top: -6px; right: -4px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; font-size: 10px; padding: 0 5px; font-variant-numeric: tabular-nums }
 .r0 .zone:not(.void), .r1 .zone:not(.void) { border-color: color-mix(in srgb, var(--mat-line) 60%, var(--opp) 40%) }
