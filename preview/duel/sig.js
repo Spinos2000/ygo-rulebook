@@ -6,7 +6,7 @@ const TAU = Math.PI * 2;
 /* ---------- どのカードにどの演出を使うか ---------- */
 const SIG = {
   'ブラック・ホール': 'hole', 'ライトニング・ボルテックス': 'vortex', '激流葬': 'torrent', '聖なるバリアミラーフォース': 'mirror',
-  '大嵐': 'storm', 'ハーピィの羽根帚': 'harpie', 'ナイト・ショット': 'night', '神の宣告': 'judgment', '神の警告': 'warning',
+  '大嵐': 'storm', 'サイクロン': 'cyclone', 'ハーピィの羽根帚': 'harpie', 'ナイト・ショット': 'night', '神の宣告': 'judgment', '神の警告': 'warning',
   '強欲な壺': 'greed', '強欲で謙虚な壺': 'humble', '増援': 'reinforce', '封印の黄金櫃': 'sarco', '死者蘇生': 'revive',
   '早すぎた埋葬': 'burial', 'リビングデッドの呼び声': 'call', '超融合': 'superfusion', '未来融合フューチャー・フュージョン': 'future',
   '洗脳ブレインコントロール': 'brain', '光の護封剣': 'swords', '王宮のお触れ': 'decree', 'スキルドレイン': 'drain',
@@ -109,7 +109,7 @@ export function playSignature(root, info) {
 function setup(I) {
   const B = I.board, bw = B.right - B.left;
   const S = { I, B, U: Math.max(.7, Math.min(1.6, bw / 420)), t: 0, last: 0, speed: (I.speed || 1) * (window.__fxSlow || 1), end: 2800, done: false,
-    cards: [], tints: [], parts: [], rings: [], ev: [], hooks: [], shards: [], cracks: [], fire: [], bolts: [],
+    cards: [], tints: [], zaps: [], parts: [], rings: [], ev: [], hooks: [], shards: [], cracks: [], fire: [], bolts: [],
     shake: 0, flash: 0, flashC: '255,255,255', dark: 0, invert: 0, freeze: 0, chroma: 0, title: null };
   S.dir = I.me ? -1 : 1; // 相手の方向（画面の上が相手なら -1）
   S.self = mk(I.self);
@@ -287,6 +287,32 @@ const FX = {
     S.end = 3200;
   },
 
+  /* サイクロン：自分のカードを中心に竜巻が巻き起こり、その頂点から雷が一瞬で落ちて対象を撃ち砕く */
+  cyclone(S) {
+    const me = S.self, U = S.U, STRIKE = 1500;
+    S.twister = { t0: 300, top: { x: me.x, y: Math.max(30, me.y - 170 * U) } };
+    const top = S.twister.top;
+    at(S, 250, () => { S.dark = .65; });
+    hook(S, t => {
+      const e = t - 300; if (e < 0) return true;
+      const grow = Math.min(1, e / 450), hgt = me.y - top.y;
+      if (t < STRIKE + 300) for (let q = 0; q < 14; q++) { const h = Math.random(), a = Math.random() * TAU, rad = (12 + h * 70) * U * grow; P(S, { x: me.x + Math.cos(a) * rad, y: me.y + 40 * U - h * (hgt + 40 * U) * grow + Math.sin(a) * rad * .25, vx: -Math.sin(a) * 5, vy: -1.5 - Math.random() * 2.5, life: 18, sz: (1.6 + h * 2.2) * U, c: Math.random() < .6 ? '#9df5c8' : '#e9fff4', drag: .95, k: 'streak' }); }
+      if (t < STRIKE) { me.rot += .04 + grow * .25; S.shake = Math.max(S.shake, 2 + 3 * grow); }
+      else me.rot *= .88;
+      // 雷の力が頂点に溜まる
+      if (t > STRIKE - 450 && t < STRIKE && Math.random() < .5) S.zaps.push({ pts: zigzag(top.x + (Math.random() - .5) * 40 * U, top.y - 10, top.x + (Math.random() - .5) * 60 * U, top.y + 40 * U, 5, 20 * U), t, life: 80, w: 1.5 * U });
+      return t < STRIKE + 900;
+    });
+    S.dest.forEach((c, i) => at(S, STRIKE + i * 140, () => {
+      for (let k = 0; k < 3; k++) S.zaps.push({ pts: zigzag(top.x, top.y, c.x + (Math.random() - .5) * 6, c.y, 14, 46 * U), t: S.t + k * 40, life: 260, w: (k ? 2.2 : 4.5) * U });
+      S.zaps.push({ pts: zigzag(c.x, -20, c.x, c.y, 10, 30 * U), t: S.t, life: 200, w: 3 * U });
+      impact(S, c.x, c.y, 1, '#bfe9ff'); S.flashC = '200,235,255'; S.freeze = 110; S.shake = 30 * U;
+      explode(S, c, '#bfe9ff');
+    }));
+    at(S, STRIKE + 300 + S.dest.length * 140, () => { S.twister.fade = S.t; });
+    S.end = STRIKE + 1300 + S.dest.length * 140;
+  },
+
   /* ハーピィの羽根帚：羽根の嵐と斬撃で、相手の魔法・罠を次々に断ち切る */
   harpie(S) {
     at(S, 350, () => { S.dark = .55; });
@@ -462,6 +488,8 @@ const FX = {
     S.end = 2900;
   },
 };
+/** ジグザグの稲妻の点 */
+function zigzag(x0, y0, x1, y1, seg, jit) { const pts = [[x0, y0]]; for (let i = 1; i < seg; i++) { const u = i / seg; pts.push([x0 + (x1 - x0) * u + (Math.random() - .5) * jit, y0 + (y1 - y0) * u + (Math.random() - .5) * jit * .4]); } pts.push([x1, y1]); return pts; }
 /** ドームの縁の点（u：0〜1） */
 function domePt(D, u) { const a = D.up ? Math.PI + u * Math.PI : u * Math.PI; return { x: D.cx + Math.cos(a) * D.R, y: D.cy + Math.sin(a) * D.Ry }; }
 function domeArc(D, r, ry) { ctx.beginPath(); ctx.ellipse(D.cx, D.cy, r, ry, 0, D.up ? Math.PI : 0, D.up ? TAU : Math.PI); }
@@ -625,6 +653,25 @@ function draw(S) {
       glowH(f2.x, f2.y, 80 * U, (t * .5) % 360, 1);
     }
   }
+  // サイクロン：自分のカードの竜巻と、頂点に溜まる雷・落ちる稲妻
+  if (S.twister) {
+    const tw = S.twister, me = S.self, e = t - tw.t0;
+    if (e > 0) {
+      const grow = Math.min(1, e / 450), fa = tw.fade ? Math.max(0, 1 - (t - tw.fade) / 500) : 1, hgt = me.y - tw.top.y;
+      if (fa > 0) {
+        for (let l = 0; l < 11; l++) { const yy = me.y + 40 * U - l * (hgt + 40 * U) / 10 * grow, rw = (10 + l * 7) * U * grow; ctx.strokeStyle = hexA(l % 2 ? '#9df5c8' : '#e9fff4', (.25 + l * .05) * fa); ctx.lineWidth = 3 * U; ctx.beginPath(); ctx.ellipse(me.x + Math.sin(t / 55 + l) * 6 * U, yy, rw, rw * .28, 0, 0, TAU); ctx.stroke(); }
+        glow(me.x, me.y, 70 * U, '#9df5c8', .45 * fa);
+        if (e > 700) glow(tw.top.x, tw.top.y, (50 + 20 * Math.sin(t / 30)) * U, '#bfe9ff', .8 * fa);
+      }
+    }
+  }
+  S.zaps = S.zaps.filter(z => t - z.t < z.life);
+  S.zaps.forEach(z => {
+    const age = t - z.t; if (age < 0) return; const al = 1 - age / z.life;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    [[z.w * 5, .18, '#bfe9ff'], [z.w * 2, .55, '#bfe9ff'], [z.w * .8, 1, '#ffffff']].forEach(l => { ctx.strokeStyle = l[2]; ctx.globalAlpha = al * l[1]; ctx.lineWidth = l[0]; ctx.beginPath(); z.pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.stroke(); });
+    ctx.globalAlpha = 1;
+  });
   if (S.tornado) { const tx = S.tornado.x, hh = (B.bottom - B.top) / 10; for (let l = 0; l < 10; l++) { ctx.strokeStyle = `rgba(216,234,255,${.3 + l * .05})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(tx + Math.sin(t / 80 + l) * 8, B.top + l * hh + hh / 2, (16 + l * 9) * U, (6 + l * 2) * U, 0, 0, TAU); ctx.stroke(); } }
   if (S.slashes) S.slashes.forEach(s => { const el = t - s.t; if (el < 0 || el > 260) return; const p = Math.min(1, el / 90), fa = 1 - Math.max(0, (el - 100) / 160); ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.ang); [[14, .35, '#ff7ac0'], [4, 1, '#ffffff']].forEach(l => { ctx.strokeStyle = l[2]; ctx.globalAlpha = fa * l[1]; ctx.lineWidth = l[0] * U; ctx.beginPath(); ctx.moveTo(-50 * U, 0); ctx.lineTo((-50 + 100 * p) * U, 0); ctx.stroke(); }); ctx.restore(); ctx.globalAlpha = 1; });
   if (S.shot) { const k6 = Math.min(1, (t - S.shot.t) / 110), sx = S.shot.from.x + (S.shot.to.x - S.shot.from.x) * k6, sy = S.shot.from.y + (S.shot.to.y - S.shot.from.y) * k6; ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 4 * U; ctx.beginPath(); ctx.moveTo(S.shot.from.x, S.shot.from.y); ctx.lineTo(sx, sy); ctx.stroke(); glow(sx, sy, 26 * U, '#ffd27a', 1); glow(S.shot.from.x, S.shot.from.y, 50 * U, '#ffb05a', 1 - k6); }
