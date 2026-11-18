@@ -109,7 +109,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 
 /* ---------- 手札 ---------- */
 /* 手札はトランプアプリのように扇形に重ねる。位置（--tx・--ty・--rot）は app.js の fanOut() が決める */
-.hand { position: relative; --cw: 84px; --ch: calc(var(--cw) * 86 / 59); height: calc(var(--ch) * .84 + 28px); margin-bottom: calc(var(--ch) * -.16) }
+.hand { position: relative; isolation: isolate; overflow-x: clip; --cw: 84px; --ch: calc(var(--cw) * 86 / 59); height: calc(var(--ch) * .84 + 28px); margin-bottom: calc(var(--ch) * -.16) }
 .hand .card { position: absolute; left: 50%; bottom: 0; width: var(--cw); margin-left: calc(var(--cw) / -2); font-size: 10px; z-index: var(--z, 1);
   transform-origin: 50% 160%; transform: translate(var(--tx, 0px), var(--ty, 0px)) rotate(var(--rot, 0deg)); transition: transform .18s ease-out, box-shadow .12s }
 .hand.me .card:not(.sel):not(.picked):hover { transform: translate(var(--tx, 0px), calc(var(--ty, 0px) - 10px)) rotate(var(--rot, 0deg)) }

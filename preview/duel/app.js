@@ -220,8 +220,10 @@ function fanOut(el) {
   if (!n) return;
   const W = parseFloat(getComputedStyle(el).getPropertyValue('--cw')) || 84;
   const opp = el.classList.contains('opp');
-  const step = n > 1 ? Math.min(W * (opp ? 0.5 : 0.66), (el.clientWidth - W - 12) / (n - 1)) : 0;
   const spread = Math.min(30, n * 4.5);
+  // 傾けた分だけ端のカードが外へはみ出すので、その分を差し引いて横幅に収める
+  const spill = W * 86 / 59 * (opp ? 0.6 : 1.6) * Math.sin(spread / 2 * Math.PI / 180);
+  const step = n > 1 ? Math.max(8, Math.min(W * (opp ? 0.5 : 0.66), (el.clientWidth - W - spill * 2 - 8) / (n - 1))) : 0;
   cs.forEach((c, i) => {
     const t = n === 1 ? 0 : i / (n - 1) - 0.5;
     c.style.setProperty('--tx', (t * step * (n - 1)).toFixed(1) + 'px');
