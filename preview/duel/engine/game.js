@@ -536,6 +536,7 @@ export function destroy(s           , uids          , reason        , opt       
     moveCard(s, u, opt.banish ? 'banished' : 'gy');
     // どの効果で破壊されたか（ユベル④「③の効果以外で破壊された時」の判定用）
     emit(s, { type: 'destroyed', uid: u, from, reason, srcUid: s.resolving?.uid ?? null, srcEffect: s.resolving?.effect ?? null });
+    if (reason !== 'battle') pushAnim(s, { kind: 'destroy', uid: u }); // 演出用：効果などによる破壊
     if (opt.banish) emit(s, { type: 'banished', uid: u, from: zone, reason });
     else emit(s, { type: 'toGy', uid: u, from, reason });
     if (!opt.summoning) emit(s, { type: 'leftField', uid: u, from: zone, reason, wasFaceUp: before.faceUp });
@@ -588,7 +589,7 @@ export function effectDamage(s           , p          , amount        )       {
 /** 画面の演出用の記録を足す（ルールの処理には使わない） */
 export function pushAnim(s           , a                         )       {
   (s.anim ??= []).push({ ...(a          ), seq: (s.animSeq = (s.animSeq ?? 0) + 1) }         );
-  if (s.anim.length > 8) s.anim.shift();
+  if (s.anim.length > 40) s.anim.shift();
 }
 export function addLingering(s           , l           )       { s.lingering.push(l); }
 
@@ -679,11 +680,13 @@ export function linkCards(s           , card        , monster        )       {
 /** 発動を無効にし破壊する */
 export function negateActivation(s           , link           , andDestroy = true)       {
   link.negated = true;
+  pushAnim(s, { kind: 'negate', uid: link.uid }); // 演出用：無効
   log(s, `${nameOf(s, link.uid)}の発動を無効にした`);
   if (andDestroy && sameCard(s, link.uid, link.serial) && isOnField(s.cards[link.uid])) destroy(s, [link.uid], 'effect');
 }
 /** 召喚を無効にし破壊する */
 export function negateSummon(s           , uid        , how                                            = 'normal')       {
+  pushAnim(s, { kind: 'negate', uid }); // 演出用：無効
   log(s, `${nameOf(s, uid)}の${how === 'flip' ? '反転召喚' : '召喚'}を無効にした`);
   s.cards[uid].summoning = false;
   // 反転召喚は既にフィールドにあったカードなので、モンスターゾーンで破壊された扱い（公式Q&A：幻影騎士団ブレイクソード）

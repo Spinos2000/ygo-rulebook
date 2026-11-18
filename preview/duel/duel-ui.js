@@ -259,6 +259,19 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .fan-btns { display: flex; gap: 10px; margin: 8px 0 }
 .fan-btns:empty { display: none }
 @media (max-width: 860px) { .fan-area .card { font-size: 8.5px } }
+/* カードの移動・発動・ターン・勝敗の演出（押した操作は下の画面に通す） */
+.fly-layer { position: fixed; inset: 0; pointer-events: none; z-index: 27 }
+.fly-layer .card { box-shadow: 0 8px 18px rgba(0,0,0,.45) }
+.fx-cross { position: fixed; pointer-events: none }
+.fx-cross::before, .fx-cross::after { content: ""; position: absolute; left: -10%; top: 46%; width: 120%; height: 9%; border-radius: 4px; background: #ff4a3d; box-shadow: 0 0 12px #ff4a3d }
+.fx-cross::before { transform: rotate(45deg) } .fx-cross::after { transform: rotate(-45deg) }
+.fx-ring { position: fixed; width: 90px; height: 90px; border-radius: 50%; border: 4px solid; box-shadow: 0 0 18px currentColor; pointer-events: none }
+.fx-banner { position: fixed; left: 50%; top: 42%; transform: translate(-50%,-50%); padding: 14px 60px; color: #fff; text-align: center; white-space: nowrap;
+  background: linear-gradient(90deg, transparent, rgba(10,14,20,.85) 18%, rgba(10,14,20,.85) 82%, transparent); border-block: 2px solid var(--accent) }
+.fx-banner b { font-family: var(--display); font-weight: 400; font-size: clamp(22px, 5vw, 34px); letter-spacing: .08em }
+.fx-banner.opp { border-color: var(--opp) }
+.fx-banner.win b { color: #ffe08a; font-size: clamp(30px, 8vw, 52px) }
+.fx-banner.lose b { color: #b9c3d6; font-size: clamp(30px, 8vw, 52px) }
 /* 攻撃の演出を描く全画面のキャンバス（押した操作は下の画面に通す） */
 .fx-layer { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 26; display: none }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + 24px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); border-radius: 10px; padding: 9px 16px; max-width: min(520px, calc(100vw - 32px)); box-shadow: var(--shadow); z-index: 40; font-weight: 500 }

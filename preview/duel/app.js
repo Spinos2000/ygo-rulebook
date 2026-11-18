@@ -68,6 +68,7 @@ function commit(next) {
   S = next;
   if (prev) play(soundsFor(prev, next));
   if (prev) queueBattleFx(prev, next);
+  if (prev) queueMoves(prev, next);
 }
 
 /* ---------- 攻撃の演出：演出の間は画面の更新とCPUの手番を止め、終わったら続ける ---------- */
@@ -287,7 +288,7 @@ function renderSide() {
     el.classList.toggle('acting', actorOf(S) === p && S.winner === null);
     el.querySelector('.who').textContent = NAME(p);
     const lp = el.querySelector('.lp');
-    lp.textContent = P.lp;
+    tweenLp(lp, p, P.lp);
     if (P.lp < lastLp[p]) { lp.classList.remove('hit'); void lp.offsetWidth; lp.classList.add('hit'); }
     else if (P.lp > lastLp[p]) lp.classList.remove('hit');
     lastLp[p] = P.lp;
@@ -709,6 +710,7 @@ async function fanFinish(sel) {
   await Promise.all(picked.map(el => flyTo(el, to, { dur: 460, scale: .55, rot: -8 })));
   shakePile(p);
   closeFan();
+  fanDoneUids = new Set(sel);
   run({ type: 'answer', value: sel });
 }
 
@@ -745,6 +747,185 @@ async function cpuSearchFx(j) {
   layer.remove();
 }
 
+
+/* ---------- カードの移動・発動・無効・ターン・勝敗の演出 ----------
+   画面を更新する前のカードの位置を覚えておき、更新した後の位置まで、カードの写しを飛ばす */
+let pendingMoves = null;
+let fanDoneUids = new Set();   // 扇から選んだカード（扇の演出で飛ばし済み）
+const VIEWER = 0;              // 画面を見ている人（CPU対戦では P1）
+const dur = ms => (fxMode() === 'short' ? ms / 2 : ms);
+const wait = ms => new Promise(res => setTimeout(res, dur(ms)));
+const PUBLIC = ['mzone', 'emz', 'szone', 'fzone', 'gy', 'banished'];
+/** そのカードの表を、画面を見ている人が見てよいか */
+function visibleTo(st, u) {
+  const c = st.cards[u];
+  if (!c) return false;
+  if (PUBLIC.includes(c.zone)) return c.faceUp || (c.zone !== 'banished' && c.controller === VIEWER && cpuMode());
+  if (c.zone === 'hand') return !cpuMode() || c.owner === VIEWER;
+  return false;
+}
+function snapRects() {
+  const m = new Map(), piles = {};
+  ROOT.querySelectorAll('#board [data-uid], #hand0 [data-uid], #hand1 [data-uid]').forEach(el => m.set(Number(el.dataset.uid), el.getBoundingClientRect()));
+  ROOT.querySelectorAll('#board [data-pile]').forEach(el => { piles[el.dataset.pile] = el.getBoundingClientRect(); });
+  return { m, piles };
+}
+function linkKey(l) { return `${l.uid}:${l.serial}:${l.effect}`; }
+function queueMoves(prev, next) {
+  if (fxMode() === 'none' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const fresh = (next.anim || []).filter(x => x.seq > (prev.animSeq ?? 0));
+  const skip = new Set(fanDoneUids); fanDoneUids = new Set();
+  for (const x of fresh) {
+    if (x.kind === 'summon' || x.kind === 'search') skip.add(x.uid);
+    if (x.kind === 'summon') (x.mats || []).forEach(m => { if (x.how === 'fusion' || x.how === 'ritual' || x.how === 'advance') skip.add(m); });
+    if (x.kind === 'battle') x.destroyed.forEach(u => skip.add(u));
+  }
+  const negs = new Set(fresh.filter(x => x.kind === 'negate').map(x => x.uid));
+  const destroys = new Set(fresh.filter(x => x.kind === 'destroy').map(x => x.uid));
+  const moves = [];
+  for (const k of Object.keys(next.cards)) {
+    const u = Number(k), pc = prev.cards[u], nc = next.cards[u];
+    if (!pc || skip.has(u)) continue;
+    const same = pc.zone === nc.zone && pc.controller === nc.controller && (!['mzone', 'szone', 'emz'].includes(nc.zone) || pc.index === nc.index);
+    if (same) continue;
+    if (pc.zone === 'deck' && nc.zone === 'deck') continue;
+    moves.push({ u, from: pc.zone, to: nc.zone, fromP: pc.controller, toP: nc.controller, face: visibleTo(prev, u) || visibleTo(next, u), d: defOf(next, u),
+      destroy: destroys.has(u), negate: negs.has(u) });
+  }
+  const had = new Set((prev.chain || []).map(linkKey));
+  const acts = (next.chain || []).filter(l => !had.has(linkKey(l))).map(l => ({ uid: l.uid, p: l.player, kind: l.cardKind, zone: next.cards[l.uid].zone, d: defOf(next, l.uid) }));
+  const turn = next.turn !== prev.turn && next.winner === null ? next.turnPlayer : null;
+  const win = prev.winner === null && next.winner !== null ? next.winner : null;
+  if (!moves.length && !acts.length && turn === null && win === null) return;
+  const snap = snapRects();
+  if (!pendingMoves) pendingMoves = { from: snap.m, piles: snap.piles, moves: [], acts: [], turn: null, win: null };
+  else snap.m.forEach((r, u) => { if (!pendingMoves.from.has(u)) pendingMoves.from.set(u, r); });
+  // 同じカードが続けて動いた時は、最初の場所から最後の場所へ
+  for (const m of moves) {
+    const old = pendingMoves.moves.find(x => x.u === m.u);
+    if (old) { old.to = m.to; old.toP = m.toP; old.face = old.face || m.face; old.destroy ||= m.destroy; old.negate ||= m.negate; }
+    else pendingMoves.moves.push(m);
+  }
+  pendingMoves.acts.push(...acts);
+  if (turn !== null) pendingMoves.turn = turn;
+  if (win !== null) pendingMoves.win = win;
+}
+function flyLayer() {
+  let l = $('.fly-layer');
+  if (!l) { l = document.createElement('div'); l.className = 'fly-layer'; $('.droot').appendChild(l); }
+  return l;
+}
+function ghost(m, rect) {
+  const el = document.createElement('span');
+  el.className = m.face ? `card f-${frameOf(m.d)}` : 'card back';
+  if (m.face) el.innerHTML = faceHtml(m.u, m.d, false);
+  Object.assign(el.style, { position: 'fixed', left: rect.left + 'px', top: rect.top + 'px', width: rect.width + 'px', margin: 0, fontSize: Math.max(6, rect.width / 8.4) + 'px', zIndex: 2 });
+  flyLayer().appendChild(el);
+  return el;
+}
+/** カード1枚を、前の場所から今の場所へ飛ばす */
+async function flyOne(m, P, i) {
+  const pileRect = (p, z) => P.piles[`${p}:${z}`];
+  const fromR = P.from.get(m.u) || pileRect(m.fromP, m.from);
+  const destEl = ROOT.querySelector(`#board [data-uid="${m.u}"], #hand0 [data-uid="${m.u}"], #hand1 [data-uid="${m.u}"]`);
+  const toR = destEl ? destEl.getBoundingClientRect() : (ROOT.querySelector(`#board [data-pile="${m.toP}:${m.to}"]`) || {}).getBoundingClientRect?.();
+  if (!fromR || !toR) return;
+  // 盤面のカードと同じ大きさの写しを作る（山札などのマスから出る時は、カードの大きさにそろえる）
+  const w = destEl ? toR.width : Math.min(fromR.width, toR.width) * .72;
+  const start = { left: fromR.left + (fromR.width - w) / 2, top: fromR.top + (fromR.height - w * 86 / 59) / 2, width: w };
+  const g = ghost(m, start);
+  if (destEl) destEl.style.visibility = 'hidden';
+  await wait(i * 45);
+  // 無効：赤い×印
+  if (m.negate) {
+    const x = document.createElement('span'); x.className = 'fx-cross';
+    Object.assign(x.style, { left: fromR.left + 'px', top: fromR.top + 'px', width: fromR.width + 'px', height: fromR.height + 'px' });
+    flyLayer().appendChild(x);
+    await x.animate([{ transform: 'scale(1.6)', opacity: 0 }, { transform: 'scale(1)', opacity: 1, offset: .35 }, { transform: 'scale(1)', opacity: 1 }], { duration: dur(520), easing: 'ease-out' }).finished;
+    x.remove();
+  }
+  // 効果で破壊：赤く光って震えてから
+  if (m.destroy && ['mzone', 'emz', 'szone', 'fzone'].includes(m.from)) {
+    await g.animate([{ transform: 'none', filter: 'none' }, { transform: 'translateX(-4px) rotate(-4deg)', filter: 'brightness(1.6) drop-shadow(0 0 10px #ff4a3d)' }, { transform: 'translateX(4px) rotate(4deg)', filter: 'brightness(1.6) drop-shadow(0 0 10px #ff4a3d)' }, { transform: 'none', filter: 'brightness(.7)' }], { duration: dur(300) }).finished;
+  }
+  const tx = toR.left + (toR.width - w) / 2 - start.left, ty = toR.top + (toR.height - w * 86 / 59) / 2 - start.top;
+  const banish = m.to === 'banished', toPile = !destEl;
+  const end = `translate(${tx}px,${ty}px) rotate(${toPile ? (m.to === 'gy' ? -8 : 0) : 0}deg) scale(${toPile ? .9 : 1})`;
+  await g.animate([{ transform: 'none', opacity: 1, filter: m.destroy ? 'brightness(.7)' : 'none' },
+    { transform: `translate(${tx * .5}px,${ty * .5 - 26}px) scale(1.08)`, opacity: 1, offset: .5 },
+    { transform: end, opacity: banish ? 0 : 1, filter: banish ? 'hue-rotate(220deg) brightness(1.4) blur(1px)' : 'none' }],
+  { duration: dur(toPile ? 460 : 400), easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }).finished;
+  g.remove();
+  if (destEl) destEl.style.visibility = '';
+}
+/** 発動：カードが光る。墓地で発動した時は、墓地からカードが浮かび上がる */
+async function activateOne(a, P, i) {
+  await wait(i * 120);
+  const col = a.kind === 'spell' ? '#5dbfa1' : a.kind === 'trap' ? '#d98bb2' : '#ffd27a';
+  const el = ROOT.querySelector(`#board [data-uid="${a.uid}"], #hand0 [data-uid="${a.uid}"], #hand1 [data-uid="${a.uid}"]`);
+  if (a.zone === 'gy' || a.zone === 'banished' || !el) {
+    const pile = ROOT.querySelector(`#board [data-pile="${a.p}:${a.zone}"]`);
+    if (!pile) return;
+    const r = pile.getBoundingClientRect(), w = r.width * .72;
+    const g = ghost({ face: true, u: a.uid, d: a.d }, { left: r.left + (r.width - w) / 2, top: r.top + (r.height - w * 86 / 59) / 2, width: w });
+    g.classList.add('fx-soul');
+    await g.animate([{ transform: 'translateY(0) scale(.9)', opacity: 0, filter: 'drop-shadow(0 0 0 #b67cff)' },
+      { transform: 'translateY(-34px) scale(1.15)', opacity: 1, filter: 'drop-shadow(0 0 14px #b67cff) brightness(1.15)', offset: .35 },
+      { transform: 'translateY(-40px) scale(1.15)', opacity: 1, filter: 'drop-shadow(0 0 18px #b67cff) brightness(1.15)', offset: .8 },
+      { transform: 'translateY(-50px) scale(1.2)', opacity: 0, filter: 'drop-shadow(0 0 24px #b67cff)' }], { duration: dur(1100), easing: 'ease-out' }).finished;
+    g.remove();
+    return;
+  }
+  const r = el.getBoundingClientRect(), ring = document.createElement('span');
+  ring.className = 'fx-ring';
+  Object.assign(ring.style, { left: (r.left + r.width / 2) + 'px', top: (r.top + r.height / 2) + 'px', borderColor: col });
+  flyLayer().appendChild(ring);
+  el.animate([{ filter: 'none', transform: getComputedStyle(el).transform === 'none' ? 'none' : getComputedStyle(el).transform }, { filter: `brightness(1.35) drop-shadow(0 0 12px ${col})` }, { filter: 'none' }], { duration: dur(700) });
+  await ring.animate([{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 1 }, { transform: 'translate(-50%,-50%) scale(2.4)', opacity: 0 }], { duration: dur(650), easing: 'ease-out' }).finished;
+  ring.remove();
+}
+async function banner(text, cls, ms) {
+  const b = document.createElement('div');
+  b.className = `fx-banner ${cls}`;
+  b.innerHTML = `<b>${esc(text)}</b>`;
+  flyLayer().appendChild(b);
+  await b.animate([{ transform: 'translate(-50%,-50%) scaleX(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scaleX(1)', opacity: 1, offset: .2 }, { transform: 'translate(-50%,-50%) scaleX(1)', opacity: 1, offset: .8 }, { transform: 'translate(-50%,-50%) scaleX(1.05)', opacity: 0 }], { duration: dur(ms), easing: 'ease-out' }).finished;
+  b.remove();
+}
+/** 画面を更新した後：たまっている移動・発動・ターン・勝敗の演出を再生する */
+function playPendingMoves() {
+  if (!pendingMoves || fxBusy) return false;
+  const P = pendingMoves; pendingMoves = null;
+  fxBusy = true;
+  (async () => {
+    try {
+      await Promise.all(P.moves.map((m, i) => flyOne(m, P, i)));
+      await Promise.all(P.acts.map((a, i) => activateOne(a, P, i)));
+      if (P.win !== null) await banner(P.win === 'draw' ? '引き分け' : cpuMode() ? (P.win === 0 ? '勝利！' : '敗北…') : `${NAME(P.win)}の勝利！`, P.win === 0 || !cpuMode() ? 'win' : 'lose', 1800);
+      else if (P.turn !== null) await banner(cpuMode() ? (P.turn === 0 ? 'あなたのターン' : 'CPUのターン') : `${NAME(P.turn)}のターン`, P.turn === 0 ? 'me' : 'opp', 1000);
+    } catch (e) { console.error(e); }
+    const l = $('.fly-layer'); if (l) l.innerHTML = '';
+    fxBusy = false;
+    render();
+  })();
+  return true;
+}
+/* LP：数字をなめらかに増減させる */
+const lpShown = [null, null], lpAnim = [0, 0];
+function tweenLp(el, p, to) {
+  const from = lpShown[p] ?? to;
+  lpShown[p] = to;
+  if (from === to || fxMode() === 'none') { el.textContent = to; return; }
+  const t0 = performance.now(), id = ++lpAnim[p], d = dur(600);
+  const step = now => {
+    if (id !== lpAnim[p]) return;
+    const k = Math.min(1, (now - t0) / d), v = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3)));
+    el.textContent = v;
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 /* ---------- シート（スマホ） ---------- */
 function renderSheets() {
   const humanChoice = S.pending && !isCpu(S.pending.request.player);
@@ -761,13 +942,14 @@ function closeSheets() {
 }
 
 function render() {
-  if (fxBusy) { renderSheets(); return; }
-  if (fan && !(S.pending && !isCpu(S.pending.request.player) && isDeckPick(S.pending.request))) closeFan(); // 攻撃の演出が終わってから画面を更新する（開いていたシートは先に閉じる）
+  if (fxBusy) { renderSheets(); return; } // 演出が終わってから画面を更新する（開いていたシートは先に閉じる）
+  if (fan && !(S.pending && !isCpu(S.pending.request.player) && isDeckPick(S.pending.request))) closeFan();
   canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
   renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets();
   $('#result').hidden = S.winner === null;
   if (S.winner !== null) $('#result').textContent = S.winner === 'draw' ? `引き分け：${S.winReason}` : `${NAME(S.winner)}の勝利：${S.winReason}`;
-  // 召喚の演出があれば、それが終わるまでCPUの手番と自動パスを待つ
+  // カードの移動・召喚の演出があれば、それが終わるまでCPUの手番と自動パスを待つ
+  if (playPendingMoves()) { saveSoon(); return; }
   if (playPendingSummons()) { saveSoon(); return; }
   scheduleCpu();
   scheduleAutoPass();
