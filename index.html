@@ -456,6 +456,11 @@ section.fold.open > .sec-h{border-bottom:3px double var(--line);padding-bottom:1
 .ow-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .ow-top b{font-weight:900;font-size:16px}
 .ow-themes{display:flex;flex-wrap:wrap;gap:6px}
+.dk-info{display:flex;flex-direction:column;gap:6px;margin-top:8px;width:100%}
+.dk-info[hidden]{display:none}
+.dk-row{font-size:12px;line-height:1.6;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.dk-row b{font-size:13px;margin-right:6px}
+.dk-row .dk-why{color:var(--trap)}
 .ow-t{font-size:14px;font-weight:700;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
 .ow-t.dup{border-color:var(--monster);background:var(--monster-bg);color:var(--monster)}
 .ow-acts{display:flex;gap:6px;justify-content:flex-end}
@@ -2362,9 +2367,10 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     <div class="pool-row yes"><b>✅ 使える</b><span><span class="hlw"><span class="hl">2008年3月までに初登場したカード</span></span></span><span class="note">後から再録されたカードも、初登場が2008年3月までならOK。</span></div>
     <div class="pool-row no"><b>⛔ 使えない</b><span>2008年4月以降に初登場したカード</span><span class="note">GX以降に登場したテーマも、GX以前のテーマに後から追加されたモンスターも、すべて使用不可。</span></div>
     <div class="pool-row ex"><b>🔑 例外（新しくても使える）</b>
-      <span>① <strong>汎用魔法・罠</strong><br><span class="note">→ <a href="#allow">許可リスト</a>にあるカードだけ。どのデッキも使える（枚数は<a href="#list">汎用規制リスト</a>に従う）</span></span>
+      <span>① <strong>汎用魔法・罠</strong><br><span class="note">→ GX以降のカードも、どのデッキも使える（枚数は<a href="#list">汎用規制リスト</a>に従う）</span></span>
       <span>② <strong>汎用モンスター</strong><br><span class="note">→ <a href="#allow">許可リスト</a>にあるカードだけ。弱いデッキが1枚まで</span></span>
       <span>③ <strong>弱いデッキの救済</strong><br><span class="note">→ 専用の魔法・罠強化カードを1種類だけ（最大2枚）</span></span>
+      <span>④ <strong>アニメで登場済みのカード</strong><br><span class="note">→ オシリスの天空竜・オベリスクの巨神兵のように、GXまでのアニメに登場していて、カード化が2008年4月以降になった<strong>汎用</strong>カード。テーマの専用カードはこの例外に入りません</span></span>
     </div>
   </div>
   <div class="principles stack">
@@ -2375,16 +2381,15 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   <p>そのため<strong>シンクロ・エクシーズ・リンク・ペンデュラム</strong>のモンスターは存在せず、<span class="red">使用できません。</span></p>
   <div class="principles stack">
     <b>📖「汎用」と「専用」の見分け方</b>
-    <span><span class="hlw"><span class="hl">テーマ名を含む</span></span>カード、または<span class="hlw"><span class="hl">テーマを参照する</span></span>カードは「専用」。</span>
-    <span>それ以外は「汎用」。</span>
-    <span class="note">・<strong>種族・属性・カードの種類だけ</strong>を参照するカード（例：「ドラゴン族」「炎属性」「融合モンスター」）は<strong>「汎用」</strong>。<br>・<strong>特定のカード名</strong>が書かれているカード（例：「青眼の白龍」を指定するカード）は、そのカードのテーマの<strong>「専用」</strong>。</span>
+    <span><span class="hlw"><span class="hl">効果テキストにテーマ名か特定のカード名が入っている</span></span>カードは「専用」。</span>
+    <span>それ以外は「汎用」（魔法・罠もモンスターも）。</span>
+    <span class="note">・判断は<strong>効果テキスト</strong>で行います。カード名にテーマ名が入っていても、効果テキストに入っていなければ<strong>「汎用」</strong>（例：帝王の烈旋）。<br>・<strong>特定のカード名</strong>が書かれているカード（例：「青眼の白龍」を指定するカード）は、そのカードのテーマの<strong>「専用」</strong>。<br>・「このカード名のカードは1ターンに1枚」のように、<strong>自分の名前</strong>だけが書かれているものは数えません。<br>・<strong>種族・属性・カードの種類だけ</strong>を参照するカード（例：「ドラゴン族」「炎属性」「融合モンスター」）は<strong>「汎用」</strong>。</span>
   </div>
   <div class="principles stack">
-    <b>🟢 GX以降の汎用カードは「許可リスト方式」</b>
-    <span>2008年4月以降の汎用カードは<span class="red">原則使用不可。</span><a href="#allow">許可リスト</a>に載っているカードだけ使えます。</span>
-    <span>・<strong>汎用魔法・罠</strong>：許可されたものは<strong>どのデッキも</strong>使えます。枚数は汎用規制リストに従います（載っていなければ3枚まで）。</span>
-    <span>・<strong>汎用モンスター</strong>：許可されたものを、<strong>弱いデッキが強化手順1で1枚</strong>投入できます。</span>
-    <span class="note">汎用規制リストに「後」マークつきで載っているカードは、許可済みとしてリストの枚数まで使えます。</span>
+    <b>🟢 GX以降の汎用カード</b>
+    <span>・<strong>汎用魔法・罠</strong>：2008年4月以降のカードも<strong>どのデッキも</strong>使えます。枚数は汎用規制リストに従います（載っていなければ3枚まで）。</span>
+    <span>・<strong>汎用モンスター</strong>：<span class="red">原則使用不可。</span><a href="#allow">許可リスト</a>に載っているものを、<strong>弱いデッキが強化手順1で1枚</strong>投入できます。</span>
+    <span class="note">強すぎる汎用魔法・罠は、汎用規制リストに「後」マークつきで載せて枚数を決めています（完全使用不可もあります）。</span>
   </div>
   <div class="principles stack">
     <b>🟣 GX以前の汎用モンスターにも規制があります</b>
@@ -2477,7 +2482,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       <li><b>バランス調整</b><span>強いデッキの弱化・弱いデッキの強化</span></li>
       <li><b>サイドデッキ</b><span>相手対策ではなく、自分のデッキの強さ調整用</span></li>
       <li><b>先攻・後攻</b><span>必ずサイトの抽選で決める</span></li>
-      <li><b>新規カード</b><span>許可リストの汎用魔法・罠と汎用モンスター、弱いデッキの救済カードのみ</span></li>
+      <li><b>新規カード</b><span>汎用魔法・罠（汎用規制リストに従う）、許可リストの汎用モンスター、弱いデッキの救済カードのみ</span></li>
       <li><b>規制の共有</b><span>デッキごとの規制を規制報告ボードで管理する</span></li>
     </ul></div>
   </div>
@@ -2790,6 +2795,17 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       <li>どうしても使いたい専用カードが、2008年4月以降のカードだったり、規制リストに引っかかったりする</li>
     </ul>
     <p>そんなデッキも、この環境に<span class="hlw"><span class="hl">遊びに来て大歓迎</span></span>です。<br>このルールやカード規制には沿っていなくても、<strong>環境のトップにならないように調整したデッキ</strong>を「<strong>🌏 留学生デッキ</strong>」と呼んで、アカデミアに迎えます。<br>このルールに沿ったデッキは「<strong>🏫 在校生デッキ</strong>」と呼びます。</p>
+    <div class="ryu-heart" id="ryu-rule">
+      <b>🧭 在校生・留学生の分け方</b>
+      <p style="margin:6px 0">次の<strong>どれか1つ</strong>にでも当てはまるデッキは「🌏 留学生デッキ」、どれにも当てはまらないデッキは「🏫 在校生デッキ」です。</p>
+      <ol>
+        <li><strong>2008年4月以降に始まったテーマのカード</strong>を使う（主軸でなくても、<strong>1枚でも</strong>入れたら当てはまる）</li>
+        <li>2008年3月までのテーマに、<strong>2008年4月以降のそのテーマの専用カード</strong>（モンスター・魔法・罠）を入れる<br><span class="note">※弱いデッキの救済（専用魔法・罠強化カード1種類・2枚まで）として入れた場合は、在校生のまま</span></li>
+        <li><strong>2008年4月以降の汎用モンスター</strong>を、<a href="#allow">許可リスト</a>にないのに入れる</li>
+        <li><strong>規制リスト</strong>に合っていない（完全使用不可のカードを入れる、制限・準制限の枚数をこえる）</li>
+      </ol>
+      <span class="note">・専用か汎用かは<strong>効果テキスト</strong>で決めます（くわしくは「📖「汎用」と「専用」の見分け方」）。<br>・2008年4月以降の<strong>汎用魔法・罠</strong>は、規制リストの枚数を守れば在校生のまま使えます。<br>・オシリスの天空竜・オベリスクの巨神兵のように、GXまでのアニメに登場していてカード化が2008年4月以降になった<strong>汎用</strong>カードは、在校生のまま使えます（テーマの専用カードは2.に当てはまります）。<br>・シンクロ・エクシーズ・リンク・ペンデュラムのモンスターは、<strong>留学生デッキでも使えません</strong>。</span>
+    </div>
     <ol class="steps seq">
       <li><span class="n">1</span><div><strong>対戦前に「留学生デッキです」とひとこと</strong><span class="note">相手が知っていれば、それで十分です</span></div></li>
       <li><span class="n">2</span><div><strong>強さの目標は、みんなと同じ6〜7</strong><span class="note">調整は本人におまかせ。まわりは口出しせず、アドバイスは本人から求められたときだけにしましょう。<br>自分で調整した内容（例：使いたいカード1枚だけ入れて、代わりにこれを抜いた）を残しておきたいときは、<a href="#board">📋 規制報告ボード</a>に自由に記録できます（記録は任意です）。</span></div></li>
@@ -2803,7 +2819,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
 <!-- 規制リスト -->
 <section class="fold" id="list">
   <div class="sec-h"><span>LIMITED LIST</span><h2>🚨 汎用魔法・罠 規制リスト</h2><p class="note">全デッキ共通</p></div>
-  <p><strong>リストにない汎用魔法・罠</strong>は、GX以前（2008年3月まで）のカードなら<strong>無制限</strong>です。GX以降のカードは、<a href="#allow">許可リスト</a>にあるものだけ使えます。</p>
+  <p><strong>リストにない汎用魔法・罠</strong>は、GX以降（2008年4月〜）のカードも含めて<strong>無制限</strong>（3枚まで）です。</p>
     <details class="fold-in"><summary>ℹ️ このリストについて</summary><div class="fold-body">
     <p class="note">👀 今後の緩和・強化の候補は <a href="#watch">見直し候補</a> にまとめています。</p>
     <p class="note">GX時代の公式リスト（2008年3月1日）で禁止だったカードは「完全使用不可」、制限・準制限だったカードは「制限」として載せています（一部はこの環境に合わせて変えています）。</p>
@@ -2842,18 +2858,17 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     <div class="cats">
       <div class="cat"><b>全体除去</b><div class="cards"><span class="card sp">ブラック・ホール</span><span class="card sp">ライトニング・ボルテックス</span><span class="card tr">激流葬</span><span class="card tr">聖なるバリア －ミラーフォース－</span></div></div>
       <div class="cat"><b>魔法・罠除去</b><div class="cards"><span class="card sp">大嵐</span><span class="card sp">ハーピィの羽根帚</span><span class="card tr">ナイト・ショット <span class="after">後</span></span><span class="card sp">ハリケーン</span></div></div>
-      <div class="cat"><b>カウンター罠</b><div class="cards"><span class="card tr">神の宣告</span><span class="card tr">神の警告 <span class="after">後</span></span><span class="card tr">魔宮の賄賂</span><span class="card tr">天罰</span></div></div>
+      <div class="cat"><b>カウンター罠</b><div class="cards"><span class="card tr">神の宣告</span><span class="card tr">神の警告 <span class="after">後</span></span><span class="card tr">天罰</span></div></div>
       <div class="cat"><b>ドロー</b><div class="cards"><span class="card sp">強欲で謙虚な壺 <span class="after">後</span></span><span class="card sp">手札抹殺</span></div></div>
       <div class="cat"><b>サーチ</b><div class="cards"><span class="card sp">増援</span><span class="card sp">封印の黄金櫃</span></div></div>
       <div class="cat"><b>蘇生</b><div class="cards"><span class="card sp">死者蘇生</span><span class="card sp">早すぎた埋葬</span><span class="card tr">リビングデッドの呼び声</span></div></div>
-      <div class="cat"><b>召喚補助</b><div class="cards"><span class="card sp">超融合 <span class="after">後</span></span><span class="card sp">未来融合－フューチャー・フュージョン</span><span class="card sp">高等儀式術</span><span class="card sp">オーバーロード・フュージョン</span><span class="card sp">デビルズ・サンクチュアリ</span></div></div>
+      <div class="cat"><b>召喚補助</b><div class="cards"><span class="card sp">超融合 <span class="after">後</span></span><span class="card sp">未来融合－フューチャー・フュージョン</span><span class="card sp">オーバーロード・フュージョン</span></div></div>
       <div class="cat"><b>コントロール奪取</b><div class="cards"><span class="card sp">洗脳－ブレインコントロール</span><span class="card sp">エネミーコントローラー</span></div></div>
-      <div class="cat"><b>攻撃の防御</b><div class="cards"><span class="card sp">光の護封剣</span><span class="card sp">スケープ・ゴート</span><span class="card tr">魔法の筒</span><span class="card tr">光の護封壁</span><span class="card tr">メタル・リフレクト・スライム</span></div></div>
+      <div class="cat"><b>攻撃の防御</b><div class="cards"><span class="card sp">光の護封剣</span><span class="card sp">スケープ・ゴート</span><span class="card tr">魔法の筒</span><span class="card tr">光の護封壁</span></div></div>
       <div class="cat"><b>ロック</b><div class="cards"><span class="card tr">王宮のお触れ</span><span class="card tr">スキルドレイン</span><span class="card sp">レベル制限Ｂ地区</span><span class="card tr">グラヴィティ・バインド－超重力の網－</span><span class="card tr">おジャマトリオ</span><span class="card tr">マクロコスモス</span><span class="card tr">王宮の弾圧</span></div></div>
     
       <div class="cat"><b>単体除去</b><div class="cards"><span class="card sp">地砕き</span><span class="card sp">地割れ</span><span class="card sp">抹殺の使徒</span><span class="card tr">奈落の落とし穴</span><span class="card tr">次元幽閉</span><span class="card tr">因果切断</span><span class="card sp">死者への手向け</span></div></div>
-      <div class="cat"><b>墓地操作</b><div class="cards"><span class="card sp">おろかな埋葬</span><span class="card sp">魔法石の採掘</span><span class="card tr">転生の予言</span></div></div>
-      <div class="cat"><b>妨害</b><div class="cards"><span class="card sp">月の書</span></div></div>
+      <div class="cat"><b>墓地操作</b><div class="cards"><span class="card sp">魔法石の採掘</span><span class="card tr">転生の予言</span></div></div>
       <div class="cat"><b>強化</b><div class="cards"><span class="card sp">巨大化</span><span class="card sp">団結の力</span><span class="card sp">魔導師の力</span><span class="card sp">リミッター解除</span></div></div>
       <div class="cat"><b>手札・デッキ破壊</b><div class="cards"><span class="card tr">死のデッキ破壊ウイルス</span><span class="card tr">ダスト・シュート</span><span class="card tr">マインドクラッシュ</span></div></div>
       <div class="cat"><b>バーン</b><div class="cards"><span class="card tr">連鎖爆撃</span><span class="card tr">停戦協定</span></div></div></div>
@@ -2861,6 +2876,8 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   <div class="tier t-semi">
     <div class="tier-h"><h3>✌️ 準制限（2枚まで・24枚）</h3><p>強いけれど、2枚までなら環境を壊さないカード</p></div>
     <div class="cats">
+      <div class="cat"><b>召喚補助</b><div class="cards"><span class="card sp">高等儀式術</span></div></div>
+      <div class="cat"><b>カウンター罠</b><div class="cards"><span class="card tr">魔宮の賄賂</span></div></div>
       <div class="cat"><b>魔法・罠除去</b><div class="cards"><span class="card sp">サイクロン</span></div></div>
       <div class="cat"><b>単体除去</b><div class="cards"><span class="card tr">サンダー・ブレイク</span><span class="card tr">炸裂装甲</span><span class="card tr">強制脱出装置</span></div></div>
       <div class="cat"><b>ドロー</b><div class="cards"><span class="card sp">成金ゴブリン</span><span class="card sp">貪欲な壺</span><span class="card sp">闇の誘惑</span><span class="card sp">トレード・イン</span><span class="card sp">七星の宝刀</span><span class="card sp">強欲なカケラ</span><span class="card sp">打ち出の小槌</span><span class="card sp">凡骨の意地</span><span class="card tr">ゴブリンのやりくり上手</span><span class="card tr">マジック・プランター <span class="after">後</span></span></div></div>
@@ -2898,14 +2915,14 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   <p><strong>リストにないGX以前の汎用モンスターは無制限</strong>です。GX以降の汎用モンスターは<a href="#allow">許可リスト</a>を見てください。</p>
     <details class="fold-in"><summary>ℹ️ このリストについて</summary><div class="fold-body">
     <p class="note">👀 今後の緩和・強化の候補は <a href="#watch">見直し候補</a> にまとめています。</p>
-    <p class="note">GX時代の公式リスト（2008年3月1日）のうち、汎用モンスターを採用しています（この環境に合わせて、開闢・カオス・ソーサラー・ブレイカー・聖なる魔術師は禁止から制限に、黒き森のウィッチは準制限にしています）。E・HEROやエクゾディアなど、テーマのカードは<a href="#tune">デッキごとの規制</a>で扱います。</p>
+    <p class="note">GX時代の公式リスト（2008年3月1日）のうち、汎用モンスターを採用しています（この環境に合わせて、開闢・カオス・ソーサラー・ブレイカー・聖なる魔術師・混沌帝龍は制限に、黒き森のウィッチ・クリッターは準制限に、サウザンド・アイズ・サクリファイスはリストから外しています）。E・HEROやエクゾディアなど、テーマのカードは<a href="#tune">デッキごとの規制</a>で扱います。</p>
   </div></details>
 <div class="legend"><span class="card mo">モンスター</span><span class="note">カードを押すと効果の要約が見られます</span></div>
   <div class="tier t-out">
     <div class="tier-h"><h3>⛔ 完全使用不可（12枚）</h3><p>どのデッキも採用不可（どうしても使いたいときは<a href="#ryu" style="color:inherit">🌏 留学生デッキ</a>で）</p></div>
     <div class="cats">
-      <div class="cat"><b>切り札</b><div class="cards"><span class="card mo">混沌帝龍 －終焉の使者－</span><span class="card mo">ヴィクトリー・ドラゴン</span></div></div>
-      <div class="cat"><b>除去・妨害</b><div class="cards"><span class="card mo">同族感染ウィルス</span><span class="card mo">サウザンド・アイズ・サクリファイス</span></div></div>
+      <div class="cat"><b>切り札</b><div class="cards"><span class="card mo">ヴィクトリー・ドラゴン</span></div></div>
+      <div class="cat"><b>除去・妨害</b><div class="cards"><span class="card mo">同族感染ウィルス</span></div></div>
       <div class="cat"><b>サーチ・展開</b><div class="cards"><span class="card mo">魔導サイエンティスト</span><span class="card mo">デビル・フランケン</span><span class="card mo">キラー・スネーク</span><span class="card mo">処刑人-マキュラ</span></div></div>
       <div class="cat"><b>リバース・ドロー</b><div class="cards"><span class="card mo">サイバーポッド</span><span class="card mo">ファイバーポッド</span></div></div>
       <div class="cat"><b>ロック</b><div class="cards"><span class="card mo">八汰烏</span><span class="card mo">月読命</span></div></div>
@@ -2914,8 +2931,8 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   <div class="tier t-lim">
     <div class="tier-h"><h3>☝️ 制限（1枚まで・19枚）</h3><p>何があっても緩めない</p></div>
     <div class="cats">
-      <div class="cat"><b>切り札</b><div class="cards"><span class="card mo">カオス・ソルジャー －開闢の使者－</span><span class="card mo">カオス・ソーサラー</span></div></div>
-      <div class="cat"><b>サーチ・展開</b><div class="cards"><span class="card mo">クリッター</span><span class="card mo">ダンディライオン</span><span class="card mo">黄泉ガエル</span><span class="card mo">冥府の使者ゴーズ</span><span class="card mo">森の番人グリーン・バブーン</span><span class="card mo">ドル・ドラ</span></div></div>
+      <div class="cat"><b>切り札</b><div class="cards"><span class="card mo">カオス・ソルジャー －開闢の使者－</span><span class="card mo">カオス・ソーサラー</span><span class="card mo">混沌帝龍 －終焉の使者－</span></div></div>
+      <div class="cat"><b>サーチ・展開</b><div class="cards"><span class="card mo">ダンディライオン</span><span class="card mo">黄泉ガエル</span><span class="card mo">冥府の使者ゴーズ</span><span class="card mo">森の番人グリーン・バブーン</span><span class="card mo">ドル・ドラ</span></div></div>
       <div class="cat"><b>除去・妨害</b><div class="cards"><span class="card mo">魔導戦士 ブレイカー</span><span class="card mo">異次元の女戦士</span><span class="card mo">深淵の暗殺者</span><span class="card mo">風帝ライザー</span><span class="card mo">スナイプストーカー</span><span class="card mo">魂を削る死霊</span><span class="card mo">異次元の戦士</span><span class="card mo">D・D・アサイラント</span></div></div>
       <div class="cat"><b>ドロー・回収</b><div class="cards"><span class="card mo">聖なる魔術師</span><span class="card mo">カードガンナー</span><span class="card mo">メタモルポット</span><span class="card mo">混沌の黒魔術師</span></div></div>
       <div class="cat"><b>壁</b><div class="cards"><span class="card mo">マシュマロン</span></div></div>
@@ -2924,7 +2941,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   <div class="tier t-semi">
     <div class="tier-h"><h3>✌️ 準制限（2枚まで・4枚）</h3><p>何があっても緩めない</p></div>
     <div class="cats">
-      <div class="cat"><b>サーチ・展開</b><div class="cards"><span class="card mo">黒き森のウィッチ</span></div></div>
+      <div class="cat"><b>サーチ・展開</b><div class="cards"><span class="card mo">黒き森のウィッチ</span><span class="card mo">クリッター</span></div></div>
       <div class="cat"><b>展開・妨害</b><div class="cards"><span class="card mo">暗黒のマンティコア</span><span class="card mo">ネクロフェイス</span><span class="card mo">光と闇の竜</span></div></div>
     </div>
   </div>
@@ -2933,10 +2950,10 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
 <section class="fold" id="allow">
   <div class="sec-h"><span>ALLOW LIST</span><h2>🟢 汎用カード 許可リスト</h2><p class="note">GX以降（2008年4月〜）に登場した汎用カードが対象</p></div>
   <div class="principles stack">
-    <span>⛔ GX以降の汎用カードは<span class="red">原則使用不可。</span></span>
-    <span>✅ <strong>汎用魔法・罠</strong>：「許可」にあるカードは<span class="hlw"><span class="hl">どのデッキも使えます</span></span>（枚数は<a href="#list">汎用規制リスト</a>に従う。載っていなければ3枚まで）。</span>
+    <span>✅ <strong>汎用魔法・罠</strong>は、GX以降のカードも使えます（枚数は<a href="#list">汎用規制リスト</a>に従う）。下の魔法・罠の一覧は、検討したカードの記録です。</span>
+    <span>⛔ GX以降の<strong>汎用モンスター</strong>は<span class="red">原則使用不可。</span></span>
     <span>✅ <strong>汎用モンスター</strong>：「許可」にあるカードだけ、<span class="hlw"><span class="hl">弱いデッキが強化手順1で1枚</span></span>投入できます。</span>
-    <span class="note">汎用規制リストに「後」マークつきで載っている魔法・罠は、許可済みとしてリストの枚数まで使えます。</span>
+    <span class="note">汎用規制リストに「後」マークつきで載っている魔法・罠は、リストの枚数まで使えます。</span>
     <span>📏 追加の目安：<strong>効果が1つだけ</strong>で、かつ<strong>サーチ・ドローや相手の展開を止めない</strong>カード</span><span class="note">効果が1つでも、灰流うららのようにこの環境の土台（増援・強欲な壺など）を止めるカードは不許可にします。</span>
   </div>
 
@@ -3536,6 +3553,14 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   function uid(){return 'p'+Date.now().toString(36)+rnd(1e6).toString(36);}
   function normP(x){x=x||{};return {id:x.id||uid(),name:str(x.name,20),themes:Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[],log:Array.isArray(x.log)?x.log:[],lastTheme:x.lastTheme==null?null:str(x.lastTheme,30),recDefault:x.recDefault!==false,kinds:normK(x.kinds),ctr:normC(x.ctr),fmtDefault:x.fmtDefault==='bo3'?'bo3':'bo1'};}
   function normC(c){var o={};if(c&&typeof c==='object')Object.keys(c).forEach(function(t){if(Array.isArray(c[t])&&c[t].length)o[str(t,30)]=c[t].map(function(v){return str(v,30);}).filter(Boolean).slice(0,12);});return o;}
+  /* テーマごとの「🌏 留学生の理由」と「🔢 数えるカード」 */
+  window.YGO_DKINFO=function(themes,kinds,ctr,why){kinds=kinds||{};ctr=ctr||{};why=why||{};var box=el('div','dk-info');
+    (themes||[]).forEach(function(t){var w=kinds[t]==='ryu'?(why[t]||[]):[],c=(ctr[t]||[]).map(function(k){return k==='mag'?'魔力カウンター':k==='時計カウンター'?'幽獄の時計塔':k;});if(!w.length&&!c.length)return;
+      var row=el('div','dk-row');row.appendChild(el('b','',t));
+      if(w.length){row.appendChild(el('span','dk-why','🌏 留学生の理由：'+w.join('、')));}
+      if(w.length&&c.length)row.appendChild(el('br'));
+      if(c.length)row.appendChild(el('span','','🔢 数えるカード：'+c.join('、')));box.appendChild(row);});
+    box.hidden=!box.children.length;return box;};
   function normK(k){var o={};if(k&&typeof k==='object')Object.keys(k).forEach(function(t){if(k[t]==='ryu')o[str(t,30)]='ryu';});return o;}
   var store=load(SKEY,null);
   if(!store||!Array.isArray(store.list)){
@@ -3570,6 +3595,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       x.addEventListener('click',function(){if(!x.classList.contains('confirm')){x.classList.add('confirm');setTimeout(function(){x.classList.remove('confirm');},3000);return;}draft.themes.splice(i,1);delete draft.kinds[t];renderThemes();markDirty();});
       var cn=(draft.ctr&&draft.ctr[t]||[]).length,cb=el('button','ctr-tb'+(cn?' on':''),cn?'🔢 '+cn:'🔢 なし');cb.type='button';cb.title='このデッキで使うカウンター';cb.addEventListener('click',function(){openCtr(t);});tag.appendChild(cb);var gb=el('button','ctr-tb gd-tb','📖 回し方');gb.type='button';gb.title='このデッキの回し方を書く';gb.addEventListener('click',function(){if(window.YGO_GUIDE)YGO_GUIDE.edit(t);});tag.appendChild(gb);
       tag.appendChild(x);box.appendChild(tag);});
+    box.appendChild(window.YGO_DKINFO(draft.themes,draft.kinds,draft.ctr,pf.ryuWhy));
     renderCtrEdit();
   }
   /* テーマ登録のとき：カウンターやターンを数えるカードを使うか聞く */
@@ -3677,7 +3703,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     who.hidden=true;pf=normP({id:u.uid});resetDraft();renderLog();
     var firstSnap=true;
     CL.ref.onSnapshot(function(d){var x=d.exists?(d.data()||{}):{};var dirty=!firstSnap&&isDirty();
-      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;pf.kinds=normK(x.kinds);pf.ctr=normC(x.ctr);pf.ach=(x.ach&&typeof x.ach==='object')?x.ach:{};
+      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;pf.kinds=normK(x.kinds);pf.ctr=normC(x.ctr);pf.ryuWhy=normC(x.ryuWhy);pf.ach=(x.ach&&typeof x.ach==='object')?x.ach:{};
       if(!dirty)resetDraft();else renderCur();
       if(firstSnap&&!pf.name){$('profile').open=true;pfStatus('👋 はじめまして！ニックネームに苗字をひらがなで（例：やまだ）、デッキテーマも入れて「💾 プロフィールを保存」を押してください。','');}
       firstSnap=false;},function(){pfStatus('プロフィールを読み込めませんでした。ページを開き直してください。','err');});
@@ -4375,7 +4401,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       rows.forEach(function(r){
         var themes=(r.themes||[]);if(f&&key(r.name).indexOf(f)<0&&!themes.some(function(t){return key(t).indexOf(f)>=0;}))return;shown++;
         var card=el('div','ow-card');var top=el('div','ow-top');top.appendChild(el('b','','👤 '+r.name));top.appendChild(el('span','note',themes.length+'テーマ'+(r.ach?'　🏆'+r.ach:'')));card.appendChild(top);
-        var box=el('div','ow-themes');themes.forEach(function(t){var dup=count[key(t)]>1;var hb=window.YGO_GUIDE&&YGO_GUIDE.has(r.id,t);var c=el('button','ow-t gd-ow'+(dup?' dup':''),(hb?'📖 ':'')+t+(dup?' ⚠️':''));c.type='button';c.addEventListener('click',function(){if(window.YGO_GUIDE)YGO_GUIDE.view(r.id,t);});if(dup)c.title='他の人も使っています';if(r.kinds&&r.kinds[t]==='ryu'){c.appendChild(document.createTextNode(' '));c.appendChild(el('span','ryu','🌏 留学生'));}box.appendChild(c);});card.appendChild(box);
+        var box=el('div','ow-themes');themes.forEach(function(t){var dup=count[key(t)]>1;var hb=window.YGO_GUIDE&&YGO_GUIDE.has(r.id,t);var c=el('button','ow-t gd-ow'+(dup?' dup':''),(hb?'📖 ':'')+t+(dup?' ⚠️':''));c.type='button';c.addEventListener('click',function(){if(window.YGO_GUIDE)YGO_GUIDE.view(r.id,t);});if(dup)c.title='他の人も使っています';if(r.kinds&&r.kinds[t]==='ryu'){c.appendChild(document.createTextNode(' '));c.appendChild(el('span','ryu','🌏 留学生'));}box.appendChild(c);});card.appendChild(box);card.appendChild(window.YGO_DKINFO(themes,r.kinds,r.ctr,r.ryuWhy));
         if(false){var acts=el('div','ow-acts');var ed=el('button','del','編集');ed.type='button';ed.addEventListener('click',function(){$('ow-name').value=r.name;$('ow-themes').value=themes.join('、');$('ow-form').scrollIntoView({behavior:'smooth',block:'center'});});
           var dl=el('button','del','削除');dl.type='button';dl.addEventListener('click',function(){if(!dl.classList.contains('confirm')){dl.classList.add('confirm');dl.textContent='本当に削除';setTimeout(function(){dl.classList.remove('confirm');dl.textContent='削除';},4000);return;}col.doc(r.id).delete().catch(function(){});});
           acts.appendChild(ed);acts.appendChild(dl);card.appendChild(acts);}
@@ -4399,7 +4425,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     if(!YGO.db){msg('読み込めませんでした。ページを開き直してください。');return;}
     if(!u){msg('🔑 ログインすると、メンバーのテーマ一覧が見られます。');return;}
     YGO.db.collection('users').onSnapshot(function(s){
-      rows=s.docs.map(function(d){var x=d.data()||{};return {id:d.id,name:String(x.name||'').slice(0,20),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{}};})
+      rows=s.docs.map(function(d){var x=d.data()||{};return {id:d.id,name:String(x.name||'').slice(0,20),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},ctr:(x.ctr&&typeof x.ctr==='object')?x.ctr:{},ryuWhy:(x.ryuWhy&&typeof x.ryuWhy==='object')?x.ryuWhy:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{}};})
         .filter(function(r){return r.name;}).sort(function(a,b){return a.name.localeCompare(b.name,'ja');});
       render();
     },function(){msg('読み込めませんでした。ページを開き直してください。');});
@@ -4452,6 +4478,8 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-11-19-zaiko-ryu',createdAt:1795044787961,text:'🧭 在校生・留学生の分け方を決めました（1. GX以降のテーマ 2. GX以降の専用カード 3. 許可リストにないGX以降の汎用モンスター 4. 規制リスト違反のどれかで🌏留学生）。専用か汎用かは効果テキストで判断、アニメ登場済みの汎用カード（神など）は例外。GX以降の汎用魔法・罠は規制リストの枚数で使えるように。プロフィールとテーマ一覧に「留学生の理由」「数えるカード」、CPU対戦のデッキ選びに🏫／🌏を表示'},
+      {id:'auto-2026-11-19-limits',createdAt:1795044787960,text:'📋 規制リストを変更：魔宮の賄賂・高等儀式術・クリッターを準制限に、混沌帝龍 －終焉の使者－を制限に、サウザンド・アイズ・サクリファイス・デビルズ・サンクチュアリ・メタル・リフレクト・スライム・月の書をリストから外しました'},
       {id:'auto-2026-11-18-cpu-dno9-10-rulings',createdAt:1795011431712,text:'🆕 CPU対戦：A召喚デッキ・墓守デッキを追加しました（GX以降のサポートは特例で許可）。死皇帝の陵墓・召喚僧サモンプリースト・D-HERO ダイヤモンドガイ・クリッターの処理を公式Q&Aに合わせて修正。ルール早見の「起動効果の優先権」を現行ルール（召喚成功時は先に奈落の落とし穴などの発動の機会がある）に直しました'},
       {id:'auto-2026-11-18-cpu-4decks-fx',createdAt:1795007920249,text:'🆕 CPU対戦：新デッキ4つ（D-HERO・絵札の騎士・月書恐竜・海馬）を追加しました。カードを初期の配置とレア度つきのデザインに一新し、ライトニング・ボルテックス・ブラック・ホール・激流葬・ミラーフォース・大嵐・サイクロンの演出を作り直し、カード専用の演出と大きな召喚の演出ではプレイマットの柄が変わるようにしました'},
       {id:'auto-2026-11-18-cpu-v5-counters',createdAt:1794990981486,text:'🎨 CPU対戦の画面をサイトのデザインに合わせました（3寮カラー・濃い枠と影）。魔力カウンターや光の護封剣・未来融合・封印の黄金櫃の残りターンがカードの上に表示されます。スマホでは墓地・除外などを長押しすると一覧が開きます'},
@@ -4820,7 +4848,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     if(!Y.db)return;
     Y.db.collection('reports').orderBy('createdAt','desc').onSnapshot(function(s){Y.reports=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
     if(!u)return;
-    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={guides:(x.guides&&typeof x.guides==='object')?x.guides:{},name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{},icon:typeof x.icon==='string'&&x.icon.length<90000?x.icon:''};});Y.members=m;fillLists();fire('ygo:data');},function(){});
+    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={guides:(x.guides&&typeof x.guides==='object')?x.guides:{},name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},ctr:(x.ctr&&typeof x.ctr==='object')?x.ctr:{},ryuWhy:(x.ryuWhy&&typeof x.ryuWhy==='object')?x.ryuWhy:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{},icon:typeof x.icon==='string'&&x.icon.length<90000?x.icon:''};});Y.members=m;fillLists();fire('ygo:data');},function(){});
     Y.db.collection('results').where('oppUid','==',u.uid).onSnapshot(function(s){Y.ratedMe=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
   });
 
@@ -5663,7 +5691,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     var x=el('button','del','✕ 閉じる');x.type='button';x.addEventListener('click',function(){sel=null;renderList();renderDetail();});h.appendChild(x);det.appendChild(h);
     var s1=el('div','pl-sec');s1.appendChild(el('h3','','🃏 使うデッキ'));var c1=el('div','pl-chips');
     if(m.themes.length)m.themes.forEach(function(th){(function(){var hb=window.YGO_GUIDE&&YGO_GUIDE.has(sel,th),cb2=el('button','pl-chip gd-chip'+(hb?' has':''),(hb?'📖 ':'')+th+((m.kinds||{})[th]==='ryu'?'（🌏 留学生）':'（🏫 在校生）'));cb2.type='button';cb2.title='回し方を見る';var su=sel;cb2.addEventListener('click',function(){if(window.YGO_GUIDE)YGO_GUIDE.view(su,th);});c1.appendChild(cb2);})();});else c1.appendChild(el('span','note','まだ登録がありません'));
-    s1.appendChild(c1);s1.appendChild(el('span','note','📖 テーマを押すと、デッキの回し方が読めます。'));det.appendChild(s1);
+    s1.appendChild(c1);s1.appendChild(window.YGO_DKINFO(m.themes,m.kinds,m.ctr,m.ryuWhy));s1.appendChild(el('span','note','📖 テーマを押すと、デッキの回し方が読めます。'));det.appendChild(s1);
     var A=window.YGO_ACH||[],got=m.achAt||{},s2=el('div','pl-sec');s2.appendChild(el('h3','','🏆 実績 '+Object.keys(got).length+'/'+(A.length||30)));var c2=el('div','pl-chips');
     A.forEach(function(a){if(got[a[0]])c2.appendChild(el('span','pl-chip',a[1]+' '+a[2]));});if(!c2.children.length)c2.appendChild(el('span','note','まだ解除した実績はありません'));s2.appendChild(c2);det.appendChild(s2);
     if(sel!==me()){var v=vsData(sel),g=v.games,w=0,l=0,d=0;g.forEach(function(x){if(x.res==='win')w++;else if(x.res==='lose')l++;else d++;});

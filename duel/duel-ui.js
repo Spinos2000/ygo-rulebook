@@ -272,6 +272,12 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .box-head h3 { margin: 0; font-size: 16px }
 .menu-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px }
 .menu-grid label { display: grid; gap: 4px; font-size: 12px; color: var(--sub); font-weight: 700 }
+.deck-fmt { display: grid; gap: 2px; font-weight: 500; line-height: 1.5 }
+.deck-fmt:empty { display: none }
+.deck-fmt b { font-size: 12px }
+.deck-fmt b.ryu { color: #a3456b }
+.deck-fmt b.std { color: #2f7a55 }
+.deck-fmt small { font-size: 11px; color: var(--sub) }
 .menu-grid select { min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); padding: 0 10px; color: var(--ink); font-weight: 500 }
 .menu-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px }
 .menu-row .btn { flex: 1 }
@@ -486,8 +492,8 @@ export const MARKUP = `
   <div class="box">
     <div class="box-head"><h3 id="menuTitle">メニュー</h3><button class="btn small ghost" id="menuClose">閉じる</button></div>
     <div class="menu-grid">
-      <label for="deck0">あなたのデッキ（P1）<select id="deck0"></select></label>
-      <label for="deck1">相手のデッキ（P2）<select id="deck1"></select></label>
+      <label for="deck0">あなたのデッキ（P1）<select id="deck0"></select><span class="deck-fmt" id="deckFmt0"></span></label>
+      <label for="deck1">相手のデッキ（P2）<select id="deck1"></select><span class="deck-fmt" id="deckFmt1"></span></label>
       <label for="mode">対戦相手<select id="mode"><option value="cpu">CPU</option><option value="hot">2人で交互に操作</option></select></label>
       <label for="first">先攻<select id="first"><option value="0">P1（あなた）</option><option value="1">P2</option><option value="r">ランダム</option></select></label>
       <label for="chainMode">チェーンの確認<select id="chainMode"><option value="auto">おまかせ（相手が動いた時だけ聞く）</option><option value="always">いつも聞く</option><option value="never">聞かない（「次で止める」の時だけ）</option></select></label>
