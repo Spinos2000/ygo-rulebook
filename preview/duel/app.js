@@ -281,15 +281,22 @@ function toast(msg, bad) {
 /* ---------- カード表示 ---------- */
 function frameOf(d) { return d.kind === 'spell' ? 'spell' : d.kind === 'trap' ? 'trap' : d.frame; }
 let canAct = new Set();
-function cardHtml(uid, { hidden = false, field = false } = {}) {
+/** カードごとに決まった「置いた時のずれ」（場に出し直すと変わる）。amp：傾きの大きさ */
+function jitterCss(uid, serial, amp = 1) {
+  let h = (uid * 2654435761 + (serial || 0) * 40503) >>> 0;
+  const rnd = () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return (h % 10000) / 10000 - .5; };
+  return `translate: ${(rnd() * 6).toFixed(1)}% ${(rnd() * 4).toFixed(1)}%; rotate: ${(rnd() * 7 * amp).toFixed(1)}deg`;
+}
+function cardHtml(uid, { hidden = false, field = false, style = '' } = {}) {
   const c = S.cards[uid];
+  const st = field ? ` style="${jitterCss(uid, c.serial)}"` : style ? ` style="${style}"` : '';
   const d = defOf(S, uid);
   const cls = [uid === selected ? 'sel' : '', field && c.position === 'def' ? 'def' : '', canAct.has(uid) ? 'can' : '', pick.includes(uid) ? 'picked' : ''].join(' ');
   const badge = [c.counters && c.counters.magic ? `<span class="badge">魔${c.counters.magic}</span>` : '', c.equippedTo !== null ? '<span class="badge eq">装備</span>' : ''].join('');
-  if (hidden || (!c.faceUp && !(c.zone === 'hand' || c.zone === 'extra' || c.zone === 'deck' || field))) return `<button class="card back ${cls}" data-uid="${uid}" aria-label="裏側のカード">${badge}</button>`;
-  if (!c.faceUp && field && isCpu(c.controller)) return `<button class="card back ${cls}" data-uid="${uid}" aria-label="裏側のカード">${badge}</button>`;
-  if (!c.faceUp && field) return `<button class="card back ${cls}" data-uid="${uid}" aria-label="裏側：${esc(d.name)}"><span class="bn">${esc(d.name)}</span>${badge}</button>`;
-  return `<button class="card f-${frameOf(d)} ${cls}" data-uid="${uid}" aria-label="${esc(d.name)}">${faceHtml(uid, d, field)}${badge}</button>`;
+  if (hidden || (!c.faceUp && !(c.zone === 'hand' || c.zone === 'extra' || c.zone === 'deck' || field))) return `<button class="card back ${cls}" data-uid="${uid}"${st} aria-label="裏側のカード">${badge}</button>`;
+  if (!c.faceUp && field && isCpu(c.controller)) return `<button class="card back ${cls}" data-uid="${uid}"${st} aria-label="裏側のカード">${badge}</button>`;
+  if (!c.faceUp && field) return `<button class="card back ${cls}" data-uid="${uid}"${st} aria-label="裏側：${esc(d.name)}"><span class="bn">${esc(d.name)}</span>${badge}</button>`;
+  return `<button class="card f-${frameOf(d)} ${cls}" data-uid="${uid}"${st} aria-label="${esc(d.name)}">${faceHtml(uid, d, field)}${badge}</button>`;
 }
 /* ---------- カードの表面：カード名と属性／レベル（魔法・罠は種類）／種族の一文字／種族と種類／攻撃力・守備力 ---------- */
 const ATTR_COLOR = { 闇: '#534ab7', 光: '#b8902a', 地: '#8a6a3a', 水: '#2f6fb0', 炎: '#c4473a', 風: '#2e8b57', 神: '#a9841f' };
@@ -325,7 +332,13 @@ function pile(p, kind) {
   const list = S.players[p][kind];
   const label = { deck: 'デッキ', gy: '墓地', extra: 'EX', banished: '除外' }[kind];
   const top = list.length ? list[list.length - 1] : null;
-  const face = (kind === 'gy' || kind === 'banished') && top !== null ? cardHtml(top) : list.length ? `<span class="card back mini"></span>` : '';
+  // 積み重なった厚み（6枚ごとに1段、最大7段）。下と右にカードの縁がのぞく
+  const n = Math.min(7, Math.ceil(list.length / 6)), open = kind === 'gy' || kind === 'banished';
+  const edges = Array.from({ length: n }, (_, k) => `${((k + 1) * .6).toFixed(1)}px ${((k + 1) * .9).toFixed(1)}px 0 ${open ? (k % 2 ? '#bdb5a3' : '#e6dfcf') : (k % 2 ? '#2a170a' : '#7a5634')}`);
+  const stack = `box-shadow: ${[...edges, `${(n * .6 + 1).toFixed(1)}px ${(n * .9 + 2).toFixed(1)}px 4px rgba(0,0,0,.45)`].join(', ')}; translate: ${(-n * .3).toFixed(1)}px ${(-n * .45).toFixed(1)}px`;
+  // 墓地・除外は投げ置いたように一番上のカードを傾け、山札とEXはほぼまっすぐ
+  const tilt = top !== null ? `; rotate: ${jitterCss(top, S.cards[top].serial, open ? 1.6 : .3).split('rotate: ')[1]}` : '';
+  const face = open && top !== null ? cardHtml(top, { style: stack + tilt }) : list.length ? `<span class="card back mini" style="${stack}${tilt}"></span>` : '';
   return `<button class="zone pile" data-pile="${p}:${kind}" aria-label="${NAME(p)}の${label}（${list.length}枚）">${face}<span class="pl">${label}</span><span class="cnt">${list.length}</span></button>`;
 }
 function renderBoard() {
