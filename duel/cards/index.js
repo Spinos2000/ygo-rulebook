@@ -6,7 +6,7 @@ import {
   canSpecialSummon, specialSummon, sendToGy, addToHand, destroy, release, payLp, equipCard, equippedBySelf, linkCards,
   negateActivation, negateSummon, targetValid, addLingering, newStep, log, pl, currentAtk, FIELD_ZONES, sameCard,
   placeCounters, scriptOf, removeCounters, counterHolders, counterRoom, addStatMod, drawCards, gainLp, effectDamage, negateAttack,
-  banish, isOnField, isImmune, emit, millTop, randomOf, freeMZones,
+  banish, isOnField, isImmune, emit, millTop, randomOf, freeMZones, moveCard, createTokens, takeControl, setFaceDown, changePositionByEffect, isToken, summonedThisTurn, shuffleDeck, specialSummonedThisTurn, tributesFor, freeSZones,
 } from '../engine/game.js';
                                                               
 import {
@@ -1415,6 +1415,1054 @@ export const SCRIPTS                             = {
     blocksSummon: (s, _self, p) => hasFaceDownMonster(s, p),
     forbidsAttack: (s, _self, m) => hasFaceDownMonster(s, s.cards[m].controller) && s.cards[m].summonedTurn === s.turn && isSpecialSummoned(s, m),
   },
+
+  /* ================= デッキ dno11（D-HEROデッキ）で追加 ================= */
+  /* D-HERO デビルガイ */
+  '6658': {
+    effects: [{
+      id: 'e1', label: '①：相手モンスター1体を2回目の自分スタンバイフェイズまで除外', type: 'ignition', ss: 1, opt: 'card',
+      // 表側攻撃表示の場合に発動と処理ができる。既に攻撃宣言したターンには発動できない
+      can: x => x.s.cards[x.self].position === 'atk' && x.s.opt[`${x.player}:attackDecl`] !== x.s.turn && monstersOf(x.s, opp(x.player)).length > 0,
+      activate: x => {
+        // 「このカード名の効果を発動するターン、自分は攻撃宣言できない」
+        addLingering(x.s, { type: 'noAttackDecl', player: x.player, turn: x.s.turn });
+        target(x, '除外する相手モンスターを選んでください', monstersOf(x.s, opp(x.player)));
+      },
+      resolve: x => {
+        const s = x.s, t = x.link .targets[0];
+        if (!isFaceUpMonster(s, x.self) || s.cards[x.self].position !== 'atk' || !sameCard(s, x.self, x.link .serial)) return;
+        if (!targetValid(s, x.link ) || !isMonsterZone(s.cards[t]) || s.cards[t].controller === x.player) return;
+        const c = s.cards[t], faceUp = c.faceUp, position = c.position ?? 'atk', controller = c.controller;
+        banish(s, [t], 'effect');
+        if (s.cards[t].zone !== 'banished') return;
+        // 裏側で除外したモンスターは、このターンのエンドフェイズに裏側守備表示で戻る
+        addLingering(s, faceUp
+          ? { type: 'returnToField', uid: t, serial: s.cards[t].serial, player: x.player, turnsLeft: 2, controller, position, faceUp: true, turn: s.turn + 4 }
+          : { type: 'returnToField', uid: t, serial: s.cards[t].serial, player: x.player, atEnd: true, controller, position: 'def', faceUp: false, turn: s.turn });
+      },
+    }],
+  },
+  /* E・HERO エアーマン */
+  '6784': {
+    effects: [{
+      id: 'e1', label: '①：魔法・罠を破壊するか、「HERO」を手札に加える', type: 'trigger', ss: 1, damageStep: true,
+      trigger: { mandatory: false, when: true, match: (s, self, ev) => ev.type === 'summoned' && ev.uid === self && ev.how !== 'flip' },
+      can: x => airmanModes(x).length > 0,
+      activate: x => {
+        const modes = airmanModes(x);
+        const m = modes.length > 1 ? modes[choose(x, { kind: 'option', prompt: 'どちらの効果を発動しますか？', options: modes.map(v => v === 0 ? '他の「HERO」の数まで魔法・罠を破壊' : 'デッキから「HERO」を手札に加える') })] : modes[0];
+        x.link .data.mode = m;
+      },
+      resolve: x => {
+        const s = x.s;
+        if (x.link .data.mode === 0) {
+          const n = otherHeroes(x).length, sts = [...spellTrapsOf(s, 0), ...spellTrapsOf(s, 1)];
+          if (!n || !sts.length) return;
+          const pick = choose(x, { kind: 'cards', prompt: `破壊する魔法・罠カードを${Math.min(n, sts.length)}枚まで選んでください`, options: sts, min: 1, max: Math.min(n, sts.length) });
+          destroy(s, pick, 'effect');
+        } else {
+          const u = chooseOne(x, '手札に加える「HERO」モンスターを選んでください', deckOf(s, x.player).filter(u => isHeroMonster(s, u)));
+          if (u !== null) addToHand(s, [u]);
+        }
+      },
+    }],
+  },
+  /* D-HERO ダイヤモンドガイ */
+  '6660': {
+    effects: [{
+      id: 'e1', label: '①：デッキの一番上をめくり、通常魔法なら墓地へ（次の自分ターンにその効果を発動できる）', type: 'ignition', ss: 1, opt: 'card',
+      can: x => x.s.players[x.player].deck.length > 0,
+      resolve: x => {
+        const s = x.s, deck = s.players[x.player].deck;
+        if (!deck.length) return;
+        const u = deck[deck.length - 1], d = defOf(s, u);
+        log(s, `${pl(x.player)}：デッキの一番上をめくる（${nameOf(s, u)}）`);
+        if (d.kind === 'spell' && d.subtype === '通常') {
+          sendToGy(s, [u], 'effect');
+          // 次の自分ターンのメインフェイズに、その通常魔法カードの発動時の効果を発動できる
+          if (s.cards[u].zone === 'gy') addLingering(s, { type: 'diamondSpell', player: x.player, uid: u, serial: s.cards[u].serial, turn: s.turn + 2 });
+        } else {
+          moveCard(s, u, 'deck', { bottom: true });
+          log(s, `${nameOf(s, u)}をデッキの一番下に戻す`);
+        }
+      },
+    }],
+  },
+  /* D-HERO ダッシュガイ */
+  '6753': {
+    defAfterAttack: true,
+    effects: [{
+      id: 'e1', label: '①：他のモンスター1体をリリースし、攻撃力をターン終了時まで1000アップ', type: 'ignition', ss: 1, opt: 'card',
+      can: x => monstersOf(x.s, x.player).some(u => u !== x.self),
+      activate: x => { const u = chooseOne(x, 'リリースするモンスターを選んでください（コスト）', monstersOf(x.s, x.player).filter(u => u !== x.self)) ; release(x.s, [u], 'cost'); },
+      resolve: x => { if (isFaceUpMonster(x.s, x.self) && sameCard(x.s, x.self, x.link .serial)) addStatMod(x.s, x.self, 1000, 0, true); },
+    }, {
+      id: 'e3', label: '③：ドローしたモンスターを特殊召喚', type: 'trigger', ss: 1, zones: ['gy'],
+      trigger: {
+        mandatory: false, when: true,
+        match: (s, self, ev) => ev.type === 'drew' && s.cards[self].zone === 'gy' && !s.cards[self].counters.dashUsed && ev.player === s.cards[self].owner
+          && s.phase === 'draw' && s.turnPlayer === ev.player && defOf(s, ev.uid).kind === 'monster',
+      },
+      can: x => dashDrawn(x) !== null,
+      activate: x => {
+        const s = x.s, u = dashDrawn(x) ;
+        s.cards[x.self].counters.dashUsed = 1; // 墓地に存在する限り1度だけ
+        log(s, `${pl(x.player)}：ドローした${nameOf(s, u)}を見せる`);
+        x.link .data.u = u; x.link .data.serial = s.cards[u].serial;
+      },
+      resolve: x => {
+        const s = x.s, u = x.link .data.u          ;
+        if (!sameCard(s, x.self, x.link .serial) || s.cards[x.self].zone !== 'gy') return;
+        if (sameCard(s, u, x.link .data.serial          ) && s.cards[u].zone === 'hand') specialSummon(x, [u]);
+      },
+    }],
+  },
+  /* D-HERO ディアボリックガイ */
+  '6949': {
+    effects: [{
+      id: 'e1', label: '①：墓地のこのカードを除外し、デッキから「D-HERO ディアボリックガイ」を特殊召喚', type: 'ignition', ss: 1, zones: ['gy'],
+      can: x => deckOf(x.s, x.player).some(u => defOf(x.s, u).name === 'D-HERO ディアボリックガイ' && canSpecialSummon(x.s, u, x.player, 'special', [], x.self)),
+      activate: x => { log(x.s, `${pl(x.player)}：${nameOf(x.s, x.self)}を除外`); banish(x.s, [x.self], 'cost'); },
+      resolve: x => {
+        const u = chooseOne(x, '特殊召喚する「D-HERO ディアボリックガイ」を選んでください', deckOf(x.s, x.player).filter(u => defOf(x.s, u).name === 'D-HERO ディアボリックガイ' && canSpecialSummon(x.s, u, x.player)));
+        if (u !== null) specialSummon(x, [u]);
+      },
+    }],
+  },
+  /* D-HERO ディスクガイ */
+  '7095': {
+    // 墓地へ送られたターンには墓地から特殊召喚できない（効果ではない）
+    specialSummonOk: (s, self) => !(s.cards[self].zone === 'gy' && s.cards[self].counters.gyTurn === s.turn),
+    effects: [{
+      id: 'e1', label: '①：2枚ドロー（デュエル中に1度）', type: 'trigger', ss: 1, damageStep: true,
+      trigger: { mandatory: false, when: false, match: (s, self, ev) => ev.type === 'summoned' && ev.uid === self && ev.how === 'special' && ev.from === 'gy' },
+      can: x => x.s.players[x.player].deck.length >= 2 && !x.s.opt[`${x.player}:duel:7095`],
+      activate: x => { x.s.opt[`${x.player}:duel:7095`] = 1; }, // このカード名の効果はデュエル中に1度しか使用できない
+      resolve: x => { drawCards(x.s, x.player, 2); },
+    }],
+  },
+  /* D-HERO ドゥームガイ */
+  '6756': {
+    // 戦闘で破壊され墓地へ送られた：次の自分のスタンバイフェイズに発動する印
+    onDestroyed: (s, before, reason) => { const c = s.cards[before.uid]; if (reason === 'battle' && c.zone === 'gy') c.counters.doom = s.turn; },
+    effects: [{
+      id: 'e1', label: '墓地の「D-HERO」1体を特殊召喚', type: 'trigger', ss: 1, zones: ['gy'],
+      trigger: {
+        mandatory: true, when: false,
+        match: (s, self, ev) => ev.type === 'phase' && ev.phase === 'standby' && s.cards[self].zone === 'gy' && ev.player === s.cards[self].owner && (s.cards[self].counters.doom ?? s.turn) < s.turn,
+      },
+      can: x => doomTargets(x).length > 0,
+      activate: x => { delete x.s.cards[x.self].counters.doom; target(x, '特殊召喚する「D-HERO」モンスターを選んでください', doomTargets(x)); },
+      resolve: x => { const t = x.link .targets[0]; if (targetValid(x.s, x.link ) && x.s.cards[t].zone === 'gy') specialSummon(x, [t]); },
+    }],
+  },
+  /* D-HERO ドグマガイ */
+  '6757': {
+    cannotNormalSummon: true,
+    specialSummonOk: () => false,
+    procSummon: {
+      zones: ['hand'], label: '「D-HERO」を含む自分のモンスター3体をリリースして特殊召喚',
+      can: (s, _self, p) => monstersOf(s, p).length >= 3 && monstersOf(s, p).some(u => isDHero(s, u)),
+      pay: x => {
+        const s = x.s, mine = monstersOf(s, x.player);
+        const h = chooseOne(x, 'リリースする「D-HERO」モンスターを選んでください', mine.filter(u => isDHero(s, u))) ;
+        const rest = choose(x, { kind: 'cards', prompt: 'ほかにリリースするモンスターを2体選んでください', options: mine.filter(u => u !== h), min: 2, max: 2 });
+        release(s, [h, ...rest]);
+        newStep(s); // リリースと特殊召喚は同時に行われない
+      },
+    },
+    effects: [{
+      id: 'e1', label: '①：相手のLPを半分にする', type: 'trigger', ss: 1,
+      trigger: {
+        mandatory: true, when: false,
+        match: (s, self, ev) => ev.type === 'phase' && ev.phase === 'standby' && isFaceUpMonster(s, self) && !!s.cards[self].counters.byProc
+          && ev.player === opp(s.cards[self].controller) && s.cards[self].summonedTurn === s.turn - 1,
+      },
+      resolve: x => {
+        const s = x.s, o = opp(x.player), lp = s.players[o].lp;
+        s.players[o].lp = Math.ceil(lp / 2);
+        log(s, `${pl(o)}のLPは半分になった（LP ${s.players[o].lp}）`);
+      },
+    }],
+  },
+  /* D-HERO Bloo-D */
+  '7096': {
+    cannotNormalSummon: true,
+    specialSummonOk: () => false,
+    procSummon: {
+      zones: ['hand'], label: '自分のモンスター3体をリリースして特殊召喚',
+      can: (s, _self, p) => monstersOf(s, p).length >= 3,
+      pay: x => {
+        const pick = choose(x, { kind: 'cards', prompt: 'リリースするモンスターを3体選んでください', options: monstersOf(x.s, x.player), min: 3, max: 3 });
+        release(x.s, pick);
+        newStep(x.s);
+      },
+    },
+    // ①：相手フィールドの表側表示モンスターの効果は無効化される
+    negatesMonster: (s, self, t) => s.cards[t].controller !== s.cards[self].controller,
+    effects: [equipEnemyEffect('e2', '②：相手モンスター1体を装備する')],
+    // ③：装備したモンスターの元々の攻撃力の半分アップ
+    statAdd: (s, self) => { const e = equippedBySelf(s, self); return { atk: e !== null && s.cards[e].faceUp ? Math.ceil((defOf(s, e).atk ?? 0) / 2) : 0, def: 0 }; },
+  },
+  /* D-HERO ドレッドガイ */
+  '6661': {
+    // ②：特殊召喚時に適用。このターン、自分の「D-HERO」は破壊されず、その戦闘で自分への戦闘ダメージは0
+    onSpecialSummoned: (s, self) => { addLingering(s, { type: 'dheroProtect', player: s.cards[self].controller, turn: s.turn }); log(s, 'このターン、「D-HERO」モンスターは破壊されず、その戦闘で受ける戦闘ダメージは0'); },
+    // ③：自分フィールドの他の「D-HERO」の元々の攻撃力の合計
+    statSet: (s, self) => {
+      const n = monstersOf(s, s.cards[self].controller).filter(u => u !== self && isFaceUpMonster(s, u) && isDHero(s, u)).reduce((a, u) => a + (defOf(s, u).atk ?? 0), 0);
+      return { atk: n, def: n };
+    },
+    effects: [{
+      id: 'e1', label: '①：「D-HERO」以外を破壊し、墓地の「D-HERO」を2体まで特殊召喚', type: 'trigger', ss: 1, damageStep: true,
+      trigger: {
+        mandatory: true, when: false,
+        match: (s, self, ev) => ev.type === 'summoned' && ev.uid === self && ev.how === 'special' && !!s.resolving && defOf(s, s.resolving.uid).name === '幽獄の時計塔',
+      },
+      resolve: x => {
+        const s = x.s, p = x.player;
+        const others = monstersOf(s, p).filter(u => !(s.cards[u].faceUp && isDHero(s, u)));
+        if (others.length) destroy(s, others, 'effect');
+        newStep(s); // 2つの処理は同時に行われない
+        const gy = gyOf(s, p).filter(u => isDHero(s, u) && defOf(s, u).kind === 'monster' && canSpecialSummon(s, u, p));
+        if (!gy.length) return;
+        const max = Math.min(2, gy.length, freeMZones(s, p).length);
+        const pick = choose(x, { kind: 'cards', prompt: `墓地から特殊召喚する「D-HERO」を${max}体まで選んでください`, options: gy, min: 0, max });
+        if (pick.length) specialSummon(x, pick);
+      },
+    }],
+  },
+  /* デステニー・ドロー */
+  '6950': {
+    effects: [{
+      id: 'e1', label: '「D-HERO」カードを1枚捨て、2枚ドロー', type: 'card', ss: 1,
+      can: x => x.s.players[x.player].deck.length >= 2 && handOf(x.s, x.player).some(u => u !== x.self && isDHero(x.s, u)),
+      activate: x => {
+        const c = chooseOne(x, '捨てる「D-HERO」カードを選んでください（コスト）', handOf(x.s, x.player).filter(u => isDHero(x.s, u))) ;
+        log(x.s, `${pl(x.player)}：${nameOf(x.s, c)}を捨てる`);
+        sendToGy(x.s, [c], 'discard');
+      },
+      resolve: x => { drawCards(x.s, x.player, 2); },
+    }],
+  },
+  /* オーバー・デステニー */
+  '6951': {
+    effects: [{
+      id: 'e1', label: '墓地の「D-HERO」のレベルの半分以下の「D-HERO」をデッキから特殊召喚', type: 'card', ss: 1,
+      can: x => overDestinyTargets(x).length > 0,
+      activate: x => { target(x, '対象にする墓地の「D-HERO」モンスターを選んでください', overDestinyTargets(x)); },
+      resolve: x => {
+        const s = x.s, t = x.link .targets[0];
+        if (!targetValid(s, x.link ) || s.cards[t].zone !== 'gy') return;
+        const u = chooseOne(x, 'デッキから特殊召喚する「D-HERO」モンスターを選んでください', halfLevelDHeroes(x, level(s, t)));
+        if (u === null || !specialSummon(x, [u]).length) return;
+        addLingering(s, { type: 'destroyAtEnd', uid: u, serial: s.cards[u].serial, turn: s.turn });
+      },
+    }],
+  },
+  /* スケープ・ゴート */
+  '4818': {
+    effects: [{
+      id: 'e1', label: '「羊トークン」4体を守備表示で特殊召喚', type: 'card', ss: 2,
+      // 既に召喚・反転召喚・特殊召喚したターンには発動できない。メインモンスターゾーンが4か所以上空いていること
+      can: x => !summonedThisTurn(x.s, x.player) && freeMZones(x.s, x.player).length >= 4,
+      activate: x => { addLingering(x.s, { type: 'noSummonExcept', player: x.player, uid: x.self, turn: x.s.turn }); },
+      resolve: x => { if (freeMZones(x.s, x.player).length >= 4) createTokens(x, 'token:sheep', 4, 'def'); },
+    }],
+  },
+  /* 羊トークン：アドバンス召喚のためにはリリースできない */
+  'token:sheep': { noAdvanceTribute: true },
+  /* 増援 */
+  '5328': {
+    effects: [{
+      id: 'e1', label: 'デッキからレベル4以下の戦士族を手札に加える', type: 'card', ss: 1,
+      can: x => reinforceTargets(x).length > 0,
+      resolve: x => { const u = chooseOne(x, '手札に加える戦士族モンスターを選んでください', reinforceTargets(x)); if (u !== null) addToHand(x.s, [u]); },
+    }],
+  },
+  /* テラ・フォーミング */
+  '5537': {
+    effects: [{
+      id: 'e1', label: 'デッキからフィールド魔法を手札に加える', type: 'card', ss: 1,
+      can: x => fieldSpellsInDeck(x).length > 0,
+      resolve: x => { const u = chooseOne(x, '手札に加えるフィールド魔法カードを選んでください', fieldSpellsInDeck(x)); if (u !== null) addToHand(x.s, [u]); },
+    }],
+  },
+  /* ダーク・シティ */
+  '6758': {
+    effects: [{ id: 'e1', label: '発動する', type: 'card', ss: 1, resolve: () => {} }],
+    // ①：「D-HERO」がより攻撃力の高いモンスターを攻撃した場合、ダメージ計算時のみ1000アップ（お互いの「D-HERO」に適用）
+    battleAtkBonus: (s, _self, a, t) => (t !== null && isDHero(s, a) && currentAtk(s, t) > currentAtk(s, a) ? 1000 : 0),
+  },
+  /* 幽獄の時計塔 */
+  '6668': {
+    noBattleDamageFor: (s, self, p) => p === s.cards[self].controller && (s.cards[self].counters.clock ?? 0) >= 4,
+    effects: [{ id: 'e1', label: '発動する', type: 'card', ss: 1, resolve: () => {} }, {
+      id: 'e2', label: '時計カウンターを1つ置く', type: 'trigger', ss: 1, zones: ['fzone'],
+      trigger: { mandatory: true, when: false, match: (s, self, ev) => ev.type === 'phase' && ev.phase === 'standby' && s.cards[self].zone === 'fzone' && s.cards[self].faceUp && ev.player === opp(s.cards[self].controller) },
+      resolve: x => {
+        const c = x.s.cards[x.self];
+        if (!sameCard(x.s, x.self, x.link .serial) || c.zone !== 'fzone' || !c.faceUp) return;
+        c.counters.clock = (c.counters.clock ?? 0) + 1;
+        log(x.s, `${nameOf(x.s, x.self)}に時計カウンターを1つ置く（${c.counters.clock}）`);
+      },
+    }, {
+      id: 'e3', label: '手札・デッキから「D-HERO ドレッドガイ」を特殊召喚', type: 'trigger', ss: 1, zones: ['gy'], damageStep: true,
+      trigger: { mandatory: true, when: true, match: (s, self, ev) => ev.type === 'destroyed' && ev.uid === self && ev.from === 'fzone' && s.cards[self].zone === 'gy' && (ev.prevCounters?.clock ?? 0) >= 4 },
+      resolve: x => {
+        const s = x.s, p = x.player;
+        const u = chooseOne(x, '特殊召喚する「D-HERO ドレッドガイ」を選んでください', [...handOf(s, p), ...deckOf(s, p)].filter(u => defOf(s, u).name === 'D-HERO ドレッドガイ' && canSpecialSummon(s, u, p)));
+        if (u !== null) specialSummon(x, [u]);
+      },
+    }],
+  },
+  /* ライトニング・ボルテックス */
+  '5217': {
+    effects: [{
+      id: 'e1', label: '手札を1枚捨て、相手の表側表示モンスターを全て破壊', type: 'card', ss: 1,
+      can: x => handOf(x.s, x.player).some(u => u !== x.self) && oppFaceUp(x).length > 0,
+      activate: x => {
+        const c = chooseOne(x, '捨てる手札を選んでください（コスト）', handOf(x.s, x.player).filter(u => u !== x.self)) ;
+        log(x.s, `${pl(x.player)}：${nameOf(x.s, c)}を捨てる`);
+        sendToGy(x.s, [c], 'discard');
+      },
+      resolve: x => { const t = oppFaceUp(x); if (t.length) destroy(x.s, t, 'effect'); },
+    }],
+  },
+  /* デステニー・シグナル */
+  '6679': {
+    effects: [{
+      id: 'e1', label: '手札・デッキからレベル4以下の「D-HERO」を特殊召喚', type: 'card', ss: 2, damageStep: true,
+      can: x => x.s.lastEvents.some(e => e.type === 'destroyed' && e.reason === 'battle' && e.controller === x.player && x.s.cards[e.uid].zone === 'gy') && signalTargets(x).length > 0,
+      resolve: x => { const u = chooseOne(x, '特殊召喚する「D-HERO」モンスターを選んでください', signalTargets(x)); if (u !== null) specialSummon(x, [u]); },
+    }],
+  },
+  /* D－カウンター */
+  '6952': {
+    effects: [{
+      id: 'e1', label: '攻撃モンスターを破壊', type: 'card', ss: 2,
+      can: x => {
+        const b = x.s.battle;
+        return !!b && b.step === 'declared' && !b.negated && b.target !== null && x.s.cards[b.attacker].controller === opp(x.player)
+          && x.s.cards[b.target].controller === x.player && isFaceUpMonster(x.s, b.target) && isDHero(x.s, b.target);
+      },
+      activate: x => { x.link .data.a = x.s.battle .attacker; x.link .data.serial = x.s.cards[x.s.battle .attacker].serial; },
+      resolve: x => { const a = x.link .data.a          ; if (sameCard(x.s, a, x.link .data.serial          ) && isMonsterZone(x.s.cards[a])) destroy(x.s, [a], 'effect'); },
+    }],
+  },
+  /* マジック・ジャマー */
+  '4862': {
+    effects: [{
+      id: 'e1', label: '手札を1枚捨て、魔法カードの発動を無効にし破壊', type: 'card', ss: 3, damageStep: true,
+      can: x => {
+        const top = x.s.chain[x.s.chain.length - 1];
+        return !!top && top.cardActivation && top.cardKind === 'spell' && !top.negated && x.s.players[x.player].hand.length > 0;
+      },
+      activate: x => {
+        x.link .data.index = x.s.chain.length - 1;
+        const c = chooseOne(x, '捨てる手札を選んでください（コスト）', handOf(x.s, x.player)) ;
+        log(x.s, `${pl(x.player)}：${nameOf(x.s, c)}を捨てる`);
+        sendToGy(x.s, [c], 'discard');
+      },
+      resolve: x => { negateActivation(x.s, x.s.chain[x.link .data.index          ]); },
+    }],
+  },
+
+  /* ================= デッキ dno12（絵札の騎士デッキ）で追加 ================= */
+  /* キングス・ナイト */
+  '5558': {
+    effects: [{
+      id: 'e1', label: '①：デッキから「ジャックス・ナイト」を特殊召喚', type: 'trigger', ss: 1,
+      trigger: { mandatory: false, when: true, match: (s, self, ev) => ev.type === 'summoned' && ev.uid === self && (ev.how === 'normal' || ev.how === 'advance') },
+      // 発動するタイミングで、自分フィールドに表側表示の「クィーンズ・ナイト」が存在すること
+      can: x => monstersOf(x.s, x.player).some(u => isFaceUpMonster(x.s, u) && defOf(x.s, u).name === 'クィーンズ・ナイト') && jacks(x).length > 0,
+      resolve: x => { const u = chooseOne(x, '特殊召喚する「ジャックス・ナイト」を選んでください', jacks(x)); if (u !== null) specialSummon(x, [u]); },
+    }],
+  },
+  /* 異次元の女戦士 */
+  '5719': {
+    effects: [{
+      id: 'e1', label: '①：戦闘を行ったそれぞれのモンスターを除外', type: 'trigger', ss: 1, damageStep: true,
+      trigger: {
+        mandatory: false, when: false,
+        match: (s, self, ev) => ev.type === 'afterDamageCalc' && ev.target !== null && (ev.attacker === self || ev.target === self)
+          && isMonsterZone(s.cards[self]) && s.cards[ev.attacker].controller !== s.cards[ev.target].controller,
+      },
+      activate: x => {
+        const b = x.s.battle , other = b.attacker === x.self ? b.target  : b.attacker;
+        x.link .data.other = other; x.link .data.oserial = x.s.cards[other].serial;
+      },
+      resolve: x => {
+        const s = x.s, o = x.link .data.other          , list           = [];
+        if (sameCard(s, x.self, x.link .serial) && isMonsterZone(s.cards[x.self])) list.push(x.self);
+        if (sameCard(s, o, x.link .data.oserial          ) && isMonsterZone(s.cards[o])) list.push(o);
+        if (list.length) { log(s, `${list.map(u => nameOf(s, u)).join('、')}を除外`); banish(s, list, 'effect'); }
+      },
+    }],
+  },
+  /* コマンド・ナイト */
+  '5017': {
+    // ①：自分フィールドの戦士族モンスターの攻撃力は400アップ（このカード自身にも適用）
+    statAdd: () => ({ atk: 400, def: 0 }),
+    aura: (s, self, t) => (s.cards[t].controller === s.cards[self].controller && defOf(s, t).race === '戦士族' ? { atk: 400, def: 0 } : null),
+    // ②：自分フィールドに他のモンスターが存在する限り、相手はこのカードを攻撃対象に選択できない
+    cannotBeAttackTarget: (s, self) => monstersOf(s, s.cards[self].controller).some(u => u !== self),
+  },
+  /* 無敗将軍 フリード */
+  '5316': {
+    negatesSpellTargeting: true,
+    drawReplace: (s, self) => deckOf(s, s.cards[self].controller).filter(u => defOf(s, u).kind === 'monster' && defOf(s, u).race === '戦士族' && level(s, u) <= 4),
+  },
+  /* 翻弄するエルフの剣士：攻撃力1900以上のモンスターとの戦闘では破壊されない */
+  '5244': {
+    battleIndestructibleVs: (s, _self, other) => other !== null && currentAtk(s, other) >= 1900,
+  },
+  /* 旗鼓堂々 */
+  '10797': {
+    effects: [{
+      id: 'e1', label: '墓地の装備魔法をモンスターに装備する（エンドフェイズに破壊）', type: 'card', ss: 2, hardOpt: true,
+      can: x => gyEquips(x).some(e => equipTargets(x.s, e).length > 0),
+      activate: x => {
+        // このカードを発動したターン、自分はモンスターを特殊召喚できない
+        addLingering(x.s, { type: 'noSpecial', player: x.player, turn: x.s.turn });
+        const e = target(x, '装備する墓地の装備魔法カードを選んでください', gyEquips(x).filter(e => equipTargets(x.s, e).length > 0));
+        target(x, '装備するモンスターを選んでください', equipTargets(x.s, e));
+      },
+      resolve: x => {
+        const s = x.s, [e, t] = x.link .targets;
+        if (!targetValid(s, x.link , 0) || !targetValid(s, x.link , 1) || s.cards[e].zone !== 'gy' || !isFaceUpMonster(s, t)) return;
+        if (!equipTargets(s, e).includes(t) || !freeSZones(s, x.player).length) return;
+        moveCard(s, e, 'szone', { index: freeSZones(s, x.player)[0], faceUp: true, controller: x.player });
+        equipCard(s, e, t, { stay: true });
+        log(s, `${nameOf(s, e)}を${nameOf(s, t)}に装備`);
+        addLingering(s, { type: 'destroyAtEnd', uid: e, serial: s.cards[e].serial, turn: s.turn });
+      },
+    }],
+  },
+  /* 拘束解放波 */
+  '8335': {
+    effects: [{
+      id: 'e1', label: '自分の装備魔法と、相手のセットされた魔法・罠を全て破壊', type: 'card', ss: 1,
+      can: x => ownFaceUpEquips(x).length > 0 && oppSetST(x).length > 0,
+      activate: x => { target(x, '破壊する自分の装備魔法カードを選んでください', ownFaceUpEquips(x)); },
+      resolve: x => {
+        const s = x.s, t = x.link .targets[0], list = oppSetST(x);
+        if (targetValid(s, x.link ) && isOnField(s.cards[t])) list.unshift(t);
+        if (list.length) destroy(s, list, 'effect'); // 同時に破壊する
+      },
+    }],
+  },
+  /* 強欲で謙虚な壺 */
+  '8993': {
+    effects: [{
+      id: 'e1', label: 'デッキの上から3枚をめくり、1枚を手札に加える', type: 'card', ss: 1, hardOpt: true,
+      // モンスターを特殊召喚したターンには発動できない。発動したターンは特殊召喚できない
+      can: x => x.s.players[x.player].deck.length >= 3 && !specialSummonedThisTurn(x.s, x.player),
+      activate: x => { addLingering(x.s, { type: 'noSpecial', player: x.player, turn: x.s.turn }); },
+      resolve: x => {
+        const s = x.s, deck = s.players[x.player].deck, top = deck.slice(-3).reverse();
+        if (!top.length) return;
+        log(s, `${pl(x.player)}：デッキの上から${top.length}枚をめくる（${top.map(u => nameOf(s, u)).join('、')}）`);
+        const u = chooseOne(x, '手札に加えるカードを選んでください', top) ;
+        addToHand(s, [u]);
+        newStep(s); // 残りをデッキに戻してシャッフル
+        shuffleDeck(s, x.player);
+        log(s, `${pl(x.player)}：残りのカードをデッキに戻してシャッフル`);
+      },
+    }],
+  },
+  /* 最強の盾 */
+  '10539': {
+    equipOk: (s, _self, t) => defOf(s, t).race === '戦士族',
+    effects: [equipSpell('戦士族モンスターに装備する')],
+    // 攻撃表示：攻撃力は元々の守備力分アップ／守備表示：守備力は元々の攻撃力分アップ
+    aura: (s, self, t) => {
+      if (s.cards[self].equippedTo !== t) return null;
+      const d = defOf(s, t);
+      return s.cards[t].position === 'atk' ? { atk: d.def ?? 0, def: 0 } : { atk: 0, def: d.atk ?? 0 };
+    },
+  },
+  /* 死皇帝の陵墓 */
+  '6759': {
+    effects: [{ id: 'e1', label: '発動する', type: 'card', ss: 1, resolve: () => {} }, {
+      id: 'e2', label: '①：LPを払い、リリースが必要な手札のモンスター1体をリリースなしで通常召喚できるようにする', type: 'ignition', ss: 1, zones: ['fzone'], anyPlayer: true,
+      can: x => tombModes(x).length > 0,
+      activate: x => {
+        const modes = tombModes(x);
+        const n = modes.length > 1 ? modes[choose(x, { kind: 'option', prompt: 'どちらの効果を発動しますか？', options: modes.map(v => `${v * 1000}LPを払い、${v}体のリリースが必要なモンスター`) })] : modes[0];
+        payLp(x.s, x.player, n * 1000);
+        x.link .data.n = n;
+      },
+      resolve: x => {
+        const s = x.s, n = x.link .data.n          ;
+        if (s.players[x.player].normalSummonUsed) return;
+        const u = chooseOne(x, `リリースなしで通常召喚するモンスター（${n}体のリリースが必要）を選んでください`, tombMonsters(x, n));
+        if (u === null) return;
+        addLingering(s, { type: 'tributeFreeSummon', player: x.player, uid: u, turn: s.turn });
+        log(s, `${pl(x.player)}：このターン、${nameOf(s, u)}をリリースなしで通常召喚できる`);
+      },
+    }],
+  },
+  /* 収縮 */
+  '5355': {
+    effects: [{
+      id: 'e1', label: '表側表示モンスター1体の元々の攻撃力をターン終了時まで半分にする', type: 'card', ss: 2, damageStep: true,
+      // ダメージステップはダメージ計算前まで
+      can: x => !(x.s.battle && ['afterCalc', 'dsEnd', 'end'].includes(x.s.battle.step)) && allMonsters(x.s).some(u => isFaceUpMonster(x.s, u)),
+      activate: x => { target(x, '対象のモンスターを選んでください', allMonsters(x.s).filter(u => isFaceUpMonster(x.s, u))); },
+      resolve: x => {
+        const s = x.s, t = x.link .targets[0];
+        if (!targetValid(s, x.link ) || !isFaceUpMonster(s, t)) return;
+        const base = defOf(s, t).atk ?? 0;
+        addStatMod(s, t, -(base - Math.floor(base / 2)), 0, true);
+        log(s, `${nameOf(s, t)}の元々の攻撃力はターン終了時まで半分になる`);
+      },
+    }],
+  },
+  /* 戦士の生還 */
+  '5330': {
+    effects: [{
+      id: 'e1', label: '墓地の戦士族モンスター1体を手札に加える', type: 'card', ss: 1,
+      can: x => gyWarriors(x).length > 0,
+      activate: x => { target(x, '手札に加える戦士族モンスターを選んでください', gyWarriors(x)); },
+      resolve: x => { const t = x.link .targets[0]; if (targetValid(x.s, x.link ) && x.s.cards[t].zone === 'gy') addToHand(x.s, [t]); },
+    }],
+  },
+  /* 団結の力 */
+  '5212': {
+    effects: [equipSpell('モンスターに装備する')],
+    // 装備モンスターの攻撃力・守備力は、自分フィールドの表側表示モンスターの数×800アップ
+    aura: (s, self, t) => {
+      if (s.cards[self].equippedTo !== t) return null;
+      const n = monstersOf(s, s.cards[self].controller).filter(u => isFaceUpMonster(s, u)).length * 800;
+      return { atk: n, def: n };
+    },
+  },
+  /* デーモンの斧 */
+  '4310': {
+    effects: [equipSpell('モンスターに装備する'), {
+      id: 'e2', label: '②：自分のモンスター1体をリリースし、このカードをデッキの一番上に戻す', type: 'trigger', ss: 1, zones: ['gy'], damageStep: true,
+      trigger: { mandatory: false, when: true, match: (s, self, ev) => ev.type === 'toGy' && ev.uid === self && (ev.from === 'szone' || ev.from === 'fzone') && s.cards[self].zone === 'gy' },
+      can: x => monstersOf(x.s, x.player).length > 0,
+      activate: x => { const u = chooseOne(x, 'リリースするモンスターを選んでください（コスト）', monstersOf(x.s, x.player)) ; release(x.s, [u], 'cost'); },
+      resolve: x => {
+        if (!sameCard(x.s, x.self, x.link .serial) || x.s.cards[x.self].zone !== 'gy') return;
+        moveCard(x.s, x.self, 'deck');
+        log(x.s, `${nameOf(x.s, x.self)}をデッキの一番上に戻す`);
+      },
+    }],
+    aura: (s, self, t) => (s.cards[self].equippedTo === t ? { atk: 1000, def: 0 } : null),
+  },
+  /* 脆刃の剣 */
+  '14877': {
+    effects: [{
+      ...equipSpell('モンスターに装備する'),
+      // ①：自分フィールドに1枚しか表側表示で存在できない
+      can: x => !spellTrapsOf(x.s, x.player).some(u => u !== x.self && x.s.cards[u].faceUp && defOf(x.s, u).name === '脆刃の剣') && allMonsters(x.s).some(t => isFaceUpMonster(x.s, t)),
+    }, {
+      id: 'e3', label: '③：このカードを墓地へ送る', type: 'trigger', ss: 1, zones: ['szone'], damageStep: true,
+      trigger: { mandatory: true, when: false, match: (s, self, ev) => ev.type === 'damage' && ev.battle && ev.amount >= 2000 && s.cards[self].zone === 'szone' && s.cards[self].faceUp && ev.player === s.cards[self].controller },
+      resolve: x => { if (sameCard(x.s, x.self, x.link .serial) && isOnField(x.s.cards[x.self])) sendToGy(x.s, [x.self], 'effect'); },
+    }],
+    aura: (s, self, t) => (s.cards[self].equippedTo === t ? { atk: 2000, def: 0 } : null),
+    bothTakeBattleDamage: (s, self, m) => s.cards[self].equippedTo === m,
+  },
+  /* 融合武器ムラサメブレード */
+  '5388': {
+    equipOk: (s, _self, t) => defOf(s, t).race === '戦士族',
+    effects: [equipSpell('戦士族モンスターに装備する')],
+    aura: (s, self, t) => (s.cards[self].equippedTo === t ? { atk: 800, def: 0 } : null),
+    // ②：モンスターに装備されているこのカードは効果では破壊されない
+    indestructibleByEffect: (s, self) => s.cards[self].equippedTo !== null,
+  },
+  /* くず鉄のかかし */
+  '7694': {
+    staysOnField: true,
+    effects: [{
+      id: 'e1', label: '攻撃を無効にし、このカードをそのままセットする', type: 'card', ss: 2,
+      can: x => !!x.s.battle && x.s.battle.step === 'declared' && !x.s.battle.negated && x.s.cards[x.s.battle.attacker].controller === opp(x.player),
+      activate: x => { x.link .targets.push(x.s.battle .attacker); log(x.s, `対象：${nameOf(x.s, x.s.battle .attacker)}`); },
+      resolve: x => {
+        const s = x.s, t = x.link .targets[0];
+        if (targetValid(s, x.link ) && s.battle && s.battle.attacker === t) negateAttack(s);
+        newStep(s); // その後、そのままセットする（同時には行われない）
+        if (sameCard(s, x.self, x.link .serial) && isOnField(s.cards[x.self])) {
+          s.cards[x.self].faceUp = false;
+          s.cards[x.self].enteredTurn = s.turn; // セットされたターンには発動できない
+          log(s, `${nameOf(s, x.self)}をそのままセットする`);
+        }
+      },
+    }],
+  },
+  /* アルカナ ナイトジョーカー */
+  '6454': {
+    fusionOnly: true,
+    fusionMaterials: ['クィーンズ・ナイト', 'ジャックス・ナイト', 'キングス・ナイト'],
+    effects: [{
+      id: 'e1', label: '①：同じ種類の手札を1枚捨て、このカードを対象とする効果を無効にする', type: 'quick', ss: 2, opt: 'card',
+      can: x => {
+        const top = x.s.chain[x.s.chain.length - 1];
+        if (!top || top.negated || top.effectNegated || !top.targets.some((t, i) => t === x.self && targetValid(x.s, top, i))) return false;
+        return handOf(x.s, x.player).some(u => defOf(x.s, u).kind === top.cardKind);
+      },
+      activate: x => {
+        const s = x.s, top = s.chain[s.chain.length - 1];
+        x.link .data.index = s.chain.length - 1;
+        const c = chooseOne(x, '捨てる手札を選んでください（コスト：同じ種類のカード）', handOf(s, x.player).filter(u => defOf(s, u).kind === top.cardKind)) ;
+        log(s, `${pl(x.player)}：${nameOf(s, c)}を捨てる`);
+        sendToGy(s, [c], 'discard');
+      },
+      resolve: x => {
+        const l = x.s.chain[x.link .data.index          ];
+        if (!l) return;
+        l.effectNegated = true;
+        log(x.s, `${nameOf(x.s, l.uid)}の効果を無効にした`);
+      },
+    }],
+  },
+  /* ================= デッキ dno13（月書恐竜デッキ）で追加 ================= */
+  /* 暗黒恐獣：相手フィールドに守備表示モンスターしか存在しない場合、直接攻撃できる */
+  '5889': {
+    canDirectAttack: (s, self) => {
+      const o = opp(s.cards[self].controller), mons = monstersOf(s, o);
+      return mons.length > 0 && mons.every(u => s.cards[u].position === 'def') && spellTrapsOf(s, o).length === 0;
+    },
+  },
+  /* 究極恐獣 */
+  '6777': {
+    attackAll: true,
+    // ①：攻撃可能な「究極恐獣」が存在する場合、「究極恐獣」以外のモンスターは攻撃できない
+    forbidsAttack: (s, self, m) => s.cards[m].controller === s.cards[self].controller && defOf(s, m).name !== '究極恐獣' && s.turnPlayer === s.cards[self].controller && ultimateCanAttack(s, self),
+  },
+  /* クリッター */
+  '4054': {
+    effects: [{
+      id: 'e1', label: '①：デッキから攻撃力1500以下のモンスターを手札に加える', type: 'trigger', ss: 1, zones: ['gy'], damageStep: true, opt: 'name',
+      trigger: { mandatory: true, when: false, match: (s, self, ev) => leftFieldTo(ev, self) && s.cards[self].zone === 'gy' },
+      resolve: x => {
+        const s = x.s;
+        const u = chooseOne(x, '手札に加える攻撃力1500以下のモンスターを選んでください', deckOf(s, x.player).filter(u => defOf(s, u).kind === 'monster' && (defOf(s, u).atk ?? 0) <= 1500));
+        if (u === null) return;
+        addToHand(s, [u]);
+        addLingering(s, { type: 'noActivateName', player: x.player, name: defOf(s, u).name, turn: s.turn });
+      },
+    }],
+  },
+  /* 暗黒ブラキ */
+  '10924': {
+    effects: [{
+      id: 'e1', label: '①：フィールドのモンスター1体を表側守備表示にする', type: 'trigger', ss: 1,
+      trigger: { mandatory: false, when: true, match: (s, self, ev) => ev.type === 'summoned' && ev.uid === self && (ev.how === 'normal' || ev.how === 'advance') },
+      can: x => notFaceUpDef(x.s).length > 0,
+      activate: x => { target(x, '表側守備表示にするモンスターを選んでください', notFaceUpDef(x.s)); },
+      resolve: x => { const t = x.link .targets[0]; if (targetValid(x.s, x.link ) && isMonsterZone(x.s.cards[t]) && !(x.s.cards[t].faceUp && x.s.cards[t].position === 'def')) changePositionByEffect(x.s, t, 'def'); },
+    }],
+  },
+  /* 竜脚獣ブラキオン */
+  '7559': {
+    specialSummonOk: (s, self) => s.cards[self].zone !== 'deck',
+    altTribute: { count: 1, ok: (s, u) => defOf(s, u).race === '恐竜族' },
+    doubleDamageWhenAttacked: true,
+    effects: [{
+      id: 'e1', label: '①：このカードを裏側守備表示にする', type: 'ignition', ss: 1, opt: 'card',
+      resolve: x => { if (isFaceUpMonster(x.s, x.self) && sameCard(x.s, x.self, x.link .serial)) setFaceDown(x.s, [x.self]); },
+    }, {
+      id: 'e2', label: '②：このカード以外のフィールドのモンスターを全て裏側守備表示にする', type: 'trigger', ss: 1,
+      trigger: { mandatory: true, when: false, match: (s, self, ev) => ev.type === 'summoned' && ev.uid === self && ev.how === 'flip' },
+      resolve: x => { setFaceDown(x.s, allMonsters(x.s).filter(u => u !== x.self)); },
+    }],
+  },
+  /* シールドクラッシュ */
+  '6003': {
+    effects: [{
+      id: 'e1', label: '守備表示モンスター1体を破壊', type: 'card', ss: 1,
+      can: x => defMonsters(x.s).length > 0,
+      activate: x => { target(x, '破壊する守備表示モンスターを選んでください', defMonsters(x.s)); },
+      resolve: x => { const t = x.link .targets[0]; if (targetValid(x.s, x.link ) && isMonsterZone(x.s.cards[t]) && x.s.cards[t].position === 'def') destroy(x.s, [t], 'effect'); },
+    }],
+  },
+  /* 軽量化 */
+  '6215': {
+    effects: [{ id: 'e1', label: '発動する', type: 'card', ss: 1, resolve: () => {} }, {
+      id: 'e2', label: '手札のレベル7以上のモンスターをデッキに戻してシャッフルし、1枚ドロー', type: 'ignition', ss: 1, zones: ['szone'], opt: 'card',
+      can: x => handOf(x.s, x.player).some(u => defOf(x.s, u).kind === 'monster' && level(x.s, u) >= 7),
+      resolve: x => {
+        const s = x.s;
+        const u = chooseOne(x, 'デッキに加えるレベル7以上のモンスターを選んでください', handOf(s, x.player).filter(u => defOf(s, u).kind === 'monster' && level(s, u) >= 7));
+        if (u === null) return;
+        moveCard(s, u, 'deck'); shuffleDeck(s, x.player);
+        log(s, `${pl(x.player)}：${nameOf(s, u)}をデッキに加えてシャッフル`);
+        newStep(s);
+        drawCards(s, x.player, 1);
+      },
+    }],
+  },
+  /* 大進化薬 */
+  '6819': {
+    staysOnField: true,
+    // ①：自分はレベル5以上の恐竜族モンスターを召喚する場合に必要なリリースをなくせる
+    freeTribute: (s, self, m, p) => p === s.cards[self].controller && defOf(s, m).race === '恐竜族' && level(s, m) >= 5,
+    // 相手ターンで数えて3ターン目の相手エンドフェイズに破壊される（効果ではない）
+    onEndPhase: (s, self) => {
+      const c = s.cards[self];
+      if (s.turnPlayer === c.controller) return;
+      c.counters.evoTurns = (c.counters.evoTurns ?? 0) + 1;
+      if (c.counters.evoTurns >= 3) { log(s, `${nameOf(s, self)}は相手ターンで数えて3ターン目のエンドフェイズになったので破壊される`); destroy(s, [self], 'rule'); }
+    },
+    effects: [{
+      id: 'e1', label: '自分の恐竜族モンスターをリリースして発動', type: 'card', ss: 1,
+      can: x => monstersOf(x.s, x.player).some(u => defOf(x.s, u).race === '恐竜族'),
+      activate: x => { const u = chooseOne(x, 'リリースする恐竜族モンスターを選んでください（コスト）', monstersOf(x.s, x.player).filter(u => defOf(x.s, u).race === '恐竜族')) ; release(x.s, [u], 'cost'); },
+      resolve: () => {},
+    }],
+  },
+  /* 月の書 */
+  '5432': {
+    effects: [{
+      id: 'e1', label: '表側表示モンスター1体を裏側守備表示にする', type: 'card', ss: 2,
+      can: x => faceUpNonToken(x.s).length > 0,
+      activate: x => { target(x, '裏側守備表示にするモンスターを選んでください', faceUpNonToken(x.s)); },
+      resolve: x => { const t = x.link .targets[0]; if (targetValid(x.s, x.link ) && isFaceUpMonster(x.s, t)) setFaceDown(x.s, [t]); },
+    }],
+  },
+  /* テールスイング */
+  '6822': {
+    effects: [{
+      id: 'e1', label: '相手の裏側表示モンスターか、レベルが低いモンスターを2体まで手札に戻す', type: 'card', ss: 1,
+      can: x => bigDinos(x).some(d => tailTargets(x, level(x.s, d)).length > 0),
+      activate: x => { target(x, '自分のレベル5以上の恐竜族モンスターを選んでください', bigDinos(x).filter(d => tailTargets(x, level(x.s, d)).length > 0)); },
+      resolve: x => {
+        const s = x.s, d = x.link .targets[0];
+        if (!targetValid(s, x.link ) || !isFaceUpMonster(s, d)) return;
+        const opts = tailTargets(x, level(s, d));
+        if (!opts.length) return;
+        const pick = choose(x, { kind: 'cards', prompt: '手札に戻す相手モンスターを2体まで選んでください', options: opts, min: 1, max: Math.min(2, opts.length) });
+        addToHand(s, pick);
+      },
+    }],
+  },
+  /* モンスターゲート */
+  '5980': {
+    effects: [{
+      id: 'e1', label: 'モンスターをリリースし、通常召喚可能なモンスターが出るまでデッキをめくって特殊召喚', type: 'card', ss: 1,
+      can: x => monstersOf(x.s, x.player).length > 0 && deckOf(x.s, x.player).some(u => normalSummonable(x.s, u)),
+      activate: x => { const u = chooseOne(x, 'リリースするモンスターを選んでください（コスト）', monstersOf(x.s, x.player)) ; release(x.s, [u], 'cost'); },
+      resolve: x => {
+        const s = x.s, deck = s.players[x.player].deck, revealed           = [];
+        let hit                = null;
+        for (let i = deck.length - 1; i >= 0; i--) { revealed.push(deck[i]); if (normalSummonable(s, deck[i])) { hit = deck[i]; break; } }
+        log(s, `${pl(x.player)}：デッキの上から${revealed.length}枚をめくる`);
+        const rest = revealed.filter(u => u !== hit);
+        if (hit !== null && canSpecialSummon(s, hit, x.player)) specialSummon(x, [hit]);
+        if (rest.length) sendToGy(s, rest, 'effect');
+      },
+    }],
+  },
+  /* 闇の護封剣 */
+  '6268': {
+    // ②：相手フィールドのモンスターは表示形式を変更できない
+    forbidsPositionChange: (s, self, m) => s.cards[m].controller !== s.cards[self].controller,
+    // 2回目の自分スタンバイフェイズに破壊される（効果ではない）
+    onStandby: (s, self) => {
+      const c = s.cards[self];
+      if (s.turnPlayer !== c.controller) return;
+      c.counters.standbys = (c.counters.standbys ?? 0) + 1;
+      if (c.counters.standbys >= 2) { log(s, `${nameOf(s, self)}は2回目の自分スタンバイフェイズになったので破壊される`); destroy(s, [self], 'rule'); }
+    },
+    effects: [{
+      id: 'e1', label: '相手の表側表示モンスターを全て裏側守備表示にする', type: 'card', ss: 1,
+      resolve: x => { setFaceDown(x.s, monstersOf(x.s, opp(x.player)).filter(u => isFaceUpMonster(x.s, u) && !isToken(x.s, u))); },
+    }],
+  },
+  /* 化石発掘 */
+  '6811': {
+    destroyWhenLinkDestroyed: true,
+    // ②：この効果で特殊召喚したモンスターは、このカードが魔法＆罠ゾーンに存在する限り効果が無効化される
+    negatesMonster: (s, self, t) => s.cards[self].zone === 'szone' && s.cards[self].link === t && s.cards[t].serial === s.cards[self].linkSerial,
+    // このカードがフィールドから離れた時に、そのモンスターを破壊する
+    onLeaveField: (s, before) => {
+      const t = before.link;
+      if (t !== null && before.linkSerial === s.cards[t].serial && isMonsterZone(s.cards[t])) destroy(s, [t], 'rule');
+    },
+    effects: [{
+      id: 'e1', label: '手札を1枚捨て、墓地の恐竜族モンスターを特殊召喚', type: 'card', ss: 2,
+      can: x => handOf(x.s, x.player).length > 0 && gyDinos(x).length > 0,
+      activate: x => {
+        const c = chooseOne(x, '捨てる手札を選んでください（コスト）', handOf(x.s, x.player)) ;
+        log(x.s, `${pl(x.player)}：${nameOf(x.s, c)}を捨てる`);
+        sendToGy(x.s, [c], 'discard');
+        target(x, '特殊召喚する恐竜族モンスターを選んでください', gyDinos(x));
+      },
+      resolve: x => {
+        const s = x.s, t = x.link .targets[0];
+        if (!targetValid(s, x.link ) || s.cards[t].zone !== 'gy' || !sameCard(s, x.self, x.link .serial)) return;
+        if (specialSummon(x, [t]).length) linkCards(s, x.self, t);
+      },
+    }],
+  },
+  /* 砂塵のバリア －ダスト・フォース－ */
+  '12184': {
+    effects: [{
+      id: 'e1', label: '相手の攻撃表示モンスターを全て裏側守備表示にする', type: 'card', ss: 2,
+      can: x => !!x.s.battle && x.s.battle.step === 'declared' && x.s.cards[x.s.battle.attacker].controller === opp(x.player) && oppAtkNonToken(x).length > 0,
+      resolve: x => {
+        const s = x.s, done = setFaceDown(s, oppAtkNonToken(x));
+        // この効果で裏側守備表示になったモンスターは表示形式を変更できない
+        for (const u of done) addLingering(s, { type: 'noPositionChange', uid: u, serial: s.cards[u].serial, turn: 1e9 });
+      },
+    }],
+  },
+  /* 重力解除 */
+  '5857': {
+    effects: [{
+      id: 'e1', label: 'フィールドの表側表示モンスター全ての表示形式を変更する', type: 'card', ss: 2,
+      can: x => allMonsters(x.s).some(u => isFaceUpMonster(x.s, u)),
+      resolve: x => { for (const u of allMonsters(x.s).filter(u => isFaceUpMonster(x.s, u))) changePositionByEffect(x.s, u); },
+    }],
+  },
+  /* バースト・リバース */
+  '10801': {
+    effects: [{
+      id: 'e1', label: '2000LPを払い、墓地のモンスター1体を裏側守備表示で特殊召喚', type: 'card', ss: 2,
+      can: x => x.s.players[x.player].lp >= 2000 && gyOf(x.s, x.player).some(u => canSpecialSummon(x.s, u, x.player)),
+      activate: x => { payLp(x.s, x.player, 2000); target(x, '特殊召喚するモンスターを選んでください', gyOf(x.s, x.player).filter(u => canSpecialSummon(x.s, u, x.player))); },
+      resolve: x => { const t = x.link .targets[0]; if (targetValid(x.s, x.link ) && x.s.cards[t].zone === 'gy') specialSummon(x, [t], { position: 'faceDownDef' }); },
+    }],
+  },
+  /* もの忘れ */
+  '10551': {
+    effects: [{
+      id: 'e1', label: '相手の表側攻撃表示モンスターの効果の発動を無効にし、表側守備表示にする', type: 'card', ss: 2,
+      can: x => {
+        const top = x.s.chain[x.s.chain.length - 1];
+        if (!top || top.cardKind !== 'monster' || top.player !== opp(x.player) || top.negated || top.effectNegated) return false;
+        const c = x.s.cards[top.uid];
+        return sameCard(x.s, top.uid, top.serial) && isFaceUpMonster(x.s, top.uid) && c.position === 'atk';
+      },
+      activate: x => { x.link .data.index = x.s.chain.length - 1; },
+      resolve: x => {
+        const s = x.s, l = s.chain[x.link .data.index          ];
+        if (!l) return;
+        l.effectNegated = true;
+        log(s, `${nameOf(s, l.uid)}の効果を無効にした`);
+        if (sameCard(s, l.uid, l.serial) && isFaceUpMonster(s, l.uid) && s.cards[l.uid].position === 'atk') changePositionByEffect(s, l.uid, 'def');
+      },
+    }],
+  },
+  /* ================= デッキ dno14（海馬デッキ）で追加 ================= */
+  /* Z－メタル・キャタピラー（ユニオン） */
+  '5555': { effects: unionEffects(['X－ヘッド・キャノン', 'Y－ドラゴン・ヘッド']), unionGuard: true, aura: (s, self, t) => (s.cards[self].equippedTo === t ? { atk: 600, def: 600 } : null) },
+  /* Y－ドラゴン・ヘッド（ユニオン） */
+  '5552': { effects: unionEffects(['X－ヘッド・キャノン']), unionGuard: true, aura: (s, self, t) => (s.cards[self].equippedTo === t ? { atk: 400, def: 400 } : null) },
+  /* W－ウィング・カタパルト（ユニオン） */
+  '6475': { effects: unionEffects(['V－タイガー・ジェット']), unionGuard: true, aura: (s, self, t) => (s.cards[self].equippedTo === t ? { atk: 400, def: 400 } : null) },
+  /* オベリスクの巨神兵 */
+  '4998': {
+    tributes: 3, cannotSet: true, summonUnnegatable: true, summonLock: true, untargetable: true,
+    effects: [{
+      id: 'e4', label: '④：自分のモンスター2体をリリースし、相手フィールドのモンスターを全て破壊', type: 'ignition', ss: 1,
+      // この効果を発動するターン、このカードは攻撃宣言できない（既に攻撃したターンには発動できない）
+      can: x => x.s.cards[x.self].attackedTurn !== x.s.turn && monstersOf(x.s, x.player).filter(u => u !== x.self).length >= 2,
+      activate: x => {
+        const pick = choose(x, { kind: 'cards', prompt: 'リリースするモンスターを2体選んでください（コスト）', options: monstersOf(x.s, x.player).filter(u => u !== x.self), min: 2, max: 2 });
+        release(x.s, pick, 'cost');
+        x.s.cards[x.self].counters.noAtkTurn = x.s.turn;
+      },
+      resolve: x => { const t = monstersOf(x.s, opp(x.player)); if (t.length) destroy(x.s, t, 'effect'); },
+    }, {
+      id: 'e5', label: '⑤：特殊召喚されたこのカードを墓地へ送る', type: 'trigger', ss: 1,
+      trigger: { mandatory: true, when: false, match: (s, self, ev) => ev.type === 'phase' && ev.phase === 'end' && isFaceUpMonster(s, self) && s.cards[self].summonedHow === 'special' },
+      resolve: x => { if (sameCard(x.s, x.self, x.link .serial) && isMonsterZone(x.s.cards[x.self])) sendToGy(x.s, [x.self], 'effect'); },
+    }],
+  },
+  /* シャインエンジェル */
+  '4924': {
+    effects: [{
+      id: 'e1', label: 'デッキから攻撃力1500以下の光属性モンスターを攻撃表示で特殊召喚', type: 'trigger', ss: 1, zones: ['gy'], damageStep: true,
+      trigger: { mandatory: false, when: true, match: (s, self, ev) => ev.type === 'destroyed' && ev.uid === self && ev.reason === 'battle' && s.cards[self].zone === 'gy' },
+      can: x => shineTargets(x).length > 0,
+      resolve: x => { const u = chooseOne(x, '特殊召喚する光属性モンスターを選んでください', shineTargets(x)); if (u !== null) specialSummon(x, [u], { position: 'atk' }); },
+    }],
+  },
+  /* 召喚僧サモンプリースト */
+  '6400': {
+    noAdvanceTribute: true, // ②：リリースできない
+    effects: [{
+      id: 'e1', label: '①：このカードを守備表示にする', type: 'trigger', ss: 1,
+      trigger: { mandatory: true, when: false, match: (s, self, ev) => ev.type === 'summoned' && ev.uid === self && (ev.how === 'normal' || ev.how === 'advance' || ev.how === 'flip') },
+      resolve: x => { if (isFaceUpMonster(x.s, x.self) && x.s.cards[x.self].position === 'atk') changePositionByEffect(x.s, x.self, 'def'); },
+    }, {
+      id: 'e3', label: '③：手札の魔法カードを1枚捨て、デッキからレベル4モンスターを特殊召喚', type: 'ignition', ss: 1, opt: 'card',
+      can: x => handOf(x.s, x.player).some(u => defOf(x.s, u).kind === 'spell') && deckOf(x.s, x.player).some(u => defOf(x.s, u).kind === 'monster' && level(x.s, u) === 4 && canSpecialSummon(x.s, u, x.player)),
+      activate: x => {
+        const c = chooseOne(x, '捨てる魔法カードを選んでください（コスト）', handOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'spell')) ;
+        log(x.s, `${pl(x.player)}：${nameOf(x.s, c)}を捨てる`);
+        sendToGy(x.s, [c], 'discard');
+      },
+      resolve: x => {
+        const s = x.s;
+        const u = chooseOne(x, '特殊召喚するレベル4モンスターを選んでください', deckOf(s, x.player).filter(u => defOf(s, u).kind === 'monster' && level(s, u) === 4 && canSpecialSummon(s, u, x.player)));
+        if (u !== null && specialSummon(x, [u]).length) s.cards[u].counters.noAtkTurn = s.turn; // このターン攻撃できない
+      },
+    }],
+  },
+  /* D・D・R */
+  '7519': {
+    // このカードがフィールドから離れた時にそのモンスターは破壊される
+    onLeaveField: (s, before) => { const t = before.equippedTo; if (t !== null && s.cards[t].serial === before.equipSerial && isMonsterZone(s.cards[t])) destroy(s, [t], 'rule'); },
+    effects: [{
+      id: 'e1', label: '手札を1枚捨て、除外されている自分のモンスターを攻撃表示で特殊召喚して装備', type: 'card', ss: 1,
+      can: x => handOf(x.s, x.player).some(u => u !== x.self) && banishedMine(x).length > 0,
+      activate: x => {
+        const c = chooseOne(x, '捨てる手札を選んでください（コスト）', handOf(x.s, x.player).filter(u => u !== x.self)) ;
+        log(x.s, `${pl(x.player)}：${nameOf(x.s, c)}を捨てる`);
+        sendToGy(x.s, [c], 'discard');
+        target(x, '特殊召喚する除外されているモンスターを選んでください', banishedMine(x));
+      },
+      resolve: x => {
+        const s = x.s, t = x.link .targets[0];
+        if (!targetValid(s, x.link ) || s.cards[t].zone !== 'banished' || !sameCard(s, x.self, x.link .serial)) return;
+        if (specialSummon(x, [t], { position: 'atk' }).length) equipCard(s, x.self, t, { stay: true });
+      },
+    }],
+  },
+  /* エネミーコントローラー */
+  '5505': {
+    effects: [{
+      id: 'e1', label: '相手モンスターの表示形式を変更するか、自分のモンスターをリリースしてコントロールを得る', type: 'card', ss: 2,
+      can: x => oppFaceUpMons(x).length > 0,
+      activate: x => {
+        const s = x.s, modes = monstersOf(s, x.player).length ? [0, 1] : [0];
+        const m = modes.length > 1 ? choose(x, { kind: 'option', prompt: 'どちらの効果を発動しますか？', options: ['相手モンスターの表示形式を変更', '自分のモンスターをリリースし、コントロールを得る'] }) : 0;
+        x.link .data.mode = m;
+        if (m === 1) { const u = chooseOne(x, 'リリースするモンスターを選んでください（コスト）', monstersOf(s, x.player)) ; release(s, [u], 'cost'); }
+        target(x, '対象の相手モンスターを選んでください', oppFaceUpMons(x));
+      },
+      resolve: x => {
+        const s = x.s, t = x.link .targets[0];
+        if (!targetValid(s, x.link ) || !isFaceUpMonster(s, t) || s.cards[t].controller === x.player) return;
+        if (x.link .data.mode === 0) changePositionByEffect(s, t);
+        else takeControl(s, t, x.player);
+      },
+    }],
+  },
+  /* 同胞の絆 */
+  '6154': {
+    effects: [{
+      id: 'e1', label: '2000LPを払い、自分のモンスターと種族・属性・レベルが同じモンスター2体をデッキから特殊召喚', type: 'card', ss: 1,
+      // このカードを発動するターン、自分はバトルフェイズを行えない（既に行ったターンには発動できない）
+      can: x => x.s.opt[`${x.player}:battleTurn`] !== x.s.turn && x.s.players[x.player].lp >= 2000 && freeMZones(x.s, x.player).length >= 2 && bondTargets(x).length > 0,
+      activate: x => {
+        addLingering(x.s, { type: 'noBattle', player: x.player, turn: x.s.turn });
+        payLp(x.s, x.player, 2000);
+        target(x, '対象にする自分のレベル4以下のモンスターを選んでください', bondTargets(x));
+      },
+      resolve: x => {
+        const s = x.s, t = x.link .targets[0];
+        if (targetValid(s, x.link ) && isFaceUpMonster(s, t) && freeMZones(s, x.player).length >= 2) {
+          const opts = bondKin(x, t), a = chooseOne(x, '特殊召喚するモンスターを選んでください（1体目）', opts);
+          const b = a === null ? null : chooseOne(x, '特殊召喚するモンスターを選んでください（2体目・別のカード名）', opts.filter(u => defOf(s, u).name !== defOf(s, a).name));
+          if (a !== null && b !== null) specialSummon(x, [a, b]);
+        }
+        // このカードの発動後、ターン終了時まで自分はモンスターを特殊召喚できない
+        addLingering(s, { type: 'noSpecial', player: x.player, turn: s.turn });
+      },
+    }],
+  },
+  /* 龍の鏡 */
+  '6433': {
+    effects: [{ id: 'e1', label: 'フィールド・墓地の素材を除外し、ドラゴン族の融合モンスターを融合召喚', type: 'card', ss: 1, can: x => fusionCan(x, DRAGON_MIRROR), resolve: x => fusionSummon(x, DRAGON_MIRROR) }],
+  },
+  /* 左腕の代償 */
+  '5637': {
+    effects: [{
+      id: 'e1', label: 'このカード以外の手札を全て除外し、デッキから魔法カードを手札に加える', type: 'card', ss: 1,
+      // このカードを発動するターン、自分は魔法・罠カードをセットできない（既にセットしたターンには発動できない）
+      can: x => x.s.opt[`${x.player}:setST`] !== x.s.turn && handOf(x.s, x.player).filter(u => u !== x.self).length >= 2 && deckOf(x.s, x.player).some(u => defOf(x.s, u).kind === 'spell'),
+      activate: x => {
+        addLingering(x.s, { type: 'noSetST', player: x.player, turn: x.s.turn });
+        const h = handOf(x.s, x.player).filter(u => u !== x.self);
+        log(x.s, `${pl(x.player)}：手札を全て除外（${h.length}枚）`);
+        banish(x.s, h, 'cost');
+      },
+      resolve: x => { const u = chooseOne(x, '手札に加える魔法カードを選んでください', deckOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'spell')); if (u !== null) addToHand(x.s, [u]); },
+    }],
+  },
+  /* トレード・イン */
+  '7248': {
+    effects: [{
+      id: 'e1', label: '手札のレベル8モンスターを1体捨て、2枚ドロー', type: 'card', ss: 1,
+      can: x => x.s.players[x.player].deck.length >= 2 && handOf(x.s, x.player).some(u => defOf(x.s, u).kind === 'monster' && level(x.s, u) === 8),
+      activate: x => {
+        const c = chooseOne(x, '捨てるレベル8モンスターを選んでください（コスト）', handOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'monster' && level(x.s, u) === 8)) ;
+        log(x.s, `${pl(x.player)}：${nameOf(x.s, c)}を捨てる`);
+        sendToGy(x.s, [c], 'discard');
+      },
+      resolve: x => { drawCards(x.s, x.player, 2); },
+    }],
+  },
+  /* 異次元からの帰還 */
+  '6078': {
+    effects: [{
+      id: 'e1', label: 'LPを半分払い、除外されている自分のモンスターを可能な限り特殊召喚（エンドフェイズに除外）', type: 'card', ss: 2,
+      can: x => banishedMine(x).length > 0 && freeMZones(x.s, x.player).length > 0,
+      activate: x => { payLp(x.s, x.player, Math.floor(x.s.players[x.player].lp / 2)); },
+      resolve: x => {
+        const s = x.s, opts = banishedMine(x), n = Math.min(opts.length, freeMZones(s, x.player).length);
+        if (!n) return;
+        const pick = choose(x, { kind: 'cards', prompt: `特殊召喚するモンスターを${n}体選んでください`, options: opts, min: n, max: n });
+        for (const u of specialSummon(x, pick)) addLingering(s, { type: 'banishAtEnd', uid: u, serial: s.cards[u].serial, turn: s.turn });
+      },
+    }],
+  },
+  /* VWXYZ－ドラゴン・カタパルトキャノン */
+  '6484': {
+    ...contactFusion(['VW－タイガー・カタパルト', 'XYZ－ドラゴン・キャノン'], true),
+    effects: [{
+      id: 'e1', label: '①：相手フィールドのカード1枚を除外', type: 'ignition', ss: 1, opt: 'card',
+      can: x => fieldCards(x.s, opp(x.player)).length > 0,
+      activate: x => { target(x, '除外する相手のカードを選んでください', fieldCards(x.s, opp(x.player))); },
+      resolve: x => { const t = x.link .targets[0]; if (targetValid(x.s, x.link ) && isOnField(x.s.cards[t])) { log(x.s, `${nameOf(x.s, t)}を除外`); banish(x.s, [t], 'effect'); } },
+    }, {
+      id: 'e2', label: '②：攻撃対象モンスターの表示形式を変更する', type: 'trigger', ss: 1,
+      trigger: { mandatory: false, when: true, match: (s, self, ev) => ev.type === 'attackDeclared' && ev.attacker === self && ev.target !== null },
+      can: x => !!x.s.battle && x.s.battle.target !== null && isMonsterZone(x.s.cards[x.s.battle.target]),
+      activate: x => { x.link .targets.push(x.s.battle .target ); },
+      resolve: x => { const t = x.link .targets[0]; if (targetValid(x.s, x.link ) && isMonsterZone(x.s.cards[t])) changePositionByEffect(x.s, t, undefined, true); },
+    }],
+  },
+  /* VW－タイガー・カタパルト */
+  '6483': {
+    ...contactFusion(['V－タイガー・ジェット', 'W－ウィング・カタパルト'], true),
+    effects: [discardTargetEffect('①：手札を1枚捨て、相手モンスター1体の表示形式を変更', '表示形式を変更する相手モンスターを選んでください', x => monstersOf(x.s, opp(x.player)),
+      (x, t) => { if (isMonsterZone(x.s.cards[t])) changePositionByEffect(x.s, t, undefined, true); })],
+  },
+  /* XYZ－ドラゴン・キャノン */
+  '5556': {
+    ...contactFusion(['X－ヘッド・キャノン', 'Y－ドラゴン・ヘッド', 'Z－メタル・キャタピラー'], false),
+    effects: [discardTargetEffect('①：手札を1枚捨て、相手フィールドのカード1枚を破壊', '破壊する相手のカードを選んでください', x => fieldCards(x.s, opp(x.player)),
+      (x, t) => { if (isOnField(x.s.cards[t])) destroy(x.s, [t], 'effect'); })],
+  },
+  /* XY－ドラゴン・キャノン */
+  '5553': {
+    ...contactFusion(['X－ヘッド・キャノン', 'Y－ドラゴン・ヘッド'], false),
+    effects: [discardTargetEffect('①：手札を1枚捨て、相手の表側表示の魔法・罠1枚を破壊', '破壊する相手の表側表示の魔法・罠カードを選んでください', x => spellTrapsOf(x.s, opp(x.player)).filter(u => x.s.cards[u].faceUp),
+      (x, t) => { if (isOnField(x.s.cards[t]) && x.s.cards[t].faceUp) destroy(x.s, [t], 'effect'); })],
+  },
+  /* YZ－キャタピラー・ドラゴン */
+  '5626': {
+    ...contactFusion(['Y－ドラゴン・ヘッド', 'Z－メタル・キャタピラー'], false),
+    effects: [discardTargetEffect('①：手札を1枚捨て、相手の裏側表示モンスター1体を破壊', '破壊する相手の裏側表示モンスターを選んでください', x => monstersOf(x.s, opp(x.player)).filter(u => !x.s.cards[u].faceUp),
+      (x, t) => { if (isMonsterZone(x.s.cards[t]) && !x.s.cards[t].faceUp) destroy(x.s, [t], 'effect'); })],
+  },
+  /* XZ－キャタピラー・キャノン */
+  '5625': {
+    ...contactFusion(['X－ヘッド・キャノン', 'Z－メタル・キャタピラー'], false),
+    effects: [discardTargetEffect('①：手札を1枚捨て、相手の裏側表示の魔法・罠1枚を破壊', '破壊する相手の裏側表示の魔法・罠カードを選んでください', x => spellTrapsOf(x.s, opp(x.player)).filter(u => !x.s.cards[u].faceUp),
+      (x, t) => { if (isOnField(x.s.cards[t]) && !x.s.cards[t].faceUp) destroy(x.s, [t], 'effect'); })],
+  },
+  /* 青眼の究極竜 */
+  '4386': { fusionMaterials: ['青眼の白龍', '青眼の白龍', '青眼の白龍'] },
 };
 
 /* ---------- サイバーダーク用の補助 ---------- */
@@ -1646,3 +2694,149 @@ function judgmentModes(x     )            {
   if (!top && w.kind === 'priority' && w.mode === 'summoning' && w.cont.type === 'summon' && s.cards[w.cont.uid].summoning && !scriptOf(s, w.cont.uid).summonUnnegatable) res.push(2);
   return res;
 }
+
+/* ---------- デッキ dno11（D-HEROデッキ）の共通処理 ---------- */
+const isDHero = (s           , u        ) => defOf(s, u).name.startsWith('D-HERO');
+const isHeroMonster = (s           , u        ) => defOf(s, u).kind === 'monster' && defOf(s, u).name.includes('HERO');
+/** エアーマン：自分フィールドの他の表側表示「HERO」モンスター */
+const otherHeroes = (x     ) => monstersOf(x.s, x.player).filter(u => u !== x.self && isFaceUpMonster(x.s, u) && isHeroMonster(x.s, u));
+function airmanModes(x     )            {
+  const res            = [];
+  if (otherHeroes(x).length) res.push(0);
+  if (deckOf(x.s, x.player).some(u => isHeroMonster(x.s, u))) res.push(1);
+  return res;
+}
+/** ダッシュガイ③：このドローフェイズにドローしたモンスター */
+function dashDrawn(x     )                {
+  const s = x.s, p = s.cards[x.self].owner;
+  const ev = [...s.events].reverse().find(e => e.type === 'drew' && e.player === p && defOf(s, e.uid).kind === 'monster');
+  if (!ev || ev.type !== 'drew' || s.cards[ev.uid].zone !== 'hand' || !canSpecialSummon(s, ev.uid, p)) return null;
+  return ev.uid;
+}
+const doomTargets = (x     ) => gyOf(x.s, x.player).filter(u => isDHero(x.s, u) && defOf(x.s, u).kind === 'monster' && defOf(x.s, u).name !== 'D-HERO ドゥームガイ' && canSpecialSummon(x.s, u, x.player));
+const halfLevelDHeroes = (x     , lv        ) => deckOf(x.s, x.player).filter(u => isDHero(x.s, u) && defOf(x.s, u).kind === 'monster' && level(x.s, u) <= Math.floor(lv / 2) && canSpecialSummon(x.s, u, x.player));
+const overDestinyTargets = (x     ) => gyOf(x.s, x.player).filter(u => isDHero(x.s, u) && defOf(x.s, u).kind === 'monster' && halfLevelDHeroes(x, level(x.s, u)).length > 0);
+const reinforceTargets = (x     ) => deckOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'monster' && defOf(x.s, u).race === '戦士族' && level(x.s, u) <= 4);
+const fieldSpellsInDeck = (x     ) => deckOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'spell' && defOf(x.s, u).subtype === 'フィールド');
+const oppFaceUp = (x     ) => monstersOf(x.s, opp(x.player)).filter(u => isFaceUpMonster(x.s, u));
+const signalTargets = (x     ) => [...handOf(x.s, x.player), ...deckOf(x.s, x.player)].filter(u => isDHero(x.s, u) && defOf(x.s, u).kind === 'monster' && level(x.s, u) <= 4 && canSpecialSummon(x.s, u, x.player));
+
+/* ---------- デッキ dno12（絵札の騎士デッキ）の共通処理 ---------- */
+const jacks = (x     ) => deckOf(x.s, x.player).filter(u => defOf(x.s, u).name === 'ジャックス・ナイト' && canSpecialSummon(x.s, u, x.player));
+/** 装備魔法が装備できる表側表示のモンスター（equipOk が無ければ全て） */
+function equipTargets(s           , equip        )           {
+  const ok = scriptOf(s, equip).equipOk;
+  return allMonsters(s).filter(t => isFaceUpMonster(s, t) && (!ok || ok(s, equip, t)));
+}
+/** 装備魔法の発動：表側表示のモンスター1体を対象にして装備する */
+function equipSpell(label        )               {
+  return {
+    id: 'e1', label, type: 'card', ss: 1,
+    can: x => equipTargets(x.s, x.self).length > 0,
+    activate: x => { target(x, '装備するモンスターを選んでください', equipTargets(x.s, x.self)); },
+    resolve: x => {
+      const s = x.s, t = x.link .targets[0];
+      if (!targetValid(s, x.link ) || !isFaceUpMonster(s, t) || !equipTargets(s, x.self).includes(t)) return;
+      if (!sameCard(s, x.self, x.link .serial) || !isOnField(s.cards[x.self])) return;
+      equipCard(s, x.self, t, { stay: true });
+      log(s, `${nameOf(s, x.self)}を${nameOf(s, t)}に装備`);
+    },
+  };
+}
+const gyEquips = (x     ) => gyOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'spell' && defOf(x.s, u).subtype === '装備');
+const ownFaceUpEquips = (x     ) => spellTrapsOf(x.s, x.player).filter(u => x.s.cards[u].faceUp && defOf(x.s, u).kind === 'spell' && defOf(x.s, u).subtype === '装備');
+const oppSetST = (x     ) => spellTrapsOf(x.s, opp(x.player)).filter(u => !x.s.cards[u].faceUp);
+const gyWarriors = (x     ) => gyOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'monster' && defOf(x.s, u).race === '戦士族');
+/** 死皇帝の陵墓：n 体のリリースが必要な手札のモンスター */
+const tombMonsters = (x     , n        ) => handOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'monster' && defOf(x.s, u).frame !== 'ritual' && defOf(x.s, u).frame !== 'fusion' && !scriptOf(x.s, u).cannotNormalSummon && tributesFor(x.s, u) === n);
+function tombModes(x     )           {
+  const s = x.s, p = x.player;
+  if (s.players[p].normalSummonUsed || !freeMZones(s, p).length) return [];
+  return [1, 2].filter(n => s.players[p].lp >= n * 1000 && tombMonsters(x, n).length > 0);
+}
+
+/* ---------- デッキ dno13（月書恐竜デッキ）の共通処理 ---------- */
+/** 究極恐獣：このバトルフェイズにまだ攻撃できるか（他のモンスターの攻撃を禁じる判定用。永続効果の循環を避けて直接調べる） */
+function ultimateCanAttack(s           , self        )          {
+  const c = s.cards[self];
+  if (s.phase !== 'battle' || !isFaceUpMonster(s, self) || c.position !== 'atk' || c.noAttack) return false;
+  if (c.attackedTurn !== s.turn) return true;
+  const list = c.attackedList ?? [];
+  return !list.includes(null) && monstersOf(s, opp(c.controller)).some(t => !list.includes(t));
+}
+const notFaceUpDef = (s           ) => allMonsters(s).filter(u => !(s.cards[u].faceUp && s.cards[u].position === 'def'));
+const defMonsters = (s           ) => allMonsters(s).filter(u => s.cards[u].position === 'def');
+const faceUpNonToken = (s           ) => allMonsters(s).filter(u => isFaceUpMonster(s, u) && !isToken(s, u));
+const bigDinos = (x     ) => monstersOf(x.s, x.player).filter(u => isFaceUpMonster(x.s, u) && defOf(x.s, u).race === '恐竜族' && level(x.s, u) >= 5);
+const tailTargets = (x     , lv        ) => monstersOf(x.s, opp(x.player)).filter(u => !x.s.cards[u].faceUp || level(x.s, u) < lv);
+/** 通常召喚可能なモンスター（儀式・融合・「通常召喚できない」以外） */
+const normalSummonable = (s           , u        ) => { const d = defOf(s, u); return d.kind === 'monster' && d.frame !== 'ritual' && d.frame !== 'fusion' && !scriptOf(s, u).cannotNormalSummon; };
+const gyDinos = (x     ) => gyOf(x.s, x.player).filter(u => defOf(x.s, u).race === '恐竜族' && canSpecialSummon(x.s, u, x.player));
+const oppAtkNonToken = (x     ) => monstersOf(x.s, opp(x.player)).filter(u => x.s.cards[u].position === 'atk' && !isToken(x.s, u));
+
+/* ---------- デッキ dno14（海馬デッキ）の共通処理 ---------- */
+/** ユニオン：1ターンに1度、①の2つの効果のどちらかを使う */
+const unionUsed = (x     ) => x.s.opt[`${x.player}:union:${x.self}`] === x.s.turn;
+const markUnion = (x     ) => { x.s.opt[`${x.player}:union:${x.self}`] = x.s.turn; };
+const unionTargets = (x     , names          ) => monstersOf(x.s, x.player).filter(u => u !== x.self && isFaceUpMonster(x.s, u) && names.includes(defOf(x.s, u).name));
+function unionEffects(names          )                 {
+  return [{
+    id: 'u1', label: `①：「${names.join('」か「')}」に装備する`, type: 'ignition', ss: 1,
+    can: x => !unionUsed(x) && unionTargets(x, names).length > 0 && freeSZones(x.s, x.player).length > 0,
+    activate: x => { markUnion(x); target(x, '装備するモンスターを選んでください', unionTargets(x, names)); },
+    resolve: x => {
+      const s = x.s, t = x.link .targets[0];
+      if (!sameCard(s, x.self, x.link .serial) || !isMonsterZone(s.cards[x.self])) return;
+      // 処理時に対象が表側表示で存在しない場合、このカードは墓地へ送られる（効果で墓地へ送られた扱いにはならない）
+      if (!targetValid(s, x.link ) || !isFaceUpMonster(s, t) || s.cards[t].controller !== x.player || !equipCard(s, x.self, t)) { sendToGy(s, [x.self], 'rule'); return; }
+      log(s, `${nameOf(s, x.self)}を${nameOf(s, t)}に装備`);
+    },
+  }, {
+    id: 'u2', label: '①：装備されているこのカードを特殊召喚する', type: 'ignition', ss: 1, zones: ['szone'],
+    can: x => !unionUsed(x) && x.s.cards[x.self].equippedTo !== null && canSpecialSummon(x.s, x.self, x.player),
+    activate: x => { markUnion(x); },
+    resolve: x => { if (sameCard(x.s, x.self, x.link .serial) && x.s.cards[x.self].zone === 'szone') specialSummon(x, [x.self]); },
+  }];
+}
+/** 自分フィールドの上記カードを除外した場合のみEXデッキから特殊召喚できる（融合召喚はできない）。revive：その後は墓地から特殊召喚できる */
+function contactFusion(names          , revive         )                      {
+  const can = (s           , p          ) => names.every(n => fieldCards(s, p).some(u => defOf(s, u).name === n));
+  return {
+    specialSummonOk: (s, self, how) => how !== 'fusion' && (revive || s.cards[self].zone !== 'gy'),
+    procSummon: {
+      zones: ['extra'], label: `自分フィールドの${names.map(n => `「${n}」`).join('・')}を除外して特殊召喚`,
+      can: (s, _self, p) => can(s, p),
+      pay: x => {
+        const s = x.s, picks           = [];
+        for (const n of names) picks.push(chooseOne(x, `除外する「${n}」を選んでください`, fieldCards(s, x.player).filter(u => defOf(s, u).name === n && !picks.includes(u))) );
+        log(s, `${pl(x.player)}：${picks.map(u => nameOf(s, u)).join('、')}を除外`);
+        banish(s, picks, 'material');
+        newStep(s); // 除外と特殊召喚は同時に行われない
+      },
+    },
+  };
+}
+/** 手札を1枚捨て、相手のカード1枚を対象にして発動する起動効果（XYZ・VW など） */
+function discardTargetEffect(label        , prompt        , opts                      , apply                             )               {
+  return {
+    id: 'e1', label, type: 'ignition', ss: 1,
+    can: x => handOf(x.s, x.player).length > 0 && opts(x).length > 0,
+    activate: x => {
+      const c = chooseOne(x, '捨てる手札を選んでください（コスト）', handOf(x.s, x.player)) ;
+      log(x.s, `${pl(x.player)}：${nameOf(x.s, c)}を捨てる`);
+      sendToGy(x.s, [c], 'discard');
+      target(x, prompt, opts(x));
+    },
+    resolve: x => { const t = x.link .targets[0]; if (targetValid(x.s, x.link )) apply(x, t); },
+  };
+}
+const shineTargets = (x     ) => deckOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'monster' && defOf(x.s, u).attribute === '光' && (defOf(x.s, u).atk ?? 0) <= 1500 && canSpecialSummon(x.s, u, x.player));
+const banishedMine = (x     ) => x.s.players[x.player].banished.filter(u => x.s.cards[u].faceUp && defOf(x.s, u).kind === 'monster' && canSpecialSummon(x.s, u, x.player));
+const oppFaceUpMons = (x     ) => monstersOf(x.s, opp(x.player)).filter(u => isFaceUpMonster(x.s, u));
+/** 同胞の絆：カード名が異なり、種族・属性・レベルが同じデッキのモンスター */
+const bondKin = (x     , t        ) => {
+  const s = x.s, d = defOf(s, t);
+  return deckOf(s, x.player).filter(u => { const e = defOf(s, u); return e.kind === 'monster' && e.name !== d.name && e.race === d.race && e.attribute === d.attribute && e.level === d.level && canSpecialSummon(s, u, x.player); });
+};
+const bondTargets = (x     ) => monstersOf(x.s, x.player).filter(u => isFaceUpMonster(x.s, u) && level(x.s, u) <= 4 && new Set(bondKin(x, u).map(v => defOf(x.s, v).name)).size >= 2);
+const DRAGON_MIRROR             = { pool: (s, p) => [...monstersOf(s, p), ...gyOf(s, p)], move: 'banish', filter: (s, f) => defOf(s, f).race === 'ドラゴン族' };
