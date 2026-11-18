@@ -1923,6 +1923,13 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
 .hacc-p.build .hb.r b{font-size:12.5px;line-height:1.3}
 .hacc-p.build .hb.r span{font-size:20px}
 .hacc-p.build .hb.b{grid-column:span 3}
+
+/* ===== CPU対戦：対戦卓（Shadow DOM の中）を全画面で出す枠 ===== */
+.cpu-host{position:fixed;inset:0;z-index:60;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);
+  --d-bg:var(--bg);--d-panel:var(--surface);--d-panel-2:var(--surface2);--d-ink:var(--ink);--d-sub:var(--muted);--d-line:var(--line);
+  --d-accent:var(--ra);--d-accent-ink:#262b3a;--d-opp:var(--osiris);--d-bad:var(--red);--d-display:var(--display);--d-body:var(--body);--d-num:"Fredoka",var(--display)}
+.tile.big.cpu{background:var(--obelisk)}
+.cpu-decks{display:flex;flex-wrap:wrap;gap:6px}
 </style>
 </head>
 <body>
@@ -2049,6 +2056,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     </nav>
   </div>
   <button type="button" class="tile big" data-go="duel-open"><span class="i">⚔️</span><span><b>デュエルを始める</b><br><small>ライフ計算・リンク対戦・先攻後攻の抽選</small></span></button>
+  <button type="button" class="tile big cpu" data-go="cpu-open"><span class="i">🤖</span><span><b>CPUと対戦する</b><br><small>カードの効果を自動で処理する対戦卓で、1人で練習</small></span></button>
   <div class="srch" id="srch" role="search">
     <div class="srch-box"><button type="button" class="srch-back" id="srch-back" aria-label="1つ前のページに戻る" hidden>←</button><span aria-hidden="true">🔎</span><input type="search" id="srch-q" placeholder="カード・ルール・機能を検索" autocomplete="off" aria-label="ルールブック内を検索"><button type="button" id="srch-x" aria-label="検索をクリア" hidden>✕</button></div>
     <div class="srch-pop" id="srch-pop" hidden>
@@ -2177,6 +2185,33 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
 
 
   <p class="note">📊 過去のデュエルの記録は <a href="#results">戦績・リザルト</a> で見られます。</p>
+</section>
+
+<!-- CPU対戦 -->
+<section id="cpu">
+  <div class="sec-h"><span>VS CPU</span><h2>🤖 CPU対戦</h2><p class="note">カードの効果を自動で処理する対戦卓。1人でCPUと練習できます</p></div>
+
+  <button type="button" class="start-btn" id="cpu-open">🤖 CPUと対戦する</button>
+  <p class="status" id="cpu-st" role="status"></p>
+
+  <details class="fold-in" open>
+    <summary>📖 使い方・できること</summary>
+    <div class="fold-body">
+    <ul class="can">
+      <li><b>🃏 デッキ</b><span>効果を組み込んだ登録デッキから、自分と相手のデッキを選びます</span></li>
+      <li><b>⚙️ 自動処理</b><span>チェーン・優先権・タイミングを逃す・ダメージステップまで、OCGの公式ルールと公式Q&amp;Aどおりに処理します</span></li>
+      <li><b>👆 操作</b><span>カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます</span></li>
+      <li><b>🔁 チェーン</b><span>相手の発動に応答できる時は「〜にチェーンしますか？」と聞かれます</span></li>
+      <li><b>↶ 元に戻す</b><span>自分の操作を1つずつ取り消せます</span></li>
+      <li><b>👥 2人で</b><span>メニューの「対戦相手」を「2人で交互に操作」にすると、1台を2人で使って対戦できます</span></li>
+      <li><b>💾 続きから</b><span>途中で閉じても、同じ端末なら続きから再開できます</span></li>
+    </ul>
+    <div class="field"><span>使えるデッキ</span><div class="cpu-decks">
+      <span class="ow-t">バニラサクリファイスマジシャン</span><span class="ow-t">遊戯デッキ</span><span class="ow-t">暗黒混沌ユベル界</span><span class="ow-t">サイバーダーク</span>
+    </div></div>
+    <p class="note">⚠️ CPU対戦の結果は、📊 戦績には記録されません。登録デッキ以外のデッキは、カードの効果を組み込むまで使えません。</p>
+    </div>
+  </details>
 </section>
 
 <!-- 戦績 -->
@@ -4417,6 +4452,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-11-18-cpu-duel',createdAt:1794983405060,text:'🤖 「CPU対戦」を追加。カードの効果を自動で処理する対戦卓で、CPUと1人で練習できます（デュエル → 🤖 CPU対戦）。攻撃・召喚・サーチの演出や、ブラック・ホール、虹のドームのミラーフォースなど強力なカードの専用演出つき'},
       {id:'auto-2026-11-10-sound-fix',createdAt:1794282879897,text:'🔊 スマホで音楽を流していても効果音が鳴るように修正（止まっても自動で復帰）。デュエル中のボタンを押すと「ポチッ」、ログ・電卓・カード盤を切り替えると「シュッ」と鳴るように'},
       {id:'auto-2026-11-10-ctr-virus',createdAt:1794282879896,text:'⏳ カード盤に「闇のデッキ破壊ウイルス」を追加（相手のエンドで−1・3ターン）'},
       {id:'auto-2026-11-10-avatar',createdAt:1794278785180,text:'🖼️ プロフィールのアイコンを変えられるように。写真・絵文字・頭文字から選べます（ホームの丸いアイコンを押すと設定へ）。ホームとプレイヤー一覧に表示されます'},
@@ -5265,7 +5301,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var TABS=[
     {k:'home',i:'🏠',l:'ホーム',subs:[['home-hub','🏠 ホーム']]},
-    {k:'duel',i:'⚔️',l:'デュエル',subs:[['life','🧮 デュエル']]},
+    {k:'duel',i:'⚔️',l:'デュエル',subs:[['life','🧮 デュエル'],['cpu','🤖 CPU対戦']]},
     {k:'rec',i:'📊',l:'戦績',subs:[['results','📊 戦績・リザルト'],['players','🧑‍🤝‍🧑 プレイヤー'],['ach','🏆 実績']]},
     {k:'rules',i:'📜',l:'ルール',subs:[['reg-mo','👾 モンスターの規制',{show:['mlist','allow','watch'],kind:'mo'}],['reg-st','🪄 魔法・罠の規制',{show:['list','allow','watch'],kind:'st'}],['deck','🛠️ デッキ構築'],['owners','👥 テーマ一覧'],['board','🃏 デッキごとの規制'],['why','🔥 大義'],['base','📜 基盤'],['pool','🗃️ カードプール'],['basic','⚔️ 基本ルール'],['cmp','🕰️ GXとの違い'],['flow','🔁 対戦の流れ'],['balance','⚖️ 強さの判定'],['tune','🔧 調整'],['faq','❓ よくある質問']]},
     {k:'more',i:'⚙️',l:'設定ほか',subs:[['account','⚙️ アカウント設定'],['app','📲 アプリとして使う'],['log','🗒️ 更新履歴'],['data','💾 データ'],['admin','🛠️ 管理者']]}
@@ -5300,7 +5336,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     var ix=subs.map(function(s){return s[0];}).indexOf(id);
     if(subs.length>1&&e){step.innerHTML='';if(ix>0)step.appendChild(stepBtn(subs[ix-1],false));if(ix<subs.length-1)step.appendChild(stepBtn(subs[ix+1],true));e.insertAdjacentElement('afterend',step);step.hidden=false;}else step.hidden=true;
     /* 検索：ホームではプロフィール・デュエルの下、ほかのページでは一番上 */
-    var hd=t.k==='home'&&document.querySelector('#home-hub > .tile.big');
+    var hd=t.k==='home'&&(document.querySelector('#home-hub > .tile.big.cpu')||document.querySelector('#home-hub > .tile.big'));
     if(hd){if(hd.nextElementSibling!==srch)hd.insertAdjacentElement('afterend',srch);}
     else if(header.nextElementSibling!==srch)header.insertAdjacentElement('afterend',srch);
     [].forEach.call(bar.children,function(b){if(b.dataset.tab===t.k)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
@@ -5322,7 +5358,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     var t=h&&$(h);if(t){var s=t.closest('section[id]');if(s&&SEC[s.id]){go(s.id,{noScroll:true});var d=t.closest('details');if(d)d.open=true;setTimeout(function(){siv.call(t,{block:'start'});},first?300:0);return;}}
     go('home-hub');}
   /* ホームのボタン */
-  [].forEach.call(document.querySelectorAll('[data-go]'),function(b){b.addEventListener('click',function(e){e.preventDefault();var id=b.getAttribute('data-go');if(id==='duel-open'){go('life',{push:true});var d=$('duel-open');if(d)d.click();return;}if(!SEC[id]){var t=$(id);if(t){if(t.tagName==='DETAILS')t.open=true;t.scrollIntoView({block:'start'});}return;}go(id,{push:true});});});
+  [].forEach.call(document.querySelectorAll('[data-go]'),function(b){b.addEventListener('click',function(e){e.preventDefault();var id=b.getAttribute('data-go');if(id==='duel-open'){go('life',{push:true});var d=$('duel-open');if(d)d.click();return;}if(id==='cpu-open'){go('cpu',{push:true});var c=$('cpu-open');if(c)c.click();return;}if(!SEC[id]){var t=$(id);if(t){if(t.tagName==='DETAILS')t.open=true;t.scrollIntoView({block:'start'});}return;}go(id,{push:true});});});
   /* 管理者メニューが出たらサブメニューを作り直す */
   var adm=$('admin');if(adm&&window.MutationObserver)new MutationObserver(function(){if(cur&&SEC[cur].tab.k==='more')go(cur,{noScroll:true});}).observe(adm,{attributes:true,attributeFilter:['hidden']});
 
@@ -5358,7 +5394,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     if(st>0)f.appendChild(document.createTextNode('…'));f.appendChild(document.createTextNode(text.slice(st,a)));f.appendChild(el('mark','',text.slice(a,z)));f.appendChild(document.createTextNode(text.slice(z,en)));if(en<text.length)f.appendChild(document.createTextNode('…'));return f;}
   function flash(n){if(!n)return;requestAnimationFrame(function(){siv.call(n,{block:'center',behavior:reduce?'auto':'smooth'});n.classList.add('hit-flash');setTimeout(function(){n.classList.remove('hit-flash');},2200);});}
   /* 候補の集め方 */
-  var FEAT=[{t:'📖 デッキの回し方',s:'人のデッキを借りて使うときの説明。自分のデッキの回し方も書ける',k:'回し方 デッキ 使い方 借りる 説明 コンボ 勝ち筋',run:function(){if(window.YGO_GUIDE)YGO_GUIDE.list();}},{t:'⚔️ デュエルを始める',s:'ライフ計算・リンク対戦・先攻後攻の抽選',k:'デュエル 開始 始める ライフ 計算 リンク 対戦 抽選 先攻 後攻 コイン サイコロ',run:function(){go('life',{push:true});var d=$('duel-open');if(d)d.click();}}];
+  var FEAT=[{t:'🤖 CPU対戦',s:'カードの効果を自動で処理する対戦卓で、CPUと1人で練習',k:'CPU 対戦 練習 1人 ひとり コンピューター 自動 エンジン 対戦卓',run:function(){go('cpu',{push:true});var c=$('cpu-open');if(c)c.click();}},{t:'📖 デッキの回し方',s:'人のデッキを借りて使うときの説明。自分のデッキの回し方も書ける',k:'回し方 デッキ 使い方 借りる 説明 コンボ 勝ち筋',run:function(){if(window.YGO_GUIDE)YGO_GUIDE.list();}},{t:'⚔️ デュエルを始める',s:'ライフ計算・リンク対戦・先攻後攻の抽選',k:'デュエル 開始 始める ライフ 計算 リンク 対戦 抽選 先攻 後攻 コイン サイコロ',run:function(){go('life',{push:true});var d=$('duel-open');if(d)d.click();}}];
   function collect(ws){var G={page:[],card:[],text:[]},listed={};
     FEAT.forEach(function(f){var m=hit(f.t+' '+f.k,ws);if(m)G.page.push({icon:'',title:f.t,sub:f.s,m:hit(f.t,ws),score:hit(f.t,ws)?2:1,run:f.run});});
     Object.keys(SEC).forEach(function(id){var s=$(id);if(!s||id==='home-hub'||(id==='admin'&&s.hidden))return;
@@ -6046,6 +6082,27 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     edit:function(t){open();stack=[];cur=null;show({k:'edit',t:t});},has:function(uid,t){return hasText(guideOf(uid,t));}};
   document.addEventListener('ygo:data',function(){if(!M.hidden&&cur&&cur.k!=='edit')show(cur,false);});
   var pb=$('gd-open');if(pb)pb.addEventListener('click',function(){window.YGO_GUIDE.list();});
+})();
+</script>
+<div class="cpu-host" id="cpu-host" hidden role="dialog" aria-modal="true" aria-label="CPU対戦"></div>
+<script type="module">
+/* ===== CPU対戦：対戦卓を開く・閉じる ===== */
+(function(){
+  var KEY='ygo-cpu-duel-v1', btn=document.getElementById('cpu-open'), host=document.getElementById('cpu-host'), st=document.getElementById('cpu-st'), busy=false;
+  function label(){var saved=false;try{saved=!!localStorage.getItem(KEY);}catch(e){}btn.textContent=saved?'🤖 CPU対戦を再開する':'🤖 CPUと対戦する';}
+  function close(){if(host.hidden)return;host.hidden=true;document.documentElement.style.overflow='';setTimeout(label,500);}
+  label();
+  btn.addEventListener('click',async function(){
+    if(busy)return;busy=true;btn.textContent='読み込み中…';st.textContent='';st.className='status';
+    try{
+      var m=await import('./duel/embed.js');
+      host.hidden=false;document.documentElement.style.overflow='hidden';
+      m.mountDuel(host,{onClose:close,isOpen:function(){return !host.hidden;},storageKey:KEY,menuFirst:true});
+    }catch(e){console.error(e);st.className='status err';st.textContent='対戦卓を読み込めませんでした。ページを開き直してください。';}
+    finally{busy=false;label();}
+  });
+  /* スマホの「戻る」で画面が切り替わったら、対戦卓を閉じる（途中のデュエルは残る） */
+  window.addEventListener('popstate',close);
 })();
 </script>
 </body>

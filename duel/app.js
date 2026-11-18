@@ -1,0 +1,1177 @@
+// 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
+// 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
+import { cpuDecide } from './ai/cpu.js';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js';
+import { playBattle, playSummon } from './fx.js';
+import { playSignature, sigKey } from './sig.js';
+import {
+  createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
+  actorOf, activatableList, whyIllegal,
+} from './engine/game.js';
+import { CARD_POOL } from './data/cardpool.js';
+import { DECKS } from './data/decks.js';
+import { SCRIPTS } from './cards/index.js';
+
+// 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
+let ROOT = document;
+let OPTS = {};
+const $ = s => ROOT.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+
+let S = null;          // 現在の状態
+let history = [];      // 元に戻す用（自分が判断した場面だけ）
+let selected = null;   // 選択中のカード uid
+let pick = [];         // 選択中の答え（カード）
+let sheet = null;      // スマホで開いているシート：'detail' | 'log' | null
+let peek = false;      // 選択の途中でシートを閉じて盤面を見ている
+let lastLp = [8000, 8000];
+const CPU = 1;
+const cpuMode = () => $('#mode').value === 'cpu';
+const isCpu = p => cpuMode() && p === CPU;
+const narrow = () => matchMedia('(max-width: 860px)').matches;
+/** プレイヤーの呼び名：CPU対戦では「あなた」「CPU」 */
+const NAME = p => (cpuMode() ? (p === 0 ? 'あなた' : 'CPU') : `P${p + 1}`);
+let cpuTimer = null;
+
+/* ---------- 効果音：ログに増えた行から、何が起きたかを読み取って鳴らす ---------- */
+function kindOfName(name) {
+  const d = Object.values(CARD_POOL).find(x => x.name === name);
+  if (!d) return 'effect';
+  if (d.kind === 'spell') return 'spell';
+  if (d.kind === 'trap') return d.subtype === 'カウンター' ? 'counter' : 'trap';
+  return 'effect';
+}
+function soundsFor(prev, next) {
+  const lines = next.log.slice(prev.log.length).map(l => l.text);
+  const out = [];
+  const add = n => { if (!out.includes(n)) out.push(n); };
+  for (const t of lines) {
+    const nm = (t.match(/「([^」]+)」/) || [])[1];
+    if (/の勝利/.test(t)) add(cpuMode() ? (next.winner === 0 ? 'win' : 'lose') : 'win');
+    else if (/を無効にした/.test(t)) add('negate');
+    else if (/の効果を発動（チェーン/.test(t)) add(kindOfName(nm) === 'effect' ? 'effect' : kindOfName(nm));
+    else if (/を発動（チェーン/.test(t)) add(kindOfName(nm));
+    else if (/を儀式召喚/.test(t)) add('ritual');
+    else if (/を融合召喚/.test(t)) add('fusion');
+    else if (/を特殊召喚/.test(t)) add('special');
+    else if (/を(通常|アドバンス|反転)召喚する/.test(t)) add('summon');
+    else if (/をセット$/.test(t)) add('set');
+    else if (/ダイレクトアタック$|に攻撃$/.test(t)) add('attack');
+    else if (/の(戦闘|効果)ダメージ/.test(t)) add('damage');
+    else if (/を破壊/.test(t)) add('destroy');
+    else if (/：ドロー$/.test(t)) add('draw');
+  }
+  return out;
+}
+/** 状態を進めて、起きたことに合わせて効果音を鳴らし、攻撃があれば演出を再生する */
+function commit(next) {
+  const prev = S;
+  S = next;
+  if (prev) play(soundsFor(prev, next));
+  if (prev) queueBattleFx(prev, next);
+  if (prev) queueMoves(prev, next);
+}
+
+/* ---------- 攻撃の演出：演出の間は画面の更新とCPUの手番を止め、終わったら続ける ---------- */
+let fxN = 0;   // 再生中の演出の数（0 になった時だけ画面を更新する。演出が重なっても途中で描き直さない）
+const fxMode = () => ($('#fxMode') && $('#fxMode').value) || 'full';
+let pendingSummons = [];   // 画面を更新した後に再生する召喚の演出
+function queueBattleFx(prev, next) {
+  if (fxMode() === 'none' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const fresh = (next.anim || []).filter(x => x.seq > (prev.animSeq ?? 0));
+  if (!fresh.length) return;
+  // 攻撃：まだ画面に残っている前の状態の盤面（カードの位置）で再生する
+  const battles = fresh.filter(x => x.kind === 'battle').map(x => { const j = battleInfo(prev, next, x); if (j) j.seq = x.seq; return j; }).filter(Boolean);
+  // カードごとの専用演出（ブラック・ホールなど）：これも前の状態の盤面で再生する
+  const sigs = fresh.filter(x => x.kind === 'resolve').map(x => sigInfo(prev, next, x, fresh)).filter(Boolean);
+  sigs.forEach(j => j.skip.forEach(u => sigSkip.add(u)));
+  const jobs = [...battles, ...sigs].sort((p, q) => p.seq - q.seq);
+  // 召喚：素材のカードの位置は今のうちに覚えておき、召喚されたカードの位置は画面を更新してから調べる
+  pendingSummons.push(...fresh.filter(x => x.kind === 'summon').map(x => summonInfo(prev, next, x)).filter(Boolean));
+  pendingSummons.push(...fresh.filter(x => x.kind === 'search' && isCpu(x.player)).map(x => ({ search: true, uid: x.uid, p: x.player, d: defOf(next, x.uid) })));
+  if (!jobs.length) return;
+  fxN++;
+  (async () => {
+    for (const j of jobs) {
+      const hide = j.hide.map(el => { el.style.visibility = 'hidden'; return el; });
+      try { await (j.sig ? playSignature(ROOT, j.info) : playBattle(ROOT, j.info)); } catch (e) { console.error(e); }
+      hide.forEach(el => { el.style.visibility = ''; });
+    }
+    fxN = Math.max(0, fxN - 1);
+    render();
+  })();
+}
+function summonInfo(prev, next, x) {
+  const c = next.cards[x.uid];
+  if (!c || !['mzone', 'emz'].includes(c.zone)) return null;
+  // 相手の裏側のカードは中身を見せない
+  const faceDown = !c.faceUp || x.how === 'set';
+  const mats = (x.mats || []).map(u => {
+    const el = ROOT.querySelector(`[data-uid="${u}"]`);
+    if (!el || !prev.cards[u] || el.classList.contains('back')) return null;
+    return { rect: el.getBoundingClientRect(), d: defOf(prev, u), atk: currentAtk(prev, u), def: currentDef(prev, u) };
+  }).filter(Boolean);
+  return { uid: x.uid, how: x.how, faceDown: faceDown && x.how !== 'flip', d: defOf(next, x.uid), mats };
+}
+/** 画面を更新した後：召喚されたカードの場所で、召喚の演出を順に再生する */
+function playPendingSummons() {
+  if (!pendingSummons.length || (fxN > 0)) return false;
+  const jobs = pendingSummons; pendingSummons = [];
+  fxN++;
+  (async () => {
+    for (const j of jobs) {
+      if (j.search) { try { await cpuSearchFx(j); } catch (e) { console.error(e); } continue; }
+      const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`);
+      if (!el) continue;
+      el.style.visibility = 'hidden';
+      const flipFace = j.how === 'flip';
+      try {
+        await playSummon(ROOT, { rect: el.getBoundingClientRect(), d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, speed: fxMode() === 'short' ? 2 : 1 });
+      } catch (e) { console.error(e); }
+      el.style.visibility = '';
+    }
+    fxN = Math.max(0, fxN - 1);
+    render();
+  })();
+  return true;
+}
+/* ---------- カードごとの専用演出：発動したカード・破壊されるカード・盤面の位置を集める ---------- */
+const sigSkip = new Set();   // 専用演出で壊した（飛ばした）カード。いつもの移動の演出はしない
+function sigInfo(prev, next, x, fresh) {
+  if (!x.act || !prev.cards[x.uid]) return null;
+  const d = defOf(prev, x.uid), key = sigKey(d.name);
+  if (!key) return null;
+  const q = sel => ROOT.querySelector(sel);
+  const elOf = u => q(`#board [data-uid="${u}"]`);
+  const cardOf = u => {
+    const el = elOf(u), c = prev.cards[u];
+    if (!el || !c) return null;
+    return { uid: u, el, rect: el.getBoundingClientRect(), d: defOf(prev, u), atk: currentAtk(prev, u), def: currentDef(prev, u),
+      faceUp: !el.classList.contains('back'), defPos: c.position === 'def' && (c.zone === 'mzone' || c.zone === 'emz') };
+  };
+  const center = el => { if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+  const p = x.player, me = p === 0, boardEl = q('#board');
+  if (!boardEl) return null;
+  const br = boardEl.getBoundingClientRect(), mid = q('#board .row.r2');
+  const rowY = cls => { const r = q(`#board .row.${cls}`); return r ? center(r).y : br.top + br.height / 2; };
+  const board = { left: br.left, top: br.top, right: br.right, bottom: br.bottom, cx: br.left + br.width / 2, cy: mid ? center(mid).y : br.top + br.height / 2,
+    myMonY: rowY(me ? 'r3' : 'r1'), oppMonY: rowY(me ? 'r1' : 'r3'), myStY: rowY(me ? 'r4' : 'r0') };
+  const fieldMons = [0, 1].flatMap(pp => prev.players[pp].mzone).concat(prev.emz).filter(u => u !== null && u !== undefined);
+  const destU = fresh.filter(y => y.kind === 'destroy' && y.src === x.uid).map(y => y.uid);
+  const dest = destU.map(cardOf).filter(Boolean);
+  const self = cardOf(x.uid);
+  if (self) self.faceUp = true; // セットしていたカードも、発動したら表を見せる
+  const att = key === 'mirror' && prev.battle ? cardOf(prev.battle.attacker) : null;
+  const tgtU = (x.targets || [])[0];
+  const target = tgtU !== undefined ? cardOf(tgtU) : null;
+  const tgtOwner = tgtU !== undefined && prev.cards[tgtU] ? prev.cards[tgtU].owner : p;
+  const mons = fieldMons.map(cardOf).filter(Boolean);
+  const opp = mons.filter(c => prev.cards[c.uid].controller !== p);
+  const traps = [0, 1].flatMap(pp => prev.players[pp].szone).filter(u => u !== null && u !== x.uid && (!prev.cards[u].faceUp || defOf(prev, u).kind === 'trap')).map(cardOf).filter(Boolean);
+  // 強欲な壺：ドローしたカードは壺から飛ばすので、いつもの移動はしない
+  const drawn = next.players[p].hand.filter(u => prev.cards[u] && prev.cards[u].zone === 'deck');
+  const skip = [...dest.map(c => c.uid), ...(key === 'greed' ? drawn : [])];
+  // 蘇生などで呼び出したモンスターが降りる場所（今の盤面の、そのマス）
+  let land = null;
+  const nt = tgtU !== undefined ? next.cards[tgtU] : null;
+  if (nt && nt.zone === 'mzone' && nt.index !== null) {
+    const nth = nt.controller === 0 ? nt.index + 2 : 6 - nt.index;
+    land = center(q(`#board .row.${nt.controller === 0 ? 'r3' : 'r1'} > :nth-child(${nth})`));
+  }
+  return {
+    sig: true, seq: x.seq, skip,
+    hide: [self, ...dest, att].filter(Boolean).map(c => c.el),
+    info: { key, name: d.name, kind: d.kind, subtype: d.subtype, me, speed: fxMode() === 'short' ? 2 : 1, board,
+      self, dest, att, target, opp, mons, traps, drawn: drawn.length, land,
+      deck: center(pileEl(p, 'deck')), gy: center(pileEl(tgtOwner, 'gy')), hand: center(q(`#hand${p}`)) },
+  };
+}
+function battleInfo(prev, next, x) {
+  const elOf = uid => ROOT.querySelector(`#board [data-uid="${uid}"]`);
+  const aEl = elOf(x.attacker);
+  if (!aEl || !prev.cards[x.attacker]) return null;
+  const stats = uid => ({ atk: currentAtk(prev, uid), def: currentDef(prev, uid) });
+  const atkP = prev.cards[x.attacker].controller, defP = 1 - atkP;
+  const a = { rect: aEl.getBoundingClientRect(), d: defOf(next, x.attacker), ...stats(x.attacker) };
+  let t, tEl = null;
+  if (x.target === null) {
+    const strip = $(`#side${defP}`);
+    t = { rect: strip.getBoundingClientRect() };
+  } else {
+    tEl = elOf(x.target);
+    if (!tEl) return null;
+    t = { rect: tEl.getBoundingClientRect(), d: defOf(next, x.target), ...stats(x.target) };
+  }
+  const dmg = x.damage.reduce((m, d) => Math.max(m, d.amount), 0);
+  const hurt = x.damage.length ? x.damage[0].player : defP;
+  const r = hurt === atkP ? a.rect : t.rect;
+  return {
+    hide: [aEl, tEl].filter(Boolean),
+    info: { a, t, destroyed: { a: x.destroyed.includes(x.attacker), t: x.target !== null && x.destroyed.includes(x.target) }, dmg, dmgAt: { x: r.left + r.width / 2 + 40, y: r.top + 10 }, speed: fxMode() === 'short' ? 2 : 1 },
+  };
+}
+
+/* ---------- CPU の手番（速さはメニューで選べる） ---------- */
+const SPEED = { slow: 1700, normal: 1000, fast: 450 };
+function cpuDelay() {
+  const base = SPEED[$('#cpuSpeed').value] ?? SPEED.normal;
+  if (S.pending) return base * 0.6;                       // 対象やカードを選ぶ
+  if (S.window.kind === 'priority') return base * 0.7;    // 応答するかどうか
+  return base;                                            // 召喚・発動・攻撃・フェイズ移行
+}
+function scheduleCpu() {
+  clearTimeout(cpuTimer);
+  if (!S || S.winner !== null || !isCpu(actorOf(S))) return;
+  cpuTimer = setTimeout(() => {
+    if (!S || S.winner !== null || !isCpu(actorOf(S))) return;
+    let a;
+    try { a = cpuDecide(S); } catch (e) { console.error(e); toast(`CPUのエラー：${e.message}`, true); return; }
+    try { commit(applyAction(S, a)); } catch (e) { console.error(e); toast(`CPUのエラー：${e.message}`, true); return; }
+    pick = [];
+    render();
+  }, cpuDelay());
+}
+
+/* ---------- 新しいデュエル ---------- */
+function deckOptions() { return Object.values(DECKS).map(d => `<option value="${esc(d.code)}">${esc(d.name)}</option>`).join(''); }
+function newDuel() {
+  // 選ばれているデッキが無い場合（読み込み直後など）は最初のデッキを使う
+  const first = Object.values(DECKS)[0];
+  const d0 = DECKS[$('#deck0').value] ?? first, d1 = DECKS[$('#deck1').value] ?? first;
+  const f = $('#first').value;
+  S = createGame({ pool: CARD_POOL, decks: [d0, d1], firstPlayer: f === 'r' ? undefined : Number(f) });
+  history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp];
+  closeMenu();
+  render();
+}
+
+/* ---------- 行動の実行 ---------- */
+function run(action) {
+  if (S.winner === null && isCpu(actorOf(S))) { toast('CPUが考えています'); return; }
+  try {
+    const next = applyAction(S, action);
+    history.push(S); commit(next); pick = []; peek = false;
+    // スマホでは、操作したらシートを閉じて盤面に戻る
+    if (narrow() && sheet === 'detail') { sheet = null; selected = null; }
+    if (selected !== null && !(S.cards[selected] && ['hand', 'mzone', 'emz', 'szone', 'fzone'].includes(S.cards[selected].zone))) selected = null;
+    render();
+  } catch (e) {
+    toast(e && e.name === 'RuleError' ? `できません：${e.message}` : `エラー：${e.message}`, true);
+    if (!(e && e.name === 'RuleError')) console.error(e);
+  }
+}
+// CPU の行動は記録しないので、元に戻すと自分が前に判断した場面まで戻る
+function undo() { if (!history.length) return; clearTimeout(cpuTimer); S = history.pop(); pick = []; render(); }
+
+let toastT;
+function toast(msg, bad) {
+  const t = $('#toast'); t.textContent = msg; t.dataset.bad = bad ? '1' : ''; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3200);
+}
+
+/* ---------- カード表示 ---------- */
+function frameOf(d) { return d.kind === 'spell' ? 'spell' : d.kind === 'trap' ? 'trap' : d.frame; }
+let canAct = new Set();
+function cardHtml(uid, { hidden = false, field = false } = {}) {
+  const c = S.cards[uid];
+  const d = defOf(S, uid);
+  const cls = [uid === selected ? 'sel' : '', field && c.position === 'def' ? 'def' : '', canAct.has(uid) ? 'can' : '', pick.includes(uid) ? 'picked' : ''].join(' ');
+  const badge = [c.counters && c.counters.magic ? `<span class="badge">魔${c.counters.magic}</span>` : '', c.equippedTo !== null ? '<span class="badge eq">装備</span>' : ''].join('');
+  if (hidden || (!c.faceUp && !(c.zone === 'hand' || c.zone === 'extra' || c.zone === 'deck' || field))) return `<button class="card back ${cls}" data-uid="${uid}" aria-label="裏側のカード">${badge}</button>`;
+  if (!c.faceUp && field && isCpu(c.controller)) return `<button class="card back ${cls}" data-uid="${uid}" aria-label="裏側のカード">${badge}</button>`;
+  if (!c.faceUp && field) return `<button class="card back ${cls}" data-uid="${uid}" aria-label="裏側：${esc(d.name)}"><span class="bn">${esc(d.name)}</span>${badge}</button>`;
+  return `<button class="card f-${frameOf(d)} ${cls}" data-uid="${uid}" aria-label="${esc(d.name)}">${faceHtml(uid, d, field)}${badge}</button>`;
+}
+/* ---------- カードの表面：カード名と属性／レベル（魔法・罠は種類）／種族の一文字／種族と種類／攻撃力・守備力 ---------- */
+const ATTR_COLOR = { 闇: '#534ab7', 光: '#b8902a', 地: '#8a6a3a', 水: '#2f6fb0', 炎: '#c4473a', 風: '#2e8b57', 神: '#a9841f' };
+const RACE_CHAR = { ドラゴン族: '竜', 魔法使い族: '魔', 機械族: '機', 戦士族: '戦', 悪魔族: '悪', 天使族: '天', アンデット族: '屍', 獣族: '獣', 獣戦士族: '獣', 鳥獣族: '鳥', 爬虫類族: '爬', 恐竜族: '恐', 水族: '水', 海竜族: '海', 魚族: '魚', 炎族: '炎', 雷族: '雷', 岩石族: '岩', 植物族: '植', 昆虫族: '虫', 幻神獣族: '神' };
+const SPELL_MARK = { 通常: '✦', 速攻: '➶', 永続: '∞', 装備: '⚔', フィールド: '◈', 儀式: '✧' };
+const TRAP_MARK = { 通常: '◆', 永続: '∞', カウンター: '↺' };
+const FRAME_NAME = { normal: '通常', effect: '効果', ritual: '儀式', fusion: '融合' };
+function faceHtml(uid, d, field) {
+  const name = `<span class="n">${esc(d.name)}</span>`;
+  if (d.kind !== 'monster') {
+    const spell = d.kind === 'spell';
+    const at = `<b class="at" style="background:${spell ? '#0f6e56' : '#993556'}">${spell ? '魔' : '罠'}</b>`;
+    const mark = (spell ? SPELL_MARK : TRAP_MARK)[d.subtype] || (spell ? '✦' : '◆');
+    const text = String(d.text || '').replace(/^[①-⑳]：/, '').replace(/\s+/g, '');
+    return `<span class="nm">${name}${at}</span><span class="sp">${esc(d.subtype)}${spell ? '魔法' : '罠'}</span><span class="art">${mark}</span><span class="ty">${esc(text.slice(0, 16))}</span>`;
+  }
+  const at = `<b class="at" style="background:${ATTR_COLOR[d.attribute] || '#6a6e7e'}">${esc(d.attribute || '？')}</b>`;
+  const lvl = d.level ?? 0;
+  const stars = lvl <= 8 ? '★'.repeat(lvl) : `★×${lvl}`;
+  const race = d.race || '';
+  const ch = RACE_CHAR[race] || race.charAt(0) || '？';
+  const kind = FRAME_NAME[d.frame] || '効果';
+  const atk = field ? currentAtk(S, uid) : d.atk, def = field ? currentDef(S, uid) : d.def;
+  // フィールドで数値が上がっていれば緑、下がっていれば赤
+  const cls = (now, base) => (!field || now === base ? '' : now > base ? ' class="up"' : ' class="dn"');
+  return `<span class="nm">${name}${at}</span><span class="lv">${stars}</span><span class="art">${esc(ch)}</span><span class="ty">${esc(race)}／${kind}</span>`
+    + `<span class="st"><span${cls(atk, d.atk)}><i>攻</i>${atk}</span><span${cls(def, d.def)}><i>守</i>${def}</span></span>`;
+}
+function zone(uid, label, cls = '') {
+  return `<div class="zone ${cls}">${uid !== null && uid !== undefined ? cardHtml(uid, { field: true }) : `<span class="zl">${label}</span>`}</div>`;
+}
+function pile(p, kind) {
+  const list = S.players[p][kind];
+  const label = { deck: 'デッキ', gy: '墓地', extra: 'EX', banished: '除外' }[kind];
+  const top = list.length ? list[list.length - 1] : null;
+  const face = (kind === 'gy' || kind === 'banished') && top !== null ? cardHtml(top) : list.length ? `<span class="card back mini"></span>` : '';
+  return `<button class="zone pile" data-pile="${p}:${kind}" aria-label="${NAME(p)}の${label}（${list.length}枚）">${face}<span class="pl">${label}</span><span class="cnt">${list.length}</span></button>`;
+}
+function renderBoard() {
+  const p1 = S.players[0], p2 = S.players[1];
+  const emz = i => zone(S.emz[i], 'EX', 'emz');
+  const rev = a => [...a].reverse();
+  const rows = [
+    pile(1, 'deck') + rev(p2.szone).map(u => zone(u, '魔・罠', 'st')).join('') + pile(1, 'extra'),
+    pile(1, 'gy') + rev(p2.mzone).map(u => zone(u, 'モンスター', 'mz')).join('') + zone(p2.fzone, 'フィールド', 'fz'),
+    `${pile(1, 'banished')}<div class="zone void"></div>${emz(0)}<div class="zone void"></div>${emz(1)}<div class="zone void"></div>${pile(0, 'banished')}`,
+    zone(p1.fzone, 'フィールド', 'fz') + p1.mzone.map(u => zone(u, 'モンスター', 'mz')).join('') + pile(0, 'gy'),
+    pile(0, 'extra') + p1.szone.map(u => zone(u, '魔・罠', 'st')).join('') + pile(0, 'deck'),
+  ];
+  $('#board').innerHTML = rows.map((r, i) => `<div class="row r${i}">${r}</div>`).join('');
+}
+function renderHand(p) {
+  const hide = cpuMode() ? p === CPU : $('#hideOpp').checked && p !== actorOf(S);
+  const h = S.players[p].hand;
+  return h.length ? h.map(u => cardHtml(u, { hidden: hide })).join('') : '<span class="empty">手札なし</span>';
+}
+function renderSide() {
+  [0, 1].forEach(p => {
+    const el = $(`#side${p}`);
+    const P = S.players[p];
+    el.classList.toggle('acting', actorOf(S) === p && S.winner === null);
+    el.querySelector('.who').textContent = NAME(p);
+    const lp = el.querySelector('.lp');
+    tweenLp(lp, p, P.lp);
+    if (P.lp < lastLp[p]) { lp.classList.remove('hit'); void lp.offsetWidth; lp.classList.add('hit'); }
+    else if (P.lp > lastLp[p]) lp.classList.remove('hit');
+    lastLp[p] = P.lp;
+    const tag = el.querySelector('.tag');
+    tag.hidden = !(S.turnPlayer === p && S.winner === null);
+    tag.textContent = 'ターン中';
+    el.querySelector('.meta').textContent = `手札 ${P.hand.length}・デッキ ${P.deck.length}${S.turnPlayer === p && S.winner === null ? `・通常召喚 ${P.normalSummonUsed ? '済' : '未'}` : ''}`;
+  });
+  $('#hand0').innerHTML = renderHand(0);
+  $('#hand1').innerHTML = renderHand(1);
+  fanOut($('#hand0')); fanOut($('#hand1'));
+}
+/** 手札を扇形に並べる：少しずつ重ね、両端ほど傾けて下げる。枚数が増えたら重なりを深くして横幅に収める */
+function fanOut(el) {
+  const cs = [...el.querySelectorAll('.card')], n = cs.length;
+  if (!n) return;
+  const W = parseFloat(getComputedStyle(el).getPropertyValue('--cw')) || 84;
+  const opp = el.classList.contains('opp');
+  const spread = Math.min(30, n * 4.5);
+  // 傾けた分だけ端のカードが外へはみ出すので、その分を差し引いて横幅に収める
+  const spill = W * 86 / 59 * (opp ? 0.6 : 1.6) * Math.sin(spread / 2 * Math.PI / 180);
+  const step = n > 1 ? Math.max(8, Math.min(W * (opp ? 0.5 : 0.66), (el.clientWidth - W - spill * 2 - 8) / (n - 1))) : 0;
+  cs.forEach((c, i) => {
+    const t = n === 1 ? 0 : i / (n - 1) - 0.5;
+    c.style.setProperty('--tx', (t * step * (n - 1)).toFixed(1) + 'px');
+    c.style.setProperty('--ty', (t * t * 40 * W / 84).toFixed(1) + 'px');
+    c.style.setProperty('--rot', (t * spread).toFixed(1) + 'deg');
+    c.style.setProperty('--z', String(i + 1));
+  });
+}
+
+/* ---------- フェイズ（上の帯） ---------- */
+const PHASES = ['draw', 'standby', 'main1', 'battle', 'main2', 'end'];
+const PH_SHORT = { draw: 'DP', standby: 'SP', main1: 'M1', battle: 'BP', main2: 'M2', end: 'EP' };
+const STEP_LABEL = { declared: '攻撃宣言時', dsStart: 'ダメージステップ開始時', beforeCalc: 'ダメージ計算前', afterCalc: 'ダメージ計算後', dsEnd: 'ダメージステップ終了時', end: 'ダメージステップ終了時' };
+const humanActing = () => S.winner === null && !isCpu(actorOf(S));
+
+function renderTop() {
+  const cur = PHASES.indexOf(S.phase);
+  const legal = humanActing() && !S.pending ? legalActions(S) : [];
+  // 移れるフェイズは押せるボタンにする
+  $('#phases').innerHTML = PHASES.map((ph, i) => {
+    const a = legal.find(x => x.type === 'nextPhase' && x.to === ph);
+    const cls = i === cur ? 'cur' : i < cur ? 'past' : '';
+    return `<li class="${cls}">${a ? `<button data-act='${esc(JSON.stringify(a))}' title="${PHASE_LABEL[ph]}へ進む">${PH_SHORT[ph]}</button>` : `<span title="${PHASE_LABEL[ph]}">${PH_SHORT[ph]}</span>`}</li>`;
+  }).join('');
+  $('#turnInfo').textContent = S.winner !== null ? '決着' : `ターン${S.turn}・${NAME(S.turnPlayer)}`;
+  $('#undo').disabled = history.length === 0;
+}
+
+/* ---------- 操作ドック ---------- */
+/** 応答の聞き方：「「死者蘇生」にチェーンしますか？」のように、何に対して発動するかを書く */
+const cardName = uid => (S.cards[uid].faceUp || S.cards[uid].zone === 'gy' || !isCpu(S.cards[uid].controller) ? `「${defOf(S, uid).name}」` : '裏側のカード');
+function respondPrompt() {
+  const w = S.window;
+  const whose = p => (p === actorOf(S) ? '自分の' : `${NAME(p)}の`);
+  if (S.chain.length) {
+    const top = S.chain[S.chain.length - 1];
+    return `${whose(top.player)}「${defOf(S, top.uid).name}」にチェーンしますか？`;
+  }
+  if (w.mode === 'summoning' && w.cont.type === 'summon') {
+    const how = w.cont.how === 'flip' ? '反転召喚' : w.cont.how === 'advance' ? 'アドバンス召喚' : '召喚';
+    return `${whose(w.cont.player)}${cardName(w.cont.uid)}の${how}に対して発動しますか？`;
+  }
+  if (S.battle && (w.cont.type === 'battle' || w.mode === 'damage')) {
+    const b = S.battle;
+    if (b.step === 'declared') return `${cardName(b.attacker)}の${b.target === null ? 'ダイレクトアタック' : `${cardName(b.target)}への攻撃`}に対して発動しますか？`;
+    return `${STEP_LABEL[b.step] || 'バトル中'}に発動しますか？`;
+  }
+  if (w.cont.type === 'phase' || w.cont.type === 'endTurn') return `${PHASE_LABEL[S.phase]}を終える前に発動しますか？`;
+  // 召喚・特殊召喚に成功した直後など
+  const ev = [...S.lastEvents].reverse().find(e => e.type === 'summoned');
+  if (ev) {
+    const how = { normal: '召喚', advance: 'アドバンス召喚', flip: '反転召喚', special: '特殊召喚', ritual: '儀式召喚', fusion: '融合召喚' }[ev.how];
+    return `${cardName(ev.uid)}の${how}成功に対して発動しますか？`;
+  }
+  return '直前の行動に対して発動しますか？';
+}
+/** 右下の「進む」ボタン：今の場面を先に進める行動（応答なら「発動しない」、フェイズなら次のフェイズ） */
+function goAction(legal) {
+  const has = x => legal.some(y => JSON.stringify(y) === JSON.stringify(x));
+  if (S.window.kind === 'priority') return { label: '発動しない', sub: 'パスして進む', a: { type: 'pass' } };
+  const me = S.turnPlayer;
+  const attackers = monstersOf(S, me).some(u => S.cards[u].faceUp && S.cards[u].position === 'atk' && !S.cards[u].noAttack);
+  const pick = (...list) => list.find(x => has(x.a)) || null;
+  if (S.phase === 'main1') return pick(...(attackers ? [{ label: 'バトルへ', sub: 'バトルフェイズに進む', a: { type: 'nextPhase', to: 'battle' } }] : []), { label: 'エンドへ', sub: 'エンドフェイズに進む', a: { type: 'nextPhase', to: 'end' } });
+  if (S.phase === 'battle') return pick({ label: 'メイン2へ', sub: 'メインフェイズ2に進む', a: { type: 'nextPhase', to: 'main2' } });
+  if (S.phase === 'main2') return pick({ label: 'エンドへ', sub: 'エンドフェイズに進む', a: { type: 'nextPhase', to: 'end' } });
+  return pick({ label: 'ターン終了', sub: '相手のターンへ', a: { type: 'endTurn' } });
+}
+function renderDock() {
+  const dock = $('#dock');
+  const actor = $('#actor'), hint = $('#actorHint'), btns = $('#phaseBtns'), go = $('#goBtn');
+  const legal = humanActing() && !S.pending ? legalActions(S) : [];
+  const has = a => legal.some(x => JSON.stringify(x) === JSON.stringify(a));
+  const b = (label, a) => `<button class="btn" data-act='${esc(JSON.stringify(a))}'>${label}</button>`;
+  const setGo = (label, sub, act, opts = {}) => {
+    go.innerHTML = `${esc(label)}${sub ? `<small>${esc(sub)}</small>` : ''}`;
+    go.disabled = !!opts.disabled;
+    if (act) go.dataset.act = JSON.stringify(act); else delete go.dataset.act;
+    go.dataset.again = opts.again ? '1' : '';
+    go.dataset.reopen = opts.reopen ? '1' : '';
+  };
+  actor.classList.remove('thinking');
+  dock.classList.toggle('mine', humanActing());
+  hint.textContent = '';
+  btns.innerHTML = '';
+  $('#stopBtn').hidden = chainMode() === 'always' || S.winner !== null;
+  $('#stopBtn').setAttribute('aria-pressed', String(stopNext));
+
+  if (S.winner !== null) {
+    actor.textContent = S.winner === 'draw' ? '引き分け' : `${NAME(S.winner)}の勝利`;
+    hint.textContent = S.winReason || '';
+    setGo('もう一度', '新しいデュエル', null, { again: true });
+    return;
+  }
+  if (isCpu(actorOf(S))) {
+    actor.textContent = S.pending ? 'CPUが選んでいます' : 'CPUが考えています';
+    actor.classList.add('thinking');
+    hint.textContent = S.window.kind === 'priority' && S.chain.length ? `チェーン${S.chain.length}に応答するか考えています` : `${PHASE_LABEL[S.phase]}`;
+    setGo('CPUの番', '少し待ってください', null, { disabled: true });
+    return;
+  }
+  if (S.pending) {
+    actor.textContent = cpuMode() ? 'あなたの選択' : `${NAME(S.pending.request.player)}の選択`;
+    hint.textContent = S.pending.request.prompt;
+    if (narrow() && peek) setGo('選択に戻る', '選ぶ画面を開く', null, { reopen: true });
+    else setGo('選択中', '出ている欄から選ぶ', null, { disabled: true });
+    return;
+  }
+  const g = goAction(legal);
+  if (S.window.kind === 'priority') {
+    actor.textContent = respondPrompt();
+    // 発動できるカードは左に並べる（効果が複数あるカードは効果名も出す）
+    const acts = activatableList(S, actorOf(S));
+    const multi = uid => acts.filter(x => x.uid === uid).length > 1;
+    hint.textContent = acts.length ? '発動するなら左のボタン、しないなら右下の「発動しない」' : '';
+    btns.innerHTML = acts.slice(0, 3).map(x => {
+      const eff = (SCRIPTS[S.cards[x.uid].code]?.effects || []).find(e => e.id === x.effect);
+      const label = `「${defOf(S, x.uid).name}」${multi(x.uid) && eff ? `の${eff.label}` : ''}を発動`;
+      return b(esc(label), { type: 'activate', card: x.uid, effect: x.effect });
+    }).join('');
+    setGo(g.label, g.sub, g.a);
+    return;
+  }
+  // 自分のターンで自由に行動できる：右下は「先に進む」、左はそれ以外の移り先
+  const me = S.turnPlayer;
+  actor.textContent = `${cpuMode() ? 'あなた' : NAME(me)}の${PHASE_LABEL[S.phase]}`;
+  hint.textContent = S.turn === 1 && S.phase === 'main1' ? '先攻1ターン目はバトルフェイズに入れません' : S.phase === 'battle' ? '攻撃するモンスターを押す' : 'カードを押すと、できる操作が出ます';
+  const others = [];
+  if (S.phase === 'main1') { others.push({ l: 'バトルフェイズへ', a: { type: 'nextPhase', to: 'battle' } }, { l: 'エンドフェイズへ', a: { type: 'nextPhase', to: 'end' } }); }
+  if (S.phase === 'battle') others.push({ l: 'エンドフェイズへ', a: { type: 'nextPhase', to: 'end' } });
+  btns.innerHTML = others.filter(x => has(x.a) && (!g || JSON.stringify(x.a) !== JSON.stringify(g.a))).map(x => b(x.l, x.a)).join('');
+  if (g) setGo(g.label, g.sub, g.a); else setGo('—', '', null, { disabled: true });
+}
+
+/* ---------- チェーンの確認：聞く場面を減らす ---------- */
+const chainMode = () => ($('#chainMode') && $('#chainMode').value) || 'auto';
+let stopNext = false;   // 「✋ 次で止める」
+/** 今の応答の機会を、聞かずにパスしてよいか */
+function shouldAutoPass() {
+  if (!S || S.winner !== null || !humanActing() || S.pending || S.window.kind !== 'priority') return false;
+  const mode = chainMode();
+  if (mode === 'always' || stopNext) return false;
+  if (mode === 'never') return true;
+  // おまかせ：相手が動いた時だけ聞く（相手の発動・召喚・特殊召喚・攻撃宣言）
+  const me = actorOf(S), w = S.window;
+  const top = S.chain[S.chain.length - 1];
+  if (top) return top.player === me;
+  if (w.mode === 'summoning' && w.cont.type === 'summon') return w.cont.player === me;
+  if (S.battle && S.battle.step === 'declared' && w.cont.type === 'battle' && w.cont.step === 'declared') return S.cards[S.battle.attacker].controller === me;
+  const ev = S.lastEvents.find(e => e.type === 'summoned' || e.type === 'attackDeclared');
+  if (ev) return ev.player === me;
+  return true;
+}
+let autoT;
+function scheduleAutoPass() {
+  clearTimeout(autoT);
+  if (!S || S.winner !== null) return;
+  if (!shouldAutoPass()) {
+    // 「次で止める」で止まったら、ボタンは元に戻す
+    if (stopNext && humanActing() && !S.pending && S.window.kind === 'priority') { stopNext = false; $('#stopBtn').setAttribute('aria-pressed', 'false'); }
+    return;
+  }
+  autoT = setTimeout(() => {
+    if (!shouldAutoPass()) return;
+    try { commit(applyAction(S, { type: 'pass' })); } catch (e) { console.error(e); return; }
+    render();
+  }, 60);
+}
+
+/* ---------- チェーン ---------- */
+function renderChain() {
+  const el = $('#chain');
+  if (!S.chain.length) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = `<h3>チェーン（上から先に処理）</h3><ol>${S.chain.map((l, i) => `<li class="${l.player === 1 && cpuMode() ? 'opp' : ''}"><b>${i + 1}</b>${NAME(l.player)}：${esc(defOf(S, l.uid).name)}${l.negated ? '（無効）' : ''}${l.targets.length ? `<span class="tg">対象：${l.targets.map(t => esc(S.cards[t].faceUp || S.cards[t].zone === 'gy' ? defOf(S, t).name : '裏側のカード')).join('、')}</span>` : ''}</li>`).reverse().join('')}</ol>`;
+}
+
+/* ---------- カード詳細と操作 ---------- */
+function describe(uid) {
+  const c = S.cards[uid], d = defOf(S, uid);
+  if (isCpu(c.controller) && (c.zone === 'hand' || ((c.zone === 'mzone' || c.zone === 'szone') && !c.faceUp))) {
+    return { head: `<h3>裏側のカード</h3><p class="tl">${NAME(c.controller)}の${c.zone === 'hand' ? '手札' : 'フィールド'}のカードです。中身は見えません。</p>`, text: '' };
+  }
+  const typeLine = d.kind === 'monster'
+    ? `${d.attribute}属性・${d.race}・★${d.level}・${(d.monsterTypes || []).join('／')}・攻${d.atk}／守${d.def}`
+    : `${d.subtype}${d.kind === 'spell' ? '魔法' : '罠'}`;
+  const where = { hand: '手札', mzone: 'モンスターゾーン', emz: 'エクストラモンスターゾーン', szone: '魔法＆罠ゾーン', fzone: 'フィールドゾーン', gy: '墓地', deck: 'デッキ', extra: 'EXデッキ', banished: '除外' }[c.zone];
+  const state = c.zone === 'mzone' || c.zone === 'emz' ? `・${c.faceUp ? '表側' : '裏側'}${c.position === 'atk' ? '攻撃' : '守備'}表示・今の攻${currentAtk(S, uid)}／守${currentDef(S, uid)}` : (c.zone === 'szone' || c.zone === 'fzone') ? `・${c.faceUp ? '表側' : '裏側'}` : '';
+  const extra = [];
+  if (c.counters && c.counters.magic) extra.push(`魔力カウンター ${c.counters.magic}`);
+  if (c.equippedTo !== null) extra.push(`${defOf(S, c.equippedTo).name}に装備`);
+  if (c.noAttack) extra.push('攻撃できない');
+  // 墓地・除外の儀式・融合モンスターが蘇生できるか（正規の召喚をしていないものは特殊召喚できない）
+  if ((c.zone === 'gy' || c.zone === 'banished') && d.kind === 'monster' && (d.frame === 'ritual' || d.frame === 'fusion')) {
+    const how = d.frame === 'ritual' ? '儀式召喚' : '融合召喚';
+    if (SCRIPTS[c.code] && SCRIPTS[c.code].fusionOnly) extra.push('融合召喚でしか特殊召喚できないので、蘇生できません');
+    else extra.push(c.proper ? `正規の${how}をしているので、蘇生できます` : `正規の${how}をしていないので、蘇生できません`);
+  }
+  return {
+    head: `<h3>${esc(d.name)}</h3><p class="tl">${esc(typeLine)}</p><p class="tl">${NAME(c.controller)}の${where}${state}</p>${extra.length ? `<p class="tl">${esc(extra.join('・'))}</p>` : ''}`,
+    text: `<p class="tx">${esc(d.text)}</p>`,
+  };
+}
+
+function candidates(uid) {
+  const c = S.cards[uid], d = defOf(S, uid);
+  if (!humanActing() || S.pending) return [];
+  const legal = legalActions(S);
+  const actor = actorOf(S);
+  const out = [];
+  const add = (label, a, ok, primary) => out.push({ label, a, ok, primary });
+  const nm = u => `「${defOf(S, u).name}」`;
+  // 効果の発動
+  const effs = (SCRIPTS[c.code] && SCRIPTS[c.code].effects || []).filter(e => e.type !== 'trigger');
+  for (const e of effs) {
+    const a = { type: 'activate', card: uid, effect: e.id };
+    const ok = legal.some(x => x.type === 'activate' && x.card === uid && x.effect === e.id);
+    if (ok || c.controller === actor) add(e.type === 'card' ? `発動：${e.label}` : `効果：${e.label}`, a, ok, ok);
+  }
+  if (c.controller !== S.turnPlayer || S.window.kind !== 'open') return out;
+  // 召喚方法が決まった特殊召喚（混沌帝龍・暗黒界の龍神 グラファ①）
+  const proc = SCRIPTS[c.code]?.procSummon;
+  if (proc && proc.zones.includes(c.zone)) add(`特殊召喚する（${proc.label}）`, { type: 'procSummon', card: uid }, legal.some(a => a.type === 'procSummon' && a.card === uid), true);
+  if (c.zone === 'hand') {
+    if (d.kind === 'monster') {
+      for (const type of SCRIPTS[c.code]?.cannotNormalSummon || d.frame === 'ritual' ? [] : ['normalSummon', 'setMonster']) {
+        const label = type === 'normalSummon' ? '召喚する' : 'セットする';
+        const vs = legal.filter(a => a.type === type && a.card === uid);
+        if (vs.length) vs.forEach(a => add(a.tributes.length ? `${label}（リリース：${a.tributes.map(nm).join('・')}）` : label, a, true, type === 'normalSummon'));
+        else add(label, { type, card: uid, tributes: [] }, false);
+      }
+      if (d.frame === 'ritual') out.push({ info: '儀式モンスターは儀式魔法で儀式召喚します。' });
+      else if (SCRIPTS[c.code]?.cannotNormalSummon) out.push({ info: 'このカードは通常召喚できません。' });
+      else if (tributesFor(S, uid) > 0) out.push({ info: `リリース${tributesFor(S, uid)}体が必要です。` });
+      else if (S.players[S.turnPlayer].normalSummonUsed) out.push({ info: '通常召喚（セットを含む）は、このターンもう行いました。' });
+    } else add('セットする', { type: 'setSpellTrap', card: uid }, legal.some(a => a.type === 'setSpellTrap' && a.card === uid));
+  } else if (c.zone === 'mzone' || c.zone === 'emz') {
+    const atks = legal.filter(a => a.type === 'attack' && a.attacker === uid);
+    if (atks.length) atks.forEach(a => add(a.target === null ? 'ダイレクトアタック' : `${S.cards[a.target].faceUp ? nm(a.target) : '裏側守備表示モンスター'}に攻撃`, a, true, true));
+    else {
+      // 攻撃できない理由を、押さなくても見えるように出す
+      const o = monstersOf(S, 1 - S.turnPlayer);
+      const why = whyIllegal(S, { type: 'attack', attacker: uid, target: o.length ? o[0] : null });
+      if (why && S.turn > 0) out.push({ info: `攻撃できません：${why}` });
+    }
+    const t = c.faceUp ? 'changePosition' : 'flipSummon';
+    const okPos = legal.some(a => a.type === t && a.card === uid);
+    if (okPos || S.phase !== 'battle') add(c.faceUp ? (c.position === 'atk' ? '守備表示にする' : '攻撃表示にする') : '反転召喚する', { type: t, card: uid }, okPos);
+  }
+  return out;
+}
+
+function renderChoice() {
+  const r = S.pending.request;
+  const who = cpuMode() ? 'あなたの選択' : `${NAME(r.player)}の選択`;
+  const head = `<h3>${who}</h3><p class="prompt">${esc(r.prompt)}</p>`;
+  if (r.kind === 'yesno') return head + `<div class="acts row2"><button class="btn act go" data-ans="true">はい</button><button class="btn act" data-ans="false">いいえ</button></div>`;
+  if (r.kind === 'option') return head + `<div class="acts">${r.options.map((o, i) => `<button class="btn act${i === 0 ? ' go' : ''}" data-ans="${i}">${esc(o)}</button>`).join('')}</div>`;
+  const where = u => ({ hand: '手札', deck: 'デッキ', gy: '墓地', mzone: 'フィールド', emz: 'フィールド', szone: 'フィールド', extra: 'EX', banished: '除外' }[S.cards[u].zone]);
+  const label = u => { const c = S.cards[u]; return (c.faceUp || c.zone !== 'mzone' || c.controller === r.player) ? defOf(S, u).name : '裏側のモンスター'; };
+  const range = r.min === r.max ? `${r.min}枚` : `${r.min}〜${r.max}枚`;
+  const ok = pick.length >= r.min && pick.length <= r.max;
+  return head + `<p class="tl">${range}選んでください（${pick.length}枚選択中）。盤面のカードを押しても選べます。</p><div class="optlist">${r.options.map(u => `<button class="opt${pick.includes(u) ? ' on' : ''}" data-opt="${u}"><span>${esc(label(u))}</span><small>${NAME(S.cards[u].controller)}・${where(u)}${defOf(S, u).kind === 'monster' ? `・★${defOf(S, u).level}・${defOf(S, u).atk}/${defOf(S, u).def}` : ''}</small></button>`).join('')}</div>
+    <button class="btn primary confirm" id="confirmPick" ${ok ? '' : 'disabled'}>決定</button>`;
+}
+
+function renderDetail() {
+  const el = $('#detail');
+  if (S.pending && isCpu(S.pending.request.player)) { el.innerHTML = `<h3>CPUが選んでいます</h3><p class="prompt">${esc(S.pending.request.prompt)}</p>`; return; }
+  if (S.pending && isDeckPick(S.pending.request)) {
+    el.innerHTML = `<h3>あなたの選択</h3><p class="prompt">${esc(S.pending.request.prompt)}</p><p class="tl">広げた山札から選んでください。</p>`;
+    openFan();
+    return;
+  }
+  if (S.pending) { el.innerHTML = renderChoice(); return; }
+  if (selected === null) {
+    el.innerHTML = `<h3>カードを押してください</h3><p class="tl">押したカードの効果と、今できる操作がここに出ます。光っているカードは今発動できます。次のフェイズへは、下のボタンか上の「BP・M2・EP」で進めます。</p>`;
+    return;
+  }
+  // 操作ボタンはカード名のすぐ下に置き、効果テキストはその後（スマホでスクロールせずに押せるように）
+  const list = candidates(selected);
+  const dsc = describe(selected);
+  el.innerHTML = dsc.head + (list.length ? `<div class="acts">${list.map(x => x.info ? `<p class="info">${esc(x.info)}</p>` : `<button class="btn act${x.ok ? (x.primary ? ' go' : '') : ' off'}" data-act='${esc(JSON.stringify(x.a))}'>${esc(x.label)}</button>`).join('')}</div>` : '') + dsc.text;
+}
+
+function renderLog() {
+  const el = $('#log');
+  el.innerHTML = S.log.slice(-200).map(l => `<li class="${l.text.startsWith('―') ? 'turn' : ''}">${esc(l.text)}</li>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+
+/* ---------- デッキから選ぶ時：山札を扇形に広げて、カードを直接選ぶ ---------- */
+let fan = null;           // { key, layer, sel, req }
+const fanDur = ms => (fxMode() === 'short' ? ms / 2 : ms);
+/** デッキの中から選ぶ選択か（演出が「なし」の時は、今までどおり文字の一覧） */
+function isDeckPick(r) {
+  return fxMode() !== 'none' && r && r.kind === 'cards' && r.options.length > 0 && r.options.every(u => S.cards[u].zone === 'deck' && S.cards[u].owner === r.player);
+}
+const rectOf = el => el.getBoundingClientRect();
+const centerOf = r => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+function pileEl(p, kind) { return ROOT.querySelector(`[data-pile="${p}:${kind}"]`); }
+/** 山札の並びが分からないように、種類と名前の順に並べる */
+function sortForFan(list) {
+  const rank = u => ({ monster: 0, spell: 1, trap: 2 }[defOf(S, u).kind] ?? 3);
+  return [...list].sort((a, b) => rank(a) - rank(b) || defOf(S, a).name.localeCompare(defOf(S, b).name, 'ja') || a - b);
+}
+function fanCardHtml(uid, back) {
+  const d = defOf(S, uid);
+  if (back) return `<span class="card back" data-fanb="${uid}"></span>`;
+  return `<span class="card f-${frameOf(d)}" data-fan="${uid}">${faceHtml(uid, d, false)}</span>`;
+}
+/** カードを扇形（何段か）に並べる位置を決める */
+function layoutFan(area, els) {
+  const W = area.clientWidth, cw = narrow() ? 64 : 80, ch = cw * 86 / 59, n = els.length;
+  const perRow = Math.max(5, Math.floor((W - cw) / (cw * .62)) + 1), rows = Math.ceil(n / perRow);
+  els.forEach((el, i) => {
+    const row = Math.floor(i / perRow), first = row * perRow, m = Math.min(perRow, n - first), idx = i - first;
+    const t = m > 1 ? idx / (m - 1) - .5 : 0, step = m > 1 ? Math.min(cw * .7, (W - cw - 8) / (m - 1)) : 0;
+    const x = W / 2 + t * step * (m - 1), y = row * ch * .66 + ch / 2 + 16 + t * t * 34, rot = t * 16;
+    el.style.width = cw + 'px'; el.style.left = (x - cw / 2) + 'px'; el.style.top = (y - ch / 2) + 'px';
+    el.style.setProperty('--rot', rot.toFixed(1) + 'deg'); el.style.zIndex = String(i + 1);
+    el.dataset.rot = rot.toFixed(1);
+  });
+  area.style.height = (rows * ch * .66 + ch * .45 + 40) + 'px';
+}
+/** 山札の場所から、扇の位置へ飛び出す */
+function flyIn(els, from) {
+  return Promise.all(els.map((el, i) => {
+    const r = rectOf(el), c = centerOf(r), dx = from.x - c.x, dy = from.y - c.y;
+    return el.animate([{ transform: `translate(${dx}px,${dy}px) scale(.6) rotate(0deg)`, opacity: .3 }, { transform: `rotate(${el.dataset.rot}deg)`, opacity: 1 }],
+      { duration: fanDur(420), delay: fanDur(Math.min(i * 28, 700)), easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }).finished;
+  }));
+}
+/** 指定の場所へ飛んでいく（残りのカードは山札へ戻る） */
+function flyTo(el, to, opts = {}) {
+  const c = centerOf(rectOf(el)), dx = to.x - c.x, dy = to.y - c.y;
+  const a = el.animate([{ transform: el.classList.contains('picked') ? 'translateY(-20px) scale(1.12)' : `rotate(${el.dataset.rot || 0}deg)`, opacity: 1 },
+    { transform: `translate(${dx}px,${dy}px) scale(${opts.scale ?? .5}) rotate(${opts.rot ?? 0}deg)`, opacity: opts.fade ? .2 : 1 }],
+  { duration: fanDur(opts.dur ?? 420), delay: fanDur(opts.delay ?? 0), easing: opts.ease ?? 'cubic-bezier(.5,0,.3,1)', fill: 'forwards' });
+  return a.finished;
+}
+function shakePile(p) {
+  const el = pileEl(p, 'deck');
+  if (el) el.animate([{ transform: 'none' }, { transform: 'translateX(-5px) rotate(-6deg)' }, { transform: 'translateX(5px) rotate(6deg)' }, { transform: 'translateX(-3px) rotate(-3deg)' }, { transform: 'none' }], { duration: fanDur(480) });
+}
+function glowPile(p) {
+  const el = pileEl(p, 'deck');
+  if (el) el.animate([{ boxShadow: '0 0 0 0 rgba(255,224,138,0)' }, { boxShadow: '0 0 0 3px #ffe08a, 0 0 26px 8px rgba(255,224,138,.8)' }, { boxShadow: '0 0 0 0 rgba(255,224,138,0)' }], { duration: fanDur(650) });
+}
+function closeFan() { if (fan) { fan.layer.remove(); fan = null; } }
+function openFan() {
+  const r = S.pending.request, key = JSON.stringify([S.step, r.prompt, r.options, S.pending.answers.length]);
+  if (fan && fan.key === key) return;
+  closeFan();
+  const p = r.player, all = sortForFan(S.players[p].deck);
+  const layer = document.createElement('div');
+  layer.className = 'fan-layer';
+  const range = r.min === r.max ? `${r.min}枚選ぶ` : `${r.min}〜${r.max}枚選ぶ`;
+  layer.innerHTML = `<div class="fan-head"><b>${esc(r.prompt)}</b><span>山札 ${all.length}枚から${range}（明るいカードが選べます）</span></div><div class="fan-area"></div>`
+    + `<div class="fan-btns">${r.min === 0 ? '<button class="btn" data-fanskip>選ばない</button>' : ''}${r.max > 1 ? '<button class="btn primary" data-fanok disabled>決定</button>' : ''}</div>`;
+  $('.droot').appendChild(layer);
+  const area = layer.querySelector('.fan-area');
+  area.innerHTML = all.map(u => fanCardHtml(u, false)).join('');
+  const els = [...area.children];
+  els.forEach(el => { if (!r.options.includes(Number(el.dataset.fan))) el.classList.add('dim'); });
+  layoutFan(area, els);
+  fan = { key, layer, sel: [], req: r, p };
+  glowPile(p);
+  const pile = pileEl(p, 'deck');
+  if (pile) flyIn(els, centerOf(rectOf(pile)));
+}
+function fanPick(u) {
+  if (!fan || !fan.req.options.includes(u)) return;
+  const r = fan.req;
+  if (r.max === 1) { fanFinish([u]); return; }
+  fan.sel = fan.sel.includes(u) ? fan.sel.filter(x => x !== u) : fan.sel.length < r.max ? [...fan.sel, u] : fan.sel;
+  fan.layer.querySelectorAll('[data-fan]').forEach(el => el.classList.toggle('picked', fan.sel.includes(Number(el.dataset.fan))));
+  const ok = fan.layer.querySelector('[data-fanok]');
+  if (ok) ok.disabled = !(fan.sel.length >= r.min && fan.sel.length <= r.max);
+}
+/** 選んだカードを行き先（手札・墓地・場）へ飛ばし、残りを山札に戻してから答える */
+async function fanFinish(sel) {
+  if (!fan || fan.busy) return;
+  fan.busy = true;
+  const r = fan.req, p = fan.p, layer = fan.layer;
+  layer.classList.add('done');
+  const dest = /除外/.test(r.prompt) ? pileEl(p, 'banished') : /墓地/.test(r.prompt) ? pileEl(p, 'gy') : /特殊召喚|フィールド/.test(r.prompt) ? $('#board') : $(`#hand${p}`);
+  const to = dest ? centerOf(rectOf(dest)) : { x: innerWidth / 2, y: innerHeight };
+  const pile = pileEl(p, 'deck'), back = pile ? centerOf(rectOf(pile)) : to;
+  const els = [...layer.querySelectorAll('[data-fan]')];
+  const picked = els.filter(el => sel.includes(Number(el.dataset.fan)));
+  picked.forEach(el => { el.classList.add('picked'); el.style.zIndex = '100'; });
+  await new Promise(res => setTimeout(res, fanDur(200)));
+  const rest = els.filter(el => !sel.includes(Number(el.dataset.fan)));
+  rest.forEach((el, i) => flyTo(el, back, { dur: 360, delay: Math.min(i * 12, 300), fade: true, scale: .5, ease: 'ease-in' }));
+  await Promise.all(picked.map(el => flyTo(el, to, { dur: 460, scale: .55, rot: -8 })));
+  shakePile(p);
+  closeFan();
+  fanDoneUids = new Set(sel);
+  run({ type: 'answer', value: sel });
+}
+
+/* ---------- CPUのサーチ：裏面の扇から1枚を見せて、手札へ ---------- */
+async function cpuSearchFx(j) {
+  const pile = pileEl(j.p, 'deck'), hand = $(`#hand${j.p}`);
+  if (!pile || !hand) return;
+  const layer = document.createElement('div');
+  layer.className = 'fan-layer cpu';
+  layer.innerHTML = `<div class="fan-head"><b>${esc(NAME(j.p))}がデッキからカードを探しています</b></div><div class="fan-area"></div>`;
+  $('.droot').appendChild(layer);
+  const area = layer.querySelector('.fan-area');
+  area.innerHTML = Array.from({ length: 9 }, () => '<span class="card back"></span>').join('');
+  const els = [...area.children];
+  layoutFan(area, els);
+  glowPile(j.p);
+  await flyIn(els, centerOf(rectOf(pile)));
+  await new Promise(res => setTimeout(res, fanDur(350)));
+  const pick = els[4];
+  pick.style.zIndex = '100';
+  const rest = els.filter(el => el !== pick);
+  rest.forEach((el, i) => flyTo(el, centerOf(rectOf(pile)), { dur: 340, delay: i * 15, fade: true, ease: 'ease-in' }));
+  // くるりと表に返して、相手に見せる
+  await pick.animate([{ transform: 'rotate(0deg) scale(1.3)' }, { transform: 'rotate(0deg) scale(1.3) scaleX(0)' }], { duration: fanDur(180), fill: 'forwards' }).finished;
+  const d = j.d;
+  pick.className = `card f-${frameOf(d)}`;
+  pick.innerHTML = faceHtml(j.uid, d, false);
+  layer.querySelector('.fan-head b').textContent = `${NAME(j.p)}が「${d.name}」を手札に加えます`;
+  await pick.animate([{ transform: 'rotate(0deg) scale(1.3) scaleX(0)' }, { transform: 'rotate(0deg) scale(1.3)' }], { duration: fanDur(180), fill: 'forwards' }).finished;
+  await new Promise(res => setTimeout(res, fanDur(900)));
+  pick.dataset.rot = '0';
+  await flyTo(pick, centerOf(rectOf(hand)), { dur: 420, scale: .4, fade: true });
+  shakePile(j.p);
+  layer.remove();
+}
+
+
+/* ---------- カードの移動・発動・無効・ターン・勝敗の演出 ----------
+   画面を更新する前のカードの位置を覚えておき、更新した後の位置まで、カードの写しを飛ばす */
+let pendingMoves = null;
+let fanDoneUids = new Set();   // 扇から選んだカード（扇の演出で飛ばし済み）
+const VIEWER = 0;              // 画面を見ている人（CPU対戦では P1）
+const dur = ms => (fxMode() === 'short' ? ms / 2 : ms);
+const wait = ms => new Promise(res => setTimeout(res, dur(ms)));
+const PUBLIC = ['mzone', 'emz', 'szone', 'fzone', 'gy', 'banished'];
+/** そのカードの表を、画面を見ている人が見てよいか */
+function visibleTo(st, u) {
+  const c = st.cards[u];
+  if (!c) return false;
+  if (PUBLIC.includes(c.zone)) return c.faceUp || (c.zone !== 'banished' && c.controller === VIEWER && cpuMode());
+  if (c.zone === 'hand') return !cpuMode() || c.owner === VIEWER;
+  return false;
+}
+function snapRects() {
+  const m = new Map(), piles = {};
+  ROOT.querySelectorAll('#board [data-uid], #hand0 [data-uid], #hand1 [data-uid]').forEach(el => m.set(Number(el.dataset.uid), el.getBoundingClientRect()));
+  ROOT.querySelectorAll('#board [data-pile]').forEach(el => { piles[el.dataset.pile] = el.getBoundingClientRect(); });
+  return { m, piles };
+}
+function linkKey(l) { return `${l.uid}:${l.serial}:${l.effect}`; }
+function queueMoves(prev, next) {
+  if (fxMode() === 'none' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const fresh = (next.anim || []).filter(x => x.seq > (prev.animSeq ?? 0));
+  const skip = new Set([...fanDoneUids, ...sigSkip]); fanDoneUids = new Set(); sigSkip.clear();
+  for (const x of fresh) {
+    if (x.kind === 'summon' || x.kind === 'search') skip.add(x.uid);
+    if (x.kind === 'summon') (x.mats || []).forEach(m => { if (x.how === 'fusion' || x.how === 'ritual' || x.how === 'advance') skip.add(m); });
+    if (x.kind === 'battle') x.destroyed.forEach(u => skip.add(u));
+  }
+  const negs = new Set(fresh.filter(x => x.kind === 'negate').map(x => x.uid));
+  const destroys = new Set(fresh.filter(x => x.kind === 'destroy').map(x => x.uid));
+  const moves = [];
+  for (const k of Object.keys(next.cards)) {
+    const u = Number(k), pc = prev.cards[u], nc = next.cards[u];
+    if (!pc || skip.has(u)) continue;
+    const same = pc.zone === nc.zone && pc.controller === nc.controller && (!['mzone', 'szone', 'emz'].includes(nc.zone) || pc.index === nc.index);
+    if (same) continue;
+    if (pc.zone === 'deck' && nc.zone === 'deck') continue;
+    moves.push({ u, from: pc.zone, to: nc.zone, fromP: pc.controller, toP: nc.controller, face: visibleTo(prev, u) || visibleTo(next, u), d: defOf(next, u),
+      destroy: destroys.has(u), negate: negs.has(u) });
+  }
+  const had = new Set((prev.chain || []).map(linkKey));
+  const acts = (next.chain || []).filter(l => !had.has(linkKey(l))).map(l => ({ uid: l.uid, p: l.player, kind: l.cardKind, zone: next.cards[l.uid].zone, d: defOf(next, l.uid) }));
+  const turn = next.turn !== prev.turn && next.winner === null ? next.turnPlayer : null;
+  const win = prev.winner === null && next.winner !== null ? next.winner : null;
+  if (!moves.length && !acts.length && turn === null && win === null) return;
+  const snap = snapRects();
+  if (!pendingMoves) pendingMoves = { from: snap.m, piles: snap.piles, moves: [], acts: [], turn: null, win: null };
+  else snap.m.forEach((r, u) => { if (!pendingMoves.from.has(u)) pendingMoves.from.set(u, r); });
+  // 同じカードが続けて動いた時は、最初の場所から最後の場所へ
+  for (const m of moves) {
+    const old = pendingMoves.moves.find(x => x.u === m.u);
+    if (old) { old.to = m.to; old.toP = m.toP; old.face = old.face || m.face; old.destroy ||= m.destroy; old.negate ||= m.negate; }
+    else pendingMoves.moves.push(m);
+  }
+  pendingMoves.acts.push(...acts);
+  if (turn !== null) pendingMoves.turn = turn;
+  if (win !== null) pendingMoves.win = win;
+}
+function flyLayer() {
+  let l = $('.fly-layer');
+  if (!l) { l = document.createElement('div'); l.className = 'fly-layer'; $('.droot').appendChild(l); }
+  return l;
+}
+function ghost(m, rect) {
+  const el = document.createElement('span');
+  el.className = m.face ? `card f-${frameOf(m.d)}` : 'card back';
+  if (m.face) el.innerHTML = faceHtml(m.u, m.d, false);
+  Object.assign(el.style, { position: 'fixed', left: rect.left + 'px', top: rect.top + 'px', width: rect.width + 'px', margin: 0, fontSize: Math.max(6, rect.width / 8.4) + 'px', zIndex: 2 });
+  flyLayer().appendChild(el);
+  return el;
+}
+/** カード1枚を、前の場所から今の場所へ飛ばす */
+async function flyOne(m, P, i) {
+  const pileRect = (p, z) => P.piles[`${p}:${z}`];
+  const fromR = P.from.get(m.u) || pileRect(m.fromP, m.from);
+  const destEl = ROOT.querySelector(`#board [data-uid="${m.u}"], #hand0 [data-uid="${m.u}"], #hand1 [data-uid="${m.u}"]`);
+  const toR = destEl ? destEl.getBoundingClientRect() : (ROOT.querySelector(`#board [data-pile="${m.toP}:${m.to}"]`) || {}).getBoundingClientRect?.();
+  if (!fromR || !toR) return;
+  // 盤面のカードと同じ大きさの写しを作る（山札などのマスから出る時は、カードの大きさにそろえる）
+  const w = destEl ? toR.width : Math.min(fromR.width, toR.width) * .72;
+  const start = { left: fromR.left + (fromR.width - w) / 2, top: fromR.top + (fromR.height - w * 86 / 59) / 2, width: w };
+  const g = ghost(m, start);
+  if (destEl) destEl.style.visibility = 'hidden';
+  await wait(i * 45);
+  // 無効：赤い×印
+  if (m.negate) {
+    const x = document.createElement('span'); x.className = 'fx-cross';
+    Object.assign(x.style, { left: fromR.left + 'px', top: fromR.top + 'px', width: fromR.width + 'px', height: fromR.height + 'px' });
+    flyLayer().appendChild(x);
+    await x.animate([{ transform: 'scale(1.6)', opacity: 0 }, { transform: 'scale(1)', opacity: 1, offset: .35 }, { transform: 'scale(1)', opacity: 1 }], { duration: dur(520), easing: 'ease-out' }).finished;
+    x.remove();
+  }
+  // 効果で破壊：赤く光って震えてから
+  if (m.destroy && ['mzone', 'emz', 'szone', 'fzone'].includes(m.from)) {
+    await g.animate([{ transform: 'none', filter: 'none' }, { transform: 'translateX(-4px) rotate(-4deg)', filter: 'brightness(1.6) drop-shadow(0 0 10px #ff4a3d)' }, { transform: 'translateX(4px) rotate(4deg)', filter: 'brightness(1.6) drop-shadow(0 0 10px #ff4a3d)' }, { transform: 'none', filter: 'brightness(.7)' }], { duration: dur(300) }).finished;
+  }
+  const tx = toR.left + (toR.width - w) / 2 - start.left, ty = toR.top + (toR.height - w * 86 / 59) / 2 - start.top;
+  const banish = m.to === 'banished', toPile = !destEl;
+  const end = `translate(${tx}px,${ty}px) rotate(${toPile ? (m.to === 'gy' ? -8 : 0) : 0}deg) scale(${toPile ? .9 : 1})`;
+  await g.animate([{ transform: 'none', opacity: 1, filter: m.destroy ? 'brightness(.7)' : 'none' },
+    { transform: `translate(${tx * .5}px,${ty * .5 - 26}px) scale(1.08)`, opacity: 1, offset: .5 },
+    { transform: end, opacity: banish ? 0 : 1, filter: banish ? 'hue-rotate(220deg) brightness(1.4) blur(1px)' : 'none' }],
+  { duration: dur(toPile ? 460 : 400), easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }).finished;
+  g.remove();
+  if (destEl) destEl.style.visibility = '';
+}
+/** 発動：カードが光る。墓地で発動した時は、墓地からカードが浮かび上がる */
+async function activateOne(a, P, i) {
+  await wait(i * 120);
+  const col = a.kind === 'spell' ? '#5dbfa1' : a.kind === 'trap' ? '#d98bb2' : '#ffd27a';
+  const el = ROOT.querySelector(`#board [data-uid="${a.uid}"], #hand0 [data-uid="${a.uid}"], #hand1 [data-uid="${a.uid}"]`);
+  if (a.zone === 'gy' || a.zone === 'banished' || !el) {
+    const pile = ROOT.querySelector(`#board [data-pile="${a.p}:${a.zone}"]`);
+    if (!pile) return;
+    const r = pile.getBoundingClientRect(), w = r.width * .72;
+    const g = ghost({ face: true, u: a.uid, d: a.d }, { left: r.left + (r.width - w) / 2, top: r.top + (r.height - w * 86 / 59) / 2, width: w });
+    g.classList.add('fx-soul');
+    await g.animate([{ transform: 'translateY(0) scale(.9)', opacity: 0, filter: 'drop-shadow(0 0 0 #b67cff)' },
+      { transform: 'translateY(-34px) scale(1.15)', opacity: 1, filter: 'drop-shadow(0 0 14px #b67cff) brightness(1.15)', offset: .35 },
+      { transform: 'translateY(-40px) scale(1.15)', opacity: 1, filter: 'drop-shadow(0 0 18px #b67cff) brightness(1.15)', offset: .8 },
+      { transform: 'translateY(-50px) scale(1.2)', opacity: 0, filter: 'drop-shadow(0 0 24px #b67cff)' }], { duration: dur(1100), easing: 'ease-out' }).finished;
+    g.remove();
+    return;
+  }
+  const r = el.getBoundingClientRect(), ring = document.createElement('span');
+  ring.className = 'fx-ring';
+  Object.assign(ring.style, { left: (r.left + r.width / 2) + 'px', top: (r.top + r.height / 2) + 'px', borderColor: col });
+  flyLayer().appendChild(ring);
+  el.animate([{ filter: 'none', transform: getComputedStyle(el).transform === 'none' ? 'none' : getComputedStyle(el).transform }, { filter: `brightness(1.35) drop-shadow(0 0 12px ${col})` }, { filter: 'none' }], { duration: dur(700) });
+  await ring.animate([{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 1 }, { transform: 'translate(-50%,-50%) scale(2.4)', opacity: 0 }], { duration: dur(650), easing: 'ease-out' }).finished;
+  ring.remove();
+}
+async function banner(text, cls, ms) {
+  const b = document.createElement('div');
+  b.className = `fx-banner ${cls}`;
+  b.innerHTML = `<b>${esc(text)}</b>`;
+  flyLayer().appendChild(b);
+  await b.animate([{ transform: 'translate(-50%,-50%) scaleX(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scaleX(1)', opacity: 1, offset: .2 }, { transform: 'translate(-50%,-50%) scaleX(1)', opacity: 1, offset: .8 }, { transform: 'translate(-50%,-50%) scaleX(1.05)', opacity: 0 }], { duration: dur(ms), easing: 'ease-out' }).finished;
+  b.remove();
+}
+/** 画面を更新した後：たまっている移動・発動・ターン・勝敗の演出を再生する */
+function playPendingMoves() {
+  if (!pendingMoves || (fxN > 0)) return false;
+  const P = pendingMoves; pendingMoves = null;
+  fxN++;
+  (async () => {
+    try {
+      await Promise.all(P.moves.map((m, i) => flyOne(m, P, i)));
+      await Promise.all(P.acts.map((a, i) => activateOne(a, P, i)));
+      if (P.win !== null) await banner(P.win === 'draw' ? '引き分け' : cpuMode() ? (P.win === 0 ? '勝利！' : '敗北…') : `${NAME(P.win)}の勝利！`, P.win === 0 || !cpuMode() ? 'win' : 'lose', 1800);
+      else if (P.turn !== null) await banner(cpuMode() ? (P.turn === 0 ? 'あなたのターン' : 'CPUのターン') : `${NAME(P.turn)}のターン`, P.turn === 0 ? 'me' : 'opp', 1000);
+    } catch (e) { console.error(e); }
+    const l = $('.fly-layer'); if (l) l.innerHTML = '';
+    fxN = Math.max(0, fxN - 1);
+    render();
+  })();
+  return true;
+}
+/* LP：数字をなめらかに増減させる */
+const lpShown = [null, null], lpAnim = [0, 0];
+function tweenLp(el, p, to) {
+  const from = lpShown[p] ?? to;
+  lpShown[p] = to;
+  if (from === to || fxMode() === 'none') { el.textContent = to; return; }
+  const t0 = performance.now(), id = ++lpAnim[p], d = dur(600);
+  const step = now => {
+    if (id !== lpAnim[p]) return;
+    const k = Math.min(1, (now - t0) / d), v = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3)));
+    el.textContent = v;
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+/* ---------- シート（スマホ） ---------- */
+function renderSheets() {
+  const humanChoice = S.pending && !isCpu(S.pending.request.player);
+  const detailOpen = narrow() && ((humanChoice && !peek && !fan) || (sheet === 'detail' && selected !== null));
+  const logOpen = narrow() && sheet === 'log' && !detailOpen;
+  $('#detailSheet').classList.toggle('open', detailOpen);
+  $('#logSheet').classList.toggle('open', logOpen);
+  $('#scrim').hidden = !(detailOpen || logOpen);
+}
+function closeSheets() {
+  if (S.pending && !isCpu(S.pending.request.player)) peek = true;
+  sheet = null; selected = null;
+  render();
+}
+
+function render() {
+  if ((fxN > 0)) { renderSheets(); return; } // 演出が終わってから画面を更新する（開いていたシートは先に閉じる）
+  if (fan && !(S.pending && !isCpu(S.pending.request.player) && isDeckPick(S.pending.request))) closeFan();
+  canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
+  renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets();
+  $('#result').hidden = S.winner === null;
+  if (S.winner !== null) $('#result').textContent = S.winner === 'draw' ? `引き分け：${S.winReason}` : `${NAME(S.winner)}の勝利：${S.winReason}`;
+  // カードの移動・召喚の演出があれば、それが終わるまでCPUの手番と自動パスを待つ
+  if (playPendingMoves()) { saveSoon(); return; }
+  if (playPendingSummons()) { saveSoon(); return; }
+  scheduleCpu();
+  scheduleAutoPass();
+  saveSoon();
+}
+
+/* ---------- 途中のデュエルを、この端末に覚えておく（ページを閉じても続きから） ---------- */
+const SAVE_V = 1;
+let saveT;
+function saveSoon() {
+  if (!OPTS.storageKey) return;
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    try {
+      if (!S || S.winner !== null) localStorage.removeItem(OPTS.storageKey);
+      else localStorage.setItem(OPTS.storageKey, JSON.stringify({ v: SAVE_V, S, mode: $('#mode').value, d0: $('#deck0').value, d1: $('#deck1').value }));
+    } catch { /* 保存できない環境では覚えない */ }
+  }, 400);
+}
+function loadSaved() {
+  if (!OPTS.storageKey) return null;
+  try { const j = JSON.parse(localStorage.getItem(OPTS.storageKey) || 'null'); return j && j.v === SAVE_V && j.S ? j : null; } catch { return null; }
+}
+
+/* ---------- 墓地・除外・EXデッキの中身 ---------- */
+function showPile(p, kind) {
+  const list = S.players[p][kind];
+  const label = { deck: 'デッキ', gy: '墓地', extra: 'EXデッキ', banished: '除外' }[kind];
+  const hiddenExtra = kind === 'extra' && isCpu(p);
+  const body = kind === 'deck' || hiddenExtra ? `<p class="menu-note">中身は見られません（${list.length}枚）。</p>` :
+    list.length ? `<div class="pilelist">${[...list].reverse().map(u => cardHtml(u)).join('')}</div>` : '<p class="menu-note">カードはありません。</p>';
+  $('#pileBox').innerHTML = `<div class="box-head"><h3>${NAME(p)}の${label}（${list.length}枚）</h3><button class="btn small ghost" id="pileClose">閉じる</button></div>${body}`;
+  $('#pileDlg').hidden = false;
+}
+
+/* ---------- メニュー ---------- */
+function openMenu() { $('#menu').hidden = false; $('#menuBtn').setAttribute('aria-expanded', 'true'); disarm(); }
+function closeMenu() { $('#menu').hidden = true; $('#menuBtn').setAttribute('aria-expanded', 'false'); disarm(); }
+let armT;
+function disarm() { const b = $('#surrender'); b.classList.remove('armed'); b.textContent = 'サレンダーする'; clearTimeout(armT); }
+function surrender() {
+  const b = $('#surrender');
+  if (S.winner !== null) { closeMenu(); return; }
+  // 押し間違いを防ぐため、2回押して確定する
+  if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'もう一度押すとサレンダー'; armT = setTimeout(disarm, 3000); return; }
+  disarm(); closeMenu();
+  if (cpuMode()) { clearTimeout(cpuTimer); history.push(S); commit(applyAction(S, { type: 'surrender', player: 0 })); render(); return; }
+  run({ type: 'surrender', player: actorOf(S) });
+}
+
+/* ---------- イベント（boot から呼ぶ） ---------- */
+function wire(root) {
+root.addEventListener('click', e => {
+  const t = e.target;
+  if (t.closest('[data-fanok]')) { if (fan) fanFinish(fan.sel); return; }
+  if (t.closest('[data-fanskip]')) { fanFinish([]); return; }
+  const fanEl = t.closest('[data-fan]');
+  if (fanEl) { fanPick(Number(fanEl.dataset.fan)); return; }
+  if (t.closest('#again') || t.closest('[data-again="1"]')) { newDuel(); return; }
+  if (t.closest('[data-reopen="1"]')) { peek = false; render(); return; }
+  if (t.closest('#stopBtn')) { stopNext = !stopNext; renderDock(); return; }
+  if (t.closest('#closeDuel')) { clearTimeout(cpuTimer); OPTS.onClose?.(); return; }
+  if (t.closest('#reopen')) { peek = false; render(); return; }
+  if (t.closest('[data-close]') || t.id === 'scrim') { closeSheets(); return; }
+  if (t.closest('#logBtn')) { sheet = sheet === 'log' ? null : 'log'; renderSheets(); return; }
+  if (t.closest('#menuBtn')) { openMenu(); return; }
+  if (t.closest('#menuClose') || t.id === 'menu') { closeMenu(); return; }
+  if (t.closest('#surrender')) { surrender(); return; }
+  const actEl = t.closest('[data-act]');
+  if (actEl) { run(JSON.parse(actEl.dataset.act)); return; }
+  const ansEl = t.closest('[data-ans]');
+  if (ansEl) { run({ type: 'answer', value: JSON.parse(ansEl.dataset.ans) }); return; }
+  const optEl = t.closest('[data-opt]');
+  if (optEl) { togglePick(Number(optEl.dataset.opt)); return; }
+  if (t.closest('#confirmPick')) { run({ type: 'answer', value: pick }); return; }
+  if (t.closest('#pileClose') || t.id === 'pileDlg') { $('#pileDlg').hidden = true; return; }
+  const cardEl = t.closest('[data-uid]');
+  if (cardEl) {
+    const u = Number(cardEl.dataset.uid);
+    // 選択中なら、盤面のカードを押しても選べる
+    if (S.pending && S.pending.request.kind === 'cards' && S.pending.request.options.includes(u) && !isCpu(S.pending.request.player)) { togglePick(u); return; }
+    selected = u; sheet = 'detail';
+    if (cardEl.closest('#pileDlg')) $('#pileDlg').hidden = true;
+    render();
+    return;
+  }
+  const pileEl = t.closest('[data-pile]');
+  if (pileEl) { const [p, k] = pileEl.dataset.pile.split(':'); showPile(Number(p), k); }
+});
+root.addEventListener('change', e => {
+  if (e.target.id === 'hideOpp') renderSide();
+  if (e.target.id === 'mode') { $('#hideOppRow').hidden = cpuMode(); render(); }
+});
+document.addEventListener('keydown', e => {
+  if (OPTS.isOpen && !OPTS.isOpen()) return; // ルールページで対戦画面を閉じている間は反応しない
+  // スペースキー：右下の「進む」ボタン（文字を入力している時は除く）
+  if (e.key === ' ' && !/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test((e.composedPath()[0] || {}).tagName || '')) { const g = $('#goBtn'); if (g && !g.disabled) { e.preventDefault(); g.click(); } return; }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+  if (e.key === 'Escape') {
+    if (!$('#pileDlg').hidden) $('#pileDlg').hidden = true;
+    else if (!$('#menu').hidden) closeMenu();
+    else closeSheets();
+  }
+});
+$('#undo').onclick = undo;
+$('#newDuel').onclick = newDuel;
+// 効果音：ブラウザは操作の後でないと音を出せないので、最初に触った時に準備する
+root.addEventListener('pointerdown', unlock, { passive: true });
+$('#soundBtn').onclick = () => { setSoundEnabled(!soundEnabled()); renderSoundBtn(); if (soundEnabled()) play(['spell']); };
+renderSoundBtn();
+// CPUの速さは、この端末に覚えておく
+try { const v = localStorage.getItem('gx-duel-cpu-speed'); if (v) $('#cpuSpeed').value = v; } catch { /* 保存できない環境 */ }
+// 攻撃の演出も、この端末に覚えておく
+try { const v = localStorage.getItem('gx-duel-fx'); if (v) $('#fxMode').value = v; } catch { /* 保存できない環境 */ }
+$('#fxMode').onchange = () => { try { localStorage.setItem('gx-duel-fx', $('#fxMode').value); } catch { /* 保存できない環境 */ } };
+// チェーンの確認も、この端末に覚えておく
+try { const v = localStorage.getItem('gx-duel-chain-mode'); if (v) $('#chainMode').value = v; } catch { /* 保存できない環境 */ }
+$('#chainMode').onchange = () => { try { localStorage.setItem('gx-duel-chain-mode', $('#chainMode').value); } catch { /* 保存できない環境 */ } if (S) render(); };
+$('#cpuSpeed').onchange = () => { try { localStorage.setItem('gx-duel-cpu-speed', $('#cpuSpeed').value); } catch { /* 保存できない環境 */ } };
+matchMedia('(max-width: 860px)').addEventListener('change', () => S && render());
+// 画面の幅が変わったら、手札の扇を並べ直す
+if (window.ResizeObserver) { const ro = new ResizeObserver(() => { fanOut($('#hand0')); fanOut($('#hand1')); }); ro.observe($('#hand0')); ro.observe($('#hand1')); }
+}
+function togglePick(u) {
+  const r = S.pending.request;
+  if (pick.includes(u)) pick = pick.filter(x => x !== u);
+  else if (r.max === 1) pick = [u];
+  else if (pick.length < r.max) pick = [...pick, u];
+  renderDetail(); renderBoard(); renderSide();
+}
+function renderSoundBtn() { const on = soundEnabled(); $('#soundBtn').textContent = on ? '音 オン' : '音 オフ'; $('#soundBtn').setAttribute('aria-pressed', String(on)); }
+
+/* ---------- 起動 ---------- */
+/**
+ * 対戦画面を root（Shadow DOM など）の中で動かす。
+ * opts.onClose：「ルールブックに戻る」ボタンを出し、押されたら呼ぶ
+ * opts.isOpen：画面が見えているか（見えていない間はキー操作に反応しない）
+ * opts.storageKey：途中のデュエルをこの端末に覚えておくキー
+ * opts.standalone：単独のページ（Claude の hot 保存を使う）
+ */
+export function boot(root, opts = {}) {
+  ROOT = root; OPTS = opts;
+  setPool(CARD_POOL);
+  $('#deck0').innerHTML = deckOptions();
+  $('#deck1').innerHTML = deckOptions();
+  $('#closeDuel').hidden = !opts.onClose;
+  wire(root);
+  const start = data => {
+    if (data && data.mode) $('#mode').value = data.mode;
+    if (data && data.d0 && DECKS[data.d0]) $('#deck0').value = data.d0;
+    if (data && data.d1 && DECKS[data.d1]) $('#deck1').value = data.d1;
+    $('#hideOppRow').hidden = cpuMode();
+    if (data && data.S && (data.v === 4 || data.v === SAVE_V)) {
+      try { S = data.S; history = data.history || []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); return; }
+      catch (e) { console.warn('保存していたデュエルを開けませんでした', e); }
+    }
+    newDuel();
+    // ルールページでは、最初にデッキを選べるようにメニューを開く
+    if (opts.menuFirst) openMenu();
+  };
+  // 動作確認用：開発者ツールから状態を読み書きできるようにする
+  window.__duel = { get state() { return S; }, load(s) { clearTimeout(cpuTimer); S = s; history = []; selected = null; pick = []; lastLp = [s.players[0].lp, s.players[1].lp]; render(); } };
+  if (opts.standalone) {
+    window.claude?.hot?.snapshot?.(() => ({ v: 4, S, history: history.slice(-30), mode: $('#mode').value }));
+    window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+  } else start(loadSaved());
+}
+/** 画面を開き直した時：止めていたCPUの手番を再開する */
+export function resume() { if (S) render(); }
