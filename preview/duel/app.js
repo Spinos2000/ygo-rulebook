@@ -264,7 +264,18 @@ function scheduleCpu() {
 }
 
 /* ---------- 新しいデュエル ---------- */
-function deckOptions() { return Object.values(DECKS).map(d => `<option value="${esc(d.code)}">${esc(d.name)}</option>`).join(''); }
+function deckOptions() { return Object.values(DECKS).map(d => `<option value="${esc(d.code)}">${d.format ? (d.format.kind === 'ryu' ? '🌏 ' : '🏫 ') : ''}${esc(d.name)}</option>`).join(''); }
+/** デッキ選びの下に、在校生／留学生・留学生の理由・数えるカードを出す */
+function showDeckFmt() {
+  for (const i of [0, 1]) {
+    const box = $(`#deckFmt${i}`), d = DECKS[$(`#deck${i}`).value], f = d && d.format;
+    if (!box) continue;
+    if (!f) { box.innerHTML = ''; continue; }
+    const ctr = f.ctr.map(k => k === 'mag' ? '魔力カウンター' : k);
+    box.innerHTML = (f.kind === 'ryu' ? `<b class="ryu">🌏 留学生デッキ</b><small>理由：${esc(f.why.join('、'))}</small>` : '<b class="std">🏫 在校生デッキ</b>')
+      + `<small>🔢 数えるカード：${ctr.length ? esc(ctr.join('、')) : 'なし'}</small>`;
+  }
+}
 function newDuel() {
   // 選ばれているデッキが無い場合（読み込み直後など）は最初のデッキを使う
   const first = Object.values(DECKS)[0];
@@ -1303,6 +1314,7 @@ export function boot(root, opts = {}) {
   setPool(CARD_POOL);
   $('#deck0').innerHTML = deckOptions();
   $('#deck1').innerHTML = deckOptions();
+  for (const i of [0, 1]) $(`#deck${i}`).addEventListener('change', showDeckFmt);
   $('#closeDuel').hidden = !opts.onClose;
   wire(root);
   const start = data => {
@@ -1310,6 +1322,7 @@ export function boot(root, opts = {}) {
     if (data && data.d0 && DECKS[data.d0]) $('#deck0').value = data.d0;
     if (data && data.d1 && DECKS[data.d1]) $('#deck1').value = data.d1;
     $('#hideOppRow').hidden = cpuMode();
+    showDeckFmt();
     if (data && data.S && (data.v === 4 || data.v === SAVE_V)) {
       try { S = data.S; history = data.history || []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); return; }
       catch (e) { console.warn('保存していたデュエルを開けませんでした', e); }

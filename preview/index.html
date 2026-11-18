@@ -456,6 +456,11 @@ section.fold.open > .sec-h{border-bottom:3px double var(--line);padding-bottom:1
 .ow-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .ow-top b{font-weight:900;font-size:16px}
 .ow-themes{display:flex;flex-wrap:wrap;gap:6px}
+.dk-info{display:flex;flex-direction:column;gap:6px;margin-top:8px;width:100%}
+.dk-info[hidden]{display:none}
+.dk-row{font-size:12px;line-height:1.6;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.dk-row b{font-size:13px;margin-right:6px}
+.dk-row .dk-why{color:var(--trap)}
 .ow-t{font-size:14px;font-weight:700;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
 .ow-t.dup{border-color:var(--monster);background:var(--monster-bg);color:var(--monster)}
 .ow-acts{display:flex;gap:6px;justify-content:flex-end}
@@ -2362,7 +2367,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     <div class="pool-row yes"><b>✅ 使える</b><span><span class="hlw"><span class="hl">2008年3月までに初登場したカード</span></span></span><span class="note">後から再録されたカードも、初登場が2008年3月までならOK。</span></div>
     <div class="pool-row no"><b>⛔ 使えない</b><span>2008年4月以降に初登場したカード</span><span class="note">GX以降に登場したテーマも、GX以前のテーマに後から追加されたモンスターも、すべて使用不可。</span></div>
     <div class="pool-row ex"><b>🔑 例外（新しくても使える）</b>
-      <span>① <strong>汎用魔法・罠</strong><br><span class="note">→ <a href="#allow">許可リスト</a>にあるカードだけ。どのデッキも使える（枚数は<a href="#list">汎用規制リスト</a>に従う）</span></span>
+      <span>① <strong>汎用魔法・罠</strong><br><span class="note">→ GX以降のカードも、どのデッキも使える（枚数は<a href="#list">汎用規制リスト</a>に従う）</span></span>
       <span>② <strong>汎用モンスター</strong><br><span class="note">→ <a href="#allow">許可リスト</a>にあるカードだけ。弱いデッキが1枚まで</span></span>
       <span>③ <strong>弱いデッキの救済</strong><br><span class="note">→ 専用の魔法・罠強化カードを1種類だけ（最大2枚）</span></span>
     </div>
@@ -2380,11 +2385,10 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     <span class="note">・<strong>種族・属性・カードの種類だけ</strong>を参照するカード（例：「ドラゴン族」「炎属性」「融合モンスター」）は<strong>「汎用」</strong>。<br>・<strong>特定のカード名</strong>が書かれているカード（例：「青眼の白龍」を指定するカード）は、そのカードのテーマの<strong>「専用」</strong>。</span>
   </div>
   <div class="principles stack">
-    <b>🟢 GX以降の汎用カードは「許可リスト方式」</b>
-    <span>2008年4月以降の汎用カードは<span class="red">原則使用不可。</span><a href="#allow">許可リスト</a>に載っているカードだけ使えます。</span>
-    <span>・<strong>汎用魔法・罠</strong>：許可されたものは<strong>どのデッキも</strong>使えます。枚数は汎用規制リストに従います（載っていなければ3枚まで）。</span>
-    <span>・<strong>汎用モンスター</strong>：許可されたものを、<strong>弱いデッキが強化手順1で1枚</strong>投入できます。</span>
-    <span class="note">汎用規制リストに「後」マークつきで載っているカードは、許可済みとしてリストの枚数まで使えます。</span>
+    <b>🟢 GX以降の汎用カード</b>
+    <span>・<strong>汎用魔法・罠</strong>：2008年4月以降のカードも<strong>どのデッキも</strong>使えます。枚数は汎用規制リストに従います（載っていなければ3枚まで）。</span>
+    <span>・<strong>汎用モンスター</strong>：<span class="red">原則使用不可。</span><a href="#allow">許可リスト</a>に載っているものを、<strong>弱いデッキが強化手順1で1枚</strong>投入できます。</span>
+    <span class="note">強すぎる汎用魔法・罠は、汎用規制リストに「後」マークつきで載せて枚数を決めています（完全使用不可もあります）。</span>
   </div>
   <div class="principles stack">
     <b>🟣 GX以前の汎用モンスターにも規制があります</b>
@@ -2477,7 +2481,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       <li><b>バランス調整</b><span>強いデッキの弱化・弱いデッキの強化</span></li>
       <li><b>サイドデッキ</b><span>相手対策ではなく、自分のデッキの強さ調整用</span></li>
       <li><b>先攻・後攻</b><span>必ずサイトの抽選で決める</span></li>
-      <li><b>新規カード</b><span>許可リストの汎用魔法・罠と汎用モンスター、弱いデッキの救済カードのみ</span></li>
+      <li><b>新規カード</b><span>汎用魔法・罠（汎用規制リストに従う）、許可リストの汎用モンスター、弱いデッキの救済カードのみ</span></li>
       <li><b>規制の共有</b><span>デッキごとの規制を規制報告ボードで管理する</span></li>
     </ul></div>
   </div>
@@ -2803,7 +2807,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
 <!-- 規制リスト -->
 <section class="fold" id="list">
   <div class="sec-h"><span>LIMITED LIST</span><h2>🚨 汎用魔法・罠 規制リスト</h2><p class="note">全デッキ共通</p></div>
-  <p><strong>リストにない汎用魔法・罠</strong>は、GX以前（2008年3月まで）のカードなら<strong>無制限</strong>です。GX以降のカードは、<a href="#allow">許可リスト</a>にあるものだけ使えます。</p>
+  <p><strong>リストにない汎用魔法・罠</strong>は、GX以降（2008年4月〜）のカードも含めて<strong>無制限</strong>（3枚まで）です。</p>
     <details class="fold-in"><summary>ℹ️ このリストについて</summary><div class="fold-body">
     <p class="note">👀 今後の緩和・強化の候補は <a href="#watch">見直し候補</a> にまとめています。</p>
     <p class="note">GX時代の公式リスト（2008年3月1日）で禁止だったカードは「完全使用不可」、制限・準制限だったカードは「制限」として載せています（一部はこの環境に合わせて変えています）。</p>
@@ -2933,10 +2937,10 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
 <section class="fold" id="allow">
   <div class="sec-h"><span>ALLOW LIST</span><h2>🟢 汎用カード 許可リスト</h2><p class="note">GX以降（2008年4月〜）に登場した汎用カードが対象</p></div>
   <div class="principles stack">
-    <span>⛔ GX以降の汎用カードは<span class="red">原則使用不可。</span></span>
-    <span>✅ <strong>汎用魔法・罠</strong>：「許可」にあるカードは<span class="hlw"><span class="hl">どのデッキも使えます</span></span>（枚数は<a href="#list">汎用規制リスト</a>に従う。載っていなければ3枚まで）。</span>
+    <span>✅ <strong>汎用魔法・罠</strong>は、GX以降のカードも使えます（枚数は<a href="#list">汎用規制リスト</a>に従う）。下の魔法・罠の一覧は、検討したカードの記録です。</span>
+    <span>⛔ GX以降の<strong>汎用モンスター</strong>は<span class="red">原則使用不可。</span></span>
     <span>✅ <strong>汎用モンスター</strong>：「許可」にあるカードだけ、<span class="hlw"><span class="hl">弱いデッキが強化手順1で1枚</span></span>投入できます。</span>
-    <span class="note">汎用規制リストに「後」マークつきで載っている魔法・罠は、許可済みとしてリストの枚数まで使えます。</span>
+    <span class="note">汎用規制リストに「後」マークつきで載っている魔法・罠は、リストの枚数まで使えます。</span>
     <span>📏 追加の目安：<strong>効果が1つだけ</strong>で、かつ<strong>サーチ・ドローや相手の展開を止めない</strong>カード</span><span class="note">効果が1つでも、灰流うららのようにこの環境の土台（増援・強欲な壺など）を止めるカードは不許可にします。</span>
   </div>
 
@@ -3536,6 +3540,14 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   function uid(){return 'p'+Date.now().toString(36)+rnd(1e6).toString(36);}
   function normP(x){x=x||{};return {id:x.id||uid(),name:str(x.name,20),themes:Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[],log:Array.isArray(x.log)?x.log:[],lastTheme:x.lastTheme==null?null:str(x.lastTheme,30),recDefault:x.recDefault!==false,kinds:normK(x.kinds),ctr:normC(x.ctr),fmtDefault:x.fmtDefault==='bo3'?'bo3':'bo1'};}
   function normC(c){var o={};if(c&&typeof c==='object')Object.keys(c).forEach(function(t){if(Array.isArray(c[t])&&c[t].length)o[str(t,30)]=c[t].map(function(v){return str(v,30);}).filter(Boolean).slice(0,12);});return o;}
+  /* テーマごとの「🌏 留学生の理由」と「🔢 数えるカード」 */
+  window.YGO_DKINFO=function(themes,kinds,ctr,why){kinds=kinds||{};ctr=ctr||{};why=why||{};var box=el('div','dk-info');
+    (themes||[]).forEach(function(t){var w=kinds[t]==='ryu'?(why[t]||[]):[],c=(ctr[t]||[]).map(function(k){return k==='mag'?'魔力カウンター':k==='時計カウンター'?'幽獄の時計塔':k;});if(!w.length&&!c.length)return;
+      var row=el('div','dk-row');row.appendChild(el('b','',t));
+      if(w.length){row.appendChild(el('span','dk-why','🌏 留学生の理由：'+w.join('、')));}
+      if(w.length&&c.length)row.appendChild(el('br'));
+      if(c.length)row.appendChild(el('span','','🔢 数えるカード：'+c.join('、')));box.appendChild(row);});
+    box.hidden=!box.children.length;return box;};
   function normK(k){var o={};if(k&&typeof k==='object')Object.keys(k).forEach(function(t){if(k[t]==='ryu')o[str(t,30)]='ryu';});return o;}
   var store=load(SKEY,null);
   if(!store||!Array.isArray(store.list)){
@@ -3570,6 +3582,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       x.addEventListener('click',function(){if(!x.classList.contains('confirm')){x.classList.add('confirm');setTimeout(function(){x.classList.remove('confirm');},3000);return;}draft.themes.splice(i,1);delete draft.kinds[t];renderThemes();markDirty();});
       var cn=(draft.ctr&&draft.ctr[t]||[]).length,cb=el('button','ctr-tb'+(cn?' on':''),cn?'🔢 '+cn:'🔢 なし');cb.type='button';cb.title='このデッキで使うカウンター';cb.addEventListener('click',function(){openCtr(t);});tag.appendChild(cb);var gb=el('button','ctr-tb gd-tb','📖 回し方');gb.type='button';gb.title='このデッキの回し方を書く';gb.addEventListener('click',function(){if(window.YGO_GUIDE)YGO_GUIDE.edit(t);});tag.appendChild(gb);
       tag.appendChild(x);box.appendChild(tag);});
+    box.appendChild(window.YGO_DKINFO(draft.themes,draft.kinds,draft.ctr,pf.ryuWhy));
     renderCtrEdit();
   }
   /* テーマ登録のとき：カウンターやターンを数えるカードを使うか聞く */
@@ -3677,7 +3690,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     who.hidden=true;pf=normP({id:u.uid});resetDraft();renderLog();
     var firstSnap=true;
     CL.ref.onSnapshot(function(d){var x=d.exists?(d.data()||{}):{};var dirty=!firstSnap&&isDirty();
-      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;pf.kinds=normK(x.kinds);pf.ctr=normC(x.ctr);pf.ach=(x.ach&&typeof x.ach==='object')?x.ach:{};
+      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;pf.kinds=normK(x.kinds);pf.ctr=normC(x.ctr);pf.ryuWhy=normC(x.ryuWhy);pf.ach=(x.ach&&typeof x.ach==='object')?x.ach:{};
       if(!dirty)resetDraft();else renderCur();
       if(firstSnap&&!pf.name){$('profile').open=true;pfStatus('👋 はじめまして！ニックネームに苗字をひらがなで（例：やまだ）、デッキテーマも入れて「💾 プロフィールを保存」を押してください。','');}
       firstSnap=false;},function(){pfStatus('プロフィールを読み込めませんでした。ページを開き直してください。','err');});
@@ -4375,7 +4388,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       rows.forEach(function(r){
         var themes=(r.themes||[]);if(f&&key(r.name).indexOf(f)<0&&!themes.some(function(t){return key(t).indexOf(f)>=0;}))return;shown++;
         var card=el('div','ow-card');var top=el('div','ow-top');top.appendChild(el('b','','👤 '+r.name));top.appendChild(el('span','note',themes.length+'テーマ'+(r.ach?'　🏆'+r.ach:'')));card.appendChild(top);
-        var box=el('div','ow-themes');themes.forEach(function(t){var dup=count[key(t)]>1;var hb=window.YGO_GUIDE&&YGO_GUIDE.has(r.id,t);var c=el('button','ow-t gd-ow'+(dup?' dup':''),(hb?'📖 ':'')+t+(dup?' ⚠️':''));c.type='button';c.addEventListener('click',function(){if(window.YGO_GUIDE)YGO_GUIDE.view(r.id,t);});if(dup)c.title='他の人も使っています';if(r.kinds&&r.kinds[t]==='ryu'){c.appendChild(document.createTextNode(' '));c.appendChild(el('span','ryu','🌏 留学生'));}box.appendChild(c);});card.appendChild(box);
+        var box=el('div','ow-themes');themes.forEach(function(t){var dup=count[key(t)]>1;var hb=window.YGO_GUIDE&&YGO_GUIDE.has(r.id,t);var c=el('button','ow-t gd-ow'+(dup?' dup':''),(hb?'📖 ':'')+t+(dup?' ⚠️':''));c.type='button';c.addEventListener('click',function(){if(window.YGO_GUIDE)YGO_GUIDE.view(r.id,t);});if(dup)c.title='他の人も使っています';if(r.kinds&&r.kinds[t]==='ryu'){c.appendChild(document.createTextNode(' '));c.appendChild(el('span','ryu','🌏 留学生'));}box.appendChild(c);});card.appendChild(box);card.appendChild(window.YGO_DKINFO(themes,r.kinds,r.ctr,r.ryuWhy));
         if(false){var acts=el('div','ow-acts');var ed=el('button','del','編集');ed.type='button';ed.addEventListener('click',function(){$('ow-name').value=r.name;$('ow-themes').value=themes.join('、');$('ow-form').scrollIntoView({behavior:'smooth',block:'center'});});
           var dl=el('button','del','削除');dl.type='button';dl.addEventListener('click',function(){if(!dl.classList.contains('confirm')){dl.classList.add('confirm');dl.textContent='本当に削除';setTimeout(function(){dl.classList.remove('confirm');dl.textContent='削除';},4000);return;}col.doc(r.id).delete().catch(function(){});});
           acts.appendChild(ed);acts.appendChild(dl);card.appendChild(acts);}
@@ -4399,7 +4412,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     if(!YGO.db){msg('読み込めませんでした。ページを開き直してください。');return;}
     if(!u){msg('🔑 ログインすると、メンバーのテーマ一覧が見られます。');return;}
     YGO.db.collection('users').onSnapshot(function(s){
-      rows=s.docs.map(function(d){var x=d.data()||{};return {id:d.id,name:String(x.name||'').slice(0,20),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{}};})
+      rows=s.docs.map(function(d){var x=d.data()||{};return {id:d.id,name:String(x.name||'').slice(0,20),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},ctr:(x.ctr&&typeof x.ctr==='object')?x.ctr:{},ryuWhy:(x.ryuWhy&&typeof x.ryuWhy==='object')?x.ryuWhy:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{}};})
         .filter(function(r){return r.name;}).sort(function(a,b){return a.name.localeCompare(b.name,'ja');});
       render();
     },function(){msg('読み込めませんでした。ページを開き直してください。');});
@@ -4820,7 +4833,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     if(!Y.db)return;
     Y.db.collection('reports').orderBy('createdAt','desc').onSnapshot(function(s){Y.reports=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
     if(!u)return;
-    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={guides:(x.guides&&typeof x.guides==='object')?x.guides:{},name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{},icon:typeof x.icon==='string'&&x.icon.length<90000?x.icon:''};});Y.members=m;fillLists();fire('ygo:data');},function(){});
+    Y.db.collection('users').onSnapshot(function(s){var m={};s.docs.forEach(function(d){var x=d.data()||{};if(x.name)m[d.id]={guides:(x.guides&&typeof x.guides==='object')?x.guides:{},name:String(x.name),themes:Array.isArray(x.themes)?x.themes.map(String):[],kinds:(x.kinds&&typeof x.kinds==='object')?x.kinds:{},ctr:(x.ctr&&typeof x.ctr==='object')?x.ctr:{},ryuWhy:(x.ryuWhy&&typeof x.ryuWhy==='object')?x.ryuWhy:{},themeAt:(x.themeAt&&typeof x.themeAt==='object')?x.themeAt:{},ach:(x.ach&&typeof x.ach==='object')?Object.keys(x.ach).length:0,achAt:(x.ach&&typeof x.ach==='object')?x.ach:{},icon:typeof x.icon==='string'&&x.icon.length<90000?x.icon:''};});Y.members=m;fillLists();fire('ygo:data');},function(){});
     Y.db.collection('results').where('oppUid','==',u.uid).onSnapshot(function(s){Y.ratedMe=s.docs.map(function(d){return d.data()||{};});fire('ygo:data');},function(){});
   });
 
@@ -5663,7 +5676,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     var x=el('button','del','✕ 閉じる');x.type='button';x.addEventListener('click',function(){sel=null;renderList();renderDetail();});h.appendChild(x);det.appendChild(h);
     var s1=el('div','pl-sec');s1.appendChild(el('h3','','🃏 使うデッキ'));var c1=el('div','pl-chips');
     if(m.themes.length)m.themes.forEach(function(th){(function(){var hb=window.YGO_GUIDE&&YGO_GUIDE.has(sel,th),cb2=el('button','pl-chip gd-chip'+(hb?' has':''),(hb?'📖 ':'')+th+((m.kinds||{})[th]==='ryu'?'（🌏 留学生）':'（🏫 在校生）'));cb2.type='button';cb2.title='回し方を見る';var su=sel;cb2.addEventListener('click',function(){if(window.YGO_GUIDE)YGO_GUIDE.view(su,th);});c1.appendChild(cb2);})();});else c1.appendChild(el('span','note','まだ登録がありません'));
-    s1.appendChild(c1);s1.appendChild(el('span','note','📖 テーマを押すと、デッキの回し方が読めます。'));det.appendChild(s1);
+    s1.appendChild(c1);s1.appendChild(window.YGO_DKINFO(m.themes,m.kinds,m.ctr,m.ryuWhy));s1.appendChild(el('span','note','📖 テーマを押すと、デッキの回し方が読めます。'));det.appendChild(s1);
     var A=window.YGO_ACH||[],got=m.achAt||{},s2=el('div','pl-sec');s2.appendChild(el('h3','','🏆 実績 '+Object.keys(got).length+'/'+(A.length||30)));var c2=el('div','pl-chips');
     A.forEach(function(a){if(got[a[0]])c2.appendChild(el('span','pl-chip',a[1]+' '+a[2]));});if(!c2.children.length)c2.appendChild(el('span','note','まだ解除した実績はありません'));s2.appendChild(c2);det.appendChild(s2);
     if(sel!==me()){var v=vsData(sel),g=v.games,w=0,l=0,d=0;g.forEach(function(x){if(x.res==='win')w++;else if(x.res==='lose')l++;else d++;});
