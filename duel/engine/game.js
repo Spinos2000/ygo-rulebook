@@ -151,8 +151,8 @@ export const ZONES = 5;
                                                         
                                   
                       
-                                                   
-                                                                       
+                                                                    
+                                                                                                                                   
                                                       
                                                                                   
                                                          
@@ -161,6 +161,32 @@ export const ZONES = 5;
                                                
                                                                  
                        
+                                                    
+                             
+                                                           
+                        
+                                            
+                         
+                                                      
+                               
+                                 
+                          
+                                                     
+                                                            
+                                 
+                                                            
+                                                                     
+                                                    
+                                             
+                                                                          
+                                                            
+                        
+                                       
+                            
+                                                               
+                                                                                                                                        
+                                                               
+                                 
                                               
                          
  
@@ -191,11 +217,13 @@ export function setPool(pool                         )       { POOL = pool; }
 /** トークン（カードプールに無いモンスター）。code は 'token:…' */
 export const TOKENS                          = {
   'token:sheep': { name: '羊トークン', kind: 'monster', frame: 'normal', attribute: '地', race: '獣族', level: 1, atk: 0, def: 0, text: '' }                      ,
+  'token:metaldevil': { name: 'メタルデビル・トークン', kind: 'monster', frame: 'normal', attribute: '闇', race: '悪魔族', level: 1, atk: 0, def: 0, text: '' }                      ,
 };
 export const isToken = (s           , uid        ) => s.cards[uid].code.startsWith('token:');
 /** トークンを特殊召喚する（position：表示形式）。置けた数だけ uid を返す */
 export function createTokens(x     , code        , n        , position               , player           = x.player)           {
   const s = x.s, res           = [];
+  if (specialLocked(s, player)) return res;
   for (let i = 0; i < n; i++) {
     const z = freeMZones(s, player);
     if (!z.length) break;
@@ -224,9 +252,15 @@ function summonLockedFor(s           , p          , src               )         
   return s.lingering.some(l => l.type === 'noSummonExcept' && l.player === p && l.turn === s.turn && l.uid !== src);
 }
 /** player はこのターン特殊召喚できない（強欲で謙虚な壺・旗鼓堂々） */
-const specialLocked = (s           , p          ) => s.lingering.some(l => l.type === 'noSpecial' && l.player === p && l.turn === s.turn);
+const specialLocked = (s           , p          ) => s.lingering.some(l => l.type === 'noSpecial' && l.player === p && l.turn === s.turn)
+  || activeCards(s).some(u => scriptOf(s, u).blocksSpecialSummon?.(s, u));
+/** 罠モンスター：モンスターゾーンにある間のモンスターとしての数値（罠カードとしても扱う） */
+export const TRAP_MONSTERS                                   = {
+  '5686': { kind: 'monster', frame: 'effect', attribute: '水', race: '水族', level: 10, atk: 0, def: 3000 }                    ,
+};
 export function defOf(state           , uid        )          {
   const c = state.cards[uid];
+  if (TRAP_MONSTERS[c.code] && (c.zone === 'mzone' || c.zone === 'emz')) return { ...POOL[c.code], ...TRAP_MONSTERS[c.code] }           ;
   const d = POOL[c.code] ?? TOKENS[c.code];
   if (!d) throw new Error(`カードプールに無いカード: ${c.code}`);
   return d;
@@ -330,7 +364,7 @@ export function moveCard(s           , uid        , to          , opt          =
   if (!toField || !fromField) { c.counters = {}; }
   if (to === 'gy') c.counters.gyTurn = s.turn; // 墓地へ送られたターン（D-HERO ディスクガイ：そのターンは墓地から特殊召喚できない）
   c.equippedTo = null; c.equipSerial = null; c.equipBy = null; c.link = null; c.linkSerial = null;
-  c.summoning = false; c.noAttack = false; c.mods = []; c.summonedHow = null; c.summonedTurn = null; c.attackedList = undefined;
+  c.summoning = false; c.noAttack = false; c.mods = []; c.summonedHow = null; c.summonedTurn = null; c.attackedList = undefined; c.tributedWith = undefined;
   if (to === 'hand' || to === 'deck' || to === 'extra') c.proper = false;
   if (toField) {
     c.faceUp = opt.faceUp ?? true;
@@ -380,7 +414,13 @@ export function isActive(s           , uid        )          {
   const c = s.cards[uid];
   if (!isOnField(c) || !c.faceUp || c.summoning) return false;
   if (isMonsterZone(c) && monsterNegated(s, uid)) return false;
+  if (POOL[c.code]?.kind === 'trap' && !isMonsterZone(c) && trapsNegated(s)) return false;
   return true;
+}
+/** フィールドの罠カードの効果が無効化されているか（サイコ・ショッカー） */
+function trapsNegated(s           )          {
+  for (const p of [0, 1]              ) for (const u of monstersOf(s, p)) { const c = s.cards[u]; if (c.faceUp && !c.summoning && !monsterNegated(s, u) && scriptOf(s, u).blocksTraps?.(s, u)) return true; }
+  return false;
 }
 export function freeMZones(s           , p          , released           = [])           {
   const res           = [];
@@ -457,6 +497,21 @@ export function monsterNegated(s           , uid        )          {
 }
 
 /* ---------- 効果を受けない ---------- */
+/** プレイヤー p の墓地のカードが「王家の眠る谷－ネクロバレー」で守られているか（src：効果を使っているカード。ネクロバレーで無効化されない効果なら守られない） */
+export function gyLocked(s           , p          , src                = s.resolving?.uid ?? null)          {
+  if (src !== null && scriptOf(s, src).ignoresNecroValley) return false;
+  if (!activeCards(s).some(u => scriptOf(s, u).necroValley)) return false;
+  // 墓守の長：自分の墓地はネクロバレーの効果を受けない
+  return !monstersOf(s, p).some(u => isActive(s, u) && scriptOf(s, u).shieldsOwnGy);
+}
+const gyCardLocked = (s           , u        , src                ) => s.cards[u].zone === 'gy' && gyLocked(s, s.cards[u].owner, src);
+/** リリースできるか（召喚僧サモンプリースト：モンスターゾーンの表側表示のこのカードはリリースできない） */
+export function releasable(s           , uid        )          {
+  const c = s.cards[uid];
+  return !(isMonsterZone(c) && c.faceUp && !scriptOf(s, uid).noAdvanceTribute && scriptOf(s, uid).cannotBeReleased && !monsterNegated(s, uid));
+}
+/** カードの発動のコストを払うか（ダイヤモンドガイで墓地の通常魔法の効果を発動する時は払わない：公式Q&A [6392]） */
+export const paysCost = (x     ) => !x.link?.data.dg;
 /** 効果の対象にできるか（オベリスクの巨神兵：フィールドの表側表示のこのカードは対象にできない） */
 export function targetable(s           , uid        )          {
   const c = s.cards[uid];
@@ -630,7 +685,7 @@ export function release(s           , uids          , reason         = 'release'
 }
 export function banish(s           , uids          , reason        )       {
   const befores             = [];
-  for (const u of uids.filter(x => !(reason === 'effect' && isImmune(s, x)))) {
+  for (const u of uids.filter(x => !(reason === 'effect' && isImmune(s, x)) && !gyCardLocked(s, x))) {
     const c = s.cards[u]; const from = c.zone; const before = structuredClone(c);
     moveCard(s, u, 'banished');
     emit(s, { type: 'banished', uid: u, from, reason });
@@ -650,6 +705,18 @@ export function protectedFromDestroy(s           , uid        )          {
   return isMonsterZone(c) && c.faceUp && defOf(s, uid).name.startsWith('D-HERO') && s.lingering.some(l => l.type === 'dheroProtect' && l.player === c.controller && l.turn === s.turn);
 }
 export function destroy(s           , uids          , reason        , opt                                            = {})           {
+  if (!opt.summoning) uids = uids.filter(u => {
+    const c = s.cards[u];
+    if (!isMonsterZone(c) || !c.faceUp || monsterNegated(s, u)) return true;
+    const opts = scriptOf(s, u).destroyReplaceHand?.(s, u) ?? [];
+    if (!opts.length) return true;
+    const x = ctxOf(s, u, c.controller, null);
+    if (!choose(x, { kind: 'yesno', prompt: `${nameOf(s, u)}が破壊される代わりに、手札のカードを捨てますか？` })) return true;
+    const h = chooseOne(x, '代わりに捨てる手札を選んでください', opts) ;
+    log(s, `${nameOf(s, u)}が破壊される代わりに${nameOf(s, h)}を捨てる`);
+    sendToGy(s, [h], 'discard', c.controller);
+    return false;
+  });
   // 効果で破壊される場合、ユニオンの装備カードを代わりに破壊する
   if (reason === 'effect' && !opt.summoning) uids = [...new Set(uids.map(u => { if (!isMonsterZone(s.cards[u])) return u; const gd = unionGuardOf(s, u); if (gd !== null && !uids.includes(gd)) { log(s, `${nameOf(s, u)}の代わりに${nameOf(s, gd)}を破壊`); return gd; } return u; }))];
   const list = uids.filter(u => isOnField(s.cards[u]) && !(reason === 'effect' && isImmune(s, u)) && !(protectedFromDestroy(s, u) && !opt.summoning)
@@ -684,7 +751,7 @@ export function destroy(s           , uids          , reason        , opt       
 }
 export function addToHand(s           , uids          , reason         = 'effect')       {
   const befores             = [];
-  uids = uids.filter(x => !(reason === 'effect' && isImmune(s, x)));
+  uids = uids.filter(x => !(reason === 'effect' && isImmune(s, x)) && !(reason === 'effect' && gyCardLocked(s, x)));
   for (const u of uids) {
     const c = s.cards[u]; const from = c.zone; const before = structuredClone(c);
     moveCard(s, u, 'hand');
@@ -723,6 +790,8 @@ export function addLingering(s           , l           )       { s.lingering.pus
 /** 特殊召喚できるか（召喚条件・正規の召喚・置き場所） */
 export function canSpecialSummon(s           , uid        , p          , how            = 'special', released           = [], src                = s.resolving?.uid ?? null)          {
   const c = s.cards[uid], d = defOf(s, uid);
+  if (gyCardLocked(s, uid, src)) return false;
+  if (scriptOf(s, uid).uniqueOnField && monstersOf(s, p).some(u => s.cards[u].faceUp && s.cards[u].code === c.code)) return false;
   if (d.kind !== 'monster') return false;
   const sc = scriptOf(s, uid);
   if (how === 'ignore') {
@@ -819,6 +888,55 @@ export function takeControl(s           , u        , p          , untilEnd = tru
   c.controller = p; c.zone = 'mzone'; c.index = z[0]; s.players[p].mzone[z[0]] = u;
   log(s, `${pl(p)}：${nameOf(s, u)}のコントロールを得た`);
   if (untilEnd) addLingering(s, { type: 'returnControl', uid: u, serial: c.serial, player: from, turn: s.turn });
+  return true;
+}
+/** 効果の処理の中で、手札のモンスターをリリースなしで通常召喚（set ならセット）する（死皇帝の陵墓）。召喚は無効にされず、成功時の誘発効果はチェーンの処理後に発動する */
+export function normalSummonNow(x     , uid        , set         )          {
+  const s = x.s, p = x.player, me = s.players[p];
+  const z = freeMZones(s, p);
+  if (me.normalSummonUsed || !z.length || s.cards[uid].zone !== 'hand') return false;
+  moveCard(s, uid, 'mzone', { index: z[0], faceUp: !set, position: set ? 'def' : 'atk', controller: p });
+  me.normalSummonUsed = true;
+  const c = s.cards[uid];
+  if (set) { log(s, `${pl(p)}：モンスターをセット`); emit(s, { type: 'set', uid, player: p }); pushAnim(s, { kind: 'summon', uid, how: 'set', mats: [] }); return true; }
+  c.summonedHow = 'normal'; c.summonedTurn = s.turn;
+  markSummoned(s, p);
+  log(s, `${pl(p)}：${nameOf(s, uid)}をリリースなしで通常召喚`);
+  pushAnim(s, { kind: 'summon', uid, how: 'normal', mats: [] });
+  emit(s, { type: 'summoned', uid, player: p, how: 'normal' });
+  return true;
+}
+/** 2体のモンスターのコントロールを入れ替える（強制転移） */
+export function swapControl(s           , a        , b        )          {
+  const ca = s.cards[a], cb = s.cards[b];
+  if (!isMonsterZone(ca) || !isMonsterZone(cb) || ca.controller === cb.controller || isImmune(s, a) || isImmune(s, b)) return false;
+  const pa = ca.controller, pb = cb.controller, ia = ca.index, ib = cb.index, za = ca.zone, zb = cb.zone;
+  removeFromZone(s, a); removeFromZone(s, b);
+  // 入れ替わったモンスターは、相手のモンスターがいた場所に置く（EXモンスターゾーンにいた場合はメインモンスターゾーンの空きへ）
+  const put = (u        , p          , idx        , z          ) => {
+    const c = s.cards[u]; c.controller = p;
+    const i = z === 'mzone' && s.players[p].mzone[idx] === null ? idx : s.players[p].mzone.findIndex(v => v === null);
+    c.zone = 'mzone'; c.index = i; s.players[p].mzone[i] = u;
+  };
+  put(a, pb, ib, zb); put(b, pa, ia, za);
+  log(s, `${nameOf(s, a)}と${nameOf(s, b)}のコントロールを入れ替えた`);
+  return true;
+}
+/** 効果の処理の中で、手札のモンスターをアドバンス召喚する（連撃の帝王）。通常召喚の回数は使わない */
+export function advanceSummonNow(x     , uid        , tributes          )          {
+  const s = x.s, p = x.player;
+  if (s.cards[uid].zone !== 'hand') return false;
+  newStep(s);
+  release(s, tributes, 'release');
+  const z = freeMZones(s, p);
+  if (!z.length) return false;
+  newStep(s);
+  moveCard(s, uid, 'mzone', { index: z[0], faceUp: true, position: 'atk', controller: p });
+  const c = s.cards[uid]; c.summonedHow = 'advance'; c.summonedTurn = s.turn; c.counters.tributes = tributes.length;
+  markSummoned(s, p);
+  log(s, `${pl(p)}：${nameOf(s, uid)}をアドバンス召喚`);
+  pushAnim(s, { kind: 'summon', uid, how: 'advance', mats: tributes });
+  emit(s, { type: 'summoned', uid, player: p, how: 'advance' });
   return true;
 }
 /** カードを装備する（装備魔法、または装備カード扱いのモンスター） */
@@ -1072,10 +1190,13 @@ function triggerStillValid(s           , t             )          {
   const eff = (scriptOf(s, t.uid).effects || []).find(e => e.id === t.effect) ;
   if (!optAvailable(s, t.uid, eff, t.player)) return false;
   if (activationBlockedByName(s, t.uid, t.player)) return false;
+  if (activationForbidden(s, t.uid, eff, t.player)) return false;
+  if (s.cards[t.uid].zone === 'gy' && gyLocked(s, s.cards[t.uid].owner, t.uid)) return false;
   // ダメージステップには、ダメージステップでも発動できる効果しか発動できない（生還の宝札など）
   if (currentMode(s) === 'damage' && !eff.damageStep) return false;
   // 対象を取る効果などで発動の条件を満たさない場合は、強制効果でも発動しない（暗黒界の龍神 グラファ②：相手フィールドにカードが無い）
   if (eff.can && !eff.can(ctxOf(s, t.uid, t.player, null))) return false;
+  if (eff.activate && targetGuardOn(s) && !activationPossible(s, t.uid, t.player, eff)) return false;
   return true;
 }
 
@@ -1137,13 +1258,15 @@ export function activatableList(s           , p          )                {
   const candidates = [...P.hand, ...P.szone.filter((x)              => x !== null), ...(P.fzone !== null ? [P.fzone] : []), ...monstersOf(s, p), ...P.gy, ...shared];
   const spellsBlocked = activeCards(s).some(u => scriptOf(s, u).blocksSpells?.(s, u, p));
   // 対象にできないカードがある間は、対象を選べるか（発動の手順を試して）確かめる
-  const guardOn = [...fieldCards(s, 0), ...fieldCards(s, 1)].some(u => !targetable(s, u));
+  const guardOn = targetGuardOn(s);
   for (const uid of candidates) {
     const c = s.cards[uid], d = defOf(s, uid);
     for (const eff of scriptOf(s, uid).effects || []) {
       if (eff.type === 'trigger') continue;
       if (c.controller !== p && !eff.anyPlayer) continue;
       if (eff.type === 'card' && d.kind === 'spell' && spellsBlocked) continue;
+      if (activationForbidden(s, uid, eff, p)) continue;
+      if (c.zone === 'gy' && gyLocked(s, c.owner, uid)) continue;
       // 混沌帝龍の効果を発動したターンは、他の効果を発動できない／他の効果を発動したターンは、混沌帝龍の効果を発動できない
       if (s.lingering.some(l => l.type === 'onlyThisCard' && l.player === p && l.turn === s.turn && l.uid !== uid)) continue;
       if (scriptOf(s, uid).exclusive && s.activatedTurn?.[String(p)] === s.turn && !s.lingering.some(l => l.type === 'onlyThisCard' && l.player === p && l.uid === uid && l.turn === s.turn)) continue;
@@ -1182,12 +1305,25 @@ export function activatableList(s           , p          )                {
     const u = l.uid ;
     if (!sameCard(s, u, l.serial ) || s.cards[u].zone !== 'gy') continue;
     const eff = (scriptOf(s, u).effects || []).find(e => e.type === 'card');
-    if (!eff || (eff.can && !eff.can(ctxOf(s, u, p, null)))) continue;
+    if (!eff || (eff.can && !eff.can(ctxOf(s, u, p, { data: { dg: true } }                        )))) continue;
     res.push({ uid: u, effect: 'dg:' + eff.id, label: `（ダイヤモンドガイ）${eff.label}` });
   }
   return res;
 }
 
+/** その効果を発動できない状態か（罠：サイコ・ショッカー／魔法・罠：邪神アバター／モンスター：超古代生物の墓場） */
+function activationForbidden(s           , uid        , eff              , p          )          {
+  const c = s.cards[uid], d = defOf(s, uid);
+  const trap = POOL[c.code]?.kind === 'trap';
+  if (trap && (eff.type === 'card' || isOnField(c)) && activeCards(s).some(u => scriptOf(s, u).blocksTraps?.(s, u))) return true;
+  if (eff.type === 'card' && (d.kind === 'spell' || d.kind === 'trap') && s.lingering.some(l => l.type === 'noSpellTrap' && l.player === p && l.turn >= s.turn)) return true;
+  if (d.kind === 'monster' && eff.type !== 'card' && activeCards(s).some(u => scriptOf(s, u).blocksMonsterEffects?.(s, u, uid))) return true;
+  return false;
+}
+/** 対象にできないカードがある状態か（オベリスクの巨神兵・ネクロバレーで守られた墓地） */
+function targetGuardOn(s           )          {
+  return [...fieldCards(s, 0), ...fieldCards(s, 1)].some(u => !targetable(s, u)) || gyLocked(s, 0, null) || gyLocked(s, 1, null);
+}
 /** 発動の手順（コスト・対象）を最後まで行えるかを、状態の写しで試す。選択が必要になった時点で「行える」とみなす */
 function activationPossible(s           , uid        , p          , eff              )          {
   const saveA = ANSWERS, saveI = AIDX;
@@ -1242,6 +1378,8 @@ function activateEffect(s           , p          , uid        , effectId        
   (s.activatedTurn ??= {})[String(p)] = s.turn;
   if (scriptOf(s, uid).exclusive) addLingering(s, { type: 'onlyThisCard', player: p, uid, turn: s.turn });
   s.activating = p;
+  // ダイヤモンドガイで墓地の通常魔法の効果を発動する場合、カードの発動のコストは払わない（公式Q&A [6392]）
+  if (dg) link.data.dg = true;
   try { eff.activate?.(ctxOf(s, uid, p, link)); } finally { s.activating = null; }
   if (eff.chainLock) link.data.chainLock = true;
   link.targetSerials = link.targets.map(t => s.cards[t].serial);
@@ -1253,10 +1391,23 @@ function activateEffect(s           , p          , uid        , effectId        
 function doActivate(s           , p          , uid        , effectId        )       {
   const mode = s.window.kind === 'priority' ? s.window.mode : 'normal';
   if (!s.chain.length && !s.chainCont) s.chainCont = s.window.kind === 'priority' ? s.window.cont : { type: 'none' };
-  activateEffect(s, p, uid, effectId);
+  const link = activateEffect(s, p, uid, effectId);
+  forcedResponses(s, link);
   s.window = { kind: 'priority', player: opp(p), passes: 0, mode, cont: s.chainCont ?? { type: 'none' } };
 }
 
+/** 効果モンスターの効果・魔法・罠カードの発動に必ずチェーンして無効にするモンスター（光と闇の竜）。1つのチェーンでそれぞれ何度でも応じる */
+function forcedResponses(s           , link           )       {
+  for (let guard = 0; guard < 6; guard++) {
+    const top = s.chain[s.chain.length - 1];
+    if (!top || (top.cardKind !== 'monster' && !top.cardActivation)) return;
+    // 同一チェーン上で複数回発動することはない
+    const u = allMonsters(s).find(m => m !== top.uid && isFaceUpMonster(s, m) && !monsterNegated(s, m) && scriptOf(s, m).forcedNegate && !s.chain.some(l => l.uid === m && l.effect === scriptOf(s, m).forcedNegate));
+    if (u === undefined) return;
+    activateEffect(s, s.cards[u].controller, u, scriptOf(s, u).forcedNegate );
+  }
+  void link;
+}
 /** 対象が処理時もそのまま存在するか */
 export function targetValid(s           , link           , i = 0)          {
   const t = link.targets[i];
@@ -1272,6 +1423,7 @@ function resolveLink(s           )       {
     if (link.cardKind === 'spell' && link.cardActivation) {
       for (const u of activeCards(s)) scriptOf(s, u).onSpellResolved?.(s, u);
     }
+    if (!link.effectNegated && link.cardKind === 'trap' && activeCards(s).some(u => scriptOf(s, u).blocksTraps?.(s, u))) { link.effectNegated = true; log(s, `${nameOf(s, link.uid)}の効果は無効化された`); }
     const freed = link.cardKind === 'spell' ? link.targets.find((t, i) => targetValid(s, link, i) && isActive(s, t) && scriptOf(s, t).negatesSpellTargeting) : undefined;
     if (freed !== undefined && !link.effectNegated) {
       link.effectNegated = true;
@@ -1507,6 +1659,9 @@ function performMain(s           , a        )       {
       moveCard(s, a.card, 'mzone', { index: zone, faceUp: !setting, position: setting ? 'def' : 'atk', controller: p });
       me.normalSummonUsed = true;
       s.lingering = s.lingering.filter(l => l.type !== 'tributeFreeSummon' || l.player !== p);
+      s.cards[a.card].counters.tributes = a.tributes.length; // 召喚に使ったリリースの数（神獣王バルバロス）
+      s.cards[a.card].tributedWith = [...a.tributes];
+      if (s.animMats?.some(u => s.cards[u].owner !== p)) s.lingering = s.lingering.filter(l => !(l.type === 'tributeOpp' && l.player === p));
       if (setting) {
         log(s, `${pl(p)}：モンスターをセット`);
         emit(s, { type: 'set', uid: a.card, player: p });
@@ -1583,6 +1738,7 @@ function declareAttack(s           , attacker        , target               )   
   };
   // 相手モンスターがいる状態での直接攻撃は、「直接攻撃できる」効果によるもの（その後に相手モンスターがいなくなっても変わらない：公式Q&A [12442]）
   if (target === null && s.battle.oppCount > 0) s.battle.viaDirect = true;
+  if (target !== null && !s.cards[target].faceUp) s.battle.targetWasFaceDown = true;
   newStep(s);
   log(s, `${pl(p)}：${nameOf(s, attacker)}で${target === null ? 'ダイレクトアタック' : `${s.cards[target].faceUp ? nameOf(s, target) : '裏側守備表示モンスター'}に攻撃`}`);
   emit(s, { type: 'attackDeclared', attacker, target, player: p });
@@ -1599,6 +1755,7 @@ export function negateAttack(s           )       {
 }
 function battleDamage(s           , p          , amount        , monster        )       {
   if (amount <= 0) return;
+  if (isFaceUpMonster(s, monster) && s.cards[monster].controller === p && scriptOf(s, monster).redirectBattleDamage) { log(s, `${nameOf(s, monster)}の効果で、戦闘ダメージは代わりに相手が受ける`); p = opp(p); }
   if (damageZero(s, p)) { log(s, `${pl(p)}が受ける${amount}の戦闘ダメージは0になった`); return; }
   // 戦闘ダメージだけを0にする永続効果（幽獄の時計塔）
   const nb = activeCards(s).find(u => scriptOf(s, u).noBattleDamageFor?.(s, u, p));
@@ -1758,16 +1915,40 @@ function mainActions(s           )           {
       for (const uid of me.hand) {
         const d = defOf(s, uid);
         if (d.kind !== 'monster' || d.frame === 'ritual' || d.frame === 'fusion' || scriptOf(s, uid).cannotNormalSummon) continue;
+        if (scriptOf(s, uid).uniqueOnField && myMons.some(u => s.cards[u].faceUp && s.cards[u].code === s.cards[uid].code)) continue;
+        const opts = scriptOf(s, uid).tributeOptions;
+        if (opts) {
+          for (const n of opts) for (const tr of combos(myMons.filter(u => !scriptOf(s, u).noAdvanceTribute && releasable(s, u)), n)) {
+            if (freeMZones(s, p, tr).length === 0) continue;
+            if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
+            if (!scriptOf(s, uid).cannotSet && n < 3) acts.push({ type: 'setMonster', card: uid, tributes: tr }); // 3体リリースの方法は表側表示の召喚のみ（神獣王バルバロス）
+          }
+          continue;
+        }
+        for (const aid of activeCards(s).map(u => scriptOf(s, u).tributeAid?.(s, u, uid, p)).filter(Boolean)) {
+          for (const tr of combos(myMons.filter(u => aid .ok(s, u) && releasable(s, u)), aid .count)) if (freeMZones(s, p, tr).length) {
+            if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
+            if (!scriptOf(s, uid).cannotSet) acts.push({ type: 'setMonster', card: uid, tributes: tr });
+          }
+        }
+        // 帝王の烈旋：1度だけ、自分のモンスター1体の代わりに相手のモンスター1体をリリースできる
+        if (tributesFor(s, uid) > 0 && s.lingering.some(l => l.type === 'tributeOpp' && l.player === p && l.turn === s.turn)) {
+          const n = tributesFor(s, uid);
+          for (const o of monstersOf(s, opp(p)).filter(u => releasable(s, u))) for (const tr of combos(myMons.filter(u => !scriptOf(s, u).noAdvanceTribute && releasable(s, u)), n - 1)) {
+            if (!freeMZones(s, p, tr).length) continue;
+            if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: [...tr, o] });
+            if (!scriptOf(s, uid).cannotSet) acts.push({ type: 'setMonster', card: uid, tributes: [...tr, o] });
+          }
+        }
         const full = tributesFor(s, uid), free = tributeFree(s, p, uid);
-        const trs = full === 0 || !free ? combos(myMons.filter(u => !scriptOf(s, u).noAdvanceTribute), full) : [[], ...combos(myMons.filter(u => !scriptOf(s, u).noAdvanceTribute), full)];
+        const trs = full === 0 || !free ? combos(myMons.filter(u => !scriptOf(s, u).noAdvanceTribute && releasable(s, u)), full) : [[], ...combos(myMons.filter(u => !scriptOf(s, u).noAdvanceTribute && releasable(s, u)), full)];
         for (const tr of trs) {
           if (freeMZones(s, p, tr).length === 0) continue;
           if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
           if (!scriptOf(s, uid).cannotSet) acts.push({ type: 'setMonster', card: uid, tributes: tr });
         }
         // 別のリリースでのアドバンス召喚（表側表示のみ）
-        const alt = scriptOf(s, uid).altTribute;
-        if (alt && !summonBlocked) for (const tr of combos(myMons.filter(u => alt.ok(s, u)), alt.count)) if (freeMZones(s, p, tr).length) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
+        for (const alt of [scriptOf(s, uid).altTribute ?? []].flat()) if (!summonBlocked) for (const tr of combos(myMons.filter(u => alt.ok(s, u) && releasable(s, u)), alt.count)) if (freeMZones(s, p, tr).length) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
       }
     }
     for (const uid of myMons) {
@@ -1789,7 +1970,7 @@ function mainActions(s           )           {
     for (const uid of [...me.hand, ...me.gy, ...me.extra]) {
       const ps = scriptOf(s, uid).procSummon;
       if (ps && ps.opt && s.opt[`${p}:proc:${s.cards[uid].code}`] === s.turn) continue;
-      if (ps && !lockAll && !specialLocked(s, p) && ps.zones.includes(s.cards[uid].zone) && ps.can(s, uid, p)) acts.push({ type: 'procSummon', card: uid });
+      if (ps && !lockAll && !specialLocked(s, p) && ps.zones.includes(s.cards[uid].zone) && !gyCardLocked(s, uid, null) && ps.can(s, uid, p)) acts.push({ type: 'procSummon', card: uid });
     }
   }
   if (ph === 'battle') {
@@ -1908,10 +2089,9 @@ function explainIllegal(s           , a        )         {
         if (by !== undefined) return `${nameOf(s, by)}の効果で、自分フィールドに裏側表示モンスターがいる間は召喚できません（セットはできます）`;
       }
       const need = tributeFree(s, p, a.card) && a.tributes.length === 0 ? 0 : tributesFor(s, a.card);
-      const alt = scriptOf(s, a.card).altTribute;
-      if (alt && a.type === 'normalSummon' && a.tributes.length === alt.count && a.tributes.every(u => alt.ok(s, u))) return 'モンスターゾーンに空きがありません';
+      if ([scriptOf(s, a.card).altTribute ?? []].flat().some(alt => a.type === 'normalSummon' && a.tributes.length === alt.count && a.tributes.every(u => alt.ok(s, u)))) return 'モンスターゾーンに空きがありません';
       if (a.tributes.length !== need) return `このモンスターの召喚には${need}体のリリースが必要です`;
-      if (a.tributes.some(t => !monstersOf(s, p).includes(t))) return 'リリースできるのは自分フィールドのモンスターだけです';
+      if (a.tributes.some(t => !monstersOf(s, p).includes(t))) return 'リリースできるのは自分フィールドのモンスターだけです（帝王の烈旋の効果がある時は、相手のモンスター1体も使えます）';
       return 'モンスターゾーンに空きがありません';
     }
     case 'flipSummon': case 'changePosition': {

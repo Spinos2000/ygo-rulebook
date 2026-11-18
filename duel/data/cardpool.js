@@ -379,6 +379,8 @@ export const CARD_POOL                          = {
     "level": 10,
     "atk": 0,
     "def": 0,
+    "atkUnknown": true,
+    "defUnknown": true,
     "race": "幻神獣族",
     "monsterTypes": [
       "効果"
@@ -1351,6 +1353,8 @@ export const CARD_POOL                          = {
     "level": 8,
     "atk": 0,
     "def": 0,
+    "atkUnknown": true,
+    "defUnknown": true,
     "race": "戦士族",
     "monsterTypes": [
       "効果"
@@ -1660,6 +1664,8 @@ export const CARD_POOL                          = {
     "level": 10,
     "atk": 0,
     "def": 0,
+    "atkUnknown": true,
+    "defUnknown": true,
     "race": "悪魔族",
     "monsterTypes": [
       "効果"
