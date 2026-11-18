@@ -371,7 +371,11 @@ export function backImg() {
   return (BACK = o);
 }
 const SUMMON_COLOR = { normal: '#ffe08a', set: '#d9a35a', advance: '#ffd27a', special: '#9fe6ff', flip: '#ffffff', ritual: '#7fb2ff', fusion: '#c9a7ff', god: '#ffc93d' };
-const SUMMON_LAND = { normal: 420, set: 300, advance: 900, special: 1100, flip: 500, ritual: 1800, fusion: 1800, god: 2700 };
+const SUMMON_LAND = { normal: 420, set: 300, advance: 900, special: 1100, flip: 500, ritual: 1800, fusion: 2700, god: 2700 };
+/* 融合：素材が渦の中心へ集まる → 渦に巻き込まれて回りながら混ざる → 光って融合モンスターが現れる → 自分のマスへ降りる */
+const FU = { gather: 450, mix: 1750, born: 1950 };
+const FU_COLS = ['#c9a7ff', '#7f77dd', '#ff8ad8', '#6bd0ff', '#ffffff', '#b45cff'];
+const lerp = (a, b, k) => a + (b - a) * k;
 
 export function playSummon(root, info) {
   ensureCanvas(root); fit();
@@ -382,9 +386,11 @@ export function playSummon(root, info) {
     if (info.faceDown) how = how === 'flip' ? 'flip' : 'set';
     const S = { how, c: SUMMON_COLOR[how] || '#9fe6ff', U, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height,
       img: info.faceDown && how !== 'flip' ? backImg() : cardImg(info.d, info.atk, info.def), parts: [], rings: [], shake: 0, flash: 0, dark: 0, quake: 0, t: 0, last: 0,
-      speed: info.speed || 1, L: SUMMON_LAND[how] || 600, hit: false, bolt: null, done: false,
+      speed: (info.speed || 1) * (window.__fxSlow || 1), L: SUMMON_LAND[how] || 600, hit: false, bolt: null, done: false,
       mats: (info.mats || []).map(m => ({ x: m.rect.left + m.rect.width / 2, y: m.rect.top + m.rect.height / 2, w: m.rect.width, h: m.rect.height, img: cardImg(m.d, m.atk, m.def), a: 1, s: 1 })) };
     S.end = S.L + (how === 'god' ? 900 : how === 'set' ? 250 : 650);
+    // 融合の渦の中心：召喚するマスと画面の中央の間
+    if (how === 'fusion') S.C = { x: (S.x + W / 2) / 2, y: (S.y + H / 2) / 2 };
     cv.style.display = 'block';
     const step = now => {
       if (S.done) return;
@@ -405,7 +411,8 @@ function summonTick(S) {
     m.a = Math.max(0, 1 - t / 600);
     if (t < 600) for (let i = 0; i < 4; i++) SP(S, { x: m.x + (Math.random() - .5) * m.w, y: m.y + (Math.random() - .5) * m.h, vx: (x - m.x) * .02 + (Math.random() - .5), vy: (y - m.y) * .02 - 1, life: 40, sz: 2.4, c: Math.random() < .5 ? c : '#ffffff', drag: .97 });
   });
-  if (k === 'fusion' || k === 'ritual') S.mats.forEach(m => {
+  if (k === 'fusion') fusionTick(S);
+  if (k === 'ritual') S.mats.forEach(m => {
     const p = Math.min(1, t / (L * .8)), ang = Math.atan2(m.y - y, m.x - x) + p * 6, d0 = Math.hypot(m.x - x, m.y - y), r = d0 * (1 - easeIn(p));
     m.dx = x + Math.cos(ang) * r; m.dy = y + Math.sin(ang) * r * .7; m.a = 1 - Math.max(0, (p - .7) / .3); m.s = 1 - .5 * p;
     if (Math.random() < .6) SP(S, { x: m.dx, y: m.dy, vx: 0, vy: 0, life: 18, sz: 3, c, drag: .9 });
@@ -432,6 +439,34 @@ function summonTick(S) {
   S.rings.forEach(r => { r.r += r.v; r.v *= .96; r.a *= .94; }); S.rings = S.rings.filter(r => r.a > .03);
   S.shake *= .85; S.flash *= .88;
 }
+function fusionTick(S) {
+  const t = S.t, C = S.C, U = S.U, n = Math.max(1, S.mats.length), R0 = 115 * U;
+  S.mats.forEach((m, i) => {
+    const a0 = i / n * TAU - Math.PI / 2;
+    if (t < FU.gather) {
+      // 手札・フィールドから浮き上がって、渦のふちへ
+      const p = ease(t / FU.gather);
+      m.dx = lerp(m.x, C.x + Math.cos(a0) * R0, p); m.dy = lerp(m.y, C.y + Math.sin(a0) * R0 * .55, p) - Math.sin(p * Math.PI) * 30 * U;
+      m.s = 1 + .1 * p; m.rot = 0; m.a = 1; m.mix = 0;
+    } else if (t < FU.mix) {
+      // 回りながら中心へ。回るほど速く、色が混ざっていく
+      const p = (t - FU.gather) / (FU.mix - FU.gather), r = R0 * (1 - easeIn(p) * .94), ang = a0 + p * 4 + p * p * 16;
+      m.dx = C.x + Math.cos(ang) * r; m.dy = C.y + Math.sin(ang) * r * .55; m.s = 1.1 - .65 * p; m.rot = (ang - a0) * .35; m.a = 1; m.mix = p;
+      if (Math.random() < .9) SP(S, { x: m.dx, y: m.dy, vx: 0, vy: 0, life: 22, sz: 3.2, c: FU_COLS[(i + (t / 90 | 0)) % FU_COLS.length], drag: .9 });
+    } else m.a = 0;
+  });
+  // 周りの光の粒が渦に吸い込まれる
+  if (t > 250 && t < FU.mix) for (let q = 0; q < 7; q++) {
+    const a = Math.random() * TAU, d = (150 + Math.random() * 90) * U, px = C.x + Math.cos(a) * d, py = C.y + Math.sin(a) * d * .55;
+    SP(S, { x: px, y: py, vx: (C.x - px) * .035 - Math.sin(a) * 4, vy: (C.y - py) * .035 + Math.cos(a) * 2.2, life: 34, sz: 2.4, c: FU_COLS[q % FU_COLS.length], drag: .985 });
+  }
+  if (!S.mixed && t >= FU.mix) {
+    S.mixed = true; S.flash = .85; S.shake = 14;
+    for (let i = 0; i < 3; i++) S.rings.push({ x: C.x, y: C.y, r: 10 + i * 16, v: (12 - i * 3) * U, a: 1, c: i ? FU_COLS[i] : '#ffffff' });
+    sburst(S, C.x, C.y, 110, FU_COLS, 10 * U, 50, 3.2);
+  }
+  S.dark = Math.min(.6, t / 500);
+}
 function sImg(S, img, x, y, s, a, sx) { ctx.save(); ctx.translate(x, y); ctx.scale(s * (sx == null ? 1 : sx), s); ctx.globalAlpha = Math.max(0, Math.min(1, a)); ctx.drawImage(img, -S.w / 2, -S.h / 2, S.w, S.h); ctx.restore(); }
 function summonDraw(S) {
   const t = S.t, k = S.how, c = S.c, x = S.x, y = S.y, L = S.L, U = S.U, sh = S.shake + S.quake;
@@ -451,10 +486,15 @@ function summonDraw(S) {
     for (let i = 0; i < 2; i++) { ctx.beginPath(); for (let j = 0; j <= 3; j++) { const a = j / 3 * TAU + i * Math.PI / 3 - 1.57; ctx.lineTo(Math.cos(a) * R2, Math.sin(a) * R2); } ctx.stroke(); }
     ctx.restore(); for (let q = 0; q < 6; q++) { const a = q / 6 * TAU + t / 600; glow(x + Math.cos(a) * 100 * U, cy + Math.sin(a) * 34 * U, 16 * U, c, .9 * fa); }
   }
-  if (k === 'fusion' && t < L + 400) {
-    const fa = t > L ? Math.max(0, 1 - (t - L) / 400) : Math.min(1, t / 300);
-    for (let v = 0; v < 4; v++) { ctx.strokeStyle = c; ctx.globalAlpha = fa * (.7 - v * .13); ctx.lineWidth = 4 - v * .7; ctx.beginPath(); for (let a = 0; a < TAU * 2.2; a += .12) { const r3 = (6 + a * 11 + v * 7) * U, xx = x + Math.cos(a - t / 120 + v) * r3, yy = y + Math.sin(a - t / 120 + v) * r3 * .6; if (a) ctx.lineTo(xx, yy); else ctx.moveTo(xx, yy); } ctx.stroke(); }
-    ctx.globalAlpha = 1; glow(x, y, 70 * U, c, .7 * fa);
+  if (k === 'fusion' && t < FU.born + 500) {
+    const C = S.C, fa = Math.min(1, t / 350) * (t > FU.mix ? Math.max(0, 1 - (t - FU.mix) / 500) : 1);
+    const p = Math.min(1, t / FU.mix), spin = t / 1000 * (2 + p * 9);
+    for (let v = 0; v < 6; v++) {
+      ctx.strokeStyle = FU_COLS[v]; ctx.globalAlpha = fa * .65; ctx.lineWidth = (5 - v * .5) * U; ctx.beginPath();
+      for (let a = 0; a < TAU * 1.6; a += .1) { const r3 = (10 + a * 15) * U * (1 - p * .25), ang = a + spin + v / 6 * TAU; const xx = C.x + Math.cos(ang) * r3, yy = C.y + Math.sin(ang) * r3 * .55; if (a) ctx.lineTo(xx, yy); else ctx.moveTo(xx, yy); }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1; glow(C.x, C.y, (60 + 60 * p) * U, '#c9a7ff', .8 * fa); glow(C.x, C.y, 26 * U * (1 + p), '#ffffff', fa);
   }
   if (k === 'god') {
     if (S.bolt && t - S.bolt.t < 120) {
@@ -472,14 +512,24 @@ function summonDraw(S) {
   S.rings.forEach(r => { ctx.strokeStyle = r.c; ctx.globalAlpha = r.a; ctx.lineWidth = 5 * r.a + 1; ctx.beginPath(); ctx.ellipse(r.x, r.y, r.r, r.r * .32, 0, 0, TAU); ctx.stroke(); }); ctx.globalAlpha = 1;
   S.parts.forEach(p => { ctx.globalAlpha = Math.min(1, p.life / p.max * 1.6); const rad = p.sz * 2.6; ctx.drawImage(spr(p.c), p.x - rad, p.y - rad, rad * 2, rad * 2); }); ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
-  S.mats.forEach(m => { if (m.a > 0) { ctx.save(); ctx.translate(m.dx ?? m.x, m.dy ?? m.y); ctx.scale(m.s, m.s); ctx.globalAlpha = m.a; ctx.drawImage(m.img, -m.w / 2, -m.h / 2, m.w, m.h); ctx.restore(); } });
+  S.mats.forEach((m, i) => {
+    if (m.a <= 0) return;
+    ctx.save(); ctx.translate(m.dx ?? m.x, m.dy ?? m.y); ctx.rotate(m.rot || 0); ctx.scale(m.s, m.s); ctx.globalAlpha = m.a; ctx.drawImage(m.img, -m.w / 2, -m.h / 2, m.w, m.h);
+    // 混ざっていく：カードが渦の色に染まって光る
+    if (m.mix) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = m.mix * .75; ctx.fillStyle = FU_COLS[(i * 2 + (S.t / 120 | 0)) % FU_COLS.length]; ctx.fillRect(-m.w / 2, -m.h / 2, m.w, m.h); ctx.globalCompositeOperation = 'source-over'; }
+    ctx.restore();
+  });
   const img = S.img;
   if (k === 'normal' || k === 'advance') { if (!(k === 'advance' && t < 300)) { const p = Math.min(1, t / L), s = 1 + 1.1 * (1 - easeIn(p)); sImg(S, img, x, y - 160 * U * (1 - easeIn(p)), s, Math.min(1, t / 150)); } }
   else if (k === 'set') { const p = Math.min(1, t / L); sImg(S, img, x - (1 - ease(p)) * 120 * U, y, 1, p); }
   else if (k === 'special') { if (t > 200) { const p = Math.min(1, (t - 200) / (L - 200)); ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, y + S.h / 2); ctx.clip(); sImg(S, img, x, y + S.h * (1 - ease(p)), 1, 1); ctx.restore(); } }
   else if (k === 'flip') { const p = Math.min(1, t / L), sx = Math.cos(p * Math.PI); sImg(S, sx > 0 ? backImg() : img, x, y - 10 * Math.sin(p * Math.PI), 1 + .15 * Math.sin(p * Math.PI), 1, Math.abs(sx)); }
   else if (k === 'ritual') { if (t > L * .5) { const p = Math.min(1, (t - L * .5) / (L * .5)); sImg(S, img, x, y - 40 * U * (1 - ease(p)), .6 + .4 * ease(p), p); } }
-  else if (k === 'fusion') { if (t > L * .8) { const p = Math.min(1, (t - L * .8) / (L * .2)); sImg(S, img, x, y - 20 * (1 - p), .3 + .7 * ease(p), p); } }
+  else if (k === 'fusion') {
+    const C = S.C;
+    if (t > FU.mix && t <= FU.born + 250) { const p = Math.min(1, (t - FU.mix) / (FU.born + 250 - FU.mix)); sImg(S, img, C.x, C.y, .2 + 1.05 * ease(p), Math.min(1, p * 2)); }
+    else if (t > FU.born + 250) { const p = Math.min(1, (t - FU.born - 250) / (L - FU.born - 250)); sImg(S, img, lerp(C.x, x, ease(p)), lerp(C.y, y, easeIn(p)), 1.25 - .25 * ease(p), 1); }
+  }
   else if (k === 'god') { if (t > 1700) { const p = Math.min(1, (t - 1700) / (L - 1700)); sImg(S, img, x, y - 220 * (1 - easeIn(p)), 1.6 - .6 * ease(p), Math.min(1, p * 3)); } }
   if (t >= L && t < L + 500 && k !== 'set') { ctx.globalCompositeOperation = 'lighter'; glow(x, y, 130 * U, c, .5 * (1 - (t - L) / 500)); ctx.globalCompositeOperation = 'source-over'; }
   ctx.restore();

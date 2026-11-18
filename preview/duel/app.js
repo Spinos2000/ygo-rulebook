@@ -80,6 +80,12 @@ function queueBattleFx(prev, next) {
   if (fxMode() === 'none' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const fresh = (next.anim || []).filter(x => x.seq > (prev.animSeq ?? 0));
   if (!fresh.length) return;
+  // 融合・儀式の素材：召喚の前に墓地へ送られるので、元の場所（手札・場）を覚えておき、いつもの移動の演出はしない
+  for (const u of next.animMats || []) {
+    if (matRects.has(u)) continue;
+    const el = ROOT.querySelector(`#board [data-uid="${u}"], #hand0 [data-uid="${u}"], #hand1 [data-uid="${u}"]`);
+    if (el) { matRects.set(u, el.getBoundingClientRect()); sigSkip.add(u); }
+  }
   // 攻撃：まだ画面に残っている前の状態の盤面（カードの位置）で再生する
   const battles = fresh.filter(x => x.kind === 'battle').map(x => { const j = battleInfo(prev, next, x); if (j) j.seq = x.seq; return j; }).filter(Boolean);
   // カードごとの専用演出（ブラック・ホールなど）：これも前の状態の盤面で再生する
@@ -115,9 +121,13 @@ function summonInfo(prev, next, x) {
   // 相手の裏側のカードは中身を見せない
   const faceDown = !c.faceUp || x.how === 'set';
   const mats = (x.mats || []).map(u => {
-    const el = ROOT.querySelector(`[data-uid="${u}"]`);
-    if (!el || !prev.cards[u] || el.classList.contains('back')) return null;
-    return { rect: el.getBoundingClientRect(), d: defOf(prev, u), atk: currentAtk(prev, u), def: currentDef(prev, u) };
+    const pc = prev.cards[u];
+    if (!pc) return null;
+    // 場・手札にあればそのカード、無ければ（デッキ・EXなど）その置き場から。裏向きでも素材にしたカードは表を見せる
+    const el = ROOT.querySelector(`#board [data-uid="${u}"], #hand0 [data-uid="${u}"], #hand1 [data-uid="${u}"]`) || pileEl(pc.owner, pc.zone);
+    const saved = matRects.get(u); matRects.delete(u);
+    if (!el && !saved) return null;
+    return { rect: saved || el.getBoundingClientRect(), d: defOf(prev, u), atk: currentAtk(prev, u), def: currentDef(prev, u) };
   }).filter(Boolean);
   return { uid: x.uid, how: x.how, faceDown: faceDown && x.how !== 'flip', d: defOf(next, x.uid), mats };
 }
@@ -145,7 +155,8 @@ function playPendingSummons() {
   return true;
 }
 /* ---------- カードごとの専用演出：発動したカード・破壊されるカード・盤面の位置を集める ---------- */
-const sigSkip = new Set();   // 専用演出で壊した（飛ばした）カード。いつもの移動の演出はしない
+const sigSkip = new Set();
+const matRects = new Map(); // 融合・儀式の素材が元あった場所（召喚の演出で、そこから渦へ集める）   // 専用演出で壊した（飛ばした）カード。いつもの移動の演出はしない
 function sigInfo(prev, next, x, fresh) {
   if (!x.act || !prev.cards[x.uid]) return null;
   const d = defOf(prev, x.uid), key = sigKey(d.name);
@@ -281,15 +292,9 @@ function toast(msg, bad) {
 /* ---------- カード表示 ---------- */
 function frameOf(d) { return d.kind === 'spell' ? 'spell' : d.kind === 'trap' ? 'trap' : d.frame; }
 let canAct = new Set();
-/** カードごとに決まった「置いた時のずれ」（場に出し直すと変わる）。amp：傾きの大きさ */
-function jitterCss(uid, serial, amp = 1) {
-  let h = (uid * 2654435761 + (serial || 0) * 40503) >>> 0;
-  const rnd = () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return (h % 10000) / 10000 - .5; };
-  return `translate: ${(rnd() * 6).toFixed(1)}% ${(rnd() * 4).toFixed(1)}%; rotate: ${(rnd() * 7 * amp).toFixed(1)}deg`;
-}
 function cardHtml(uid, { hidden = false, field = false, style = '' } = {}) {
   const c = S.cards[uid];
-  const st = field ? ` style="${jitterCss(uid, c.serial)}"` : style ? ` style="${style}"` : '';
+  const st = style ? ` style="${style}"` : '';
   const d = defOf(S, uid);
   const cls = [uid === selected ? 'sel' : '', field && c.position === 'def' ? 'def' : '', canAct.has(uid) ? 'can' : '', pick.includes(uid) ? 'picked' : ''].join(' ');
   const badge = [c.counters && c.counters.magic ? `<span class="badge">魔${c.counters.magic}</span>` : '', c.equippedTo !== null ? '<span class="badge eq">装備</span>' : ''].join('');
@@ -336,9 +341,7 @@ function pile(p, kind) {
   const n = Math.min(7, Math.ceil(list.length / 6)), open = kind === 'gy' || kind === 'banished';
   const edges = Array.from({ length: n }, (_, k) => `${((k + 1) * .6).toFixed(1)}px ${((k + 1) * .9).toFixed(1)}px 0 ${open ? (k % 2 ? '#bdb5a3' : '#e6dfcf') : (k % 2 ? '#2a170a' : '#7a5634')}`);
   const stack = `box-shadow: ${[...edges, `${(n * .6 + 1).toFixed(1)}px ${(n * .9 + 2).toFixed(1)}px 4px rgba(0,0,0,.45)`].join(', ')}; translate: ${(-n * .3).toFixed(1)}px ${(-n * .45).toFixed(1)}px`;
-  // 墓地・除外は投げ置いたように一番上のカードを傾け、山札とEXはほぼまっすぐ
-  const tilt = top !== null ? `; rotate: ${jitterCss(top, S.cards[top].serial, open ? 1.6 : .3).split('rotate: ')[1]}` : '';
-  const face = open && top !== null ? cardHtml(top, { style: stack + tilt }) : list.length ? `<span class="card back mini" style="${stack}${tilt}"></span>` : '';
+  const face = open && top !== null ? cardHtml(top, { style: stack }) : list.length ? `<span class="card back mini" style="${stack}"></span>` : '';
   return `<button class="zone pile" data-pile="${p}:${kind}" aria-label="${NAME(p)}の${label}（${list.length}枚）">${face}<span class="pl">${label}</span><span class="cnt">${list.length}</span></button>`;
 }
 function renderBoard() {
