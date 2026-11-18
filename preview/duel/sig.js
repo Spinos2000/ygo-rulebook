@@ -369,10 +369,22 @@ const FX = {
   revive(S) {
     const B = S.B, gy = S.I.gy || { x: B.right, y: B.myMonY };
     const L = S.I.land || { x: B.cx, y: B.myMonY };
-    at(S, 400, () => { S.dark = .5; S.pillar = { x: L.x, t: S.t, c: '#fff2b0' }; S.ankh = { x: gy.x, y: gy.y }; });
-    at(S, 900, () => { for (let i = 0; i < 40; i++) { const a = Math.random() * TAU; P(S, { x: gy.x + Math.cos(a) * 20 * S.U, y: gy.y + Math.sin(a) * 26 * S.U, vx: (L.x - gy.x) * .02 + Math.cos(a), vy: -2 - Math.random() * 2, life: 50, sz: 3 * S.U, c: '#fff2b0', k: 'feather' }); } });
-    at(S, 1900, () => { S.pillar = null; S.ankh = null; });
-    S.end = 2300;
+    // 降りるマスの上空に、生命の印（アンク）がゆっくり回りながら浮かぶ。墓地から光が流れ込み、満ちると光の柱になって降りる
+    const ay = Math.max(70 * S.U, L.y - 130 * S.U);
+    at(S, 300, () => { S.dark = .6; S.sigil = { x: L.x, y: ay, t: S.t }; S.ankh = { x: gy.x, y: gy.y }; });
+    hook(S, t => {
+      if (!S.sigil) return t < 300;
+      const sg = S.sigil, e = t - sg.t;
+      // 印のまわりを光の粒が回る
+      if (Math.random() < .7) { const a = Math.random() * TAU, d = (70 + Math.random() * 40) * S.U; P(S, { x: sg.x + Math.cos(a) * d, y: sg.y + Math.sin(a) * d * .5, vx: -Math.sin(a) * 1.4, vy: Math.cos(a) * .7 - .3, life: 40, sz: 2 * S.U, c: Math.random() < .5 ? '#9fe6ff' : '#fff2b0', drag: .99 }); }
+      // 墓地から印へ、光の帯が流れ込む
+      if (e > 500 && e < 1400) for (let i = 0; i < 3; i++) P(S, { x: gy.x + (Math.random() - .5) * 20 * S.U, y: gy.y + (Math.random() - .5) * 26 * S.U, vx: (sg.x - gy.x) * .03, vy: (sg.y - gy.y) * .03 - 1, life: 34, sz: 3 * S.U, c: '#fff2b0', k: 'feather', drag: .995 });
+      return !!S.sigil;
+    });
+    at(S, 1550, () => { S.sigil.flare = S.t; S.flash = .6; S.shake = 6; S.rings.push({ x: L.x, y: ay, r: 20, v: 9 * S.U, a: 1, c: '#fff2b0', lw: 4 }); S.pillar = { x: L.x, t: S.t, c: '#fff2b0' }; burst(S, L.x, ay, 50, ['#fff2b0', '#9fe6ff', '#ffffff'], 6, 40, 2.8); });
+    at(S, 2300, () => { S.sigil = null; S.ankh = null; });
+    at(S, 2500, () => { S.pillar = null; });
+    S.end = 2800;
   },
 
   /* 早すぎた埋葬：大地がひび割れ、土を跳ね上げる */
@@ -494,6 +506,30 @@ function bolt(x0, y0, x1, y1, c, w, al, fork) {
   if (fork) for (let f = 0; f < 3; f++) { const s = pts[2 + ((Math.random() * 6) | 0)]; ctx.lineWidth = 1.5; ctx.strokeStyle = c; ctx.globalAlpha = al * .8; ctx.beginPath(); ctx.moveTo(s[0], s[1]); let fx = s[0], fy = s[1]; for (let k = 0; k < 4; k++) { fx += (Math.random() - .5) * 40; fy += 12 + Math.random() * 12; ctx.lineTo(fx, fy); } ctx.stroke(); }
   ctx.globalAlpha = 1;
 }
+/** 死者蘇生の印：ゆっくり回るアンク（生命の印）と、文字の刻まれた二重の光の輪 */
+function ankhPath(s) {
+  ctx.beginPath(); ctx.ellipse(0, -34 * s, 13 * s, 17 * s, 0, 0, TAU);
+  ctx.moveTo(0, -17 * s); ctx.lineTo(0, 46 * s); ctx.moveTo(-26 * s, -8 * s); ctx.lineTo(26 * s, -8 * s);
+}
+function drawSigil(S, sg, t, U) {
+  const e = t - sg.t, fin = Math.min(1, e / 600), fl = sg.flare ? Math.max(0, 1 - (t - sg.flare) / 700) : 0;
+  const out = sg.flare ? Math.max(0, 1 - Math.max(0, t - sg.flare - 300) / 450) : 1, al = fin * out, s = U * (.75 + .25 * ease(fin)) * (1 + .15 * fl);
+  ctx.save(); ctx.translate(sg.x, sg.y + Math.sin(e / 400) * 4 * U);
+  // 文字の刻まれた二重の輪（傾けて回す）
+  ctx.save(); ctx.scale(1, .42);
+  for (let k = 0; k < 2; k++) {
+    const R = (78 + k * 18) * U, rot = (k ? -1 : 1) * e / (k ? 1500 : 1100);
+    ctx.strokeStyle = hsl(195 + k * 25, 80, .55 * al); ctx.lineWidth = 2 * U; ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.stroke();
+    for (let j = 0; j < 16; j++) { const a = rot + j / 16 * TAU; ctx.fillStyle = hsl(45 + k * 150, 90, .8 * al); ctx.fillRect(Math.cos(a) * R - 2 * U, Math.sin(a) * R - 2 * U, 4 * U, 4 * U); }
+  }
+  ctx.restore();
+  glow(0, 0, (90 + 60 * fl) * U, '#9fe6ff', .35 * al); glow(0, -10 * U, (50 + 40 * fl) * U, '#fff2b0', .55 * al);
+  // 回る印：横幅を cos で縮めて、ゆっくり回転しているように見せる
+  const sx = Math.max(.12, Math.abs(Math.cos(e / 900)));
+  ctx.scale(sx, 1);
+  [[14, .22, '#9fe6ff'], [8, .45, '#fff2b0'], [3.2, 1, '#ffffff']].forEach(l => { ctx.strokeStyle = l[2]; ctx.globalAlpha = l[1] * al * (1 + fl); ctx.lineWidth = l[0] * U / Math.max(.35, sx) * .6 + l[0] * U * .4; ctx.lineCap = 'round'; ankhPath(s); ctx.stroke(); });
+  ctx.globalAlpha = 1; ctx.restore();
+}
 function drawCard(c) {
   if (c.a <= 0 || !c.img) return;
   ctx.save(); ctx.translate(c.x, c.y); ctx.rotate((c.rot || 0) + (c.base || 0)); ctx.scale(c.s * c.flip, c.s * c.sy); ctx.globalAlpha = Math.max(0, Math.min(1, c.a));
@@ -596,6 +632,7 @@ function draw(S) {
   if (S.beamDown) S.beamDown.forEach(b => { const k8 = Math.max(0, 1 - (t - b.t) / 500); ctx.fillStyle = hexA('#ff4a3d', .8 * k8); ctx.fillRect(b.x - 30 * U, -10, 60 * U, b.y + 10); ctx.fillStyle = `rgba(255,255,255,${k8})`; ctx.fillRect(b.x - 6 * U, -10, 12 * U, b.y + 10); });
   if (S.rays) { ctx.save(); ctx.translate(S.rays.x, S.rays.y); ctx.rotate(t / 700); for (let i = 0; i < 12; i++) { ctx.rotate(TAU / 12); ctx.globalAlpha = .25; ctx.fillStyle = S.rays.c; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(180 * U, -9 * U); ctx.lineTo(180 * U, 9 * U); ctx.closePath(); ctx.fill(); } ctx.restore(); ctx.globalAlpha = 1; glow(S.rays.x, S.rays.y, 60 * U, S.rays.c, .8); }
   if (S.ankh) glow(S.ankh.x, S.ankh.y, 60 * U, '#fff2b0', .9);
+  if (S.sigil) drawSigil(S, S.sigil, t, U);
   if (S.souls) for (let i = 0; i < 6; i++) { const a = t / 300 + i * 1.05; glow(S.souls.x + Math.cos(a) * 30 * U, S.souls.y - 20 * U + Math.sin(a * 1.3) * 30 * U, 16 * U, '#8dffb8', .8); }
   if (S.swirl) for (let v = 0; v < 5; v++) { ctx.strokeStyle = ['#ff6b6b', '#ffd25a', '#7aff8a', '#6bd0ff', '#c08bff'][v]; ctx.globalAlpha = .6; ctx.lineWidth = 3 * U; ctx.beginPath(); for (let a = 0; a < TAU * 2; a += .15) { const r3 = (6 + a * 9 + v * 5) * U, xx = S.swirl.x + Math.cos(a - t / 100 + v) * r3, yy = S.swirl.y + Math.sin(a - t / 100 + v) * r3 * .6; if (a) ctx.lineTo(xx, yy); else ctx.moveTo(xx, yy); } ctx.stroke(); ctx.globalAlpha = 1; }
   if (S.lock) glow(B.cx, B.cy, 90 * U, '#ffffff', .2);
