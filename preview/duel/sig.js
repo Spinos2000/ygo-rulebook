@@ -185,7 +185,7 @@ function activate(S) {
   const c = S.self, col = S.I.kind === 'trap' ? TRAP : SPELL;
   c.flip = 0; const t0 = S.t;
   hook(S, t => { const p = Math.min(1, (t - t0) / 180); c.flip = Math.abs(Math.cos((1 - p) * 1.57)); return p < 1; });
-  S.title = { text: S.I.name, col, t: S.t, rb: S.I.key === 'mirror' };
+  S.title = { text: S.I.name, col: S.I.key === 'mirror' ? '#bfe6ff' : col, t: S.t };
   S.shake = 6; S.rings.push({ x: c.x, y: c.y, r: 20, v: 7 * S.U, a: 1, c: col, lw: 4 });
   c.glow = 1; c.gc = col;
 }
@@ -288,25 +288,39 @@ const FX = {
 
   /* 聖なるバリア －ミラーフォース－：虹色の波が広がってドームになり、攻撃を受け止めて跳ね返す */
   mirror(S) {
-    const B = S.B, A = S.att;
+    const B = S.B, A = S.att, U = S.U;
     // ドームの土台は発動した人の魔法・罠の列、高さはモンスターの列を覆うくらい
-    const base = B.myStY, R = Math.min((B.right - B.left) * .48, 260 * S.U);
-    S.dome = { cx: B.cx, cy: base, R, Ry: Math.max(Math.abs(base - B.myMonY) * 1.9, 90 * S.U), up: S.dir < 0, v: 0, ripples: [] };
+    const base = B.myStY, R = Math.min((B.right - B.left) * .48, 260 * U);
+    S.dome = { cx: B.cx, cy: base, R, Ry: Math.max(Math.abs(base - B.myMonY) * 1.9, 90 * U), up: S.dir < 0, v: 0, ripples: [], dent: 0 };
     const D = S.dome;
     const uOf = x => Math.max(.18, Math.min(.82, Math.acos(Math.max(-1, Math.min(1, D.up ? (D.cx - x) / D.R : (x - D.cx) / D.R))) / Math.PI));
     D.hitU = A ? uOf(A.x) : .5;
-    if (A) move(S, A, { x: A.x, y: A.y - S.dir * 30 * S.U }, 300, { s: 1.12 });
-    at(S, 300, () => { S.dark = .6; D.t0 = S.t; S.shake = 8; });
-    at(S, 1300, () => { S.beam = { t: S.t }; });
-    at(S, 1480, () => {
-      const hp = domePt(D, D.hitU); S.beam = null; D.hit = { x: hp.x, y: hp.y, t: S.t }; impact(S, hp.x, hp.y, .7, '#ffffff');
-      for (let i = 0; i < 5; i++) D.ripples.push({ t: S.t + i * 80 }); rainbow(S, hp.x, hp.y, 60, 9, 36, 2.6, 'streak');
+    const HIT = 1350, PUSH = 1850;
+    if (A) move(S, A, { x: A.x, y: A.y - S.dir * 30 * U }, 300, { s: 1.12 });
+    at(S, 300, () => { S.dark = .65; D.t0 = S.t; S.shake = 8; });
+    // 攻撃：力を溜めてから、太い光線がバリアにぶつかり続ける
+    at(S, 1000, () => { S.charge = { t: S.t }; });
+    at(S, 1200, () => { S.beam = { t: S.t }; S.charge = null; });
+    at(S, HIT, () => { const hp = domePt(D, D.hitU); D.hit = { x: hp.x, y: hp.y, t: S.t }; impact(S, hp.x, hp.y, .6, '#bfe6ff'); S.flashC = '230,245,255'; });
+    hook(S, t => {
+      if (!D.hit || t > PUSH) return !D.hit || t <= PUSH;
+      // ぶつかっている間：バリアがへこみ、火花が表面を走り、波紋が広がる
+      D.dent = Math.min(1, (t - HIT) / 300); S.shake = Math.max(S.shake, 10 * U);
+      for (let i = 0; i < 8; i++) { const a2 = Math.random() * TAU, sp = (4 + Math.random() * 7) * U; P(S, { x: D.hit.x, y: D.hit.y, vx: Math.cos(a2) * sp, vy: Math.sin(a2) * sp * .6, life: 22, sz: 2.4 * U, c: Math.random() < .5 ? '#ffffff' : '#ffb05a', drag: .9, k: 'streak' }); }
+      if (Math.random() < .25) D.ripples.push({ t });
+      return true;
     });
-    at(S, 1750, () => { S.refl = { t: S.t }; D.pulse = S.t; });
-    S.dest.forEach((c, i) => at(S, 1900 + i * 130, () => { impact(S, c.x, c.y, .95, '#ffffff'); explode(S, c, '#ffffff', true); }));
-    const tEnd = 1900 + S.dest.length * 130;
-    at(S, tEnd + 300, () => { S.refl = null; D.fade = S.t; });
-    S.end = tEnd + 1200;
+    // 跳ね返す：バリアが白く激しく輝き、光線を攻撃表示のモンスターへはね返す
+    at(S, PUSH, () => {
+      S.beam = null; D.dent = 0; D.pulse = S.t; S.refl = { t: S.t };
+      impact(S, D.hit.x, D.hit.y, 1, '#ffffff'); S.flashC = '235,248,255'; S.flash = 1;
+      for (let i = 0; i < 4; i++) D.ripples.push({ t: S.t + i * 60 });
+      burst(S, D.hit.x, D.hit.y, 80, ['#ffffff', '#d6f0ff', '#9fd4ff'], 12, 40, 3, 'streak');
+    });
+    S.dest.forEach((c, i) => at(S, PUSH + 160 + i * 120, () => { impact(S, c.x, c.y, .95, '#d6f0ff'); explode(S, c, '#d6f0ff'); }));
+    const tEnd = PUSH + 160 + S.dest.length * 120;
+    at(S, tEnd + 350, () => { S.refl = null; D.fade = S.t; });
+    S.end = tEnd + 1250;
   },
 
   /* 大嵐：竜巻が横切り、魔法・罠を巻き上げて砕く */
@@ -544,9 +558,9 @@ function tick(S, now) {
   const D = S.dome;
   if (D && D.t0 != null) {
     D.v = D.fade ? Math.max(0, 1 - (t - D.fade) / 700) : Math.min(1, (t - D.t0) / 800);
-    if (t - D.t0 < 900) for (let i = 0; i < 6; i++) { const u = Math.random(), pt = domePt(D, u), k = Math.min(1, (t - D.t0) / 800); P(S, { x: D.cx + (pt.x - D.cx) * k, y: D.cy + (pt.y - D.cy) * k, vx: (pt.x - D.cx) * .01, vy: S.dir * (1 + Math.random()), life: 30, sz: 2.4 * S.U, hue: u * 360 + t * .2 }); }
+    if (t - D.t0 < 900) for (let i = 0; i < 6; i++) { const u = Math.random(), pt = domePt(D, u), k = Math.min(1, (t - D.t0) / 800); P(S, { x: D.cx + (pt.x - D.cx) * k, y: D.cy + (pt.y - D.cy) * k, vx: (pt.x - D.cx) * .01, vy: S.dir * (1 + Math.random()), life: 30, sz: 2.4 * S.U, c: Math.random() < .5 ? '#ffffff' : '#bfe6ff' }); }
     if (S.beam && S.att) { const hp = domePt(D, D.hitU), A = S.att; for (let j = 0; j < 10; j++) { const u = Math.random(); P(S, { x: A.x + (hp.x - A.x) * u, y: A.y + (hp.y - A.y) * u, vx: (Math.random() - .5) * 2, vy: (Math.random() - .5) * 2, life: 14, sz: 3 * S.U, c: '#ffb05a' }); } }
-    if (S.refl && D.hit) S.dest.forEach(c => { if (c.a <= 0) return; for (let j = 0; j < 4; j++) { const u = Math.random(); P(S, { x: D.hit.x + (c.x - D.hit.x) * u, y: D.hit.y + (c.y - D.hit.y) * u, vx: (Math.random() - .5) * 2, vy: (Math.random() - .5) * 2, life: 12, sz: 2.6 * S.U, hue: u * 360 + t * .3 }); } });
+    if (S.refl && D.hit) S.dest.forEach(c => { if (c.a <= 0) return; for (let j = 0; j < 4; j++) { const u = Math.random(); P(S, { x: D.hit.x + (c.x - D.hit.x) * u, y: D.hit.y + (c.y - D.hit.y) * u, vx: (Math.random() - .5) * 2, vy: (Math.random() - .5) * 2, life: 12, sz: 2.6 * S.U, c: Math.random() < .5 ? '#ffffff' : '#bfe6ff' }); } });
   }
   if (S.drain) (S.I.mons || []).forEach(m => { if (!m.rect || Math.random() > .5) return; const x = m.rect.left + m.rect.width / 2 + (Math.random() - .5) * 40, y = m.rect.top + m.rect.height / 2 + (Math.random() - .5) * 50; P(S, { x, y, vx: (S.self.x - x) * .03, vy: (S.self.y - y) * .03, life: 40, sz: 2.6 * S.U, c: '#b45cff', drag: 1 }); });
   S.parts.forEach(p => {
@@ -717,27 +731,48 @@ function draw(S) {
     gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.7, 'rgba(30,110,200,.55)'); gr.addColorStop(1, 'rgba(160,225,255,.9)'); ctx.fillStyle = gr;
     ctx.beginPath(); ctx.moveTo(wx - 200 * U, B.bottom); for (let y = B.bottom; y > B.top; y -= 10) ctx.lineTo(wx + Math.sin(y / 20 + t / 60) * 12, y); ctx.lineTo(wx - 200 * U, B.top); ctx.closePath(); ctx.fill();
   }
-  // 虹色の波のドーム（ミラーフォース）
+  // 薄い青のバリアのドーム（ミラーフォース）
   const D = S.dome;
   if (D && D.t0 != null) {
-    const el = t - D.t0, d = D.v, pulse = D.pulse ? Math.max(0, 1 - (t - D.pulse) / 600) : 0, ry = r => r * D.Ry / D.R;
-    for (let w = 0; w < 6; w++) { const k = Math.min(1, Math.max(0, (el - w * 130) / 700)); if (k <= 0 || k >= 1 || D.fade) continue; const r2 = D.R * ease(k); ctx.lineWidth = (7 - w * .6) * U; ctx.strokeStyle = hsl(w * 55 + el * .25, 65, .55); domeArc(D, r2, ry(r2)); ctx.stroke(); }
+    const el = t - D.t0, d = D.v, pulse = D.pulse ? Math.max(0, 1 - (t - D.pulse) / 700) : 0, ry = r => r * D.Ry / D.R;
+    // 張られる時：薄い青の輪が中心から広がってドームになる
+    for (let w = 0; w < 4; w++) { const k = Math.min(1, Math.max(0, (el - w * 120) / 650)); if (k <= 0 || k >= 1 || D.fade) continue; const r2 = D.R * ease(k); ctx.lineWidth = (6 - w) * U; ctx.strokeStyle = `rgba(200,235,255,${.8 - w * .15})`; domeArc(D, r2, ry(r2)); ctx.stroke(); }
     if (d > 0) {
       ctx.save(); domeArc(D, D.R, D.Ry); ctx.closePath(); ctx.clip();
-      const bands = 16, flow = (t / 900) % 1;
-      for (let b = 0; b < bands; b++) { const f = (b + flow) / bands, rb = D.R * f; ctx.lineWidth = D.R / bands * 1.05; ctx.strokeStyle = hsl(f * 360 * 1.4 - t * .18, 62, (.10 + .14 * f + .25 * pulse) * d); domeArc(D, rb, ry(rb)); ctx.stroke(); }
-      for (let s2 = 0; s2 < 3; s2++) { const sw = ((t / 1100) + s2 / 3) % 1; ctx.lineWidth = 3 * U; ctx.strokeStyle = `rgba(255,255,255,${.35 * (1 - sw) * d})`; domeArc(D, D.R * sw, ry(D.R * sw)); ctx.stroke(); }
-      if (D.hit) D.ripples.forEach((rp, i) => { const e2 = t - rp.t; if (e2 < 0 || e2 > 900) return; const r3 = e2 * .42 * U; ctx.strokeStyle = hsl(i * 70 + e2 * .3, 65, 1 - e2 / 900); ctx.lineWidth = 4 * U; ctx.beginPath(); ctx.ellipse(D.hit.x, D.hit.y, r3, r3 * .62, 0, 0, TAU); ctx.stroke(); });
+      // ドームの面：中心ほど透け、縁ほど白く光る薄い青
+      const g = ctx.createRadialGradient(D.cx, D.cy, D.R * .1, D.cx, D.cy, D.R * 1.02);
+      g.addColorStop(0, `rgba(150,210,255,${.06 * d})`); g.addColorStop(.75, `rgba(170,220,255,${(.16 + .3 * pulse) * d})`); g.addColorStop(1, `rgba(235,248,255,${(.55 + .4 * pulse) * d})`);
+      ctx.fillStyle = g; ctx.fillRect(D.cx - D.R, D.cy - D.Ry - 10, D.R * 2, D.Ry * 2 + 20);
+      // 六角形の模様（バリアの網目）がうっすら光る
+      ctx.strokeStyle = `rgba(220,240,255,${(.18 + .35 * pulse) * d})`; ctx.lineWidth = 1 * U;
+      const hs = 16 * U;
+      for (let row = 0, yy = D.cy - D.Ry; yy < D.cy + D.Ry; row++, yy += hs * 1.5) for (let xx = D.cx - D.R + (row % 2) * hs * .87; xx < D.cx + D.R; xx += hs * 1.73) { ctx.beginPath(); for (let k = 0; k < 6; k++) { const ang = k / 6 * TAU + Math.PI / 6; ctx.lineTo(xx + Math.cos(ang) * hs, yy + Math.sin(ang) * hs); } ctx.closePath(); ctx.stroke(); }
+      // 表面を走る白い光
+      for (let s2 = 0; s2 < 2; s2++) { const sw = ((t / 1300) + s2 / 2) % 1; ctx.lineWidth = 4 * U; ctx.strokeStyle = `rgba(255,255,255,${.4 * (1 - sw) * d})`; domeArc(D, D.R * sw, ry(D.R * sw)); ctx.stroke(); }
+      // ぶつかった所から広がる波紋
+      if (D.hit) D.ripples.forEach(rp => { const e2 = t - rp.t; if (e2 < 0 || e2 > 700) return; const r3 = e2 * .5 * U; ctx.strokeStyle = `rgba(255,255,255,${1 - e2 / 700})`; ctx.lineWidth = 3 * U; ctx.beginPath(); ctx.ellipse(D.hit.x, D.hit.y, r3, r3 * .6, 0, 0, TAU); ctx.stroke(); });
       ctx.restore();
-      for (let a = 0; a < 36; a++) { const a0 = (D.up ? Math.PI : 0) + a / 36 * Math.PI, a1 = a0 + Math.PI / 36 + .01; ctx.strokeStyle = hsl(a * 10 + t * .3, 70, (.85 + .15 * pulse) * d); ctx.lineWidth = (3.5 + 3 * pulse) * U; ctx.beginPath(); ctx.ellipse(D.cx, D.cy, D.R, D.Ry, 0, a0, a1); ctx.stroke(); }
-      glowH(D.cx, D.cy + S.dir * D.Ry * .55, D.R * .95, (t * .2) % 360, (.18 + .4 * pulse) * d);
+      // 白く光る縁
+      ctx.lineCap = 'round';
+      [[16, .18], [8, .45], [3.5, 1]].forEach(([lw, al]) => { ctx.strokeStyle = `rgba(${al === 1 ? '255,255,255' : '190,230,255'},${al * d * (1 + .6 * pulse)})`; ctx.lineWidth = lw * U * (1 + .5 * pulse); domeArc(D, D.R, D.Ry); ctx.stroke(); });
+      glow(D.cx, D.cy + S.dir * D.Ry * .5, D.R * (1 + .3 * pulse), '#bfe6ff', (.22 + .6 * pulse) * d);
+      // 跳ね返す瞬間：ドームから白い光の筋が放たれる
+      if (pulse > 0) for (let k = 0; k < 14; k++) { const u = k / 13, p = domePt(D, u), dx = p.x - D.cx, dy = p.y - D.cy, L = Math.hypot(dx, dy) || 1, len = 70 * U * pulse; ctx.strokeStyle = `rgba(255,255,255,${.7 * pulse})`; ctx.lineWidth = 3 * U; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + dx / L * len, p.y + dy / L * len * .8); ctx.stroke(); }
     }
-    if (S.beam && S.att) { const hp = domePt(D, D.hitU), A = S.att, k2 = Math.min(1, (t - S.beam.t) / 180), ex = A.x + (hp.x - A.x) * k2, ey = A.y + (hp.y - A.y) * k2; ctx.lineCap = 'round'; [[22, .3, '#ff6b3c'], [10, .8, '#ffb05a'], [4, 1, '#ffffff']].forEach(l => { ctx.strokeStyle = l[2]; ctx.globalAlpha = l[1]; ctx.lineWidth = l[0] * U; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(ex, ey); ctx.stroke(); }); ctx.globalAlpha = 1; glowH(ex, ey, 40 * U, 30, 1); }
-    if (D.hit) { const he = t - D.hit.t; if (he < 900) glowH(D.hit.x, D.hit.y, 90 * U * (1 - he / 1300), (he * .4) % 360, 1 - he / 900); }
+    // 攻撃：力を溜める光、ぶつかり続ける太い光線
+    if (S.charge && S.att) { const k = Math.min(1, (t - S.charge.t) / 200); glow(S.att.x, S.att.y, 60 * U * k, '#ffb05a', .9); }
+    if (S.beam && S.att) {
+      const hp = domePt(D, D.hitU), A2 = S.att, k2 = Math.min(1, (t - S.beam.t) / 150), ex = A2.x + (hp.x - A2.x) * k2, ey = A2.y + (hp.y - A2.y) * k2, wob = 1 + .2 * Math.sin(t / 18);
+      ctx.lineCap = 'round'; [[30, .25, '#ff6b3c'], [16, .6, '#ffb05a'], [6, 1, '#ffffff']].forEach(l => { ctx.strokeStyle = l[2]; ctx.globalAlpha = l[1]; ctx.lineWidth = l[0] * U * wob; ctx.beginPath(); ctx.moveTo(A2.x, A2.y); ctx.lineTo(ex, ey); ctx.stroke(); });
+      ctx.globalAlpha = 1; glow(ex, ey, 70 * U * wob, '#ffb05a', 1); glow(ex, ey, 34 * U, '#ffffff', 1);
+    }
+    // ぶつかった所の白い光
+    if (D.hit) { const he = t - D.hit.t; if (he < 1000) glow(D.hit.x, D.hit.y, (60 + 60 * D.dent) * U * (S.beam ? 1 : (1 - he / 1600)), '#ffffff', S.beam ? .9 : 1 - he / 1000); }
+    // 跳ね返す光線：白と薄い青
     if (S.refl && D.hit) {
-      const f2 = D.hit, k3 = Math.min(1, (t - S.refl.t) / 140);
-      S.dest.forEach((c, i) => { const ex2 = f2.x + (c.x - f2.x) * k3, ey2 = f2.y + (c.y - f2.y) * k3; ctx.lineCap = 'round'; [[30, .22], [16, .45], [8, .8]].forEach((l, j) => { ctx.strokeStyle = hsl(i * 120 + j * 40 + t * .5, 65, l[1]); ctx.lineWidth = l[0] * U * (1 + .15 * Math.sin(t / 20)); ctx.beginPath(); ctx.moveTo(f2.x, f2.y); ctx.lineTo(ex2, ey2); ctx.stroke(); }); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3 * U; ctx.beginPath(); ctx.moveTo(f2.x, f2.y); ctx.lineTo(ex2, ey2); ctx.stroke(); });
-      glowH(f2.x, f2.y, 80 * U, (t * .5) % 360, 1);
+      const f2 = D.hit, k3 = Math.min(1, (t - S.refl.t) / 120);
+      S.dest.forEach(c => { const ex2 = f2.x + (c.x - f2.x) * k3, ey2 = f2.y + (c.y - f2.y) * k3; ctx.lineCap = 'round'; [[30, .2, '#9fd4ff'], [16, .5, '#d6f0ff'], [6, 1, '#ffffff']].forEach(l => { ctx.strokeStyle = l[2]; ctx.globalAlpha = l[1]; ctx.lineWidth = l[0] * U * (1 + .15 * Math.sin(t / 20)); ctx.beginPath(); ctx.moveTo(f2.x, f2.y); ctx.lineTo(ex2, ey2); ctx.stroke(); }); ctx.globalAlpha = 1; });
+      glow(f2.x, f2.y, 90 * U, '#ffffff', 1);
     }
   }
   // サイクロン：自分のカードの竜巻と、頂点に溜まる雷・落ちる稲妻
