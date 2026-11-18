@@ -4,7 +4,7 @@ import { RuleError } from '../engine/types.js';
                                                         
 import {
   defOf, choose, chooseOne, canSpecialSummon, specialSummon, release, sendToGy, newStep, monstersOf, hasLevelCombo,
-  extraSummonZone, freeMZones, scriptOf, targetable, log, pl, opp, isFaceUpMonster, banish, moveCard, emit, shuffleDeck, cleanupOrphans, FIELD_ZONES,
+  extraSummonZone, freeMZones, scriptOf, targetable, releasable, log, pl, opp, isFaceUpMonster, banish, moveCard, emit, shuffleDeck, cleanupOrphans, FIELD_ZONES,
 } from '../engine/game.js';
 
 export const nameIs = (s           , uid        , name        ) => defOf(s, uid).name === name;
@@ -43,7 +43,7 @@ export function countDragons(s           , players            )         {
  
 function ritualMaterials(s           , p          , monster        , spec            )           {
   if (spec.materials === 'deckNormal') return deckOf(s, p).filter(u => isNormal(s, u) && level(s, u) > 0);
-  return [...handOf(s, p), ...monstersOf(s, p)].filter(u => u !== monster && defOf(s, u).kind === 'monster' && level(s, u) > 0);
+  return [...handOf(s, p), ...monstersOf(s, p).filter(u => releasable(s, u))].filter(u => u !== monster && defOf(s, u).kind === 'monster' && level(s, u) > 0);
 }
 function ritualCandidates(s           , p          , spec            )           {
   return handOf(s, p).filter(u => {
