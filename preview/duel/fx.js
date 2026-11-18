@@ -500,6 +500,126 @@ const FU = { gather: 450, mix: 1750, born: 1950 };
 const FU_COLS = ['#c9a7ff', '#7f77dd', '#ff8ad8', '#6bd0ff', '#ffffff', '#b45cff'];
 const lerp = (a, b, k) => a + (b - a) * k;
 
+/* ---------- プレイマットの柄：大きな召喚（エース・儀式・融合・神）の間だけ、盤面の地を召喚に合わせた柄に変える。
+   カードを置く枠は盤面の上に残る。短い召喚（通常・セット・アドバンス・特殊・反転）は変えない ---------- */
+function sumMatStart(S, root, cvEl) {
+  if (!cvEl || !SUM_MAT[S.how]) return;
+  const r = cvEl.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1), x = cvEl.getContext('2d');
+  cvEl.width = Math.max(1, r.width * dpr); cvEl.height = Math.max(1, r.height * dpr); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  S.mat = { cv: cvEl, ctx: x, w: r.width, h: r.height, ox: r.left, oy: r.top, fn: SUM_MAT[S.how], seed: Array.from({ length: 140 }, () => [Math.random(), Math.random(), Math.random()]) };
+  S.board = root.querySelector('#board'); if (S.board) S.board.classList.add('skin-on');
+}
+function sumMatEnd(S) { if (!S.mat) return; S.mat.ctx.clearRect(0, 0, S.mat.w, S.mat.h); if (S.board) S.board.classList.remove('skin-on'); }
+function sumMatAlpha(S) { const t = S.t; return Math.min(1, Math.max(0, (t - 100) / 450)) * (t > S.end - 650 ? Math.max(0, (S.end - t) / 650) : 1); }
+function sumMatDraw(S) {
+  const m = S.mat; if (!m) return;
+  const x = m.ctx, al = sumMatAlpha(S); x.clearRect(0, 0, m.w, m.h); if (al <= 0) return;
+  x.save(); x.globalAlpha = al; m.fn(S, x, m.w, m.h, S.t); x.restore();
+}
+const mloc = (S, px, py) => ({ x: px - S.mat.ox, y: py - S.mat.oy });
+/** 夜空の地：中心ほど色が明るい */
+function skySky(x, w, h, cx, cy, col, k) {
+  x.fillStyle = '#05060c'; x.fillRect(0, 0, w, h);
+  const R = Math.hypot(w, h), g = x.createRadialGradient(cx, cy, 0, cx, cy, R * .75);
+  g.addColorStop(0, hexA(col, .5 * k)); g.addColorStop(.45, hexA(col, .2 * k)); g.addColorStop(1, hexA(col, .04)); x.fillStyle = g; x.fillRect(0, 0, w, h);
+}
+function skyStars(S, x, w, h, t, n, col) { S.mat.seed.slice(0, n).forEach(([a, b, s]) => { const tw = .35 + .65 * Math.abs(Math.sin(t / (380 + s * 400) + s * 20)); x.fillStyle = col || `rgba(255,255,255,${.75 * tw})`; x.globalAlpha *= 1; x.fillRect(a * w, b * h, 1 + s * 1.2, 1 + s * 1.2); }); }
+/** 魔法陣：二重の輪・目盛り・星形（n=5）か六芒星（n=6）・内側の輪。rot で回す */
+function magicCircle(x, cx, cy, R, rot, col, n, lw) {
+  x.save(); x.translate(cx, cy); x.rotate(rot); x.strokeStyle = col; x.shadowColor = col; x.shadowBlur = 10; x.lineWidth = lw;
+  const ring = r => { x.beginPath(); x.arc(0, 0, r, 0, TAU); x.stroke(); };
+  ring(R); ring(R * .9); ring(R * .62); ring(R * .3);
+  // 外側の帯の文字のような目盛り
+  x.lineWidth = lw * .8; for (let i = 0; i < 48; i++) { const a = i / 48 * TAU, l = i % 4 ? .04 : .07; x.beginPath(); x.moveTo(Math.cos(a) * R * .9, Math.sin(a) * R * .9); x.lineTo(Math.cos(a) * R * (.9 + l), Math.sin(a) * R * (.9 + l)); x.stroke(); }
+  x.lineWidth = lw;
+  if (n === 5) { x.beginPath(); for (let j = 0; j <= 5; j++) { const a = j * 2 / 5 * TAU - Math.PI / 2; x.lineTo(Math.cos(a) * R * .9, Math.sin(a) * R * .9); } x.stroke(); }
+  else for (let i = 0; i < 2; i++) { x.beginPath(); for (let j = 0; j <= 3; j++) { const a = j / 3 * TAU + i * Math.PI / 3 - Math.PI / 2; x.lineTo(Math.cos(a) * R * .9, Math.sin(a) * R * .9); } x.stroke(); }
+  // 頂点の小さな輪
+  for (let j = 0; j < n; j++) { const a = j / n * TAU - Math.PI / 2; x.beginPath(); x.arc(Math.cos(a) * R * .9, Math.sin(a) * R * .9, R * .07, 0, TAU); x.stroke(); }
+  x.rotate(-rot * 2.5); x.setLineDash([R * .05, R * .04]); ring(R * .48); x.setLineDash([]);
+  for (let j = 0; j < 12; j++) { const a = j / 12 * TAU; x.beginPath(); x.moveTo(Math.cos(a) * R * .3, Math.sin(a) * R * .3); x.lineTo(Math.cos(a) * R * .62, Math.sin(a) * R * .62); x.stroke(); }
+  x.restore();
+}
+const SUM_MAT = {
+  /* エース：属性の色の夜空に、大きな魔法陣がゆっくり回る。墓地からの時は、墓地の側から光の粒が昇る */
+  ace(S, x, w, h, t) {
+    const c = mloc(S, S.x, S.y), col = S.c, R = Math.min(w, h) * .46 * (.6 + .4 * ease(Math.min(1, t / 900)));
+    skySky(x, w, h, c.x, c.y, col, 1); skyStars(S, x, w, h, t, 90);
+    // 遠くの大きな輪（ゆっくり逆回り）
+    x.save(); x.globalAlpha *= .35; magicCircle(x, c.x, c.y, Math.max(w, h) * .62, -t / 9000, hexA(col, .8), 6, 1.2); x.restore();
+    x.save(); x.globalAlpha *= .85; magicCircle(x, c.x, c.y, R, t / 5000, hexA(col, .95), 5, 2); x.restore();
+    const g = x.createRadialGradient(c.x, c.y, 0, c.x, c.y, R * .5); g.addColorStop(0, hexA(col, .45)); g.addColorStop(1, hexA(col, 0)); x.fillStyle = g; x.fillRect(c.x - R, c.y - R, R * 2, R * 2);
+    if (S.soul0) {
+      const s = mloc(S, S.soul0.x, S.soul0.y);
+      S.mat.seed.slice(0, 70).forEach(([a, b, q], i) => {
+        const f = ((t / 1600) * (.5 + q) + b) % 1, px = s.x + (a - .5) * 70 + (c.x - s.x) * f * .55 + Math.sin(t / 300 + i) * 6, py = s.y - f * h * .9;
+        x.fillStyle = i % 3 ? hexA(col, .8 * (1 - f)) : `rgba(255,255,255,${.85 * (1 - f)})`; x.beginPath(); x.arc(px, py, 1.2 + q * 2.4, 0, TAU); x.fill();
+      });
+      const g2 = x.createRadialGradient(s.x, s.y, 0, s.x, s.y, 90); g2.addColorStop(0, hexA(col, .5)); g2.addColorStop(1, hexA(col, 0)); x.fillStyle = g2; x.fillRect(s.x - 90, s.y - 90, 180, 180);
+    }
+  },
+  /* 儀式：青い夜空に、儀式の魔法陣（六芒星）の線が浮かぶ */
+  ritual(S, x, w, h, t) {
+    const c = mloc(S, S.x, S.y), R = Math.min(w, h) * .44 * (.7 + .3 * ease(Math.min(1, t / 700)));
+    x.fillStyle = '#040b1e'; x.fillRect(0, 0, w, h);
+    const g = x.createRadialGradient(c.x, c.y, 0, c.x, c.y, Math.hypot(w, h) * .7); g.addColorStop(0, 'rgba(70,120,230,.55)'); g.addColorStop(.5, 'rgba(30,60,150,.3)'); g.addColorStop(1, 'rgba(10,20,60,.1)'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+    skyStars(S, x, w, h, t, 80);
+    // 星座のような細い線
+    x.strokeStyle = 'rgba(170,205,255,.18)'; x.lineWidth = 1; const pts = S.mat.seed.slice(80, 96);
+    x.beginPath(); pts.forEach(([a, b], i) => (i % 4 ? x.lineTo(a * w, b * h) : x.moveTo(a * w, b * h))); x.stroke();
+    magicCircle(x, c.x, c.y, R, t / 7000, 'rgba(160,200,255,.9)', 6, 1.6);
+    // 陣の線を光がなぞる
+    const a = t / 500; x.fillStyle = '#e4f0ff'; x.shadowColor = '#7fb2ff'; x.shadowBlur = 12;
+    for (let i = 0; i < 3; i++) { const q = a + i * TAU / 3; x.beginPath(); x.arc(c.x + Math.cos(q) * R, c.y + Math.sin(q) * R, 3, 0, TAU); x.fill(); }
+    x.shadowBlur = 0;
+  },
+  /* 融合：紫・ピンク・水色の渦の模様が、中心へ流れ込む */
+  fusion(S, x, w, h, t) {
+    const c = mloc(S, S.C.x, S.C.y), R = Math.hypot(w, h) * .8, spin = t / 900 + (t / 2600) ** 2 * 3;
+    x.fillStyle = '#0d0618'; x.fillRect(0, 0, w, h);
+    const g = x.createRadialGradient(c.x, c.y, 0, c.x, c.y, R * .7); g.addColorStop(0, 'rgba(201,167,255,.55)'); g.addColorStop(.35, 'rgba(120,60,190,.3)'); g.addColorStop(1, 'rgba(20,10,40,.1)'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+    const cols = ['rgba(180,92,255,', 'rgba(255,138,216,', 'rgba(107,208,255,'];
+    x.save(); x.globalCompositeOperation = 'lighter';
+    for (let v = 0; v < 9; v++) {
+      x.strokeStyle = cols[v % 3] + '.45)'; x.lineWidth = 10 - (v % 3) * 2.5; x.beginPath();
+      for (let r = 8; r < R; r *= 1.06) { const ang = Math.log(r) * 1.9 - spin * 2.2 + v / 9 * TAU; const px = c.x + Math.cos(ang) * r, py = c.y + Math.sin(ang) * r * .75; r === 8 ? x.moveTo(px, py) : x.lineTo(px, py); }
+      x.stroke();
+    }
+    // 渦に沿って中心へ流れ込む光の粒
+    S.mat.seed.slice(0, 90).forEach(([a, b, q], i) => {
+      const f = ((t / 1400) * (.6 + q) + b) % 1, r = (1 - f) * R * .75 + 6, ang = Math.log(r) * 1.9 - spin * 2.2 + a * TAU;
+      x.fillStyle = cols[i % 3] + (.9 * f).toFixed(2) + ')'; x.beginPath(); x.arc(c.x + Math.cos(ang) * r, c.y + Math.sin(ang) * r * .75, 1.4 + q * 2, 0, TAU); x.fill();
+    });
+    x.restore();
+  },
+  /* 神：神ごとの色（オシリスは赤、オベリスクは青、ラーは金、ホルアクティは七色）の雷雲が渦巻く */
+  god(S, x, w, h, t) {
+    const c = mloc(S, S.x, S.y), g0 = godKind(S.d), creator = g0 === 'creator';
+    const col = creator ? null : GOD[g0 || 'gold'].c, tint = (a, i = 0) => creator ? `hsla(${(t / 8 + i * 47) % 360},90%,65%,${a})` : hexA(col, a);
+    x.fillStyle = '#050407'; x.fillRect(0, 0, w, h);
+    const g = x.createRadialGradient(c.x, c.y, 0, c.x, c.y, Math.hypot(w, h) * .7); g.addColorStop(0, tint(.7)); g.addColorStop(.5, tint(.3, 3)); g.addColorStop(1, tint(.08, 5)); x.fillStyle = g; x.fillRect(0, 0, w, h);
+    // 雷雲：大きな雲のかたまりが中心のまわりを渦巻く
+    S.mat.seed.slice(0, 26).forEach(([a, b, q], i) => {
+      const r = (.15 + b * .85) * Math.max(w, h) * .62, ang = a * TAU + t / (1300 + r * 6), px = c.x + Math.cos(ang) * r, py = c.y + Math.sin(ang) * r * .7, cr = 60 + q * 90;
+      // 雲の上側（光が当たる側）は明るく、下は暗い
+      const gc = x.createRadialGradient(px - cr * .25, py - cr * .3, 0, px, py, cr); gc.addColorStop(0, i % 3 ? 'rgba(120,112,132,.6)' : tint(.55, i)); gc.addColorStop(.45, i % 3 ? 'rgba(62,56,74,.55)' : tint(.25, i)); gc.addColorStop(1, 'rgba(20,18,26,0)');
+      x.fillStyle = gc; x.fillRect(px - cr, py - cr, cr * 2, cr * 2);
+    });
+    // 雲の中を走る稲妻（ときどき、雲全体が光る）
+    const m = S.mat;
+    if (!m.bolt || t - m.bolt.t > 260) if (Math.random() < .06) {
+      const a = Math.random() * TAU, r = (.3 + Math.random() * .6) * Math.max(w, h) * .55; let px = c.x + Math.cos(a) * r, py = c.y + Math.sin(a) * r * .7; const pts = [[px, py]];
+      for (let k = 0; k < 9; k++) { px += (c.x - px) * .14 + (Math.random() - .5) * 40; py += (c.y - py) * .14 + (Math.random() - .5) * 30; pts.push([px, py]); }
+      m.bolt = { t, pts, i: Math.random() * 7 | 0 };
+    }
+    if (m.bolt && t - m.bolt.t < 260) {
+      const k = 1 - (t - m.bolt.t) / 260; x.fillStyle = tint(.22 * k, m.bolt.i); x.fillRect(0, 0, w, h);
+      [[7, .45], [2, 1]].forEach(([lw, al], j) => { x.strokeStyle = j ? `rgba(255,255,255,${al * k})` : tint(al * k, m.bolt.i); x.lineWidth = lw; x.beginPath(); m.bolt.pts.forEach((p, i) => (i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1]))); x.stroke(); });
+    }
+    const gl = x.createRadialGradient(c.x, c.y, 0, c.x, c.y, 120); gl.addColorStop(0, tint(.6)); gl.addColorStop(1, tint(0)); x.fillStyle = gl; x.fillRect(c.x - 120, c.y - 120, 240, 240);
+  },
+};
+
 export function playSummon(root, info) {
   ensureCanvas(root); fit(); setClip(root);
   return new Promise(resolve => {
@@ -517,12 +637,14 @@ export function playSummon(root, info) {
     S.end = S.L + (how === 'god' ? 900 : how === 'ace' ? 1100 : how === 'set' ? 250 : 650);
     // 融合の渦の中心：召喚するマスと画面の中央の間
     if (how === 'fusion') S.C = { x: (S.x + W / 2) / 2, y: (S.y + H / 2) / 2 };
+    if (S.soul) S.soul0 = { x: S.soul.x, y: S.soul.y };
+    sumMatStart(S, root, info.mat);
     cv.style.display = 'block';
     const step = now => {
       if (S.done) return;
       const dt = Math.min(32, now - (S.last || now)) * S.speed; S.last = now; S.t += dt;
-      summonTick(S); summonDraw(S); maskToBoard();
-      if (S.t > S.end) { S.done = true; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; resolve(); return; }
+      summonTick(S); summonDraw(S); maskToBoard(); sumMatDraw(S);
+      if (S.t > S.end) { S.done = true; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; sumMatEnd(S); resolve(); return; }
       requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -623,7 +745,8 @@ function summonDraw(S) {
   const t = S.t, k = S.how, c = S.c, x = S.x, y = S.y, L = S.L, U = S.U, sh = S.shake + S.quake;
   const dpr = cv.width / W; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H); ctx.save();
   ctx.translate((Math.random() - .5) * sh, (Math.random() - .5) * sh);
-  if (S.dark > .01) { ctx.fillStyle = `rgba(0,0,0,${S.dark * .6})`; ctx.fillRect(-30, -30, W + 60, H + 60); }
+  // 暗転：マットの柄が出ている間は、盤面の上は暗くしない（柄が地の代わり）
+  if (S.dark > .01) { ctx.fillStyle = `rgba(0,0,0,${S.dark * .6})`; ctx.beginPath(); ctx.rect(-30, -30, W + 60, H + 60); if (S.mat && sumMatAlpha(S) > .5) rr(ctx, S.mat.ox, S.mat.oy, S.mat.w, S.mat.h, 14); ctx.fill('evenodd'); }
   ctx.globalCompositeOperation = 'lighter';
   if (k === 'special' && t < L + 300) {
     const o = Math.min(1, t / 250), fa = t > L ? 1 - (t - L) / 300 : 1;
