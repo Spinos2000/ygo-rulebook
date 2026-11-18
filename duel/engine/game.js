@@ -491,7 +491,8 @@ export function sendToGy(s           , uids          , reason        , by       
     if (from === 'hand' && reason === 'discard') s.cards[u].counters.discardBy = who === null ? -1 : who;
     if (reason === 'release') emit(s, { type: 'released', uid: u, from, reason });
     emit(s, { type: 'toGy', uid: u, from, reason, by: who });
-    if (from === 'hand') pushAnim(s, { kind: 'discard', uid: u, player: c.owner }); // 演出用：手札から墓地へ（手札が開く演出）
+    // 演出用：手札から墓地へ（手札が開く演出）。融合素材・リリースは召喚の演出で見せるので除く
+    if (from === 'hand' && reason !== 'material' && reason !== 'release') pushAnim(s, { kind: 'discard', uid: u, player: c.owner });
     if (FIELD_ZONES.includes(from)) { emit(s, { type: 'leftField', uid: u, from, reason, wasFaceUp: before.faceUp }); befores.push(before); }
   }
   if (befores.length) leaveCleanup(s, befores, reason);
