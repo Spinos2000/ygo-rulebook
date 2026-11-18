@@ -65,7 +65,7 @@ function stImg(d) {
 function mk(c) {
   if (!c || !c.rect) return null;
   const r = c.rect, def = !!c.defPos;
-  const img = !c.faceUp ? backImg() : c.d.kind === 'monster' ? cardImg(c.d, c.atk, c.def) : stImg(c.d);
+  const img = !c.faceUp ? backImg() : cardImg(c.d, c.atk, c.def);
   // 守備表示のカードは横向き（画面の四角は横長なので、縦横を入れ替えて回す）
   return { uid: c.uid, img, x: r.left + r.width / 2, y: r.top + r.height / 2, w: def ? r.height : r.width, h: def ? r.width : r.height,
     rot: 0, base: def ? Math.PI / 2 : 0, s: 1, sy: 1, a: 1, flip: 1, glow: 0, gc: '#fff', def };
@@ -116,7 +116,7 @@ function setup(I) {
   if (!S.self) {
     // 手札から直接発動した時など、フィールドに見当たらない時は手札の辺りから出す
     const h = I.hand || { x: B.cx, y: I.me ? B.bottom : B.top }, w = 60 * S.U;
-    S.self = { img: stImg({ name: I.name, kind: I.kind, subtype: I.subtype }), x: h.x, y: h.y, w, h: w * 86 / 59, rot: 0, base: 0, s: 1, sy: 1, a: 1, flip: 1, glow: 0, gc: '#fff' };
+    S.self = { img: cardImg({ name: I.name, kind: I.kind, subtype: I.subtype }), x: h.x, y: h.y, w, h: w * 86 / 59, rot: 0, base: 0, s: 1, sy: 1, a: 1, flip: 1, glow: 0, gc: '#fff' };
   }
   S.cards.push(S.self);
   const add = c => { const o = mk(c); if (o) S.cards.push(o); return o; };

@@ -34,23 +34,92 @@ function spr(c) {
   x.fillStyle = g; x.fillRect(0, 0, 64, 64); return (SPR[c] = o);
 }
 function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
-const FRAME = { normal: '#f1d98a', effect: '#e9a36f', ritual: '#9cb8ec', fusion: '#b9a3e0' };
+const FRAME = { normal: '#f1d98a', effect: '#e9a36f', ritual: '#9cb8ec', fusion: '#b9a3e0', spell: '#5dbfa1', trap: '#d98bb2' };
 const ATTR = { 闇: '#534ab7', 光: '#b8902a', 地: '#8a6a3a', 水: '#2f6fb0', 炎: '#c4473a', 風: '#2e8b57', 神: '#a9841f' };
-/** カードの表面をキャンバスに描いた絵（演出の中で動かしたり、破片にしたりする） */
-export function cardImg(d, atk, def) {
-  const CW = 78, CH = 114, o = document.createElement('canvas'); o.width = CW * 2; o.height = CH * 2;
-  const x = o.getContext('2d'); x.scale(2, 2);
-  rr(x, 1, 1, CW - 2, CH - 2, 6); x.fillStyle = FRAME[d.frame] || '#e9a36f'; x.fill(); x.lineWidth = 1.6; x.strokeStyle = '#24150b'; x.stroke();
-  x.fillStyle = 'rgba(255,255,255,.62)'; rr(x, 5, 5, CW - 10, 22, 3); x.fill();
-  x.fillStyle = '#262b3a'; x.font = '700 9px sans-serif'; x.fillText(d.name.slice(0, 7), 8, 15); x.fillText(d.name.slice(7, 14), 8, 25);
-  x.fillStyle = ATTR[d.attribute] || '#6a6e7e'; x.beginPath(); x.arc(CW - 13, 13, 6.5, 0, TAU); x.fill();
-  x.fillStyle = '#fff'; x.font = '700 8px sans-serif'; x.textAlign = 'center'; x.fillText(d.attribute || '', CW - 13, 16);
-  x.fillStyle = 'rgba(255,255,255,.28)'; rr(x, 5, 31, CW - 10, 56, 3); x.fill();
-  x.fillStyle = 'rgba(38,43,58,.3)'; x.font = '700 28px sans-serif'; x.fillText((d.race || '？').charAt(0), CW / 2, 70);
-  x.fillStyle = 'rgba(255,255,255,.62)'; rr(x, 5, CH - 19, CW - 10, 14, 3); x.fill();
-  x.fillStyle = '#262b3a'; x.font = '700 10px sans-serif'; x.fillText(`${atk}/${def}`, CW / 2, CH - 8);
+/* 対戦卓のカード（app.js の faceHtml と duel-ui.js のカードの形）と同じ文字・記号 */
+const RACE_CHAR = { ドラゴン族: '竜', 魔法使い族: '魔', 機械族: '機', 戦士族: '戦', 悪魔族: '悪', 天使族: '天', アンデット族: '屍', 獣族: '獣', 獣戦士族: '獣', 鳥獣族: '鳥', 爬虫類族: '爬', 恐竜族: '恐', 水族: '水', 海竜族: '海', 魚族: '魚', 炎族: '炎', 雷族: '雷', 岩石族: '岩', 植物族: '植', 昆虫族: '虫', 幻神獣族: '神' };
+const SPELL_MARK = { 通常: '✦', 速攻: '➶', 永続: '∞', 装備: '⚔', フィールド: '◈', 儀式: '✧' };
+const TRAP_MARK = { 通常: '◆', 永続: '∞', カウンター: '↺' };
+const FRAME_NAME = { normal: '通常', effect: '効果', ritual: '儀式', fusion: '融合' };
+const CARD_FONT = '"M PLUS Rounded 1c","Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif';
+const CARD_DISPLAY = '"Zen Maru Gothic","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif';
+const CARD_NUM = '"Fredoka","M PLUS Rounded 1c",sans-serif';
+/** 幅に収まるように文字を切る（はみ出す分は …） */
+function fitText(x, s, w) { if (x.measureText(s).width <= w) return s; let t = s; while (t.length > 1 && x.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; }
+/** 2行に折り返す（2行目に入りきらない分は …） */
+function twoLines(x, s, w) {
+  let a = ''; for (const ch of s) { if (x.measureText(a + ch).width > w) break; a += ch; }
+  const rest = s.slice(a.length); return rest ? [a, fitText(x, rest, w)] : [a];
+}
+/**
+ * カードの表面をキャンバスに描いた絵（演出の中で動かしたり、破片にしたりする）。
+ * 対戦卓のカードと同じ並び：カード名と属性（魔法は「魔」・罠は「罠」）、★かカードの種類、種族の一文字（魔法・罠は記号）、種族と種類、攻撃力・守備力。
+ * full=false（既定）はフィールドのカードと同じく、カード名・属性・中央の文字・攻守だけ
+ */
+export function cardImg(d, atk, def, full = false) {
+  const CW = 78, CH = 114, SC = 3, o = document.createElement('canvas'); o.width = CW * SC; o.height = CH * SC;
+  const x = o.getContext('2d'); x.scale(SC, SC);
+  const kind = d.kind || 'monster', mon = kind === 'monster', frame = mon ? (d.frame || 'effect') : kind;
+  const em = 9.2, L = em * .3 + 1.5, iw = CW - L * 2;
+  const ink = kind === 'spell' ? '#04342c' : kind === 'trap' ? '#4b1528' : '#262b3a';
+  rr(x, .75, .75, CW - 1.5, CH - 1.5, 5); x.fillStyle = FRAME[frame] || '#e9a36f'; x.fill();
+  let y = L;
+  // 上の帯：カード名（2行まで）と、右に属性の丸
+  x.font = `700 ${em}px ${CARD_FONT}`;
+  const atR = em * .75, lines = twoLines(x, d.name || '', iw - atR * 2 - 6), nmH = Math.max(lines.length * em * 1.15 + 2, atR * 2 + 2);
+  x.fillStyle = 'rgba(255,255,255,.62)'; rr(x, L, y, iw, nmH, 3); x.fill();
+  x.fillStyle = '#262b3a'; x.textBaseline = 'top'; lines.forEach((l, i) => x.fillText(l, L + 2, y + 1.5 + i * em * 1.15));
+  const atX = L + iw - atR - 2, atY = y + atR + 1;
+  x.fillStyle = mon ? (ATTR[d.attribute] || '#6a6e7e') : kind === 'spell' ? '#0f6e56' : '#993556';
+  x.beginPath(); x.arc(atX, atY, atR, 0, TAU); x.fill(); x.lineWidth = .8; x.strokeStyle = 'rgba(0,0,0,.3)'; x.stroke();
+  x.fillStyle = '#fff'; x.font = `700 ${em * .85}px ${CARD_FONT}`; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(mon ? (d.attribute || '？') : kind === 'spell' ? '魔' : '罠', atX, atY + .5);
+  y += nmH + 2;
+  // ★の数（モンスター）・魔法と罠の種類：手札などで全部見せる時だけ
+  if (full) {
+    x.font = `${mon ? 400 : 700} ${em * .9}px ${CARD_FONT}`; x.textAlign = 'right'; x.textBaseline = 'top'; x.fillStyle = mon ? '#a9841f' : ink;
+    const lv = d.level ?? 0;
+    x.fillText(mon ? fitText(x, lv <= 8 ? '★'.repeat(lv) : `★×${lv}`, iw) : `${d.subtype || ''}${kind === 'spell' ? '魔法' : '罠'}`, L + iw, y);
+    y += em * 1.1 + 2;
+  }
+  // 下から：攻撃力・守備力の帯（モンスター）と、種族と種類（全部見せる時）
+  const stH = em * 1.15 + 1;
+  let bottom = CH - L;
+  if (mon) bottom -= stH + 2;
+  let tyY = null;
+  if (full) { tyY = bottom - em * 1.05; bottom = tyY - 2; }
+  // 中央：種族の一文字（魔法・罠は種類の記号）
+  const artH = Math.max(10, bottom - y);
+  x.fillStyle = 'rgba(255,255,255,.28)'; rr(x, L, y, iw, artH, 3); x.fill(); x.lineWidth = .8; x.strokeStyle = 'rgba(0,0,0,.12)'; x.stroke();
+  const ch = mon ? (RACE_CHAR[d.race] || (d.race || '？').charAt(0)) : ((kind === 'spell' ? SPELL_MARK : TRAP_MARK)[d.subtype] || (kind === 'spell' ? '✦' : '◆'));
+  x.fillStyle = kind === 'spell' ? 'rgba(4,52,44,.3)' : kind === 'trap' ? 'rgba(75,21,40,.3)' : 'rgba(38,43,58,.26)';
+  x.font = `400 ${Math.min(em * 2.8, artH * .8)}px ${CARD_DISPLAY}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(ch, CW / 2, y + artH / 2 + 1);
+  if (full && tyY !== null) {
+    x.font = `400 ${em * .9}px ${CARD_FONT}`; x.textAlign = 'left'; x.textBaseline = 'top'; x.fillStyle = ink;
+    const ty = mon ? `${d.race || ''}／${FRAME_NAME[d.frame] || '効果'}` : String(d.text || '').replace(/^[①-⑳]：/, '').replace(/\s+/g, '').slice(0, 16);
+    x.fillText(fitText(x, ty, iw), L, tyY);
+  }
+  if (mon) {
+    const sy = CH - L - stH, my = sy + stH / 2 + .5, a = String(atk ?? d.atk ?? 0), df = String(def ?? d.def ?? 0);
+    x.fillStyle = 'rgba(255,255,255,.62)'; rr(x, L, sy, iw, stH, 3); x.fill();
+    x.textBaseline = 'middle';
+    if (full) {
+      x.font = `400 ${em * .78}px ${CARD_FONT}`; x.fillStyle = '#6a6e7e'; x.textAlign = 'left'; x.fillText('攻', L + 2, my);
+      const lw = x.measureText('攻').width;
+      x.font = `700 ${em}px ${CARD_NUM}`; x.fillStyle = '#262b3a'; x.fillText(a, L + 2 + lw + 1, my);
+      x.textAlign = 'right'; const vw = x.measureText(df).width; x.fillText(df, L + iw - 2, my);
+      x.font = `400 ${em * .78}px ${CARD_FONT}`; x.fillStyle = '#6a6e7e'; x.fillText('守', L + iw - 3 - vw, my);
+    } else {
+      x.font = `700 ${em}px ${CARD_NUM}`; x.fillStyle = '#262b3a'; x.textAlign = 'left'; x.fillText(a, L + 2, my);
+      x.textAlign = 'right'; x.fillText(df, L + iw - 2, my);
+    }
+  }
+  // こげ茶の枠（裏面と同じ）
+  rr(x, .75, .75, CW - 1.5, CH - 1.5, 5); x.lineWidth = 1.5; x.strokeStyle = '#24150b'; x.stroke();
+  x.textAlign = 'left'; x.textBaseline = 'alphabetic';
   return o;
 }
+
 
 /* ---------- キャンバス ---------- */
 let cv = null, ctx = null, W = 0, H = 0;
