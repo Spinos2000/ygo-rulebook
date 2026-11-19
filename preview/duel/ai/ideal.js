@@ -5,8 +5,9 @@
 import { actorOf, defOf, scriptOf, monstersOf, fieldCards, opp, isOnField, poolDef } from '../engine/game.js';
 import { cloneState } from '../engine/types.js';
                                                                       
-import { scoreCandidates, cpuDecide, evaluate,                              } from './cpu.js';
-import { applyAction, WORK } from '../engine/game.js';
+import { scoreCandidates, cpuDecide, evaluate,                                            } from './cpu.js';
+import { DECK_WEIGHTS } from './deck-weights.js';
+import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js';
 
                                
                            
@@ -18,6 +19,10 @@ import { applyAction, WORK } from '../engine/game.js';
                  
                        
                         
+                                         
+                               
+                               
+                       
                                                          
                   
                                                             
@@ -160,14 +165,17 @@ export function idealThink(s           , opt               = {}, deckNames      
   const me = actorOf(s);
   const free = !s.pending && s.window.kind === 'open' && s.chain.length === 0 && s.turnPlayer === me;
   const aces = acesOf(s, me, deckNames[me]);
+  const dw = (p          )                               => (opt.deckCodes ? DECK_WEIGHTS[opt.deckCodes[p]] : undefined);
+  const cpuOpt             = { ...opt.cpu, weights: { ...dw(me), ...opt.cpu?.weights } };
+  const wts                                                               = [dw(0), dw(1)];
 
   // 1つ目の世界で候補の数を見て、勝負所かどうかを決める
   const w0start = WORK.n;
   const w0 = (opt.noDeterminize ? s : determinize(s, me, rnd));
-  const first = scoreCandidates(w0, { ...opt.cpu, fullOpponent: opt.fullOpponent ?? true });
+  const first = scoreCandidates(w0, { ...cpuOpt, fullOpponent: opt.fullOpponent ?? true });
   const critical = isCritical(s, me, first.list.length);
-  // 処理の量の上限：普段 800回・勝負所 3000回（PCで約1秒・約4秒。遅い端末では時間が延びるが、考える量は同じ）
-  const budget = opt.budget ?? (critical ? 3000 : 800);
+  // 処理の量の上限：普段 1500回・勝負所 5000回（PCで約2秒・約6秒。遅い端末では時間が延びるが、考える量は同じ）
+  const budget = opt.budget ?? (critical ? 5000 : 1500);
   // 1つの世界にかかった量から、上限の半分に収まる世界の数にする（残りの半分は深い先読みに使う）
   const per = Math.max(1, WORK.n - w0start);
   const N = Math.max(1, Math.min(critical ? o.criticalSamples : o.samples, Math.floor(budget / 2 / per)));
@@ -191,7 +199,7 @@ export function idealThink(s           , opt               = {}, deckNames      
   run(first, w0);
   for (let i = 1; i < N; i++) {
     const w = (opt.noDeterminize ? s : determinize(s, me, rnd));
-    run(scoreCandidates(w, { ...opt.cpu, fullOpponent: opt.fullOpponent ?? true }), w);
+    run(scoreCandidates(w, { ...cpuOpt, fullOpponent: opt.fullOpponent ?? true }), w);
   }
 
   const all = [...acc.values()].filter(a => a.n > 0).map(a => ({ ...a, rate: a.p / a.n }));
@@ -211,14 +219,27 @@ export function idealThink(s           , opt               = {}, deckNames      
         if (WORK.n - w0start >= budget && i > 0) break;
         let n           ;
         try { n = applyAction(w, c.action); } catch { continue; }
-        const fin = playout(n, me, s.turn);
+        const fin = playout(n, s.turn, wts);
         const r = sum.get(c) ?? sum.set(c, { p: 0, n: 0 }).get(c) ;
-        r.p += prob(evaluate(fin, me) + (c.base ? first.margin : 0), o.scale); r.n++;
+        r.p += prob(evaluate(fin, me, cpuOpt.weights) + (c.base ? first.margin : 0), o.scale); r.n++;
       }
     }
     // 深い先読みの勝率と、浅い先読みの勝率を混ぜる（deepMix：深い方の割合）
     const mix = opt.deepMix ?? 1;
     for (const c of list) { const r = sum.get(c); c.rate = r && r.n ? mix * (r.p / r.n) + (1 - mix) * c.rate : -1; }
+  }
+  // リーサル：このターンに勝てる手順を総当たりで探す。見つかった最初の手は、その世界の割合だけ勝てるとみなす
+  if (free && (s.phase === 'main1' || s.phase === 'battle') && lethalPossible(s, me)) {
+    const LW = critical ? 3 : 2;
+    const found = new Map                ();
+    for (let i = 0; i < LW; i++) {
+      const w = opt.noDeterminize ? s : determinize(s, me, rnd);
+      const left = Math.max(150, Math.floor((budget * 1.5 - (WORK.n - w0start)) / (LW - i)));
+      const a = findLethal(w, me, Math.min(opt.lethalNodes ?? 600, left));
+      if (a) found.set(keyOf(a), (found.get(keyOf(a)) ?? 0) + 1);
+    }
+    for (const c of list) { const n = found.get(keyOf(c.action)); if (n) c.rate = Math.max(c.rate, n / LW); }
+    for (const [k, n] of found) if (!list.some(c => keyOf(c.action) === k)) list.push({ action: JSON.parse(k), p: 0, n: 1, romance: 0, burst: 0, base: false, rate: n / LW });
   }
   const bestRate = Math.max(...list.map(a => a.rate));
   // 勝率がほぼ同じ手（差 tie 未満）からランダムに選ぶ
@@ -236,10 +257,55 @@ export function idealThink(s           , opt               = {}, deckNames      
   return { action: pick.action, winRate: pick.rate, bestRate, romance, aceUid: romance === 'ace' ? pick.ace : undefined, samples: N, critical };
 }
 
+/** このターンに相手のLPを0にできる見込みがあるか（総当たりする前の大まかな判定） */
+function lethalPossible(s           , me          )          {
+  const o = opp(me);
+  const onField = monstersOf(s, me).filter(u => s.cards[u].faceUp && s.cards[u].position === 'atk').reduce((a, u) => a + currentStats(s, u).atk, 0);
+  const inHand = s.players[me].hand.reduce((a, u) => Math.max(a, defOf(s, u).kind === 'monster' ? (defOf(s, u).atk ?? 0) : 0), 0);
+  return s.players[o].lp <= (onField + inHand) * 1.5 + 1000;
+}
+/** このターンに勝てる手順の最初の手（見つからなければ null）。自分の行動を順に試し、選択や相手の応答は速い判断で進める */
+function findLethal(s0           , me          , nodeLimit        )                {
+  const turn = s0.turn, start = WORK.n;
+  const settle = (s           )            => {
+    for (let i = 0; i < 60 && s.winner === null && s.turn === turn; i++) {
+      const free = !s.pending && s.window.kind === 'open' && s.chain.length === 0 && s.turnPlayer === me && actorOf(s) === me;
+      if (free) return s;
+      try { s = applyAction(s, cpuDecide(s, { depth: 0, planSteps: 0 })); } catch { return s; }
+    }
+    return s;
+  };
+  const dfs = (s           , depth        )          => {
+    if (s.winner === me) return true;
+    if (s.winner !== null || s.turn !== turn || depth <= 0 || WORK.n - start > nodeLimit) return false;
+    let acts = legalActions(s).filter(a => a.type !== 'endTurn' && !(a.type === 'nextPhase' && a.to !== 'battle') && a.type !== 'setSpellTrap' && a.type !== 'setMonster');
+    // 攻撃を先に試す（決着に近い）
+    acts = [...acts.filter(a => a.type === 'attack'), ...acts.filter(a => a.type !== 'attack')];
+    for (const a of acts) {
+      let n           ;
+      try { n = settle(applyAction(s, a)); } catch { continue; }
+      if (dfs(n, depth - 1)) return true;
+      if (WORK.n - start > nodeLimit) return false;
+    }
+    return false;
+  };
+  const s = settle(s0);
+  if (s !== s0 && s.winner === me) return null;
+  let acts = legalActions(s).filter(a => a.type !== 'endTurn' && !(a.type === 'nextPhase' && a.to !== 'battle'));
+  acts = [...acts.filter(a => a.type === 'attack'), ...acts.filter(a => a.type !== 'attack')];
+  for (const a of acts) {
+    let n           ;
+    try { n = settle(applyAction(s, a)); } catch { continue; }
+    if (dfs(n, 6)) return a;
+    if (WORK.n - start > nodeLimit) break;
+  }
+  return null;
+}
+
 /** 相手の次のターンが終わる（自分の次のターンが始まる）まで、お互いに速い判断で指し進める */
-function playout(s           , me          , startTurn        )            {
+function playout(s           , startTurn        , wts                                                               = [undefined, undefined])            {
   for (let i = 0; i < 400 && s.winner === null && s.turn < startTurn + 2; i++) {
-    try { s = applyAction(s, cpuDecide(s, { depth: 0, planSteps: 0 })); } catch { break; }
+    try { s = applyAction(s, cpuDecide(s, { depth: 0, planSteps: 0, weights: wts[actorOf(s)] })); } catch { break; }
     s.log = []; s.anim = [];
   }
   return s;

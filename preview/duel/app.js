@@ -275,14 +275,14 @@ const deckNames = () => deckCodes().map(c => DECKS[c]?.name ?? '');
 /** 今の状態で CPU の考えを出す（Worker が使えなければこの画面の中で） */
 function think(state) {
   const local = () => new Promise(res => setTimeout(() => {
-    try { res({ ok: true, thought: idealThink(state, {}, deckNames()) }); } catch (e) { res({ ok: false, error: e.message }); }
+    try { res({ ok: true, thought: idealThink(state, { deckCodes: deckCodes() }, deckNames()) }); } catch (e) { res({ ok: false, error: e.message }); }
   }, 30));
   const w = getWorker();
   if (!w) return local();
   return new Promise(res => {
     const id = ++reqId;
     waiting.set(id, r => (r.retry ? local().then(res) : res(r)));
-    try { w.postMessage({ id, state, deckNames: deckNames() }); } catch { waiting.delete(id); local().then(res); }
+    try { w.postMessage({ id, state, deckNames: deckNames(), deckCodes: deckCodes() }); } catch { waiting.delete(id); local().then(res); }
   });
 }
 let thinking = null; // 考えている最中の状態（同じ状態で2回考えない）
