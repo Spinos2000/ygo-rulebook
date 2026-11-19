@@ -228,8 +228,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* 下の段：左に発動などのボタン、右下に場面を先に進める「進む」ボタン（いつも同じ場所） */
 .dock-acts { grid-column: 1 / -1; display: flex; gap: 8px; align-items: stretch }
 #phaseBtns { flex: 1; min-width: 0; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end }
-.btn.go { flex: none; width: clamp(150px, 34%, 240px); min-height: 52px; font-size: 16px; white-space: normal; line-height: 1.25; flex-direction: column; gap: 0 }
-.btn.go small { display: block; font-size: 11px; font-weight: 500; opacity: .8 }
+#goBtn { flex: none; width: clamp(150px, 34%, 240px); min-height: 52px; font-size: 16px; white-space: normal; line-height: 1.25; flex-direction: column; gap: 0 }
+#goBtn small { display: block; font-size: 11px; font-weight: 500; opacity: .8 }
 #stopBtn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
 #phaseBtns .btn { white-space: normal; text-align: center; line-height: 1.3 }
 #soundBtn[aria-pressed="false"] { color: var(--sub); text-decoration: line-through }
@@ -246,7 +246,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #detail .tx { margin: 8px 0 0; font-size: 13px; white-space: pre-wrap; max-height: 200px; overflow: auto; border-top: 1px solid var(--line); padding-top: 8px }
 #detail .prompt { margin: 4px 0 8px; font-weight: 700; font-size: 15px }
 .acts { display: flex; flex-direction: column; gap: 8px; margin-top: 12px }
-.acts .act { justify-content: flex-start; text-align: left; min-height: 44px; white-space: normal }
+.acts .act { justify-content: flex-start; text-align: left; min-height: 44px; white-space: normal; width: 100%; max-width: none; flex: none }
+.acts.row2 .act { width: auto; flex: 1 }
 .acts .act.go { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
 .acts .act.off { opacity: .45; border-style: dashed }
 .acts .info { margin: 0; font-size: 12px; color: var(--sub); background: var(--panel-2); border-radius: 8px; padding: 6px 10px }
@@ -354,8 +355,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .dock { padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); row-gap: 6px }
   #actor { font-size: 15px; line-height: 1.35 }
   #actorHint { font-size: 11px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
-  .btn.go { min-height: 46px; font-size: 15px }
-  .btn.go small { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100% }
+  #goBtn { min-height: 46px; font-size: 15px }
+  #goBtn small { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100% }
   .dock { position: fixed; left: 0; right: 0; bottom: 0; margin: 0;
     padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); grid-template-columns: minmax(0, 1fr) auto; border-inline: none; border-bottom: none }
   #phaseBtns { justify-content: stretch }
