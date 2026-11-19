@@ -782,7 +782,7 @@ function fanCardHtml(uid, back) {
   return `<span class="${faceCls(d)}" data-fan="${uid}">${faceHtml(uid, d, false)}</span>`;
 }
 /** カードを扇形（何段か）に並べる位置を決める */
-function layoutFan(area, els, big = false) {
+function layoutFan(area, els, big = false, sorted = false) {
   const W = area.clientWidth, cw = big ? (narrow() ? 84 : 104) : narrow() ? 64 : 80, ch = cw * 86 / 59, n = els.length;
   const perRow = Math.max(5, Math.floor((W - cw) / (cw * .62)) + 1), rows = Math.ceil(n / perRow);
   els.forEach((el, i) => {
@@ -840,7 +840,15 @@ function openFan() {
   // 山札（または手札）の場所から、カードが扇の形に開く
   const from = src === 'hand' ? $(`#hand${p}`) : pileEl(p, 'deck');
   if (src !== 'hand') glowPile(p);
-  if (from) flyIn(els, centerOf(rectOf(from)));
+  const opened = from ? flyIn(els, centerOf(rectOf(from))) : Promise.resolve();
+  // 開き終わったら、選べるカードを下の段にまとめる（押しやすいように）
+  if (src !== 'hand' && els.some(el => el.classList.contains('dim'))) opened.then(() => {
+    if (!fan || fan.layer !== layer) return;
+    const order = [...els.filter(el => el.classList.contains('dim')), ...els.filter(el => !el.classList.contains('dim'))];
+    area.classList.add('sorting');
+    layoutFan(area, order, false, true);
+    setTimeout(() => area.classList.remove('sorting'), 600);
+  });
 }
 function fanPick(u) {
   if (!fan || !fan.req.options.includes(u)) return;
@@ -1187,6 +1195,23 @@ function autoTray() {
   else if (!needs && !trayOpen && trayAuto && humanActing() && S.turnPlayer === actorOf(S) && S.window.kind !== 'priority') setTray(true);
   else setTray(trayOpen, trayAuto);
 }
+/** 指の位置にある手札のカード（重なっている時は上のカード） */
+function cardAt(x, y) {
+  const cs = [...ROOT.querySelectorAll('#hand0 .card')];
+  let best = null;
+  for (const c of cs) { const r = c.getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top - 30 && y <= r.bottom + 30 && (!best || Number(c.style.getPropertyValue('--z')) > Number(best.style.getPropertyValue('--z')))) best = c; }
+  if (best) return best;
+  // カードの少し上下でも、横の位置がいちばん近いカード
+  let d = 1e9;
+  for (const c of cs) { const r = c.getBoundingClientRect(), k = Math.abs(x - (r.left + r.width / 2)); if (k < d && k < r.width) { d = k; best = c; } }
+  return best;
+}
+/** カード1枚がパチッと震える */
+function pachiCard(c) {
+  play(['pachi1']);
+  c.animate([{ translate: '0 0', rotate: '0deg' }, { translate: '0 -10px', rotate: '-3deg' }, { translate: '0 2px', rotate: '2deg' }, { translate: '0 -4px', rotate: '-1deg' }, { translate: '0 0', rotate: '0deg' }], { duration: 180, easing: 'ease-out' });
+  if (navigator.vibrate) try { navigator.vibrate(6); } catch { /* 振動できない端末 */ }
+}
 /** 手札を左右にスワイプ：スワイプした向きに、カードが1枚ずつ震えてパチパチ鳴る */
 let pachiBusy = false;
 async function shakaPachi(toRight) {
@@ -1278,6 +1303,30 @@ function surrender() {
 }
 
 /* ---------- イベント（boot から呼ぶ） ---------- */
+function wireSheets(root) {
+  root.querySelectorAll('.sheet').forEach(sh => {
+    let y0 = null, dy = 0, drag = false;
+    sh.addEventListener('touchstart', e => { if (!narrow() || !sh.classList.contains('open') || e.touches.length !== 1) return; y0 = e.touches[0].clientY; dy = 0; drag = false; }, { passive: true });
+    sh.addEventListener('touchmove', e => {
+      if (y0 === null) return;
+      dy = e.touches[0].clientY - y0;
+      // 中身が一番上までスクロールしている時だけ、下へのドラッグでシートを動かす
+      if (!drag && (dy < 8 || sh.scrollTop > 0)) { if (dy < 0 || sh.scrollTop > 0) y0 = null; return; }
+      drag = true;
+      if (e.cancelable) e.preventDefault();
+      sh.style.transition = 'none';
+      sh.style.transform = `translateY(${Math.max(0, dy)}px)`;
+    }, { passive: false });
+    const end = () => {
+      if (y0 === null) return;
+      y0 = null;
+      if (!drag) return;
+      sh.style.transition = ''; sh.style.transform = '';
+      if (dy > 70) closeSheets();
+    };
+    sh.addEventListener('touchend', end); sh.addEventListener('touchcancel', end);
+  });
+}
 function wireTray(root) {
   const t = root.querySelector('#tray'); if (!t) return;
   let y0 = null, x0 = 0, swiped = false;
@@ -1290,9 +1339,24 @@ function wireTray(root) {
   t.addEventListener('pointercancel', () => { y0 = null; });
   // スマホのブラウザによっては指の動きが pointer で届かないので、touch でも受ける（同じ向きに何度開け閉めしても結果は同じ）
   let ty0 = null, tx0 = 0;
+  // 横になぞっている間：指の下に来たカードを1枚ずつ震わせて鳴らす（同じカードは指が離れて戻るまで1回）
+  let lastCard = null, strummed = false, sx = null, sy = 0;
+  const strumStart = (x, y) => { lastCard = null; strummed = false; sx = x; sy = y; };
+  const strumMove = (x, y) => {
+    if (sx === null || !trayOpen || !narrow()) return;
+    if (!strummed && (Math.abs(x - sx) < 8 || Math.abs(x - sx) < Math.abs(y - sy))) return;
+    strummed = true;
+    const c = cardAt(x, y);
+    if (c && c !== lastCard) { lastCard = c; pachiCard(c); }
+  };
+  t.addEventListener('pointerdown', e => strumStart(e.clientX, e.clientY));
+  t.addEventListener('pointermove', e => strumMove(e.clientX, e.clientY));
+  t.addEventListener('touchmove', e => { const p = e.touches[0]; if (p) strumMove(p.clientX, p.clientY); }, { passive: true });
+  t.addEventListener('touchstart', e => { const p = e.touches[0]; if (p) strumStart(p.clientX, p.clientY); }, { passive: true });
+  ['pointerup', 'pointercancel', 'touchend'].forEach(ev => t.addEventListener(ev, () => { sx = null; }));
   const swipeEnd = (dx, dy) => {
     if (Math.abs(dy) > 28 && Math.abs(dy) > Math.abs(dx) * 1.2) { swiped = true; setTray(dy < 0); return; }
-    if (trayOpen && Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.2) { swiped = true; shakaPachi(dx > 0); }
+    if (strummed) swiped = true;
   };
   t.addEventListener('touchstart', e => { if (!narrow() || e.touches.length !== 1) return; ty0 = e.touches[0].clientY; tx0 = e.touches[0].clientX; }, { passive: true });
   t.addEventListener('touchend', e => { if (ty0 === null) return; const p = e.changedTouches[0], dy = p.clientY - ty0, dx = p.clientX - tx0; ty0 = null; swipeEnd(dx, dy); }, { passive: true });
@@ -1433,6 +1497,7 @@ export function boot(root, opts = {}) {
   // スマホでは、下に固定したドック・手札トレイの高さだけ盤面の下を空ける
   if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(() => measureBottom()); ['#dock', '#tray'].forEach(q => { const e = root.querySelector(q); if (e) ro.observe(e); }); }
   wireTray(root);
+  wireSheets(root);
   measureBottom();
   const start = data => {
     if (data && data.mode) $('#mode').value = data.mode;

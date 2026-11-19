@@ -420,6 +420,25 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   #toast { bottom: calc(var(--bottom-h, 210px) + 12px) }
 }
 @media (max-width: 380px) { #hand0 { --cw: 94px } }
+/* サーチの山札：並べ替えはなめらかに動かす */
+.fan-area.sorting .card { transition: left .5s cubic-bezier(.2, .8, .2, 1), top .5s cubic-bezier(.2, .8, .2, 1), transform .18s ease-out, filter .2s }
+@media (max-width: 860px) {
+  /* サーチの山札：全体を画面の下に寄せて、指で押しやすく */
+  .fan-layer { padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) }
+  .fan-layer > .fan-head { margin-top: auto }
+  .fan-area .card:not(.dim) { box-shadow: 0 0 0 2px #fff, 0 6px 14px rgba(0, 0, 0, .45) }
+  /* 手札を閉じた時：盤面のマスを縦長にしてカードを大きく、カード名なども出す */
+  .droot.tray-closed #board { padding: 4px; gap: 3px }
+  .droot.tray-closed #board .row { gap: 3px }
+  .droot.tray-closed #board .row:not(.r2) .zone { aspect-ratio: 3 / 4 }
+  .droot.tray-closed #board .zone > .card { width: 92% }
+  .droot.tray-closed #board .card .top { display: flex }
+  .droot.tray-closed #board .card .top .n { font-size: .8em }
+  .droot.tray-closed #board .card .tb .ad { font-size: 1.35em }
+  .droot.tray-closed #board .card.f-spell .tb, .droot.tray-closed #board .card.f-trap .tb { display: block }
+  .droot.tray-closed #board .card { font-size: clamp(7px, 2.3vw, 10px) }
+  #board .zone, #board .zone > .card { transition: width .28s ease, aspect-ratio .28s ease }
+}
 /* 選ぶ画面：カードを横に並べてスクロール */
 .optlist.cards { display: flex; gap: 10px; overflow-x: auto; overflow-y: visible; max-height: none; scroll-snap-type: x mandatory; padding: 10px 2px 8px; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain }
 .opt.cardopt { flex: 0 0 auto; width: 104px; scroll-snap-align: center; align-items: center; text-align: center; padding: 6px; gap: 3px; position: relative; min-height: 0; border-radius: 12px }
