@@ -704,6 +704,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .place-ghost { animation: landIn .42s cubic-bezier(.2,.75,.3,1) both }
 @keyframes landIn { 0% { translate: 0 -46px; scale: 1.28; opacity: 0 } 72% { translate: 0 3px; scale: .98; opacity: 1 } 100% { translate: 0 0; scale: 1; opacity: 1 } }
 @media (prefers-reduced-motion: reduce) { .place-ghost { animation: none } }
+/* 手札の長押し：スマホの文字選択やメニューが出て操作が止まらないように */
+#hand0, #hand0 .card, .tray { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none }
+#hand0 .card { touch-action: none }
+.menu-note.ver { font-size: 11px; opacity: .7; margin-top: 4px }
 `;
 
 export const MARKUP = `
@@ -767,6 +771,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
+    <p class="menu-note ver">版：20261119-2130</p>
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>

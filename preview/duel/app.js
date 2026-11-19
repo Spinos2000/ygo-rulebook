@@ -1873,6 +1873,7 @@ root.addEventListener('pointerup', e => {
 root.addEventListener('pointercancel', () => { if (handPress) { clearTimeout(handPress.timer); handPress = null; } if (aim && aim.held) endAim(); });
 ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => root.addEventListener(ev, () => { if (pressT) pressEnd(); }));
 root.addEventListener('contextmenu', e => {
+  if (e.target.closest && e.target.closest('#hand0')) { e.preventDefault(); return; } // 手札の長押しで、ブラウザのメニューを出さない
   const el = e.target.closest && e.target.closest('#board [data-pile]');
   if (!el) return;
   e.preventDefault();
