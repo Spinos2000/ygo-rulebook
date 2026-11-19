@@ -446,10 +446,15 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .fan-layer > .fan-head { margin-top: auto }
   .fan-area .card:not(.dim) { box-shadow: 0 0 0 2px #fff, 0 6px 14px rgba(0, 0, 0, .45) }
   /* 手札を閉じた時：盤面のマスを縦長にしてカードを大きく、カード名なども出す */
-  .droot.tray-closed #board { padding: 4px; gap: 3px }
-  .droot.tray-closed #board .row { gap: 3px }
-  .droot.tray-closed #board .row:not(.r2) .zone { aspect-ratio: 3 / 4 }
-  .droot.tray-closed #board .zone > .card { width: 92% }
+  /* 手札を閉じた時：盤面を画面の端から端まで、上のLPから下のボタンまでの高さいっぱいに広げる（高さ --board-h は app.js が測る） */
+  .droot.tray-closed #board { width: 100vw; max-width: none; margin-left: calc(50% - 50vw); border-radius: 0; border-left: none; border-right: none; box-shadow: none;
+    height: var(--board-h, auto); padding: 4px 3px; gap: 3px; grid-template-rows: 1fr 1fr .58fr 1fr 1fr }
+  .droot.tray-closed #board .row { gap: 3px; min-height: 0; grid-template-columns: .74fr repeat(5, minmax(0, 1fr)) .74fr }
+  .droot.tray-closed #board .r2 { margin-block: 0 }
+  .droot.tray-closed #board .zone { aspect-ratio: auto; height: 100%; min-height: 0; container-type: size }
+  /* カードはマスの幅と高さの小さいほうに合わせて最大に（守備表示は横向きで収まる大きさ） */
+  .droot.tray-closed #board .zone > .card { width: min(92cqw, 94cqh * 59 / 86); font-size: calc(min(92cqw, 94cqh * 59 / 86) / 8) }
+  .droot.tray-closed #board .zone > .card.def { width: min(64cqw, 92cqh); font-size: calc(min(64cqw, 92cqh) / 8) }
 }
 /* 選ぶ画面：カードを横に並べてスクロール */
 .optlist.cards { display: flex; gap: 10px; overflow-x: auto; overflow-y: visible; max-height: none; scroll-snap-type: x mandatory; padding: 10px 2px 8px; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain }
@@ -562,7 +567,6 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #board .zone { container-type: inline-size }
 #board .zone > .card:not(.back) { font-size: 9cqi; padding: 0; border-radius: .09em; border: .035em solid #0d0b09; overflow: hidden;
   box-shadow: 0 .08em .22em rgba(0,0,0,.7), inset 0 0 0 .05em rgba(255,255,255,.22), inset 0 0 .3em rgba(0,0,0,.6) }
-.droot.tray-closed #board .zone > .card:not(.back) { font-size: 11.5cqi }
 #board .zone > .card:not(.back)::before { background: repeating-linear-gradient(115deg, rgba(255,255,255,.06) 0 .03em, transparent .03em .09em), repeating-linear-gradient(25deg, rgba(0,0,0,.1) 0 .025em, transparent .025em .11em), linear-gradient(160deg, rgba(255,255,255,.18), transparent 40%, rgba(0,0,0,.3)) }
 #board .zone > .card.f-normal { background: linear-gradient(160deg, #d29a2e, #a8700f 60%, #7d5206) }
 #board .zone > .card.f-effect { background: linear-gradient(160deg, #d0601c, #a2420b 60%, #782e05) }
@@ -608,8 +612,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #board .zone > .card.def:not(.back) .tb .ad > span:last-child::before { content: "DEF"; font-size: .34em; color: #e8bd55; margin-right: .12em; letter-spacing: .02em }
 /* 守備表示（横向き）：カードの長い辺がマスの幅に収まる大きさにする（隣のマスにはみ出さない） */
 #board .zone > .card.def { width: 64% }
-#board .zone > .card.def:not(.back), .droot.tray-closed #board .zone > .card.def:not(.back) { font-size: 8cqi }
-.droot.tray-closed #board .zone > .card.def { width: 64% }
+#board .zone > .card.def:not(.back) { font-size: 8cqi }
 
 /* ---------- 演出に合わせたプレイマットの柄（盤面の地だけが変わり、カードを置く枠は残る） ---------- */
 #board { position: relative }

@@ -1204,7 +1204,13 @@ function measureBottom() {
   const r = $('.droot'), t = $('#tray'), d = $('#dock'); if (!r || !t || !d) return;
   const dh = Math.ceil(d.getBoundingClientRect().height);
   r.style.setProperty('--dock-h', dh + 'px');
-  r.style.setProperty('--bottom-h', (narrow() ? (trayOpen ? Math.ceil(t.getBoundingClientRect().height) : dh + 62) : dh) + 'px');
+  const bh = narrow() ? (trayOpen ? Math.ceil(t.getBoundingClientRect().height) : dh + 62) : dh;
+  r.style.setProperty('--bottom-h', bh + 'px');
+  const b = $('#board');
+  if (b && narrow() && !trayOpen) {
+    const top = b.getBoundingClientRect().top - r.getBoundingClientRect().top;
+    r.style.setProperty('--board-h', Math.max(220, Math.floor(window.innerHeight - top - bh - 10)) + 'px');
+  }
 }
 /** 返事が要る時（チェーンの確認・選択・決着）は自動で閉じてボタンを見せ、自分の番に戻ったら開き直す */
 function autoTray() {
@@ -1525,6 +1531,7 @@ export function boot(root, opts = {}) {
   if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(() => measureBottom()); ['#dock', '#tray'].forEach(q => { const e = root.querySelector(q); if (e) ro.observe(e); }); }
   wireTray(root);
   wireSheets(root);
+  window.addEventListener('resize', () => measureBottom());
   measureBottom();
   const start = data => {
     if (data && data.mode) $('#mode').value = data.mode;
