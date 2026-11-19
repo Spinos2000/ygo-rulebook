@@ -1881,7 +1881,12 @@ root.addEventListener('pointermove', e => {
   if (aim && aim.held) { aimMove(e.clientX, e.clientY); return; }
   if (handPress) {
     handPress.lx = e.clientX; handPress.ly = e.clientY;
-    if (!handPress.fired && Math.hypot(e.clientX - handPress.x, e.clientY - handPress.y) > 10) { clearTimeout(handPress.timer); handPress = null; }
+    const dx = e.clientX - handPress.x, dy = e.clientY - handPress.y;
+    // 選んで光っているカードは、長押しを待たずに指を動かしただけでついてくる（下に払う＝手札をしまう、は除く）
+    if (!handPress.fired && selected === handPress.u && Math.hypot(dx, dy) > 8 && !(dy > 0 && dy > Math.abs(dx)) && handActs(handPress.u).length) {
+      clearTimeout(handPress.timer); handPress.fired = true; startAim(handPress.u, handPress.x, handPress.y); aimMove(e.clientX, e.clientY); return;
+    }
+    if (!handPress.fired && Math.hypot(dx, dy) > 10) { clearTimeout(handPress.timer); handPress = null; }
   }
 });
 root.addEventListener('pointerup', e => {

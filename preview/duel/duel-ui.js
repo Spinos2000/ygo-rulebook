@@ -708,6 +708,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #hand0, #hand0 .card, .tray { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none }
 #hand0 .card { touch-action: none }
 .menu-note.ver { font-size: 11px; opacity: .7; margin-top: 4px }
+/* カードを選んでいる間は「下にスワイプでしまう」を隠す（選んだカードの名前に重なるため） */
+@media (max-width: 860px) { .tray:has(#hand0 .card.sel) .tray-handle, .tray:has(#hand0.aiming) .tray-handle { opacity: 0 } }
 `;
 
 export const MARKUP = `
@@ -771,7 +773,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261119-2139</p>
+    <p class="menu-note ver">版：20261119-2147</p>
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>
