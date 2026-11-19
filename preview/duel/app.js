@@ -385,7 +385,7 @@ function faceHtml(uid, d, field) {
     const at = `<b class="at" style="background:${spell ? '#0f6e56' : '#993556'}">${spell ? '魔' : '罠'}</b>`;
     const mark = (spell ? SPELL_MARK : TRAP_MARK)[d.subtype] || (spell ? '✦' : '◆');
     const text = String(d.text || '').replace(/^[①-⑳]：/, '').replace(/\s+/g, '');
-    return `<span class="top">${name}${at}</span><span class="sp">【${spell ? '魔法' : '罠'}カード】${esc(mark)}</span><span class="art">${mark}</span>`
+    return `<span class="top">${name}${at}</span><span class="sp">【${spell ? '魔法' : '罠'}カード】${esc(mark)}</span><span class="art" style="--atc:${spell ? '#14d6a8' : '#ff4fae'}">${mark}</span>`
       + `<span class="tb"><b>${esc(text.slice(0, 24))}</b><span class="kd">${esc(d.subtype)}${spell ? '魔法' : '罠'}</span></span>`;
   }
   const at = `<b class="at" style="background:${ATTR_COLOR[d.attribute] || '#6a6e7e'}">${esc(d.attribute || '？')}</b>`;
@@ -396,7 +396,7 @@ function faceHtml(uid, d, field) {
   const atk = field ? currentAtk(S, uid) : d.atk, def = field ? currentDef(S, uid) : d.def;
   // フィールドで数値が上がっていれば緑、下がっていれば赤
   const cls = (now, base) => (!field || now === base ? '' : now > base ? ' class="up"' : ' class="dn"');
-  return `<span class="top">${name}${at}</span><span class="lv">${'<i></i>'.repeat(lvl)}</span><span class="art">${esc(ch)}</span>`
+  return `<span class="top">${name}${at}</span><span class="lv">${'<i></i>'.repeat(lvl)}</span><span class="art" style="--atc:${ATTR_COLOR[d.attribute] || '#6a6e7e'}">${esc(ch)}</span>`
     + `<span class="tb"><b>【${esc(race)}／${kind}】</b><span class="ad"><span${cls(atk, d.atk)}><i>ATK/</i>${atk}</span><span${cls(def, d.def)}><i>DEF/</i>${def}</span></span></span>`;
 }
 /** カードの表側の class（種類の色とレア度） */

@@ -450,11 +450,6 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .droot.tray-closed #board .row { gap: 3px }
   .droot.tray-closed #board .row:not(.r2) .zone { aspect-ratio: 3 / 4 }
   .droot.tray-closed #board .zone > .card { width: 92% }
-  .droot.tray-closed #board .card .top { display: flex }
-  .droot.tray-closed #board .card .top .n { font-size: .8em }
-  .droot.tray-closed #board .card .tb .ad { font-size: 1.35em }
-  .droot.tray-closed #board .card.f-spell .tb, .droot.tray-closed #board .card.f-trap .tb { display: block }
-  .droot.tray-closed #board .card { font-size: clamp(7px, 2.3vw, 10px) }
 }
 /* 選ぶ画面：カードを横に並べてスクロール */
 .optlist.cards { display: flex; gap: 10px; overflow-x: auto; overflow-y: visible; max-height: none; scroll-snap-type: x mandatory; padding: 10px 2px 8px; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain }
@@ -470,11 +465,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   background: radial-gradient(circle, transparent 46%, transparent 47%), linear-gradient(var(--lc), var(--lc)) center / 3px 100% no-repeat, linear-gradient(var(--lc), var(--lc)) center / 100% 3px no-repeat;
   -webkit-mask: radial-gradient(circle, transparent 18%, #000 19%); mask: radial-gradient(circle, transparent 18%, #000 19%) }
 @media (max-width: 860px) {
-  /* 盤面のカードには文字を出さない（攻撃力・守備力の数字だけ残す） */
-  #board .card .top { display: none }
-  #board .card .tb { border: none; background: transparent; top: auto; bottom: 2%; padding: 0 }
-  #board .card .tb .ad { position: static; border: none; justify-content: center; gap: .3em; font-size: 1.15em; text-shadow: 0 0 2px #fff, 0 0 3px #fff }
-  #board .card.f-spell .tb, #board .card.f-trap .tb { display: none }
+  /* 盤面のカードの見た目は、下の「盤面のカード（A4）」で決める */
   /* 手札：枠なし（取っ手の線だけ） */
   .tray { background: transparent; border: none; box-shadow: none; touch-action: none; pointer-events: none }
   .tray > * { pointer-events: auto }
@@ -566,6 +557,55 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .hand .ctr, .fan-area .ctr, .pilelist .ctr { display: none }
 /* カウンターの帯がカードの幅より長い時（5つの玉など）は、はみ出して見せる */
 .zone .card:has(> .ctr) { overflow: visible }
+
+/* ===== 盤面のカード（案A4）：実物風・色を濃く・攻守の数字を大きく。1em ＝ カードの幅の1/8（マスの幅から計算） ===== */
+#board .zone { container-type: inline-size }
+#board .zone > .card:not(.back) { font-size: 9cqi; padding: 0; border-radius: .09em; border: .035em solid #0d0b09; overflow: hidden;
+  box-shadow: 0 .08em .22em rgba(0,0,0,.7), inset 0 0 0 .05em rgba(255,255,255,.22), inset 0 0 .3em rgba(0,0,0,.6) }
+.droot.tray-closed #board .zone > .card:not(.back) { font-size: 11.5cqi }
+#board .zone > .card:not(.back)::before { background: repeating-linear-gradient(115deg, rgba(255,255,255,.06) 0 .03em, transparent .03em .09em), repeating-linear-gradient(25deg, rgba(0,0,0,.1) 0 .025em, transparent .025em .11em), linear-gradient(160deg, rgba(255,255,255,.18), transparent 40%, rgba(0,0,0,.3)) }
+#board .zone > .card.f-normal { background: linear-gradient(160deg, #d29a2e, #a8700f 60%, #7d5206) }
+#board .zone > .card.f-effect { background: linear-gradient(160deg, #d0601c, #a2420b 60%, #782e05) }
+#board .zone > .card.f-ritual { background: linear-gradient(160deg, #3f7fd6, #1f55a8 60%, #143c7d) }
+#board .zone > .card.f-fusion { background: linear-gradient(160deg, #8a46c8, #62269c 60%, #461974) }
+#board .zone > .card.f-spell { background: linear-gradient(160deg, #109f80, #056b55 60%, #03503f) }
+#board .zone > .card.f-trap { background: linear-gradient(160deg, #b8247a, #8a0f57 60%, #650a40) }
+/* 名前の板 */
+#board .zone > .card:not(.back) .top { display: flex; left: 5%; right: 5%; top: 3.6%; height: 9.2%; padding: 0 .08em 0 .1em; gap: .05em; align-items: center; border-radius: .03em; border: .02em solid rgba(0,0,0,.7);
+  background: linear-gradient(180deg, rgba(255,236,190,.55), rgba(255,220,150,.15) 45%, rgba(0,0,0,.12) 55%, rgba(255,220,150,.2)); box-shadow: inset 0 0 .06em rgba(0,0,0,.4) }
+#board .zone > .card:not(.back) .top .n { font-family: 'Shippori Mincho B1', var(--body), serif; font-weight: 800; font-size: .5em; line-height: 1; color: #151210; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: clip; display: block }
+#board .zone > .card.f-spell .top .n, #board .zone > .card.f-trap .top .n { color: #fff; text-shadow: 0 .03em 0 rgba(0,0,0,.7) }
+/* 属性：金の輪に色の玉と一文字 */
+#board .zone > .card:not(.back) .at { width: 2.5em; height: 2.5em; line-height: 2.5em; font-size: .29em; padding: 0; border: none; border-radius: 50%; flex: none; text-align: center; color: #fff; font-weight: 800; text-shadow: 0 0 .25em #000;
+  box-shadow: 0 0 0 .16em #e8bd55, 0 0 0 .26em #3a2706, inset .1em .14em .2em rgba(255,255,255,.55), inset -.1em -.14em .28em rgba(0,0,0,.5) }
+/* レベルの星 */
+#board .zone > .card:not(.back) .lv { display: flex; right: 6%; top: 14%; height: 5.4%; gap: .035em; align-items: center }
+#board .zone > .card:not(.back) .lv i { width: .38em; height: .38em; border: none; border-radius: 0; background: radial-gradient(circle at 40% 35%, #ffd36a, #e0500c 55%, #7a1d04); clip-path: polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%) }
+/* 魔法・罠の種類の行 */
+#board .zone > .card:not(.back) .sp { display: block; right: 6%; top: 13.6%; font-size: .36em; font-weight: 800; color: #fff; text-shadow: 0 .04em 0 rgba(0,0,0,.6); white-space: nowrap; letter-spacing: 0 }
+/* イラスト：額縁＋属性の色の光＋種族の紋 */
+#board .zone > .card:not(.back) .art { left: 11.5%; right: 11.5%; top: 20.4%; border: .01em solid #2a1f14; font-size: 3.1em; overflow: hidden; font-family: 'Shippori Mincho B1', var(--display), serif; font-weight: 800;
+  color: color-mix(in srgb, var(--atc, #fff) 30%, #fff); text-shadow: 0 .02em .03em rgba(0,0,0,.85), 0 0 .06em var(--atc, #fff);
+  box-shadow: 0 0 0 .016em rgba(255,255,255,.55), 0 0 0 .025em rgba(0,0,0,.45), inset 0 0 .11em rgba(0,0,0,.75);
+  background: radial-gradient(70% 60% at 50% 38%, var(--atc, #6a6e7e), color-mix(in srgb, var(--atc, #6a6e7e) 85%, #000) 45%, #06070c 100%) }
+#board .zone > .card:not(.back) .art::before { content: ""; position: absolute; inset: 0; background: linear-gradient(125deg, transparent 35%, rgba(255,255,255,.22) 47%, transparent 58%) }
+/* 説明の欄（魔法・罠）：羊皮紙 */
+#board .zone > .card:not(.back) .tb { left: 5%; right: 5%; top: 77.2%; bottom: 3.8%; border: .025em solid #5d4a2f; border-radius: .02em; background: linear-gradient(180deg, #e8d6ad, #cdb27c); box-shadow: inset 0 0 .08em rgba(0,0,0,.35); padding: .05em .1em; font-size: .28em; color: #1a1408 }
+#board .zone > .card:not(.back) .tb b { display: block; font-family: 'Shippori Mincho B1', var(--body), serif; font-weight: 800; white-space: nowrap; overflow: hidden }
+/* モンスター：説明の欄をまるごと、金の縁の黒い数字の欄にする（攻撃力を大きく、守備力を小さく） */
+#board .zone > .card:not(.back):not(.f-spell):not(.f-trap) .tb { display: flex; align-items: center; justify-content: center; padding: 0; font-size: 1em; border: .025em solid #e8bd55;
+  background: linear-gradient(180deg, #2a1d0c, #100a04); box-shadow: inset 0 .04em 0 rgba(255,236,190,.3), inset 0 0 .12em rgba(0,0,0,.7) }
+#board .zone > .card:not(.back):not(.f-spell):not(.f-trap) .tb > b { display: none }
+#board .zone > .card:not(.back) .tb .ad { position: static; border: none; display: flex; align-items: center; justify-content: center; gap: .08em; font-family: var(--num); font-weight: 700; line-height: 1; letter-spacing: -.03em; text-shadow: none; white-space: nowrap; font-size: 1em }
+#board .zone > .card:not(.back) .tb .ad i { display: none }
+#board .zone > .card:not(.back) .tb .ad > span:first-child { font-size: 1.5em; color: #fff3d4; text-shadow: 0 0 .1em rgba(255,200,90,.5) }
+#board .zone > .card:not(.back) .tb .ad > span:last-child { font-size: 1em; color: #cdb27c }
+#board .zone > .card:not(.back) .tb .ad > span:last-child::before { content: "/"; color: #8a7650; margin-right: .06em; font-size: .85em }
+#board .zone > .card:not(.back) .tb .ad .up { color: #8dffb0 !important } #board .zone > .card:not(.back) .tb .ad .dn { color: #ff9a9a !important }
+/* 守備表示：守備力だけを青白く大きく */
+#board .zone > .card.def:not(.back) .tb .ad > span:first-child { display: none }
+#board .zone > .card.def:not(.back) .tb .ad > span:last-child { font-size: 1.6em; color: #bfe0ff; text-shadow: 0 0 .1em rgba(120,180,255,.55) }
+#board .zone > .card.def:not(.back) .tb .ad > span:last-child::before { content: "DEF"; font-size: .34em; color: #e8bd55; margin-right: .12em; letter-spacing: .02em }
 
 /* ---------- 演出に合わせたプレイマットの柄（盤面の地だけが変わり、カードを置く枠は残る） ---------- */
 #board { position: relative }

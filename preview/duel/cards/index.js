@@ -127,7 +127,11 @@ export const SCRIPTS                             = {
       resolve: x => {
         const s = x.s, p = x.player;
         const opts = [...handOf(s, p), ...deckOf(s, p), ...gyOf(s, p)].filter(u => defOf(s, u).name === 'ブラック・マジシャン' && canSpecialSummon(s, u, p));
-        const u = chooseOne(x, '特殊召喚する「ブラック・マジシャン」を選んでください（手札・デッキ・墓地）', opts);
+        // 同じカードが何か所にもある時は、まず「どこから」を選ぶ（カードの見た目が同じで区別しにくいため）
+        const ZN                         = { hand: '手札', deck: 'デッキ', gy: '墓地' };
+        const zones = [...new Set(opts.map(u => s.cards[u].zone))];
+        const from = zones.length > 1 ? zones[choose(x, { kind: 'option', prompt: '「ブラック・マジシャン」をどこから特殊召喚しますか？', options: zones.map(z => ZN[z] ?? z) })] : zones[0];
+        const u = chooseOne(x, `特殊召喚する「ブラック・マジシャン」を選んでください（${ZN[from] ?? from}）`, opts.filter(v => s.cards[v].zone === from));
         if (u !== null) specialSummon(x, [u]);
       },
     }],
