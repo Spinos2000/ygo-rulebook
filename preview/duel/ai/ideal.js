@@ -28,6 +28,8 @@ import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js
                                                             
                  
                    
+                                               
+                
                       
                          
                               
@@ -52,6 +54,8 @@ import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js
                   
                   
                     
+                            
+                                            
  
 
 const DEF = { samples: 6, criticalSamples: 10, romanceWidth: 0.10, scale: 3000 };
@@ -114,13 +118,17 @@ export function acesOf(s           , p          , deckName = '')              {
   const res = new Set        ();
   let top = -1, topCodes           = [];
   const words = norm(deckName.replace(/デッキ/g, '')).match(/[ァ-ヶー]{3,}|[A-Za-z]{2,}|[一-龠]{2,}/g) ?? [];
+  // デッキの他のカードのテキストに名前が出てくる回数（「ブラック・マジシャン」を参照するカードが多ければ、そのデッキの顔）
+  const texts = [...new Set(mine.map(c => c.code))].filter(code => poolDef(code)?.frame !== 'fusion').map(code => ({ code, text: poolDef(code)?.text ?? '' }));
+  const refs = (code        ) => { const n = poolDef(code)?.name ?? ''; return texts.filter(x => x.code !== code && x.text.includes(`「${n}」`)).length; };
   for (const c of mine) {
     const d = defOf(s, c.uid);
     if (d.kind !== 'monster') continue;
-    const sc = scriptOf(s, c.uid);
+    const sc = scriptOf(s, c.uid), lv = d.level ?? 0;
     if (d.frame === 'fusion' || d.frame === 'ritual') res.add(c.code);
-    if (sc.cannotNormalSummon || sc.procSummon || sc.specialSummonOk) res.add(c.code);
-    if (words.some(w => norm(d.name).includes(w))) res.add(c.code);
+    if (lv >= 5 && (sc.cannotNormalSummon || sc.procSummon || sc.specialSummonOk)) res.add(c.code);
+    if (lv >= 7 && words.some(w => norm(d.name).includes(w))) res.add(c.code);
+    if (lv >= 5 && refs(c.code) >= 2) res.add(c.code);
     const atk = d.atk ?? 0;
     if (atk > top) { top = atk; topCodes = [c.code]; } else if (atk === top) topCodes.push(c.code);
   }
@@ -212,7 +220,8 @@ export function idealThink(s           , opt               = {}, deckNames      
     const sorted = [...list].sort((x, y) => y.rate - x.rate);
     const top = sorted[0].rate;
     const deep = new Set([...sorted.slice(0, K), ...sorted.filter(a => a.rate >= top - o.romanceWidth && (a.romance + a.burst) * 2 > a.n).slice(0, 2), ...sorted.filter(a => a.base)]);
-    const sum = new Map                                               ();
+    const sum = new Map                                                              ();
+    const shallowBest = sorted[0];
     for (let i = 0; i < DW && WORK.n - w0start < budget; i++) {
       const w = opt.noDeterminize ? s : determinize(s, me, rnd);
       for (const c of deep) {
@@ -220,13 +229,26 @@ export function idealThink(s           , opt               = {}, deckNames      
         let n           ;
         try { n = applyAction(w, c.action); } catch { continue; }
         const fin = playout(n, s.turn, wts);
-        const r = sum.get(c) ?? sum.set(c, { p: 0, n: 0 }).get(c) ;
-        r.p += prob(evaluate(fin, me, cpuOpt.weights) + (c.base ? first.margin : 0), o.scale); r.n++;
+        const r = sum.get(c) ?? sum.set(c, { p: 0, n: 0, per: [] }).get(c) ;
+        const pr = prob(evaluate(fin, me, cpuOpt.weights) + (c.base ? first.margin : 0), o.scale);
+        r.p += pr; r.n++; r.per[i] = pr;
       }
     }
     // 深い先読みの勝率と、浅い先読みの勝率を混ぜる（deepMix：深い方の割合）
     const mix = opt.deepMix ?? 1;
     for (const c of list) { const r = sum.get(c); c.rate = r && r.n ? mix * (r.p / r.n) + (1 - mix) * c.rate : -1; }
+    // 深い先読みの結論が浅い先読み（今のCPUの考え方を世界ごとに平均したもの）と違う時は、同じ世界どうしで比べた差が
+    // ぶれ（標準誤差）の conf 倍より大きい時だけ深い方に従う。自信がない時は堅実な浅い方の手を選ぶ
+    const deepBest = list.reduce((x, y) => (y.rate > x.rate ? y : x));
+    const H = sum.get(shallowBest), D = sum.get(deepBest);
+    if (deepBest !== shallowBest && H && D) {
+      const d           = [];
+      for (let i = 0; i < Math.max(H.per.length, D.per.length); i++) if (H.per[i] !== undefined && D.per[i] !== undefined) d.push(D.per[i] - H.per[i]);
+      const m = d.reduce((a, b) => a + b, 0) / Math.max(1, d.length);
+      const sd = Math.sqrt(d.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(1, d.length - 1));
+      const se = d.length > 1 ? sd / Math.sqrt(d.length) : Infinity;
+      if (!(m > (opt.conf ?? 1.5) * se)) shallowBest.rate = deepBest.rate + 1e-6;
+    }
   }
   // リーサル：このターンに勝てる手順を総当たりで探す。見つかった最初の手は、その世界の割合だけ勝てるとみなす
   if (free && (s.phase === 'main1' || s.phase === 'battle') && lethalPossible(s, me)) {
@@ -254,7 +276,8 @@ export function idealThink(s           , opt               = {}, deckNames      
       romance = r.romance >= r.burst ? 'ace' : 'burst';
     }
   }
-  return { action: pick.action, winRate: pick.rate, bestRate, romance, aceUid: romance === 'ace' ? pick.ace : undefined, samples: N, critical };
+  const alts = [...list].sort((x, y) => y.rate - x.rate).slice(0, 5).map(a => ({ action: a.action, rate: a.rate }));
+  return { action: pick.action, winRate: pick.rate, bestRate, romance, aceUid: romance === "ace" ? pick.ace : undefined, samples: N, critical, alts };
 }
 
 /** このターンに相手のLPを0にできる見込みがあるか（総当たりする前の大まかな判定） */
