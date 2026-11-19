@@ -6,7 +6,7 @@ import {
   canSpecialSummon, specialSummon, sendToGy, addToHand, destroy, release, payLp, equipCard, equippedBySelf, linkCards,
   negateActivation, negateSummon, targetValid, addLingering, newStep, log, pl, currentAtk, FIELD_ZONES, sameCard,
   placeCounters, scriptOf, removeCounters, counterHolders, counterRoom, addStatMod, drawCards, gainLp, effectDamage, negateAttack,
-  banish, isOnField, isImmune, emit, millTop, randomOf, freeMZones, moveCard, currentDef, targetable, swapControl, advanceSummonNow, pushAnim, releasable, paysCost, normalSummonNow, createTokens, takeControl, setFaceDown, changePositionByEffect, isToken, summonedThisTurn, shuffleDeck, specialSummonedThisTurn, tributesFor, freeSZones,
+  banish, isOnField, isImmune, emit, millTop, randomOf, freeMZones, moveCard, currentDef, targetable, swapControl, advanceSummonNow, pushAnim, releasable, paysCost, normalSummonNow, createTokens, takeControl, setFaceDown, changePositionByEffect, isToken, summonedThisTurn, shuffleDeck, specialSummonedThisTurn, tributesFor, freeSZones, advanceTributeSets,
 } from '../engine/game.js';
                                                               
 import {
@@ -2713,8 +2713,10 @@ export const SCRIPTS                             = {
         const s = x.s;
         const u = chooseOne(x, 'アドバンス召喚するモンスターを選んでください', rengekiMonsters(x));
         if (u === null) return;
-        const n = tributesFor(s, u);
-        const tr = choose(x, { kind: 'cards', prompt: `リリースするモンスターを${n}体選んでください`, options: relMons(s, x.player), min: n, max: n });
+        // リリースの組み合わせ（バルバロスの3体リリース・審神者の別のリリース・アドバンス・フォース・帝王の烈旋も含む）から選ぶ
+        const sets = advanceTributeSets(s, x.player, u);
+        if (!sets.length) return;
+        const tr = sets.length === 1 ? sets[0] : sets[choose(x, { kind: 'option', prompt: `${nameOf(s, u)}のリリースを選んでください`, options: sets.map(t => `リリース：${t.map(v => nameOf(s, v)).join('・')}`) })];
         advanceSummonNow(x, u, tr);
       },
     }],
@@ -3355,8 +3357,8 @@ const isDark = (s           , u        ) => defOf(s, u).attribute === '闇' || d
 const ancientTarget = (s           , u        ) => isFaceUpMonster(s, u) && ['special', 'ritual', 'fusion'].includes(s.cards[u].summonedHow ?? '') && level(s, u) >= 6;
 /** 連撃の帝王：アドバンス召喚できる手札のモンスター（必要な数のリリースができること） */
 const rengekiMonsters = (x     ) => handOf(x.s, x.player).filter(u => {
-  const d = defOf(x.s, u), n = tributesFor(x.s, u);
-  return d.kind === 'monster' && d.frame !== 'ritual' && d.frame !== 'fusion' && !scriptOf(x.s, u).cannotNormalSummon && n > 0 && relMons(x.s, x.player).length >= n;
+  const d = defOf(x.s, u);
+  return d.kind === 'monster' && d.frame !== 'ritual' && d.frame !== 'fusion' && !scriptOf(x.s, u).cannotNormalSummon && advanceTributeSets(x.s, x.player, u).length > 0;
 });
 const brainTargets = (x     ) => monstersOf(x.s, opp(x.player)).filter(u => isFaceUpMonster(x.s, u) && normalSummonable(x.s, u));
 

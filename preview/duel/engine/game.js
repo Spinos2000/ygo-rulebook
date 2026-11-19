@@ -1889,6 +1889,26 @@ function battleProc(s           , step            )       {
 /* =====================================================================
  * 行える行動
  * ===================================================================== */
+/**
+ * アドバンス召喚（リリースが1体以上）で使えるリリースの組み合わせを全部返す。
+ * 普通のリリース数・リリースの数を選べるモンスター（神獣王バルバロス）・別のリリース（墓守の審神者・竜脚獣ブラキオン）・
+ * リリースを助けるカード（アドバンス・フォース）・相手のモンスターをリリースに含める（帝王の烈旋）をまとめて考える
+ */
+export function advanceTributeSets(s           , p          , uid        )             {
+  const myMons = monstersOf(s, p);
+  const rel = myMons.filter(u => !scriptOf(s, u).noAdvanceTribute && releasable(s, u));
+  const sc = scriptOf(s, uid);
+  const counts = (sc.tributeOptions ?? [tributesFor(s, uid)]).filter(n => n > 0);
+  const out             = [];
+  for (const n of counts) out.push(...combos(rel, n));
+  if (s.lingering.some(l => l.type === 'tributeOpp' && l.player === p && l.turn === s.turn)) {
+    for (const n of counts) for (const o of monstersOf(s, opp(p)).filter(u => releasable(s, u))) for (const tr of combos(rel, n - 1)) out.push([...tr, o]);
+  }
+  for (const aid of activeCards(s).map(u => scriptOf(s, u).tributeAid?.(s, u, uid, p)).filter(Boolean)) out.push(...combos(myMons.filter(u => aid .ok(s, u) && releasable(s, u)), aid .count));
+  for (const alt of [sc.altTribute ?? []].flat()) out.push(...combos(myMons.filter(u => alt.ok(s, u) && releasable(s, u)), alt.count));
+  const seen = new Set        ();
+  return out.filter(tr => { const k = [...tr].sort((a, b) => a - b).join(','); if (seen.has(k) || !freeMZones(s, p, tr).length) return false; seen.add(k); return true; });
+}
 function combos   (arr     , k        )        {
   if (k === 0) return [[]];
   const res        = [];
@@ -1927,6 +1947,13 @@ function mainActions(s           )           {
             if (freeMZones(s, p, tr).length === 0) continue;
             if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
             if (!scriptOf(s, uid).cannotSet && n < 3) acts.push({ type: 'setMonster', card: uid, tributes: tr }); // 3体リリースの方法は表側表示の召喚のみ（神獣王バルバロス）
+          }
+          // アドバンス・フォース：レベル5以上のモンスター1体のリリースで、リリース2体の召喚として行える
+          for (const aid of activeCards(s).map(u => scriptOf(s, u).tributeAid?.(s, u, uid, p)).filter(Boolean)) {
+            for (const tr of combos(myMons.filter(u => aid .ok(s, u) && releasable(s, u)), aid .count)) if (freeMZones(s, p, tr).length) {
+              if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
+              if (!scriptOf(s, uid).cannotSet) acts.push({ type: 'setMonster', card: uid, tributes: tr });
+            }
           }
           // 帝王の烈旋：リリースのうち1体を相手のモンスターにできる（例：バルバロスを自分2体＋相手1体の3体リリースで召喚）
           if (s.lingering.some(l => l.type === 'tributeOpp' && l.player === p && l.turn === s.turn)) {
@@ -2084,8 +2111,8 @@ function explainIllegal(s           , a        )         {
       if (activationBlockedByName(s, a.card, actorOf(s))) return 'このターン、このカード名の効果は発動できません';
       // 混沌帝龍：「このカードの効果を発動するターン、自分は他の効果を発動できない」
       { const q = actorOf(s), only = s.lingering.find(l => l.type === 'onlyThisCard' && l.player === q && l.turn === s.turn && l.uid !== a.card);
-        if (only) return `このターンは「${nameOf(s, only.uid )}」の効果を発動したので、他の効果は発動できません`;
-        if (scriptOf(s, a.card).exclusive && s.activatedTurn?.[String(q)] === s.turn) { const f = s.activatedFirst?.[String(q)]; return `このターンはすでに${f && f.turn === s.turn ? `「${nameOf(s, f.uid)}」` : '他のカード'}の効果を発動しているので、「${nameOf(s, a.card)}」の効果は発動できません（このカードの効果を発動するターン、自分は他の効果を発動できない）`; } }
+        if (only) return `このターンは${nameOf(s, only.uid )}の効果を発動したので、他の効果は発動できません`;
+        if (scriptOf(s, a.card).exclusive && s.activatedTurn?.[String(q)] === s.turn) { const f = s.activatedFirst?.[String(q)]; return `このターンはすでに${f && f.turn === s.turn ? nameOf(s, f.uid) : '他のカード'}の効果を発動しているので、${nameOf(s, a.card)}の効果は発動できません（このカードの効果を発動するターン、自分は他の効果を発動できない）`; } }
       return '今は発動条件を満たしていません';
     }
     case 'nextPhase':
