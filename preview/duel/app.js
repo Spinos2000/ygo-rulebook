@@ -309,6 +309,28 @@ function scheduleCpu() {
   });
 }
 let ready = null; // 考え終わった答え { state, th }
+let endArmT = null, autoEnd = false;
+function endTap() {
+  const b = $('#endBtn'); if (!b) return;
+  if (!b.classList.contains('armed')) {
+    b.classList.add('armed'); b.textContent = 'もう一度でエンド';
+    clearTimeout(endArmT); endArmT = setTimeout(() => { b.classList.remove('armed'); b.textContent = 'エンド'; }, 1200);
+    return;
+  }
+  clearTimeout(endArmT); b.classList.remove('armed'); b.textContent = 'エンド';
+  const legal = legalActions(S);
+  const fin = legal.find(x => x.type === 'endTurn'), toEnd = legal.find(x => x.type === 'nextPhase' && x.to === 'end');
+  if (fin) { run(fin); return; }
+  if (toEnd) { autoEnd = true; run(toEnd); }
+}
+/** エンドを押した後：エンドフェイズで自由に行動できるようになったら、そのままターンを終える（途中で選ぶことがあれば、それが済んでから） */
+function continueEnd() {
+  if (!autoEnd || !S) return;
+  if (S.winner !== null || isCpu(S.turnPlayer) || S.turnPlayer !== actorOf(S) && !S.pending && S.window.kind === 'open') { autoEnd = false; return; }
+  if (!humanActing() || S.pending || S.window.kind !== 'open' || S.phase !== 'end') return;
+  const fin = legalActions(S).find(x => x.type === 'endTurn');
+  if (fin) { autoEnd = false; setTimeout(() => { if (S && legalActions(S).some(x => x.type === 'endTurn')) run(fin); }, 120); }
+}
 function playCpu(state, th) {
   if (S !== state) return;
   ready = null;
@@ -753,6 +775,8 @@ function renderDock() {
   };
   actor.classList.remove('thinking');
   dock.classList.toggle('mine', humanActing());
+  dock.classList.remove('free');
+  const eb = $('#endBtn'); if (eb) { eb.hidden = true; eb.classList.remove('armed'); eb.textContent = 'エンド'; }
   const oi = $('#oppInfo'); if (oi) { const O = S.players[1]; oi.textContent = `${NAME(1)}：手札${O.hand.length}・墓地${O.gy.length}・除外${O.banished.length}`; }
   hint.textContent = '';
   btns.innerHTML = '';
@@ -797,6 +821,8 @@ function renderDock() {
   }
   // 自分のターンで自由に行動できる：右下は「先に進む」、左はそれ以外の移り先
   const me = S.turnPlayer;
+  dock.classList.add('free');
+  if (eb) eb.hidden = !legal.some(x => x.type === 'endTurn' || (x.type === 'nextPhase' && x.to === 'end'));
   actor.textContent = `${cpuMode() ? 'あなた' : NAME(me)}の${PHASE_LABEL[S.phase]}`;
   hint.textContent = S.turn === 1 && S.phase === 'main1' ? '先攻1ターン目はバトルフェイズに入れません' : S.phase === 'battle' ? '攻撃するモンスターを押す' : 'カードを押すと、できる操作が出ます';
   const others = [];
@@ -1529,10 +1555,18 @@ function measureBottom() {
 /** 返事が要る時（チェーンの確認・選択・決着）は自動で閉じてボタンを見せ、自分の番に戻ったら開き直す */
 function renderHandHold() {
   const el = $('#handHold'); if (!el) return;
-  const frames = sortHand(S, S.players[0].hand).map(u => frameOf(defOf(S, u)));
-  const key = frames.join(',');
-  if (el.dataset.key !== key) { el.innerHTML = holdingHandSvg(frames); el.dataset.key = key; }
-  el.setAttribute('aria-label', `手札（${frames.length}枚）。押すか上に払うと開きます`);
+  // 手札を閉じた時：開いた時と同じ大きさのカードを、画面の左下の角から扇形に飛び出させる（下の方は画面の外）
+  const hand = sortHand(S, S.players[0].hand);
+  const key = hand.join(',');
+  if (el.dataset.key !== key) {
+    const n = hand.length, spread = Math.min(64, 10 + n * 7);
+    el.innerHTML = hand.map((u, i) => {
+      const a = (n === 1 ? 0 : i / (n - 1)) * spread - 12;
+      return `<span class="${faceCls(defOf(S, u))} hh-card" style="--a:${a.toFixed(1)}deg;--i:${i}">${faceHtml(u, defOf(S, u), false)}</span>`;
+    }).join('');
+    el.dataset.key = key;
+  }
+  el.setAttribute('aria-label', `手札（${hand.length}枚）。押すか上に払うと開きます`);
 }
 /* 自分のターンが始まったら（ドローの後のメインフェイズ1で）手札を開き、相手のターンになったら閉じる（CPU対戦） */
 let trayTurn = null, trayWantOpen = false;
@@ -1603,7 +1637,7 @@ function render() {
   if ((fxN > 0)) { renderSheets(); return; } // 演出が終わってから画面を更新する（開いていたシートは先に閉じる）
   if (fan && !(S.pending && !isCpu(S.pending.request.player) && isDeckPick(S.pending.request))) closeFan();
   canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
-  renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets(); autoTray(); renderHandHold(); checkPachi();
+  renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets(); autoTray(); renderHandHold(); // シャカパチは手札をゆっくりなぞった時だけ（罠が来た時などの自動の演出はしない）
   // これから召喚の演出をするカードは、演出が始まるまで盤面に出さない（先に置かれてから巻き戻って見えないように）
   for (const j of pendingSummons) if (j && j.uid != null && !j.search && !j.handOpen && !j.handAdd) { const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`); if (el) el.style.visibility = 'hidden'; }
   $('#result').hidden = S.winner === null;
@@ -1613,6 +1647,7 @@ function render() {
   if (playPendingSummons()) { saveSoon(); return; }
   scheduleCpu();
   scheduleAutoPass();
+  continueEnd();
   saveSoon();
 }
 
@@ -1708,11 +1743,15 @@ function wireTray(root) {
   let ty0 = null, tx0 = 0;
   // 横になぞっている間：指の下に来たカードを1枚ずつ震わせて鳴らす（同じカードは指が離れて戻るまで1回）
   let lastCard = null, strummed = false, sx = null, sy = 0;
-  const strumStart = (x, y) => { lastCard = null; strummed = false; sx = x; sy = y; };
+  let px = 0, pt = 0;
+  const strumStart = (x, y) => { lastCard = null; strummed = false; sx = x; sy = y; px = x; pt = performance.now(); };
   const strumMove = (x, y) => {
     if (sx === null || !trayOpen || !narrow() || aim || place) return;
+    // 速さ（指が1ミリ秒に動く距離）。速く払った時はシャカパチしない（ゆっくりなぞった時だけ）
+    const now = performance.now(), v = Math.abs(x - px) / Math.max(1, now - pt); px = x; pt = now;
     if (!strummed && (Math.abs(x - sx) < 8 || Math.abs(x - sx) < Math.abs(y - sy))) return;
     strummed = true;
+    if (v > 0.7) { lastCard = cardAt(x, y); return; }
     const c = cardAt(x, y);
     if (c && c !== lastCard) { lastCard = c; pachiCard(c); }
   };
@@ -2035,6 +2074,8 @@ root.addEventListener('click', e => {
   if (t.closest('[data-reopen="1"]')) { peek = false; render(); return; }
   if (t.closest('#stopBtn')) { stopNext = !stopNext; renderDock(); return; }
   if (t.closest('#handHold')) { setTray(true); return; }
+  if (t.closest('#endBtn')) { endTap(); return; }
+  if (t.closest('#undoMini')) { undo(); return; }
   if (t.closest('#reviewBtn')) { showReview(); return; }
   if (t.closest('#reviewClose') || t.id === 'reviewDlg') { $('#reviewDlg').hidden = true; return; }
   if (t.closest('#closeDuel')) { clearTimeout(cpuTimer); OPTS.onClose?.(); return; }

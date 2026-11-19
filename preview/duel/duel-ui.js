@@ -745,6 +745,29 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .droot.tray-closed .dock-extra .btn, .droot.tray-closed #phaseBtns .btn { min-height: 32px; padding: 2px 10px; font-size: 12px }
   .droot.tray-closed #actorHint { -webkit-line-clamp: 1 }
 }
+/* 手札を閉じた時：開いた時と同じ大きさのカードが左下の角から扇形に飛び出す（下の方は画面の外） */
+@media (max-width: 860px) {
+  .hand-hold { left: 0; bottom: 0; width: 50vw; height: calc(var(--hh-cw, 104px) * 86 / 59 * .62); overflow: visible; filter: none }
+  .hand-hold .hh-card { position: absolute; left: calc(4px + var(--i) * 6px); bottom: calc(var(--hh-cw, 104px) * 86 / 59 * -.5); width: var(--hh-cw, 104px); font-size: calc(var(--hh-cw, 104px) / 10.4);
+    transform-origin: 30% 150%; transform: rotate(var(--a)); pointer-events: none; box-shadow: 0 6px 14px rgba(0,0,0,.4) }
+}
+@media (max-width: 380px) { .hand-hold { --hh-cw: 94px } }
+/* 手札を閉じた時のボタン：フェイズの説明・ログ・ひとつ戻す・✋・エンド（2回押し）・次のフェイズへ（小さめ） */
+.mini-only { display: none }
+@media (max-width: 860px) {
+  .droot.tray-closed .mini-only:not([hidden]) { display: inline-flex }
+  .droot.tray-closed #actorHint, .droot.tray-closed #oppInfo { display: none }
+  .droot.tray-closed .dock.free #phaseBtns { display: none }
+  .droot.tray-closed .dock { grid-template-areas: "st" "ex" "ph" "go"; row-gap: 6px; padding-top: 8px }
+  .droot.tray-closed .dock-extra { gap: 5px }
+  .droot.tray-closed .dock-extra .btn { min-height: 30px; padding: 1px 9px; font-size: 12px; box-shadow: 1px 1px 0 var(--edge) }
+  .droot.tray-closed #stopBtn { font-size: 0; padding: 1px 8px }
+  .droot.tray-closed #stopBtn::before { content: "✋"; font-size: 15px }
+  .droot.tray-closed #goBtn { min-height: 40px; font-size: 14px; padding: 2px 8px }
+  .droot.tray-closed #goBtn small { display: none }
+  .end-btn { background: color-mix(in srgb, var(--opp) 20%, var(--panel)) }
+  .end-btn.armed { background: var(--opp); color: #fff }
+}
 `;
 
 export const MARKUP = `
@@ -771,7 +794,7 @@ export const MARKUP = `
     <div class="pstrip me" id="side0"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="meta"></span></div>
     <div class="dock" id="dock">
       <div class="dock-status"><span id="actor"></span><span id="actorHint"></span><span id="oppInfo"></span></div>
-      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できるタイミングで、必ず止めて聞く">✋ 次で止める</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">ログ</button></div>
+      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できるタイミングで、必ず止めて聞く">✋ 次で止める</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">ログ</button><button class="btn small mini-only" id="undoMini" type="button">↶ ひとつ戻す</button><button class="btn small mini-only end-btn" id="endBtn" type="button" hidden>エンド</button></div>
       <div class="dock-acts"><div id="phaseBtns"></div><button class="btn primary go" id="goBtn"></button></div>
     </div>
   </main>
@@ -809,7 +832,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261119-2226</p>
+    <p class="menu-note ver">版：20261119-2235</p>
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>
