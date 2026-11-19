@@ -5,7 +5,7 @@
                                                                                                                           
                                                                
                     
-import { RuleError } from './types.js';
+import { RuleError, cloneCard, cloneState } from './types.js';
 import { SCRIPTS } from '../cards/index.js';
 
 export const START_LP = 8000;
@@ -105,6 +105,8 @@ export const ZONES = 5;
                                                                   
                    
                                  
+                                                                                      
+                    
                                                 
                                                                               
                                     
@@ -214,6 +216,7 @@ export function shuffleDeck(state           , p          )       {
 
 let POOL                          = {};
 export function setPool(pool                         )       { POOL = pool; }
+export const poolDef = (code        )                      => POOL[code];
 /** トークン（カードプールに無いモンスター）。code は 'token:…' */
 export const TOKENS                          = {
   'token:sheep': { name: '羊トークン', kind: 'monster', frame: 'normal', attribute: '地', race: '獣族', level: 1, atk: 0, def: 0, text: '' }                      ,
@@ -229,7 +232,7 @@ export function createTokens(x     , code        , n        , position          
     if (!z.length) break;
     const uid = s.nextUid++;
     s.cards[uid] = { uid, code, owner: player, controller: player, zone: 'none', index: 0, serial: 0, faceUp: true, position: null, enteredTurn: null, positionChangedTurn: null,
-      attackedTurn: null, counters: {}, equippedTo: null, equipSerial: null, equipBy: null, link: null, linkSerial: null, proper: false, summoning: false, noAttack: false }            ;
+      attackedTurn: null, counters: {}, equippedTo: null, equipSerial: null, equipBy: null, link: null, linkSerial: null, proper: false, summoning: false, noAttack: false, pub: false }            ;
     moveCard(s, uid, 'mzone', { index: z[0], faceUp: true, position, controller: player });
     const c = s.cards[uid]; c.summonedHow = 'special'; c.summonedTurn = s.turn;
     res.push(uid);
@@ -325,7 +328,7 @@ function newCard(s           , code        , owner          , zone          , in
   s.cards[uid] = {
     uid, code, owner, controller: owner, zone, index, serial: 0, faceUp: false, position: null,
     enteredTurn: null, positionChangedTurn: null, attackedTurn: null, counters: {}, equippedTo: null, equipSerial: null,
-    equipBy: null, link: null, linkSerial: null, proper: false, summoning: false, noAttack: false, mods: [], summonedHow: null, summonedTurn: null,
+    equipBy: null, link: null, linkSerial: null, proper: false, summoning: false, noAttack: false, pub: false, mods: [], summonedHow: null, summonedTurn: null,
   };
   return uid;
 }
@@ -355,7 +358,7 @@ function removeFromZone(s           , uid        )       {
 /** カードを移動する。フィールド外へ出る場合は持ち主の領域へ。移動すると serial が変わる */
 export function moveCard(s           , uid        , to          , opt          = {})       {
   const c = s.cards[uid];
-  const fromField = isOnField(c);
+  const fromField = isOnField(c), fromZone = c.zone;
   removeFromZone(s, uid);
   const toField = FIELD_ZONES.includes(to);
   const ctl           = toField ? (opt.controller ?? c.controller) : c.owner;
@@ -370,6 +373,9 @@ export function moveCard(s           , uid        , to          , opt          =
   c.equippedTo = null; c.equipSerial = null; c.equipBy = null; c.link = null; c.linkSerial = null;
   c.summoning = false; c.noAttack = false; c.mods = []; c.summonedHow = null; c.summonedTurn = null; c.attackedList = undefined; c.tributedWith = undefined;
   if (to === 'hand' || to === 'deck' || to === 'extra') c.proper = false;
+  // 相手にカード名が知られているか（CPU の推測用）。デッキに戻ると分からなくなり、手札に加えた（ドロー以外）・手札以外からフィールドに出たカードは知られる
+  if (to === 'deck' || to === 'extra') c.pub = false;
+  else if (to === 'hand' || (toField && fromZone !== 'hand')) c.pub = true;
   if (toField) {
     c.faceUp = opt.faceUp ?? true;
     c.position = to === 'mzone' || to === 'emz' ? (opt.position ?? 'atk') : null;
@@ -656,7 +662,7 @@ export function sendToGy(s           , uids          , reason        , by       
   for (const u of uids.filter(x => !(reason === 'effect' && isImmune(s, x)))) {
     const c = s.cards[u];
     const from = c.zone;
-    const before = structuredClone(c);
+    const before = cloneCard(c);
     moveCard(s, u, 'gy');
     // 手札から捨てられた場合、誰の効果で捨てられたかをカードに記録する（暗黒界：「相手の効果で捨てられた場合」）。-1 はルール
     if (from === 'hand' && reason === 'discard') s.cards[u].counters.discardBy = who === null ? -1 : who;
@@ -690,7 +696,7 @@ export function release(s           , uids          , reason         = 'release'
 export function banish(s           , uids          , reason        )       {
   const befores             = [];
   for (const u of uids.filter(x => !(reason === 'effect' && isImmune(s, x)) && !gyCardLocked(s, x))) {
-    const c = s.cards[u]; const from = c.zone; const before = structuredClone(c);
+    const c = s.cards[u]; const from = c.zone; const before = cloneCard(c);
     moveCard(s, u, 'banished');
     emit(s, { type: 'banished', uid: u, from, reason });
     if (FIELD_ZONES.includes(from)) { emit(s, { type: 'leftField', uid: u, from, reason, wasFaceUp: before.faceUp }); befores.push(before); }
@@ -728,7 +734,7 @@ export function destroy(s           , uids          , reason        , opt       
   if (!list.length) return [];
   const befores             = [];
   for (const u of list) {
-    const c = s.cards[u]; const zone = c.zone; const before = structuredClone(c);
+    const c = s.cards[u]; const zone = c.zone; const before = cloneCard(c);
     // 召喚を無効にされ破壊されたモンスターはフィールドのカードとして扱わない（公式Q&A：神の宣告と補給部隊）
     const from = opt.summoning ? 'summoning'          : zone;
     moveCard(s, u, opt.banish ? 'banished' : 'gy');
@@ -757,7 +763,7 @@ export function addToHand(s           , uids          , reason         = 'effect
   const befores             = [];
   uids = uids.filter(x => !(reason === 'effect' && isImmune(s, x)) && !(reason === 'effect' && gyCardLocked(s, x)));
   for (const u of uids) {
-    const c = s.cards[u]; const from = c.zone; const before = structuredClone(c);
+    const c = s.cards[u]; const from = c.zone; const before = cloneCard(c);
     moveCard(s, u, 'hand');
     emit(s, { type: 'toHand', uid: u, from, reason });
     if (from === 'deck') pushAnim(s, { kind: 'search', uid: u, player: s.cards[u].owner }); // 演出用：デッキから手札に加えた
@@ -1056,7 +1062,7 @@ export function hasLevelCombo(s           , uids          , target        , mode
  * 手順の実行
  * ===================================================================== */
 function runProc(s           , proc      , answers           )       {
-  const base = structuredClone(s);
+  const base = cloneState(s);
   ANSWERS = answers; AIDX = 0;
   try {
     execProc(s, proc);
@@ -1347,7 +1353,7 @@ function activationPossible(s           , uid        , p          , eff         
       const ans = tries.shift() ;
       ANSWERS = [...ans]; AIDX = 0;
       try {
-        const c = structuredClone(s);
+        const c = cloneState(s);
         const link            = { player: p, uid, serial: c.cards[uid].serial, effect: eff.id, ss: eff.ss, cardActivation: false, cardKind: defOf(c, uid).kind, targets: [], targetSerials: [], data: { ...data }, negated: false, effectNegated: false };
         eff.activate (ctxOf(c, uid, p, link));
         return true;
@@ -1477,6 +1483,7 @@ function drawOne(s           , p          )          {
   if (deck.length === 0) return false;
   const u = deck[deck.length - 1];
   moveCard(s, u, 'hand');
+  s.cards[u].pub = false;
   emit(s, { type: 'drew', uid: u, player: p });
   return true;
 }
@@ -2052,8 +2059,11 @@ function sameAction(a        , b        )          {
  * 行動の実行
  * ===================================================================== */
 /** 行動を実行した新しい状態を返す（元の状態は変更しない）。ルール上できない行動は RuleError */
+/** applyAction を呼んだ回数（CPU の考える量の上限に使う） */
+export const WORK = { n: 0 };
 export function applyAction(prev           , action        )            {
-  let s            = structuredClone(prev);
+  WORK.n++;
+  let s            = cloneState(prev);
   if (s.winner !== null) throw new RuleError('デュエルは終了しています');
   if (action.type === 'surrender') { lose(s, action.player, 'サレンダーした'); return s; }
 
@@ -2062,7 +2072,7 @@ export function applyAction(prev           , action        )            {
     const pend = s.pending;
     const err = validateAnswer(s, pend.request, action.value);
     if (err) throw new RuleError(err);
-    s = structuredClone(pend.base);
+    s = cloneState(pend.base);
     runProc(s, pend.proc, [...pend.answers, action.value]);
     flow(s);
     return s;

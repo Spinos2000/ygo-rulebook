@@ -880,6 +880,7 @@ export const SCRIPTS                             = {
   },
   /* ユベル－Das Abscheulich Ritter */
   '7410': {
+    endWipe: true,
     cannotNormalSummon: true, battleIndestructible: true, noSelfBattleDamage: true,
     specialSummonOk: (s, _self, _how, src) => src !== null && s.cards[src]?.code === '7409',
     properSpecial: () => true,

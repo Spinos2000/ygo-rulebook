@@ -291,6 +291,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   padding: calc(env(safe-area-inset-top, 0px) + 14px) 12px calc(env(safe-area-inset-bottom, 0px) + 16px) }
 .fan-layer.cpu { background: rgba(6,20,14,.38); pointer-events: none; justify-content: center }
 .fan-layer.done { pointer-events: none }
+.fan-layer.hand-add { background: rgba(6,20,14,.55) }
+.fan-area .card.new { box-shadow: 0 0 0 2px #ffe08a, 0 0 22px 6px rgba(255,224,138,.65) }
 .fan-head { color: #fff; text-align: center; display: flex; flex-direction: column; gap: 2px; margin: 6px 0 4px; max-width: 640px }
 .fan-head b { font-family: var(--display); font-weight: 400; font-size: 16px; line-height: 1.4 }
 .fan-head span { font-size: 12px; opacity: .8 }
@@ -299,7 +301,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .fan-area .card.dim { filter: grayscale(.85) brightness(.5); cursor: default }
 .fan-area .card:not(.dim):not(.back):hover { transform: translateY(-10px) rotate(0deg) scale(1.06); z-index: 80 !important }
 .fan-area .card.picked { transform: translateY(-20px) scale(1.12); z-index: 90 !important; box-shadow: 0 0 0 3px var(--accent), 0 0 22px 6px color-mix(in srgb, var(--accent) 70%, transparent) }
-.fan-btns { display: flex; gap: 10px; margin: 8px 0 }
+.fan-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 8px 0 }
+.fan-btns .btn.ghost { color: #fff; background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.55) }
 .fan-btns:empty { display: none }
 @media (max-width: 860px) { .fan-area .card { font-size: 8.5px } }
 /* カードの移動・発動・ターン・勝敗の演出（押した操作は下の画面に通す） */
@@ -319,6 +322,31 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .fx-layer { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 26; display: none }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + 24px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); border-radius: 10px; padding: 9px 16px; max-width: min(520px, calc(100vw - 32px)); box-shadow: var(--shadow); z-index: 40; font-weight: 500 }
 #toast[data-bad="1"] { background: var(--bad); color: #fff }
+/* CPU が考えている間の小さな表示 */
+.pstrip .think { font-size: .78rem; color: var(--sub); font-weight: 600; letter-spacing: .04em; animation: thinkPulse 1.2s ease-in-out infinite }
+@keyframes thinkPulse { 50% { opacity: .35 } }
+/* ロマンの台詞：画面の中央に大きく */
+#speech { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 45; pointer-events: none; text-align: center; width: min(92vw, 620px);
+  animation: speechIn 2.8s ease forwards }
+#speech .speech-who { display: inline-block; font-size: .8rem; font-weight: 700; letter-spacing: .08em; color: var(--accent-ink); background: var(--accent); border: 2px solid var(--edge); border-radius: 999px; padding: 2px 12px; margin-bottom: 8px }
+#speech .speech-text { font-family: var(--display); font-weight: 900; font-size: clamp(1.5rem, 6.5vw, 2.6rem); line-height: 1.25; color: #fff; text-wrap: balance;
+  text-shadow: 0 0 2px var(--edge), 0 3px 0 var(--edge), 0 0 18px color-mix(in srgb, var(--opp) 70%, transparent), 0 0 36px color-mix(in srgb, var(--accent) 50%, transparent) }
+#speech[data-side="me"] .speech-text { text-shadow: 0 0 2px var(--edge), 0 3px 0 var(--edge), 0 0 18px color-mix(in srgb, var(--me) 70%, transparent), 0 0 36px color-mix(in srgb, var(--accent) 50%, transparent) }
+@keyframes speechIn { 0% { opacity: 0; transform: translate(-50%, -40%) scale(.85) } 10% { opacity: 1; transform: translate(-50%, -50%) scale(1.04) } 16% { transform: translate(-50%, -50%) scale(1) } 82% { opacity: 1 } 100% { opacity: 0; transform: translate(-50%, -56%) } }
+@media (prefers-reduced-motion: reduce) { #speech { animation: none } .pstrip .think { animation: none } }
+/* 勝率の振り返り */
+#reviewBox { max-width: 640px }
+.wr-chart { width: 100%; height: auto; display: block; margin: 8px 0 4px }
+.wr-chart .grid { stroke: var(--line); stroke-width: 1 }
+.wr-chart .half { stroke: var(--sub); stroke-dasharray: 4 4; stroke-width: 1 }
+.wr-chart .ln { fill: none; stroke: var(--opp); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round }
+.wr-chart .area { fill: color-mix(in srgb, var(--opp) 14%, transparent) }
+.wr-chart .rom { fill: var(--accent); stroke: var(--edge); stroke-width: 1.5 }
+.wr-chart text { fill: var(--sub); font-size: 11px; font-family: var(--body) }
+.wr-list { margin: 6px 0 0; padding-left: 1.2em; color: var(--ink); font-size: .9rem; line-height: 1.6 }
+.wr-list b { color: var(--opp) }
+.wr-note { color: var(--sub); font-size: .82rem; margin: 4px 0 0 }
+
 
 /* ---------- スマホ・タブレット（縦） ---------- */
 @media (max-width: 860px) {
@@ -638,7 +666,7 @@ export const MARKUP = `
 
 <div class="app">
   <main class="table" aria-label="デュエル">
-    <div class="pstrip opp" id="side1"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="meta"></span></div>
+    <div class="pstrip opp" id="side1"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="think" id="cpuThink" hidden aria-live="polite">考え中…</span><span class="meta"></span></div>
     <div class="hand opp" id="hand1"></div>
     <div id="board"></div>
     <div id="result" hidden></div>
@@ -647,7 +675,7 @@ export const MARKUP = `
     <div class="pstrip me" id="side0"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="meta"></span></div>
     <div class="dock" id="dock">
       <div class="dock-status"><span id="actor"></span><span id="actorHint"></span></div>
-      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できるタイミングで、必ず止めて聞く">✋ 次で止める</button><button class="btn small" id="logBtn">ログ</button></div>
+      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できるタイミングで、必ず止めて聞く">✋ 次で止める</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">ログ</button></div>
       <div class="dock-acts"><div id="phaseBtns"></div><button class="btn primary go" id="goBtn"></button></div>
     </div>
   </main>
@@ -688,5 +716,7 @@ export const MARKUP = `
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>
 <div id="toast" role="status" hidden></div>
+<div id="speech" hidden aria-live="polite"><div class="speech-who"></div><div class="speech-text"></div></div>
+<div class="overlay" id="reviewDlg" hidden role="dialog" aria-modal="true" aria-labelledby="reviewTitle"><div class="box" id="reviewBox"></div></div>
 </div>
 `;

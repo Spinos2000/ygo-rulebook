@@ -1,6 +1,6 @@
 // カード効果で共通して使う処理
                                                                                 
-import { RuleError } from '../engine/types.js';
+import { RuleError, cloneCard } from '../engine/types.js';
                                                         
 import {
   defOf, choose, chooseOne, canSpecialSummon, specialSummon, release, sendToGy, newStep, monstersOf, hasLevelCombo,
@@ -154,7 +154,7 @@ export function returnToDeck(s           , uids          , reason        )      
   const befores             = [];
   const owners = new Set          ();
   for (const u of uids) {
-    const c = s.cards[u]; const from = c.zone; const before = structuredClone(c);
+    const c = s.cards[u]; const from = c.zone; const before = cloneCard(c);
     moveCard(s, u, 'deck');
     owners.add(s.cards[u].owner);
     if (FIELD_ZONES.includes(from)) { emit(s, { type: 'leftField', uid: u, from, reason, wasFaceUp: before.faceUp }); befores.push(before); }

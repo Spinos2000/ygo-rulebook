@@ -1,6 +1,7 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { cpuDecide } from './ai/cpu.js';
+import { idealThink, acesOf } from './ai/ideal.js';
+import { lineFor } from './lines.js';
 import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js';
 import { playBattle, playSummon, rarityOf } from './fx.js';
 import { playSignature, sigKey } from './sig.js';
@@ -25,6 +26,7 @@ let pick = [];         // 選択中の答え（カード）
 let sheet = null;      // スマホで開いているシート：'detail' | 'log' | null
 let peek = false;      // 選択の途中でシートを閉じて盤面を見ている
 let lastLp = [8000, 8000];
+let trace = [];        // CPU の勝率の見積もりの記録（対戦後の振り返り用）：{ turn, rate, romance }
 const CPU = 1;
 const cpuMode = () => $('#mode').value === 'cpu';
 const isCpu = p => cpuMode() && p === CPU;
@@ -99,7 +101,8 @@ function queueBattleFx(prev, next) {
     const gone = fresh.filter(x => x.kind === 'discard' && x.player === p && !fanDoneUids.has(x.uid)).map(x => x.uid);
     if (!gone.length) continue;
     // 同じ処理の中でドローしてすぐ捨てたカードも、手札の中に入れて見せる
-    const hand = [...new Set([...prev.players[p].hand, ...gone])];
+    const hand0 = [...new Set([...prev.players[p].hand, ...gone])];
+    const hand = sortsHand(p) ? sortHand(next, hand0) : hand0;
     pendingSummons.push({ handOpen: true, p, gone, hand, faces: !isCpu(p), ds: Object.fromEntries(hand.map(u => [u, defOf(next, u)])) });
     gone.forEach(u => sigSkip.add(u));
   }
@@ -144,6 +147,7 @@ function playPendingSummons() {
     for (const j of jobs) {
       if (j.search) { try { await cpuSearchFx(j); } catch (e) { console.error(e); } continue; }
       if (j.handOpen) { try { await handOpenFx(j); } catch (e) { console.error(e); } continue; }
+      if (j.handAdd) { try { await handAddFx(j); } catch (e) { console.error(e); } continue; }
       const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`);
       if (!el) continue;
       el.style.visibility = 'hidden';
@@ -251,17 +255,133 @@ function cpuDelay() {
   if (S.window.kind === 'priority') return base * 0.7;    // 応答するかどうか
   return base;                                            // 召喚・発動・攻撃・フェイズ移行
 }
+/* ---------- 理想のCPU：画面とは別の場所（Web Worker）で考える ---------- */
+let worker = null, workerBroken = false, reqId = 0;
+const waiting = new Map();
+function getWorker() {
+  if (worker || workerBroken) return worker;
+  try {
+    worker = new Worker(new URL('./ai/worker.js', import.meta.url), { type: 'module' });
+    worker.onmessage = e => { const w = waiting.get(e.data.id); if (w) { waiting.delete(e.data.id); w(e.data); } };
+    worker.onerror = e => {
+      console.warn('CPUの考える場所を作れませんでした。この画面の中で考えます', e);
+      workerBroken = true; worker = null;
+      for (const w of waiting.values()) w({ ok: false, retry: true });
+      waiting.clear();
+    };
+  } catch (e) { console.warn(e); workerBroken = true; worker = null; }
+  return worker;
+}
+const deckCodes = () => [$('#deck0').value, $('#deck1').value];
+const deckNames = () => deckCodes().map(c => DECKS[c]?.name ?? '');
+/** 今の状態で CPU の考えを出す（Worker が使えなければこの画面の中で） */
+function think(state) {
+  const local = () => new Promise(res => setTimeout(() => {
+    try { res({ ok: true, thought: idealThink(state, { deckCodes: deckCodes() }, deckNames()) }); } catch (e) { res({ ok: false, error: e.message }); }
+  }, 30));
+  const w = getWorker();
+  if (!w) return local();
+  return new Promise(res => {
+    const id = ++reqId;
+    waiting.set(id, r => (r.retry ? local().then(res) : res(r)));
+    try { w.postMessage({ id, state, deckNames: deckNames(), deckCodes: deckCodes() }); } catch { waiting.delete(id); local().then(res); }
+  });
+}
+let thinking = null; // 考えている最中の状態（同じ状態で2回考えない）
+function setThinking(on) { const el = $('#cpuThink'); if (el) el.hidden = !on; }
 function scheduleCpu() {
   clearTimeout(cpuTimer);
   if (!S || S.winner !== null || !isCpu(actorOf(S))) return;
-  cpuTimer = setTimeout(() => {
-    if (!S || S.winner !== null || !isCpu(actorOf(S))) return;
-    let a;
-    try { a = cpuDecide(S); } catch (e) { console.error(e); toast(`CPUのエラー：${e.message}`, true); return; }
-    try { commit(applyAction(S, a)); } catch (e) { console.error(e); toast(`CPUのエラー：${e.message}`, true); return; }
-    pick = [];
-    render();
-  }, cpuDelay());
+  if (thinking === S) return;
+  // 考え終わった答えがあれば、考え直さずに指す（演出の後などで呼ばれ直した時）
+  if (ready && ready.state === S) { const th = ready.th; cpuTimer = setTimeout(() => playCpu(S, th), cpuDelay() * 0.5); return; }
+  const state = S, t0 = performance.now(), delay = cpuDelay();
+  thinking = state;
+  const showT = setTimeout(() => { if (thinking === state) setThinking(true); }, 450);
+  think(state).then(r => {
+    clearTimeout(showT);
+    if (thinking === state) thinking = null;
+    setThinking(false);
+    if (S !== state || !S || S.winner !== null) return; // 考えている間に状態が変わった（元に戻す・新しいデュエルなど）
+    if (!r.ok) { console.error(r.error); toast(`CPUのエラー：${r.error}`, true); return; }
+    const th = r.thought;
+    ready = { state, th };
+    cpuTimer = setTimeout(() => playCpu(state, th), Math.max(0, delay - (performance.now() - t0)));
+  });
+}
+let ready = null; // 考え終わった答え { state, th }
+function playCpu(state, th) {
+  if (S !== state) return;
+  ready = null;
+  let next;
+  try { next = applyAction(S, th.action); } catch (e) { console.error(e); toast(`CPUのエラー：${e.message}`, true); return; }
+  if (!state.pending && state.window.kind === 'open' && state.turnPlayer === CPU) trace.push({ turn: state.turn, rate: th.winRate, romance: th.romance });
+  if (th.romance) speakRomance(state, next, th);
+  commit(next);
+  pick = [];
+  render();
+}
+
+/* ---------- CPU の台詞 ---------- */
+let speechT;
+function speak(text, side = 'opp') {
+  const el = $('#speech');
+  if (!el || !text) return;
+  el.querySelector('.speech-who').textContent = side === 'opp' ? NAME(CPU) : NAME(0);
+  el.querySelector('.speech-text').textContent = text;
+  el.dataset.side = side;
+  el.hidden = true; void el.offsetWidth; el.hidden = false;
+  clearTimeout(speechT);
+  speechT = setTimeout(() => { el.hidden = true; }, 2900);
+}
+const cardNameOf = (s, u) => (u !== undefined && u !== null && s.cards[u] ? defOf(s, u).name : '');
+/** p の表側の切り札（台詞の「迎え撃つ」用） */
+function faceUpAce(s, p) {
+  const aces = acesOf(s, p, deckNames()[p]);
+  return monstersOf(s, p).find(u => s.cards[u].faceUp && aces.has(s.cards[u].code));
+}
+function speakRomance(prev, next, th) {
+  const oppAce = faceUpAce(prev, 0);
+  const kind = th.romance === 'ace' ? (oppAce !== undefined ? 'meet' : 'ace') : 'burst';
+  speak(lineFor(deckCodes()[CPU], kind, { ace: cardNameOf(next, th.aceUid) || cardNameOf(prev, th.aceUid), opp: cardNameOf(prev, oppAce) }));
+}
+/** あなたが切り札を出した時、CPU が一言反応する */
+function reactToAce(prev, next) {
+  if (!cpuMode() || next.winner !== null) return;
+  const aces = acesOf(next, 0, deckNames()[0]);
+  const was = new Set(monstersOf(prev, 0).filter(u => prev.cards[u].faceUp).map(u => `${u}:${prev.cards[u].serial}`));
+  const u = monstersOf(next, 0).find(x => next.cards[x].faceUp && aces.has(next.cards[x].code) && !was.has(`${x}:${next.cards[x].serial}`));
+  if (u !== undefined) speak(lineFor(deckCodes()[CPU], 'react', { opp: cardNameOf(next, u) }));
+}
+
+/* ---------- 対戦後の振り返り：CPU から見た勝率の変化 ---------- */
+function showReview() {
+  const pts = trace.filter(x => Number.isFinite(x.rate));
+  const box = $('#reviewBox');
+  const head = '<div class="box-head"><h3 id="reviewTitle">勝率の振り返り（CPUから見た勝率）</h3><button class="btn small ghost" id="reviewClose">閉じる</button></div>';
+  if (pts.length < 2) { box.innerHTML = head + '<p class="menu-note">記録が少ないため、グラフを描けません。</p>'; $('#reviewDlg').hidden = false; return; }
+  const W = 600, H = 220, L = 38, R = 10, T = 12, B = 26;
+  const x = i => L + (W - L - R) * (i / (pts.length - 1)), y = r => T + (H - T - B) * (1 - r);
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.rate).toFixed(1)}`).join('');
+  const area = `${line}L${x(pts.length - 1).toFixed(1)},${y(0)}L${x(0)},${y(0)}Z`;
+  const turns = [...new Set(pts.map(p => p.turn))];
+  const step = Math.ceil(turns.length / 8);
+  const ticks = turns.filter((_, i) => i % step === 0).map(tn => { const i = pts.findIndex(p => p.turn === tn); return `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">T${tn}</text>`; }).join('');
+  const roms = pts.map((p, i) => (p.romance ? `<circle class="rom" cx="${x(i)}" cy="${y(p.rate)}" r="5"><title>T${p.turn}：ロマンの手（勝率${Math.round(p.rate * 100)}%）</title></circle>` : '')).join('');
+  const grid = [0, 0.25, 0.75, 1].map(r => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(r)}" y2="${y(r)}"/><text x="${L - 6}" y="${y(r) + 4}" text-anchor="end">${r * 100}%</text>`).join('');
+  const svg = `<svg class="wr-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="CPUから見た勝率の変化">${grid}`
+    + `<line class="half" x1="${L}" x2="${W - R}" y1="${y(0.5)}" y2="${y(0.5)}"/><text x="${L - 6}" y="${y(0.5) + 4}" text-anchor="end">50%</text>`
+    + `<path class="area" d="${area}"/><path class="ln" d="${line}"/>${roms}${ticks}</svg>`;
+  // 勝率が大きく動いた場面（勝負所）を3つ
+  const swings = pts.slice(1).map((p, i) => ({ turn: p.turn, d: p.rate - pts[i].rate, from: pts[i].rate, to: p.rate }))
+    .sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 3).sort((a, b) => a.turn - b.turn);
+  const pct = r => Math.round(r * 100) + '%';
+  const list = swings.map(w => `<li>T${w.turn}：CPUの勝率 ${pct(w.from)} → <b>${pct(w.to)}</b>（${w.d > 0 ? 'CPUに有利' : 'あなたに有利'}になった場面）</li>`).join('');
+  const nRom = pts.filter(p => p.romance).length;
+  box.innerHTML = head + svg
+    + '<p class="wr-note">● はCPUがロマンの手（切り札・大ダメージ）を選んだ場面。CPUは見えないカードを確率で推測して勝率を見積もっています。</p>'
+    + `<h4>勝率が大きく動いた場面</h4><ol class="wr-list">${list}</ol><p class="wr-note">CPUがロマンを選んだ回数：${nRom}回</p>`;
+  $('#reviewDlg').hidden = false;
 }
 
 /* ---------- 新しいデュエル ---------- */
@@ -283,7 +403,7 @@ function newDuel() {
   const d0 = DECKS[$('#deck0').value] ?? first, d1 = DECKS[$('#deck1').value] ?? first;
   const f = $('#first').value;
   S = createGame({ pool: CARD_POOL, decks: [d0, d1], firstPlayer: f === 'r' ? undefined : Number(f) });
-  history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp];
+  history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp]; trace = []; thinking = null;
   closeMenu();
   render();
 }
@@ -293,6 +413,7 @@ function run(action) {
   if (S.winner === null && isCpu(actorOf(S))) { toast('CPUが考えています'); return; }
   try {
     const next = applyAction(S, action);
+    reactToAce(S, next);
     history.push(S); commit(next); pick = []; peek = false;
     // スマホでは、操作したらシートを閉じて盤面に戻る
     if (narrow() && sheet === 'detail') { sheet = null; selected = null; }
@@ -304,7 +425,7 @@ function run(action) {
   }
 }
 // CPU の行動は記録しないので、元に戻すと自分が前に判断した場面まで戻る
-function undo() { if (!history.length) return; clearTimeout(cpuTimer); S = history.pop(); pick = []; render(); }
+function undo() { if (!history.length) return; clearTimeout(cpuTimer); closeFan(); S = history.pop(); pick = []; render(); }
 
 let toastT;
 function toast(msg, bad) {
@@ -429,9 +550,31 @@ function renderBoard() {
   ];
   $('#board').innerHTML = rows.map((r, i) => `<div class="row r${i}">${r}</div>`).join('');
 }
+/* ---------- 手札の並べ替え（自分の手札だけ。CPUの手札は並べ替えると種類が分かってしまうので、来た順のまま） ----------
+ * モンスター（レベルの低い順）→ 儀式・特殊召喚系のモンスター → 魔法（通常・永続・装備・フィールド・儀式・速攻）→ 罠（通常・永続・カウンター）。
+ * 同じ並びの中は、攻撃力の低い順 → 名前順 */
+const SPELL_ORDER = { 通常: 0, 永続: 1, 装備: 2, フィールド: 3, 儀式: 4, 速攻: 5 };
+const TRAP_ORDER = { 通常: 0, 永続: 1, カウンター: 2 };
+function handKey(s, u) {
+  const d = defOf(s, u), sc = SCRIPTS[s.cards[u].code] || {};
+  if (d.kind === 'monster') {
+    const special = d.frame === 'ritual' || d.frame === 'fusion' || !!sc.cannotNormalSummon;
+    return [special ? 1 : 0, d.level ?? 0, d.atk ?? 0];
+  }
+  if (d.kind === 'spell') return [2, SPELL_ORDER[d.subtype] ?? 3, 0];
+  return [3, TRAP_ORDER[d.subtype] ?? 1, 0];
+}
+function sortHand(s, uids) {
+  return [...uids].sort((a, b) => {
+    const x = handKey(s, a), y = handKey(s, b);
+    for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] - y[i];
+    return defOf(s, a).name.localeCompare(defOf(s, b).name, 'ja') || a - b;
+  });
+}
+const sortsHand = p => !isCpu(p);
 function renderHand(p) {
   const hide = cpuMode() ? p === CPU : $('#hideOpp').checked && p !== actorOf(S);
-  const h = S.players[p].hand;
+  const h = sortsHand(p) ? sortHand(S, S.players[p].hand) : S.players[p].hand;
   return h.length ? h.map(u => cardHtml(u, { hidden: hide })).join('') : '<span class="empty">手札なし</span>';
 }
 function renderSide() {
@@ -552,6 +695,7 @@ function renderDock() {
   $('#stopBtn').hidden = chainMode() === 'always' || S.winner !== null;
   $('#stopBtn').setAttribute('aria-pressed', String(stopNext));
 
+  const rb = $('#reviewBtn'); if (rb) rb.hidden = !(S.winner !== null && cpuMode() && trace.length > 1);
   if (S.winner !== null) {
     actor.textContent = S.winner === 'draw' ? '引き分け' : `${NAME(S.winner)}の勝利`;
     hint.textContent = S.winReason || '';
@@ -829,7 +973,7 @@ function openFan() {
   layer.className = 'fan-layer';
   const range = r.min === r.max ? `${r.min}枚選ぶ` : `${r.min}〜${r.max}枚選ぶ`;
   layer.innerHTML = `<div class="fan-head"><b>${esc(r.prompt)}</b><span>${src === 'hand' ? '手札' : '山札'} ${all.length}枚から${range}（明るいカードが選べます）</span></div><div class="fan-area"></div>`
-    + `<div class="fan-btns">${r.min === 0 ? '<button class="btn" data-fanskip>選ばない</button>' : ''}${r.max > 1 ? '<button class="btn primary" data-fanok disabled>決定</button>' : ''}</div>`;
+    + `<div class="fan-btns">${history.length ? '<button class="btn ghost" data-fanundo aria-label="元に戻す">↶ 元に戻す</button>' : ''}${r.min === 0 ? '<button class="btn" data-fanskip>選ばない</button>' : ''}${r.max > 1 ? '<button class="btn primary" data-fanok disabled>決定</button>' : ''}</div>`;
   $('.droot').appendChild(layer);
   const area = layer.querySelector('.fan-area');
   area.innerHTML = all.map(u => fanCardHtml(u, false)).join('');
@@ -935,6 +1079,70 @@ async function handOpenFx(j) {
   layer.remove();
 }
 
+/* ---------- 手札に加わった時：残りの手札を左に扇で、加わったカードを右に置いて大きく見せ、並べ替えてから手札へ ---------- */
+async function handAddFx(j) {
+  const hand = $(`#hand${j.p}`);
+  if (!hand) return;
+  const pause = ms => new Promise(res => setTimeout(res, fanDur(ms)));
+  const layer = document.createElement('div');
+  layer.className = 'fan-layer cpu hand-add';
+  const names = j.added.map(u => `「${j.ds[u].name}」`).join('');
+  const verb = j.drew ? 'ドロー' : '手札に加えた';
+  layer.innerHTML = `<div class="fan-head"><b>${esc(verb)}：${esc(names)}</b><span>手札 ${j.kept.length + j.added.length}枚</span></div><div class="fan-area"></div>`;
+  $('.droot').appendChild(layer);
+  const area = layer.querySelector('.fan-area');
+  const face = u => `<span class="${faceCls(j.ds[u])}${j.added.includes(u) ? ' new' : ''}" data-fan="${u}">${faceHtml(u, j.ds[u], false)}</span>`;
+  const order0 = [...j.kept, ...j.added];
+  area.innerHTML = order0.map(face).join('');
+  const els = [...area.children];
+  const elOf = u => els.find(el => Number(el.dataset.fan) === u);
+  // 残りの手札は扇（左）、加わったカードは少し離して右に、大きく
+  layoutHandAdd(area, j.kept.map(elOf), j.added.map(elOf));
+  const deck = pileEl(j.p, 'deck');
+  await Promise.all([
+    flyIn(j.kept.map(elOf), centerOf(rectOf(hand))),
+    flyIn(j.added.map(elOf), centerOf(rectOf(j.drew && deck ? deck : hand))),
+  ]);
+  await pause(900);
+  // 並べ替え：今の位置を覚えて並べ直し、そこから動かす（FLIP）
+  const sorted = sortHand(S, order0).filter(u => order0.includes(u)).map(elOf);
+  const before = new Map(els.map(el => [el, rectOf(el)]));
+  layoutFan(area, sorted, true);
+  await Promise.all(sorted.map((el, i) => {
+    const b = before.get(el), r = rectOf(el);
+    return el.animate([{ transform: `translate(${b.left - r.left}px,${b.top - r.top}px)` }, { transform: `rotate(${el.dataset.rot}deg)` }],
+      { duration: fanDur(480), delay: fanDur(i * 18), easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }).finished;
+  }));
+  await pause(450);
+  const to = centerOf(rectOf(hand));
+  await Promise.all(sorted.map((el, i) => flyTo(el, to, { dur: 380, delay: Math.min(i * 14, 200), scale: .55, ease: 'ease-in', fade: true })));
+  layer.remove();
+}
+/** 残りの手札（左の扇）と加わったカード（右）を並べる */
+function layoutHandAdd(area, kept, added) {
+  const W = area.clientWidth, cw = narrow() ? 76 : 100, ch = cw * 86 / 59;
+  const nk = kept.length, na = added.length;
+  const right = Math.min(W - 8, W / 2 + (na * cw * .8 + nk * cw * .38) / 2 + cw * .3);
+  // 加わったカード：右端から並べる
+  added.forEach((el, i) => {
+    const x = right - cw / 2 - (na - 1 - i) * cw * .82;
+    place(el, x, ch / 2 + 22, 0, 50 + i);
+  });
+  // 残りの手札：加わったカードの左に扇形
+  const leftEdge = Math.max(cw / 2 + 4, right - na * cw * .82 - cw * .35 - nk * cw * .42);
+  const end = right - na * cw * .82 - cw * .45;
+  nk && kept.forEach((el, i) => {
+    const t = nk > 1 ? i / (nk - 1) : 1, x = leftEdge + (end - leftEdge) * t, rot = (t - .5) * 18;
+    place(el, x, ch / 2 + 30 + (t - .5) ** 2 * 30, rot, i + 1);
+  });
+  area.style.height = (ch + 60) + 'px';
+  function place(el, x, y, rot, z) {
+    el.style.width = cw + 'px'; el.style.fontSize = (cw / 8).toFixed(1) + 'px';
+    el.style.left = (x - cw / 2) + 'px'; el.style.top = (y - ch / 2) + 'px';
+    el.style.setProperty('--rot', rot.toFixed(1) + 'deg'); el.dataset.rot = rot.toFixed(1); el.style.zIndex = String(z);
+  }
+}
+
 /* ---------- CPUのサーチ：裏面の扇から1枚を見せて、手札へ ---------- */
 async function cpuSearchFx(j) {
   const pile = pileEl(j.p, 'deck'), hand = $(`#hand${j.p}`);
@@ -1003,6 +1211,17 @@ function queueMoves(prev, next) {
     if (x.kind === 'summon') (x.mats || []).forEach(m => { if (x.how === 'fusion' || x.how === 'ritual' || x.how === 'advance') skip.add(m); });
     if (x.kind === 'battle') x.destroyed.forEach(u => skip.add(u));
   }
+  // 自分の手札に加わったカード（ドロー・サーチなど）：引いたカードを右、残りの手札を左に扇で広げて大きく見せてから並べ替える
+  for (const p of [0, 1]) {
+    if (!sortsHand(p)) continue;
+    const added = next.players[p].hand.filter(u => !prev.players[p].hand.includes(u) && prev.cards[u] && !fanDoneUids.has(u));
+    if (!added.length) continue;
+    const from = Object.fromEntries(added.map(u => [u, prev.cards[u].zone]));
+    const kept = sortHand(prev, prev.players[p].hand.filter(u => next.players[p].hand.includes(u)));
+    pendingSummons.push({ handAdd: true, p, kept, added, from, drew: added.every(u => from[u] === 'deck') && (next.anim || []).every(x => !(x.kind === 'search' && added.includes(x.uid))),
+      ds: Object.fromEntries([...kept, ...added].map(u => [u, defOf(next, u)])) });
+    added.forEach(u => skip.add(u));
+  }
   const negs = new Set(fresh.filter(x => x.kind === 'negate').map(x => x.uid));
   const destroys = new Set(fresh.filter(x => x.kind === 'destroy').map(x => x.uid));
   const moves = [];
@@ -1049,7 +1268,7 @@ function ghost(m, rect) {
 /** カード1枚を、前の場所から今の場所へ飛ばす */
 async function flyOne(m, P, i) {
   // これから召喚の演出をするカードは、ここでは飛ばさない（演出が始まるまで見えないままにする）
-  if (pendingSummons.some(j => j && j.uid === m.u && !j.search && !j.handOpen)) {
+  if (pendingSummons.some(j => j && j.uid === m.u && !j.search && !j.handOpen && !j.handAdd)) {
     const el = ROOT.querySelector(`#board [data-uid="${m.u}"]`); if (el) el.style.visibility = 'hidden';
     return;
   }
@@ -1272,7 +1491,7 @@ function render() {
   canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
   renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets(); autoTray(); checkPachi();
   // これから召喚の演出をするカードは、演出が始まるまで盤面に出さない（先に置かれてから巻き戻って見えないように）
-  for (const j of pendingSummons) if (j && j.uid != null && !j.search && !j.handOpen) { const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`); if (el) el.style.visibility = 'hidden'; }
+  for (const j of pendingSummons) if (j && j.uid != null && !j.search && !j.handOpen && !j.handAdd) { const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`); if (el) el.style.visibility = 'hidden'; }
   $('#result').hidden = S.winner === null;
   if (S.winner !== null) $('#result').textContent = S.winner === 'draw' ? `引き分け：${S.winReason}` : `${NAME(S.winner)}の勝利：${S.winReason}`;
   // カードの移動・召喚の演出があれば、それが終わるまでCPUの手番と自動パスを待つ
@@ -1292,7 +1511,7 @@ function saveSoon() {
   saveT = setTimeout(() => {
     try {
       if (!S || S.winner !== null) localStorage.removeItem(OPTS.storageKey);
-      else localStorage.setItem(OPTS.storageKey, JSON.stringify({ v: SAVE_V, S, mode: $('#mode').value, d0: $('#deck0').value, d1: $('#deck1').value }));
+      else localStorage.setItem(OPTS.storageKey, JSON.stringify({ v: SAVE_V, S, trace, mode: $('#mode').value, d0: $('#deck0').value, d1: $('#deck1').value }));
     } catch { /* 保存できない環境では覚えない */ }
   }, 400);
 }
@@ -1418,6 +1637,7 @@ root.addEventListener('click', e => {
   const t = e.target;
   if (t.closest('[data-fanok]')) { if (fan) fanFinish(fan.sel); return; }
   if (t.closest('[data-fanskip]')) { fanFinish([]); return; }
+  if (t.closest('[data-fanundo]')) { closeFan(); undo(); return; }
   const fanEl = t.closest('[data-fan]');
   if (fanEl) {
     const fu = Number(fanEl.dataset.fan);
@@ -1427,6 +1647,8 @@ root.addEventListener('click', e => {
   if (t.closest('#again') || t.closest('[data-again="1"]')) { newDuel(); return; }
   if (t.closest('[data-reopen="1"]')) { peek = false; render(); return; }
   if (t.closest('#stopBtn')) { stopNext = !stopNext; renderDock(); return; }
+  if (t.closest('#reviewBtn')) { showReview(); return; }
+  if (t.closest('#reviewClose') || t.id === 'reviewDlg') { $('#reviewDlg').hidden = true; return; }
   if (t.closest('#closeDuel')) { clearTimeout(cpuTimer); OPTS.onClose?.(); return; }
   if (t.closest('#reopen')) { peek = false; render(); return; }
   if (t.closest('[data-close]') || t.id === 'scrim') { closeSheets(); return; }
@@ -1540,7 +1762,7 @@ export function boot(root, opts = {}) {
     $('#hideOppRow').hidden = cpuMode();
     showDeckFmt();
     if (data && data.S && (data.v === 4 || data.v === SAVE_V)) {
-      try { S = data.S; history = data.history || []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); return; }
+      try { S = data.S; history = data.history || []; trace = Array.isArray(data.trace) ? data.trace : []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); return; }
       catch (e) { console.warn('保存していたデュエルを開けませんでした', e); }
     }
     newDuel();
@@ -1548,7 +1770,7 @@ export function boot(root, opts = {}) {
     if (opts.menuFirst) openMenu();
   };
   // 動作確認用：開発者ツールから状態を読み書きできるようにする
-  window.__duel = { get state() { return S; }, load(s) { clearTimeout(cpuTimer); S = s; history = []; selected = null; pick = []; lastLp = [s.players[0].lp, s.players[1].lp]; render(); } };
+  window.__duel = { get state() { return S; }, speak(t) { speak(t); }, act(a) { run(a); }, review(tr) { if (tr) trace = tr; showReview(); }, get cpu() { return { thinking: thinking === S, ready: !!ready, waiting: waiting.size, worker: !!worker, workerBroken, timer: cpuTimer, trace: trace.length }; }, load(s) { clearTimeout(cpuTimer); S = s; history = []; selected = null; pick = []; lastLp = [s.players[0].lp, s.players[1].lp]; render(); } };
   if (opts.standalone) {
     window.claude?.hot?.snapshot?.(() => ({ v: 4, S, history: history.slice(-30), mode: $('#mode').value }));
     window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});

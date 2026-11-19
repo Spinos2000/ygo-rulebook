@@ -2,7 +2,7 @@
 // 考え方：候補の行動を1つずつ試し、その先を自分の次の判断の場面まで進め、盤面を点数にして一番高いものを選ぶ。
 // 点数には公開情報だけを使う（相手の手札・裏側のカード・デッキの中身は見ない）。
 // 先読みの中の相手は、表側でフィールドにあるカード（公開情報）の効果だけを使うと考える。
-import { applyAction, legalActions, validateAnswer, actorOf, defOf, monstersOf, spellTrapsOf, currentStats, canAttack, opp, isOnField, couldAttackNextBattle } from '../engine/game.js';
+import { applyAction, legalActions, validateAnswer, actorOf, defOf, monstersOf, spellTrapsOf, currentStats, canAttack, opp, isOnField, couldAttackNextBattle, scriptOf, isFaceUpMonster, monsterNegated } from '../engine/game.js';
                                                                                      
 
 /** 盤面の点数の重み（scripts/cpu-tune.mjs で CPU 同士を対戦させて調整した値） */
@@ -25,6 +25,7 @@ export const DEFAULT_WEIGHTS = {
   gyProper: 60,         // 墓地の正規の召喚をした儀式・融合モンスター
   threatW: 0.5,         // 相手の次のバトルで受ける損害（LPと倒されるモンスター）の重み。相手の手札・伏せカードで変わるので割り引く
   lethal: 20000,        // 相手の場のモンスターだけで次のバトルで負ける盤面の減点
+  doomed: 0.15,         // エンドフェイズに全て破壊される（ユベル－Das Abscheulich Ritter など）モンスターの価値の割合
   margin: 30,           // これ以上良くならない行動はしない
   previewMix: 0,        // メインフェイズ1の判断で、その後のバトルの結果をどれだけ混ぜるか（0〜1）
 };
@@ -38,6 +39,8 @@ export const DEFAULT_WEIGHTS = {
                                          
                      
                              
+                                                                
+                         
  
 
 /* ===================== 盤面の点数 ===================== */
@@ -70,9 +73,14 @@ const handCardValue = (s           , uid        , w         ) => {
  * 自分のモンスターがいなくなったら残りはダイレクトアタックする。裏側のモンスターは、相手から見えないので守備力1500とみなす
  */
 export function battleThreat(s           , p          , viewer          )                                     {
-  const attackers = monstersOf(s, opp(p)).filter(u => couldAttackNextBattle(s, u)).map(u => currentStats(s, u).atk).sort((a, b) => b - a);
-  const blockers = monstersOf(s, p).map(u => {
+  // エンドフェイズに全て破壊されるモンスターは、次のバトルまで残らない
+  const wipers = endWipers(s);
+  const doomed = (u        ) => wipers.some(x => x !== u);
+  const attackers = monstersOf(s, opp(p)).filter(u => couldAttackNextBattle(s, u) && !doomed(u)).map(u => currentStats(s, u).atk).sort((a, b) => b - a);
+  const blockers = monstersOf(s, p).filter(u => !doomed(u)).map(u => {
     const c = s.cards[u];
+    // 戦闘では破壊されないモンスターは倒せない（攻撃しない）
+    if (c.faceUp && scriptOf(s, u).battleIndestructible) return { u, atkPos: false, v: Infinity };
     if (!c.faceUp) return { u, atkPos: false, v: viewer === p ? (defOf(s, u).def ?? 0) : 1500 };
     const st = currentStats(s, u);
     return c.position === 'atk' ? { u, atkPos: true, v: st.atk } : { u, atkPos: false, v: st.def };
@@ -91,6 +99,11 @@ export function battleThreat(s           , p          , viewer          )       
     blockers.splice(pick, 1);
   }
   return { damage, lost };
+}
+
+/** エンドフェイズに自分以外のモンスターを全て破壊するカード（ユベル－Das Abscheulich Ritter など）。表側で効果が無効になっていないもの */
+function endWipers(s           )           {
+  return [...monstersOf(s, 0), ...monstersOf(s, 1)].filter(u => isFaceUpMonster(s, u) && scriptOf(s, u).endWipe && !monsterNegated(s, u));
 }
 
 /** 相手の次のバトルで受ける損害の見積もり（LPの減少と、倒されるモンスターの価値） */
@@ -112,11 +125,14 @@ export function evaluate(s           , viewer          , weights                
 function evalW(s           , viewer          , w         )         {
   if (s.winner !== null) return s.winner === viewer ? WIN : -WIN;
   let score = 0;
+  // エンドフェイズに自分以外のモンスターを全て破壊するカード：それ以外のモンスターは、もうすぐ消えるので価値を割り引く
+  const wipers = endWipers(s);
   for (const p of [0, 1]              ) {
     const sign = p === viewer ? 1 : -1;
     const pl = s.players[p];
     let v = 8000 * (1 - Math.exp(-pl.lp / w.lpScale));
-    for (const u of [...monstersOf(s, p), ...spellTrapsOf(s, p)]) v += cardValueOnField(s, u, viewer, w);
+    for (const u of monstersOf(s, p)) v += cardValueOnField(s, u, viewer, w) * (wipers.some(x => x !== u) ? w.doomed : 1);
+    for (const u of spellTrapsOf(s, p)) v += cardValueOnField(s, u, viewer, w);
     v += p === viewer ? pl.hand.reduce((a, u) => a + handCardValue(s, u, w), 0) : pl.hand.length * w.oppHand;
     for (const u of pl.gy) {
       const d = defOf(s, u);
@@ -170,7 +186,8 @@ const isFreeDecision = (s           ) => !s.pending && s.window.kind === 'open' 
 class Thinker {
   w         ;
   me          ;
-  constructor(w         , me          ) { this.w = w; this.me = me; }
+  full         ;
+  constructor(w         , me          , full = false) { this.w = w; this.me = me; this.full = full; }
 
   score(s           , viewer           = this.me)         { return evalW(s, viewer, this.w); }
 
@@ -195,7 +212,7 @@ class Thinker {
 
   /** 先読みの中の相手の応答：表側のフィールドのカードの効果を使うと良くなるなら使う */
   opponentReply(s           , p          )         {
-    const pub = legalActions(s).filter(a => a.type === 'activate' && isOnField(s.cards[a.card]) && s.cards[a.card].faceUp);
+    const pub = legalActions(s).filter(a => a.type === 'activate' && (this.full || (isOnField(s.cards[a.card]) && s.cards[a.card].faceUp)));
     if (!pub.length) return { type: 'pass' };
     const t = (a        ) => { try { return this.score(this.rollout(applyAction(s, a), p, -1, s.turn), p); } catch { return -Infinity; } };
     let best         = { type: 'pass' }, bestScore = t(best) + this.w.margin;
@@ -278,53 +295,73 @@ function phaseAdvance(s           , acts          )                {
   return acts.find(a => a.type === 'endTurn') ?? null;
 }
 
-/** 今の手番で CPU が取る行動（選択待ちなら答え） */
-export function cpuDecide(s           , opt             = {})         {
+/** 候補と点数。base：何もしない（パス・フェイズを進める）場合の行動。点数は先読み後の盤面の点数 */
+                                                                            
+                                                                                  
+
+/** 今の手番の候補を全て点数にする（選択待ちなら答えの候補） */
+export function scoreCandidates(s           , opt             = {})            {
   const me = actorOf(s);
   const depth = opt.depth ?? 1;
-  const T = new Thinker({ ...DEFAULT_WEIGHTS, ...opt.weights }, me);
-  if (s.pending) return { type: 'answer', value: T.bestAnswer(s, me, depth) };
+  const T = new Thinker({ ...DEFAULT_WEIGHTS, ...opt.weights }, me, !!opt.fullOpponent);
+  const margin = T.w.margin;
+  if (s.pending) {
+    const list           = [];
+    for (const v of answerCandidates(s, s.pending.request)) {
+      try { const after = T.rollout(applyAction(s, { type: 'answer', value: v }), me, depth, s.turn); list.push({ action: { type: 'answer', value: v }, score: T.score(after, me), after }); } catch { /* 選べない答え */ }
+    }
+    return { list, base: null, margin: 0 };
+  }
 
   const acts = legalActions(s);
   if (!acts.length) throw new Error('行動がありません');
   const turn = s.turn;
-  const score = (a        )         => {
-    try { return T.score(T.rollout(applyAction(s, a), me, depth, turn)); } catch { return -Infinity; }
+  const one = (a        )         => {
+    try { const after = T.rollout(applyAction(s, a), me, depth, turn); return { action: a, score: T.score(after), after }; } catch { return { action: a, score: -Infinity }; }
   };
 
   if (s.window.kind === 'priority') {
-    let best         = { type: 'pass' }, bestScore = score(best) + T.w.margin;
-    for (const a of acts) {
-      if (a.type === 'pass') continue;
-      const sc = score(a);
-      if (sc > bestScore) { bestScore = sc; best = a; }
-    }
-    return best;
+    const list = acts.filter(a => a.type !== 'pass').map(one);
+    return { list, base: one({ type: 'pass' }), margin };
   }
 
   const advance = phaseAdvance(s, acts);
   const preview = T.w.previewMix > 0 && s.phase === 'main1' && s.turn > 1;
   const plan = (s.phase === 'main1' || s.phase === 'main2') ? (opt.planSteps ?? 3) : 0;
   const scoreMain = (a        )         => {
-    if (a.type === 'nextPhase') return score(a);
+    if (a.type === 'nextPhase') return one(a);
     try {
       const n = T.rollout(applyAction(s, a), me, depth, turn);
-      if (preview) return T.withBattlePreview(n, turn);
-      return plan > 0 ? T.continuePlan(n, turn, plan, depth) : T.score(n);
-    } catch { return -Infinity; }
+      const score = preview ? T.withBattlePreview(n, turn) : plan > 0 ? T.continuePlan(n, turn, plan, depth) : T.score(n);
+      return { action: a, score, after: n };
+    } catch { return { action: a, score: -Infinity }; }
   };
   // フェイズを進める行動も、同じ物差し（バトルの結果込み）で比べる
-  const base = advance ? (preview && advance.type === 'nextPhase' && advance.to === 'battle' ? T.withBattlePreview(s, turn) : score(advance)) : -Infinity;
+  const base                = advance ? (preview && advance.type === 'nextPhase' && advance.to === 'battle' ? { action: advance, score: T.withBattlePreview(s, turn) } : one(advance)) : null;
   let plays = acts.filter(a => a.type !== 'nextPhase' && a.type !== 'endTurn');
   // バトルフェイズに入る前は、罠・魔法のセットを後回しにする（バトルの結果を見てからメインフェイズ2でセットする）
   if (s.phase === 'main1' && advance?.type === 'nextPhase' && advance.to === 'battle') plays = plays.filter(a => a.type !== 'setSpellTrap');
   plays = plays.slice(0, opt.maxCandidates ?? 60);
-  let best                = null, bestScore = base + T.w.margin;
-  for (const a of plays) {
-    const sc = scoreMain(a);
-    if (sc > bestScore) { bestScore = sc; best = a; }
+  return { list: plays.map(scoreMain), base: base ?? (acts[0] ? { action: acts[0], score: -Infinity } : null), margin };
+}
+
+/** 点数の一番高い行動（何もしない行動は margin だけ有利に扱う） */
+export function pickBest(set           )         {
+  let best = set.base, bestScore = set.base ? set.base.score + set.margin : -Infinity;
+  for (const c of set.list) if (c.score > bestScore) { bestScore = c.score; best = c; }
+  if (!best) throw new Error('行動がありません');
+  return best.action;
+}
+
+/** 今の手番で CPU が取る行動（選択待ちなら答え） */
+export function cpuDecide(s           , opt             = {})         {
+  const set = scoreCandidates(s, opt);
+  if (s.pending) {
+    let best = set.list[0], bs = -Infinity;
+    for (const c of set.list) if (c.score > bs) { bs = c.score; best = c; }
+    return best ? best.action : { type: 'answer', value: defaultAnswer(s, s.pending.request) };
   }
-  return best ?? advance ?? acts[0];
+  return pickBest(set);
 }
 
 /** 自由に行動できる場面での各候補の点数（調査用） */
