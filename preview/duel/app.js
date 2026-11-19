@@ -968,7 +968,7 @@ function openFan() {
   const r = S.pending.request, key = JSON.stringify([S.step, r.prompt, r.options, S.pending.answers.length]);
   if (fan && fan.key === key) return;
   closeFan();
-  const p = r.player, src = fanSrc(r), all = src === 'hand' ? [...S.players[p].hand] : sortForFan(S.players[p].deck);
+  const p = r.player, src = fanSrc(r), all = src === 'hand' ? (sortsHand(p) ? sortHand(S, S.players[p].hand) : [...S.players[p].hand]) : sortForFan(S.players[p].deck);
   const layer = document.createElement('div');
   layer.className = 'fan-layer';
   const range = r.min === r.max ? `${r.min}枚選ぶ` : `${r.min}〜${r.max}枚選ぶ`;
@@ -1216,6 +1216,8 @@ function queueMoves(prev, next) {
     if (!sortsHand(p)) continue;
     const added = next.players[p].hand.filter(u => !prev.players[p].hand.includes(u) && prev.cards[u] && !fanDoneUids.has(u));
     if (!added.length) continue;
+    // 引いた直後に手札から選ぶ（暗黒界の取引など）時は、選ぶ画面に手札が全部出るので、この演出はしない
+    if (next.pending && next.pending.request.player === p && fanSrc(next.pending.request) === 'hand') { added.forEach(u => skip.add(u)); continue; }
     const from = Object.fromEntries(added.map(u => [u, prev.cards[u].zone]));
     const kept = sortHand(prev, prev.players[p].hand.filter(u => next.players[p].hand.includes(u)));
     pendingSummons.push({ handAdd: true, p, kept, added, from, drew: added.every(u => from[u] === 'deck') && (next.anim || []).every(x => !(x.kind === 'search' && added.includes(x.uid))),
