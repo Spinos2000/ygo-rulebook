@@ -87,6 +87,12 @@ const SOUNDS = {
   destroy: s => { noise(s, 0.45, { gain: 0.45, freq: 2500, to: 200 }); tone(90, s, 0.3, { type: 'triangle', gain: 0.3, to: 45 }); },
   // 無効：下がるブザー
   negate: s => { tone(440, s, 0.35, { type: 'sawtooth', gain: 0.18, to: 140 }); tone(445, s, 0.35, { type: 'square', gain: 0.1, to: 145 }); },
+  // シャカパチ：カードをはじく乾いた音を細かく
+  pachi: s => { [0, .07, .12, .2, .26, .34, .4, .47].forEach((d, i) => { const f = 1400 + (i % 3) * 300; noise(s + d, 0.045, { gain: 0.55 - i * 0.03, filter: 'bandpass', freq: f, q: 0.9 }); noise(s + d + 0.011, 0.03, { gain: 0.25, filter: 'bandpass', freq: f * 1.6, q: 1.2 }); }); },
+  // シャカパチの1枚ぶん
+  pachi1: s => { const f = 1500 + Math.random() * 700; noise(s, 0.045, { gain: 0.6, filter: 'bandpass', freq: f, q: 0.9 }); noise(s + 0.011, 0.03, { gain: 0.28, filter: 'bandpass', freq: f * 1.6, q: 1.2 }); noise(s, 0.02, { gain: 0.18, filter: 'lowpass', freq: 500 }); },
+  // 対象を選んだ：照準が合う音
+  target: s => { tone(1320, s, 0.05, { type: 'square', gain: 0.12 }); tone(1760, s + 0.06, 0.08, { type: 'square', gain: 0.12 }); noise(s + 0.06, 0.08, { gain: 0.15, filter: 'highpass', freq: 4000 }); },
   // ドロー：小さな音
   draw: s => { noise(s, 0.05, { gain: 0.2, filter: 'highpass', freq: 2500 }); },
   // 勝利・敗北

@@ -1376,6 +1376,7 @@ function activateEffect(s           , p          , uid        , effectId        
   log(s, `${pl(p)}：${nameOf(s, uid)}${eff.type === 'card' && !dg ? 'を発動' : `の効果を発動`}（チェーン${s.chain.length + 1}）`);
   // このターンに効果を発動した記録（混沌帝龍：「このカードの効果を発動するターン、自分は他の効果を発動できない」）
   (s.activatedTurn ??= {})[String(p)] = s.turn;
+  if (s.activatedFirst?.[String(p)]?.turn !== s.turn) (s.activatedFirst ??= {})[String(p)] = { turn: s.turn, uid };
   if (scriptOf(s, uid).exclusive) addLingering(s, { type: 'onlyThisCard', player: p, uid, turn: s.turn });
   s.activating = p;
   // ダイヤモンドガイで墓地の通常魔法の効果を発動する場合、カードの発動のコストは払わない（公式Q&A [6392]）
@@ -1923,6 +1924,14 @@ function mainActions(s           )           {
             if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
             if (!scriptOf(s, uid).cannotSet && n < 3) acts.push({ type: 'setMonster', card: uid, tributes: tr }); // 3体リリースの方法は表側表示の召喚のみ（神獣王バルバロス）
           }
+          // 帝王の烈旋：リリースのうち1体を相手のモンスターにできる（例：バルバロスを自分2体＋相手1体の3体リリースで召喚）
+          if (s.lingering.some(l => l.type === 'tributeOpp' && l.player === p && l.turn === s.turn)) {
+            for (const n of opts.filter(k => k > 0)) for (const o of monstersOf(s, opp(p)).filter(u => releasable(s, u))) for (const tr of combos(myMons.filter(u => !scriptOf(s, u).noAdvanceTribute && releasable(s, u)), n - 1)) {
+              if (!freeMZones(s, p, tr).length) continue;
+              if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: [...tr, o] });
+              if (!scriptOf(s, uid).cannotSet && n < 3) acts.push({ type: 'setMonster', card: uid, tributes: [...tr, o] });
+            }
+          }
           continue;
         }
         for (const aid of activeCards(s).map(u => scriptOf(s, u).tributeAid?.(s, u, uid, p)).filter(Boolean)) {
@@ -2069,6 +2078,10 @@ function explainIllegal(s           , a        )         {
       if (eff.ss === 1 && (actorOf(s) !== p || !isMain(ph))) return 'スペルスピード1の効果は自分のメインフェイズにしか発動できません';
       if (!optAvailable(s, a.card, eff, actorOf(s))) return 'この効果は1ターンに1度しか使えません';
       if (activationBlockedByName(s, a.card, actorOf(s))) return 'このターン、このカード名の効果は発動できません';
+      // 混沌帝龍：「このカードの効果を発動するターン、自分は他の効果を発動できない」
+      { const q = actorOf(s), only = s.lingering.find(l => l.type === 'onlyThisCard' && l.player === q && l.turn === s.turn && l.uid !== a.card);
+        if (only) return `このターンは「${nameOf(s, only.uid )}」の効果を発動したので、他の効果は発動できません`;
+        if (scriptOf(s, a.card).exclusive && s.activatedTurn?.[String(q)] === s.turn) { const f = s.activatedFirst?.[String(q)]; return `このターンはすでに${f && f.turn === s.turn ? `「${nameOf(s, f.uid)}」` : '他のカード'}の効果を発動しているので、「${nameOf(s, a.card)}」の効果は発動できません（このカードの効果を発動するターン、自分は他の効果を発動できない）`; } }
       return '今は発動条件を満たしていません';
     }
     case 'nextPhase':

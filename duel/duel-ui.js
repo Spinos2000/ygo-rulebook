@@ -125,7 +125,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* 相手の手札：画面の上に、裏面を逆向きの扇形で小さく */
 .hand.opp { --cw: 40px; height: calc(var(--ch) * .62); margin-bottom: 0 }
 .hand.opp .card { bottom: auto; top: calc(var(--ch) * -.38); font-size: 0; transform-origin: 50% -60%; transform: translate(var(--tx, 0px), calc(var(--ty, 0px) * -1)) rotate(calc(var(--rot, 0deg) * -1)) }
-.pstrip.me { position: relative; z-index: 5 }
+.pstrip.me, .pstrip.opp { position: relative; z-index: 5 }
 .empty { font-size: 12px; color: var(--sub); align-self: center; padding: 4px }
 
 /* ---------- デュエルマット ---------- */
@@ -228,8 +228,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* 下の段：左に発動などのボタン、右下に場面を先に進める「進む」ボタン（いつも同じ場所） */
 .dock-acts { grid-column: 1 / -1; display: flex; gap: 8px; align-items: stretch }
 #phaseBtns { flex: 1; min-width: 0; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end }
-.btn.go { flex: none; width: clamp(150px, 34%, 240px); min-height: 52px; font-size: 16px; white-space: normal; line-height: 1.25; flex-direction: column; gap: 0 }
-.btn.go small { display: block; font-size: 11px; font-weight: 500; opacity: .8 }
+#goBtn { flex: none; width: clamp(150px, 34%, 240px); min-height: 52px; font-size: 16px; white-space: normal; line-height: 1.25; flex-direction: column; gap: 0 }
+#goBtn small { display: block; font-size: 11px; font-weight: 500; opacity: .8 }
 #stopBtn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
 #phaseBtns .btn { white-space: normal; text-align: center; line-height: 1.3 }
 #soundBtn[aria-pressed="false"] { color: var(--sub); text-decoration: line-through }
@@ -246,7 +246,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #detail .tx { margin: 8px 0 0; font-size: 13px; white-space: pre-wrap; max-height: 200px; overflow: auto; border-top: 1px solid var(--line); padding-top: 8px }
 #detail .prompt { margin: 4px 0 8px; font-weight: 700; font-size: 15px }
 .acts { display: flex; flex-direction: column; gap: 8px; margin-top: 12px }
-.acts .act { justify-content: flex-start; text-align: left; min-height: 44px; white-space: normal }
+.acts .act { justify-content: flex-start; text-align: left; min-height: 44px; white-space: normal; width: 100%; max-width: none; flex: none }
+.acts.row2 .act { width: auto; flex: 1 }
 .acts .act.go { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
 .acts .act.off { opacity: .45; border-style: dashed }
 .acts .info { margin: 0; font-size: 12px; color: var(--sub); background: var(--panel-2); border-radius: 8px; padding: 6px 10px }
@@ -338,13 +339,29 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .card { font-size: clamp(6px, 2vw, 9px) }
   .droot { padding-bottom: 0 }
   /* ドックは画面の一番下に固定し、その分だけ下に余白をとる */
-  .droot { --dock-h: 130px }
-  .table { padding-bottom: 150px }
+  .table { padding-bottom: calc(var(--dock-h) + 12px) }
+  /* 自分のLPは盤面のすぐ下に出す（手札の下だとドックに隠れやすい） */
+  #side1 { order: 1 } #hand1 { order: 2 } #board { order: 3 } #result { order: 4 } #chain { order: 5 } #side0 { order: 6 } #hand0 { order: 7 } .dock { order: 8 }
+  #hand0 { position: relative; z-index: 6; margin-top: 2px }
+  .hand.me { margin-bottom: 0 }
+  /* 見出しは1行に：タイトルは隠し、ボタンを小さく */
+  .top h1 { display: none }
+  .topbtns { margin-left: auto; gap: 4px }
+  .topbtns .btn { padding: 2px 8px; min-height: 32px; font-size: 13px }
+  .turn { order: 0; width: auto; flex: 1 1 auto; gap: 6px; justify-content: flex-start }
+  #turnInfo { font-size: 12px; white-space: nowrap }
+  #phases li button, #phases li span { padding: 3px 5px; font-size: 11px }
+  /* ドックを低く：説明は2行まで、進むボタンの小さい文字は1行 */
+  .dock { padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); row-gap: 6px }
+  #actor { font-size: 15px; line-height: 1.35 }
+  #actorHint { font-size: 11px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+  #goBtn { min-height: 46px; font-size: 15px }
+  #goBtn small { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100% }
   .dock { position: fixed; left: 0; right: 0; bottom: 0; margin: 0;
     padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); grid-template-columns: minmax(0, 1fr) auto; border-inline: none; border-bottom: none }
   #phaseBtns { justify-content: stretch }
   #phaseBtns .btn { flex: 1 }
-  .btn.go { width: 42% }
+  #goBtn { width: 42% }
   #logBtn { display: inline-flex }
   .dock-extra { grid-column: 2; grid-row: 1 }
   .pstrip { flex-wrap: wrap; row-gap: 2px }
@@ -366,6 +383,114 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   #closeDuel .long { display: none }
 }
 @media (min-width: 861px) { #scrim { display: none } }
+/* 手札のトレイ：パソコンでは何もしない（手札はいつもの場所） */
+.tray { display: contents }
+.tray-handle { display: none }
+/* シャカパチ：罠カードが手札に来たら、手札のカードが小刻みに跳ねる */
+@keyframes pachi { 0%, 100% { translate: 0 0 } 20% { translate: 0 -7px } 40% { translate: 0 1px } 60% { translate: 0 -5px } 80% { translate: 0 0 } }
+.hand.me.pachi .card { animation: pachi .16s ease-in-out 4 }
+.hand.me.pachi .card:nth-child(2n) { animation-delay: .05s }
+.hand.me.pachi .card:nth-child(3n) { animation-delay: .09s }
+.hand.me .card.newtrap { box-shadow: 0 0 0 2px var(--trap, #c2558f), 0 0 14px var(--trap, #c2558f) }
+@media (prefers-reduced-motion: reduce) { .hand.me.pachi .card { animation: none } }
+@media (max-width: 860px) {
+  /* LPは上に2つ並べる（左が相手、右が自分） */
+  .table { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 6px; row-gap: 6px; align-content: start; padding-bottom: calc(var(--bottom-h, 210px) + 10px) }
+  .table > * { grid-column: 1 / -1 }
+  #side1 { grid-column: 1; order: 1 } #side0 { grid-column: 2; order: 1 }
+  .pstrip { padding: 4px 8px; gap: 0 6px; border-left-width: 6px; align-content: center; min-width: 0 }
+  .pstrip .who { font-size: 12px; gap: 4px }
+  .pstrip .who::before { width: 9px; height: 9px }
+  .pstrip .lp { font-size: 20px; min-width: 0 }
+  .pstrip .lp::before { font-size: 9px; margin-right: 2px }
+  .pstrip .tag { font-size: 9px; padding: 0 5px }
+  .pstrip .meta { width: 100%; margin-left: 0; text-align: left; font-size: 10px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  /* 手札のトレイ：画面の下に固定。上下のスワイプ（または取っ手）で開け閉め */
+  .tray { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; background: var(--panel); border: 2px solid var(--edge); border-bottom: none; border-radius: 18px 18px 0 0;
+    box-shadow: 0 -4px 14px rgba(0, 0, 0, .18); padding: 0 max(6px, env(safe-area-inset-right, 0px)) calc(4px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px));
+    transition: transform .28s cubic-bezier(.2, .8, .2, 1); touch-action: pan-x }
+  .tray-handle { display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; height: 28px; padding: 0; background: none; border: 0; color: var(--sub); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer }
+  .tray-handle .grip { width: 38px; height: 5px; border-radius: 5px; background: var(--line) }
+  .tray-handle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 12px }
+  #hand0 { --cw: 104px; position: relative; z-index: auto; margin: 0; height: calc(var(--ch) * .9 + 22px) }
+  #hand0 .card { font-size: 10px }
+  /* 閉じた時：取っ手と手札の上の端だけ見せ、その下にドック（エンドなどのボタン） */
+  .droot.tray-closed .tray { transform: translateY(calc(100% - 46px - var(--dock-h))); z-index: 6 }
+  .dock { z-index: 8; transition: transform .28s cubic-bezier(.2, .8, .2, 1) }
+  .droot:not(.tray-closed) .dock { transform: translateY(110%); pointer-events: none }
+  #toast { bottom: calc(var(--bottom-h, 210px) + 12px) }
+}
+@media (max-width: 380px) { #hand0 { --cw: 94px } }
+/* サーチ：選べるカードを並べる下の列（手札のあたり） */
+.fan-pick { display: flex; gap: 8px; justify-content: flex-start; overflow-x: auto; max-width: 100%; padding: 14px 12px 6px; flex: none; scroll-snap-type: x proximity }
+.fan-pick > .card:first-child { margin-left: auto }
+.fan-pick > .card:last-child { margin-right: auto }
+.fan-pick .card { position: relative; flex: 0 0 auto; width: 84px; font-size: 10.5px; cursor: pointer; scroll-snap-align: center; box-shadow: 0 0 0 2px #fff, 0 8px 18px rgba(0, 0, 0, .5); transition: transform .18s ease-out, box-shadow .18s }
+.fan-pick .card.peek, .fan-area .card.peek { transform: translateY(-12px) scale(1.08); box-shadow: 0 0 0 3px var(--accent), 0 0 18px 4px color-mix(in srgb, var(--accent) 70%, transparent); z-index: 80 !important }
+.fan-pick .card.picked { transform: translateY(-16px) scale(1.12); box-shadow: 0 0 0 3px var(--accent), 0 0 22px 6px color-mix(in srgb, var(--accent) 70%, transparent) }
+/* 押したカードの効果 */
+.fan-info { width: min(560px, calc(100% - 24px)); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 14px; box-shadow: 3px 3px 0 var(--edge); padding: 8px 12px; display: grid; gap: 2px; flex: none; margin-top: 6px }
+.fan-info b { font-family: var(--display); font-size: 15px }
+.fan-info small { color: var(--sub); font-size: 11px }
+.fan-info p { margin: 2px 0 0; font-size: 12px; line-height: 1.55; max-height: 7.8em; overflow: auto }
+.fan-info .fan-hint { font-size: 11px; font-weight: 700; color: var(--me) }
+@media (max-width: 860px) {
+  .fan-layer > .fan-head { margin-top: 0 }
+  .fan-layer > .fan-area { margin-bottom: auto }
+}
+/* サーチの山札：並べ替えはなめらかに動かす */
+.fan-area.sorting .card { transition: left .5s cubic-bezier(.2, .8, .2, 1), top .5s cubic-bezier(.2, .8, .2, 1), transform .18s ease-out, filter .2s }
+@media (max-width: 860px) {
+  /* サーチの山札：全体を画面の下に寄せて、指で押しやすく */
+  .fan-layer { padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) }
+  .fan-layer > .fan-head { margin-top: auto }
+  .fan-area .card:not(.dim) { box-shadow: 0 0 0 2px #fff, 0 6px 14px rgba(0, 0, 0, .45) }
+  /* 手札を閉じた時：盤面のマスを縦長にしてカードを大きく、カード名なども出す */
+  /* 手札を閉じた時：盤面を画面の端から端まで、上のLPから下のボタンまでの高さいっぱいに広げる（高さ --board-h は app.js が測る） */
+  .droot.tray-closed #board { width: 100vw; max-width: none; margin-left: calc(50% - 50vw); border-radius: 0; border-left: none; border-right: none; box-shadow: none;
+    height: var(--board-h, auto); padding: 4px 3px; gap: 3px; grid-template-rows: 1fr 1fr .58fr 1fr 1fr }
+  .droot.tray-closed #board .row { gap: 3px; min-height: 0; grid-template-columns: .74fr repeat(5, minmax(0, 1fr)) .74fr }
+  .droot.tray-closed #board .r2 { margin-block: 0 }
+  .droot.tray-closed #board .zone { aspect-ratio: auto; height: 100%; min-height: 0; container-type: size }
+  /* カードはマスの幅と高さの小さいほうに合わせて最大に（守備表示は横向きで収まる大きさ） */
+  .droot.tray-closed #board .zone > .card { width: min(92cqw, 94cqh * 59 / 86); font-size: calc(min(92cqw, 94cqh * 59 / 86) / 8) }
+  .droot.tray-closed #board .zone > .card.def { width: min(64cqw, 92cqh); font-size: calc(min(64cqw, 92cqh) / 8) }
+}
+/* 選ぶ画面：カードを横に並べてスクロール */
+.optlist.cards { display: flex; gap: 10px; overflow-x: auto; overflow-y: visible; max-height: none; scroll-snap-type: x mandatory; padding: 10px 2px 8px; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain }
+.opt.cardopt { flex: 0 0 auto; width: 104px; scroll-snap-align: center; align-items: center; text-align: center; padding: 6px; gap: 3px; position: relative; min-height: 0; border-radius: 12px }
+.opt.cardopt > .card { position: relative; width: 100%; font-size: 8.5px; pointer-events: none }
+.opt.cardopt small { font-size: 11px; line-height: 1.3; color: var(--ink); font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; width: 100% }
+.opt.cardopt small.wh { font-weight: 500; color: var(--sub); font-size: 10px }
+.opt.cardopt .on-mark { position: absolute; top: 2px; right: 2px; z-index: 3; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); border: 2px solid var(--edge); font-weight: 900; line-height: 20px; display: none }
+.opt.cardopt.on .on-mark { display: block }
+.opt.cardopt.on > .card { box-shadow: 0 0 0 3px var(--accent) }
+/* ロックオンの照準 */
+.fx-lock { position: fixed; z-index: 30; pointer-events: none; border-radius: 50%; border: 3px solid var(--lc); box-shadow: 0 0 12px var(--lc), inset 0 0 12px var(--lc);
+  background: radial-gradient(circle, transparent 46%, transparent 47%), linear-gradient(var(--lc), var(--lc)) center / 3px 100% no-repeat, linear-gradient(var(--lc), var(--lc)) center / 100% 3px no-repeat;
+  -webkit-mask: radial-gradient(circle, transparent 18%, #000 19%); mask: radial-gradient(circle, transparent 18%, #000 19%) }
+@media (max-width: 860px) {
+  /* 盤面のカードの見た目は、下の「盤面のカード（A4）」で決める */
+  /* 手札：枠なし（取っ手の線だけ） */
+  .tray { background: transparent; border: none; box-shadow: none; touch-action: none; pointer-events: none }
+  .tray > * { pointer-events: auto }
+  .tray-handle { height: 22px; font-size: 10px; color: var(--sub); text-shadow: 0 0 3px var(--bg), 0 0 6px var(--bg) }
+  #hand0 .card { box-shadow: 0 6px 14px rgba(0, 0, 0, .28) }
+  /* しまう時：カードが真ん中に集まって小さく重なり、真ん中の下（ボタンの上）に収まる */
+  .tray { transition: bottom .28s cubic-bezier(.2, .8, .2, 1) }
+  .droot.tray-closed .tray { transform: none; bottom: var(--dock-h); z-index: 6 }
+  #hand0 { transition: height .28s cubic-bezier(.2, .8, .2, 1) }
+  .droot.tray-closed #hand0 { height: 40px; cursor: pointer }
+  .droot.tray-closed .tray-handle { height: 0; overflow: hidden; opacity: 0 }
+  #hand0 .card { transition: transform .3s cubic-bezier(.2, .8, .2, 1), box-shadow .12s }
+  .droot.tray-closed #hand0 .card { transform: translate(calc((var(--z, 1) - 3) * 3px), 0) rotate(calc((var(--z, 1) - 3) * 2deg)) scale(.46); transform-origin: 50% 100% }
+  .droot.tray-closed #hand0 .card.sel { transform: translate(0, 0) scale(.46) }
+}
+@media (max-width: 860px) and (max-height: 700px) { #hand0 { --cw: 94px } }
+/* 縦が短いスマホ：手札を少し小さくして、1画面に収まりやすくする */
+@media (max-width: 860px) and (max-height: 720px) { .hand { --cw: 62px } .hand.opp { --cw: 30px } }
+#turnInfo .ts { display: none }
+@media (max-width: 520px) { .top { flex-wrap: nowrap } .turn { flex: 0 1 auto; flex-wrap: nowrap; gap: 4px } #phases li button, #phases li span { padding: 3px 4px } #actor { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis } .dock-extra .btn { padding: 2px 8px; min-height: 34px; font-size: 13px } #turnInfo .tl { display: none } #turnInfo .ts { display: inline } #turnInfo { font-family: var(--num); font-weight: 600 } .topbtns .bl { display: none } .topbtns .btn { min-width: 36px; font-size: 16px } }
 @media (prefers-reduced-motion: reduce) { .card, .hand .card, .btn, .sheet, .pstrip .lp { transition: none; animation: none } }
 /* ================= デザイン v5（ルールブックのサイトに合わせる） =================
    外側の箱：濃い線＋右下にずらした影／中の箱：細い線・影なし／角丸 16・12・10／ボタンは主・副・控えめの3段階 */
@@ -438,6 +563,57 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* カウンターの帯がカードの幅より長い時（5つの玉など）は、はみ出して見せる */
 .zone .card:has(> .ctr) { overflow: visible }
 
+/* ===== 盤面のカード（案A4）：実物風・色を濃く・攻守の数字を大きく。1em ＝ カードの幅の1/8（マスの幅から計算） ===== */
+#board .zone { container-type: inline-size }
+#board .zone > .card:not(.back) { font-size: 9cqi; padding: 0; border-radius: .09em; border: .035em solid #0d0b09; overflow: hidden;
+  box-shadow: 0 .08em .22em rgba(0,0,0,.7), inset 0 0 0 .05em rgba(255,255,255,.22), inset 0 0 .3em rgba(0,0,0,.6) }
+#board .zone > .card:not(.back)::before { background: repeating-linear-gradient(115deg, rgba(255,255,255,.06) 0 .03em, transparent .03em .09em), repeating-linear-gradient(25deg, rgba(0,0,0,.1) 0 .025em, transparent .025em .11em), linear-gradient(160deg, rgba(255,255,255,.18), transparent 40%, rgba(0,0,0,.3)) }
+#board .zone > .card.f-normal { background: linear-gradient(160deg, #d29a2e, #a8700f 60%, #7d5206) }
+#board .zone > .card.f-effect { background: linear-gradient(160deg, #d0601c, #a2420b 60%, #782e05) }
+#board .zone > .card.f-ritual { background: linear-gradient(160deg, #3f7fd6, #1f55a8 60%, #143c7d) }
+#board .zone > .card.f-fusion { background: linear-gradient(160deg, #8a46c8, #62269c 60%, #461974) }
+#board .zone > .card.f-spell { background: linear-gradient(160deg, #109f80, #056b55 60%, #03503f) }
+#board .zone > .card.f-trap { background: linear-gradient(160deg, #b8247a, #8a0f57 60%, #650a40) }
+/* 名前の板 */
+#board .zone > .card:not(.back) .top { display: flex; left: 5%; right: 5%; top: 3.6%; height: 9.2%; padding: 0 .08em 0 .1em; gap: .05em; align-items: center; border-radius: .03em; border: .02em solid rgba(0,0,0,.7);
+  background: linear-gradient(180deg, rgba(255,236,190,.55), rgba(255,220,150,.15) 45%, rgba(0,0,0,.12) 55%, rgba(255,220,150,.2)); box-shadow: inset 0 0 .06em rgba(0,0,0,.4) }
+#board .zone > .card:not(.back) .top .n { font-family: 'Shippori Mincho B1', var(--body), serif; font-weight: 800; font-size: .5em; line-height: 1; color: #151210; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: clip; display: block }
+#board .zone > .card.f-spell .top .n, #board .zone > .card.f-trap .top .n { color: #fff; text-shadow: 0 .03em 0 rgba(0,0,0,.7) }
+/* 属性：金の輪に色の玉と一文字 */
+#board .zone > .card:not(.back) .at { width: 2.5em; height: 2.5em; line-height: 2.5em; font-size: .29em; padding: 0; border: none; border-radius: 50%; flex: none; text-align: center; color: #fff; font-weight: 800; text-shadow: 0 0 .25em #000;
+  box-shadow: 0 0 0 .16em #e8bd55, 0 0 0 .26em #3a2706, inset .1em .14em .2em rgba(255,255,255,.55), inset -.1em -.14em .28em rgba(0,0,0,.5) }
+/* レベルの星 */
+#board .zone > .card:not(.back) .lv { display: flex; right: 6%; top: 14%; height: 5.4%; gap: .035em; align-items: center }
+#board .zone > .card:not(.back) .lv i { width: .38em; height: .38em; border: none; border-radius: 0; background: radial-gradient(circle at 40% 35%, #ffd36a, #e0500c 55%, #7a1d04); clip-path: polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%) }
+/* 魔法・罠の種類の行 */
+#board .zone > .card:not(.back) .sp { display: block; right: 6%; top: 13.6%; font-size: .36em; font-weight: 800; color: #fff; text-shadow: 0 .04em 0 rgba(0,0,0,.6); white-space: nowrap; letter-spacing: 0 }
+/* イラスト：額縁＋属性の色の光＋種族の紋 */
+#board .zone > .card:not(.back) .art { left: 11.5%; right: 11.5%; top: 20.4%; border: .01em solid #2a1f14; font-size: 3.1em; overflow: hidden; font-family: 'Shippori Mincho B1', var(--display), serif; font-weight: 800;
+  color: color-mix(in srgb, var(--atc, #fff) 30%, #fff); text-shadow: 0 .02em .03em rgba(0,0,0,.85), 0 0 .06em var(--atc, #fff);
+  box-shadow: 0 0 0 .016em rgba(255,255,255,.55), 0 0 0 .025em rgba(0,0,0,.45), inset 0 0 .11em rgba(0,0,0,.75);
+  background: radial-gradient(70% 60% at 50% 38%, var(--atc, #6a6e7e), color-mix(in srgb, var(--atc, #6a6e7e) 85%, #000) 45%, #06070c 100%) }
+#board .zone > .card:not(.back) .art::before { content: ""; position: absolute; inset: 0; background: linear-gradient(125deg, transparent 35%, rgba(255,255,255,.22) 47%, transparent 58%) }
+/* 説明の欄（魔法・罠）：羊皮紙 */
+#board .zone > .card:not(.back) .tb { left: 5%; right: 5%; top: 77.2%; bottom: 3.8%; border: .025em solid #5d4a2f; border-radius: .02em; background: linear-gradient(180deg, #e8d6ad, #cdb27c); box-shadow: inset 0 0 .08em rgba(0,0,0,.35); padding: .05em .1em; font-size: .28em; color: #1a1408 }
+#board .zone > .card:not(.back) .tb b { display: block; font-family: 'Shippori Mincho B1', var(--body), serif; font-weight: 800; white-space: nowrap; overflow: hidden }
+/* モンスター：説明の欄をまるごと、金の縁の黒い数字の欄にする（攻撃力を大きく、守備力を小さく） */
+#board .zone > .card:not(.back):not(.f-spell):not(.f-trap) .tb { display: flex; align-items: center; justify-content: center; padding: 0; font-size: 1em; border: .025em solid #e8bd55;
+  background: linear-gradient(180deg, #2a1d0c, #100a04); box-shadow: inset 0 .04em 0 rgba(255,236,190,.3), inset 0 0 .12em rgba(0,0,0,.7) }
+#board .zone > .card:not(.back):not(.f-spell):not(.f-trap) .tb > b { display: none }
+#board .zone > .card:not(.back) .tb .ad { position: static; border: none; display: flex; align-items: center; justify-content: center; gap: .08em; font-family: var(--num); font-weight: 700; line-height: 1; letter-spacing: -.03em; text-shadow: none; white-space: nowrap; font-size: 1em }
+#board .zone > .card:not(.back) .tb .ad i { display: none }
+#board .zone > .card:not(.back) .tb .ad > span:first-child { font-size: 1.5em; color: #fff3d4; text-shadow: 0 0 .1em rgba(255,200,90,.5) }
+#board .zone > .card:not(.back) .tb .ad > span:last-child { font-size: 1em; color: #cdb27c }
+#board .zone > .card:not(.back) .tb .ad > span:last-child::before { content: "/"; color: #8a7650; margin-right: .06em; font-size: .85em }
+#board .zone > .card:not(.back) .tb .ad .up { color: #8dffb0 !important } #board .zone > .card:not(.back) .tb .ad .dn { color: #ff9a9a !important }
+/* 守備表示：守備力だけを青白く大きく */
+#board .zone > .card.def:not(.back) .tb .ad > span:first-child { display: none }
+#board .zone > .card.def:not(.back) .tb .ad > span:last-child { font-size: 1.6em; color: #bfe0ff; text-shadow: 0 0 .1em rgba(120,180,255,.55) }
+#board .zone > .card.def:not(.back) .tb .ad > span:last-child::before { content: "DEF"; font-size: .34em; color: #e8bd55; margin-right: .12em; letter-spacing: .02em }
+/* 守備表示（横向き）：カードの長い辺がマスの幅に収まる大きさにする（隣のマスにはみ出さない） */
+#board .zone > .card.def { width: 64% }
+#board .zone > .card.def:not(.back) { font-size: 8cqi }
+
 /* ---------- 演出に合わせたプレイマットの柄（盤面の地だけが変わり、カードを置く枠は残る） ---------- */
 #board { position: relative }
 #board .row { position: relative; z-index: 1 }
@@ -454,8 +630,8 @@ export const MARKUP = `
   <div class="turn"><span id="turnInfo"></span><ol id="phases" aria-label="フェイズ"></ol></div>
   <div class="topbtns">
     <button class="btn small ghost" id="soundBtn" aria-pressed="true" title="効果音のオン・オフ">音 オン</button>
-    <button class="btn small ghost" id="undo" title="Ctrl+Z">元に戻す</button>
-    <button class="btn small" id="menuBtn" aria-haspopup="dialog">メニュー</button>
+    <button class="btn small ghost" id="undo" title="元に戻す（Ctrl+Z）" aria-label="元に戻す"><span aria-hidden="true">↶</span><span class="bl"> 元に戻す</span></button>
+    <button class="btn small" id="menuBtn" aria-haspopup="dialog" aria-label="メニュー"><span aria-hidden="true">☰</span><span class="bl"> メニュー</span></button>
     <button class="btn small" id="closeDuel" hidden aria-label="ルールブックに戻る">✕<span class="long"> ルールブックに戻る</span></button>
   </div>
 </header>
@@ -467,7 +643,7 @@ export const MARKUP = `
     <div id="board"></div>
     <div id="result" hidden></div>
     <section class="panel" id="chain" hidden aria-live="polite"></section>
-    <div class="hand me" id="hand0"></div>
+    <div class="tray" id="tray"><button class="tray-handle" id="trayHandle" type="button" aria-expanded="true" aria-controls="hand0"><span class="grip" aria-hidden="true"></span><span class="tray-lbl" id="trayLbl">手札をしまう</span></button><div class="hand me" id="hand0"></div></div>
     <div class="pstrip me" id="side0"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="meta"></span></div>
     <div class="dock" id="dock">
       <div class="dock-status"><span id="actor"></span><span id="actorHint"></span></div>

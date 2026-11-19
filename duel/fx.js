@@ -635,6 +635,7 @@ export function playSummon(root, info) {
       speed: (info.speed || 1) * (window.__fxSlow || 1), L: SUMMON_LAND[how] || 600, hit: false, bolt: null, done: false,
       mats: (info.mats || []).map(m => ({ x: m.rect.left + m.rect.width / 2, y: m.rect.top + m.rect.height / 2, w: m.rect.width, h: m.rect.height, img: cardImg(m.d, m.atk, m.def), a: 1, s: 1 })) };
     S.end = S.L + (how === 'god' ? 900 : how === 'ace' ? 1100 : how === 'set' ? 250 : 650);
+    S.onLand = info.onLand || null; S.landed = false;
     // 融合の渦の中心：召喚するマスと画面の中央の間
     if (how === 'fusion') S.C = { x: (S.x + W / 2) / 2, y: (S.y + H / 2) / 2 };
     if (S.soul) S.soul0 = { x: S.soul.x, y: S.soul.y };
@@ -643,6 +644,7 @@ export function playSummon(root, info) {
     const step = now => {
       if (S.done) return;
       const dt = Math.min(32, now - (S.last || now)) * S.speed; S.last = now; S.t += dt;
+      if (info.track && !S.hit) { const q = info.track(); if (q && q.width) { S.x = q.left + q.width / 2; S.y = q.top + q.height / 2; S.w = q.width; S.h = q.height; } }
       summonTick(S); summonDraw(S); maskToBoard(); sumMatDraw(S);
       if (S.t > S.end) { S.done = true; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; sumMatEnd(S); resolve(); return; }
       requestAnimationFrame(step);
@@ -678,6 +680,7 @@ function summonTick(S) {
   if (t > L + 200) S.dark *= .9;
   if (!S.hit && t >= L) {
     S.hit = true;
+    if (S.onLand) { try { S.onLand(); } catch { /* 置けなくても演出は続ける */ } S.onLand = null; }
     const big = k === 'god' || k === 'ace' ? 1 : k === 'advance' || k === 'ritual' || k === 'fusion' ? .75 : k === 'set' ? .1 : .45;
     S.flash = big; S.shake = k === 'set' ? 1 : 18 * big;
     S.rings.push({ x, y: y + S.h / 2 - 4, r: S.w * .5, v: k === 'set' ? 2 : (9 * big + 3) * U, a: 1, c: k === 'normal' || k === 'advance' ? '#e8d2a8' : c });
