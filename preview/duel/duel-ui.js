@@ -606,6 +606,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #board .zone > .card.def:not(.back) .tb .ad > span:first-child { display: none }
 #board .zone > .card.def:not(.back) .tb .ad > span:last-child { font-size: 1.6em; color: #bfe0ff; text-shadow: 0 0 .1em rgba(120,180,255,.55) }
 #board .zone > .card.def:not(.back) .tb .ad > span:last-child::before { content: "DEF"; font-size: .34em; color: #e8bd55; margin-right: .12em; letter-spacing: .02em }
+/* 守備表示（横向き）：カードの長い辺がマスの幅に収まる大きさにする（隣のマスにはみ出さない） */
+#board .zone > .card.def { width: 64% }
+#board .zone > .card.def:not(.back), .droot.tray-closed #board .zone > .card.def:not(.back) { font-size: 8cqi }
+.droot.tray-closed #board .zone > .card.def { width: 64% }
 
 /* ---------- 演出に合わせたプレイマットの柄（盤面の地だけが変わり、カードを置く枠は残る） ---------- */
 #board { position: relative }
