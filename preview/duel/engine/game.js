@@ -955,6 +955,8 @@ export function equipCard(s           , equip        , target        , opt      
   e.equippedTo = target;
   e.equipSerial = s.cards[target].serial;
   e.equipBy = opt.by !== undefined ? `${opt.by}:${s.cards[opt.by].serial}` : null;
+  // モンスターが装備カードになった時（ユニオン）：そのモンスターに装備されていたカードは装備対象を失うので破壊する
+  cleanupOrphans(s);
   return true;
 }
 export function linkCards(s           , card        , monster        )       {
@@ -1306,6 +1308,8 @@ export function activatableList(s           , p          )                {
     if (!sameCard(s, u, l.serial ) || s.cards[u].zone !== 'gy') continue;
     const eff = (scriptOf(s, u).effects || []).find(e => e.type === 'card');
     if (!eff || (eff.can && !eff.can(ctxOf(s, u, p, { data: { dg: true } }                        )))) continue;
+    // 対象を選べるかなど、最後まで発動できるかを試す（ダイヤモンドガイの効果ではコストは払わない）
+    if (eff.activate && !activationPossible(s, u, p, eff, { dg: true })) continue;
     res.push({ uid: u, effect: 'dg:' + eff.id, label: `（ダイヤモンドガイ）${eff.label}` });
   }
   return res;
@@ -1325,7 +1329,7 @@ function targetGuardOn(s           )          {
   return [...fieldCards(s, 0), ...fieldCards(s, 1)].some(u => !targetable(s, u)) || gyLocked(s, 0, null) || gyLocked(s, 1, null);
 }
 /** 発動の手順（コスト・対象）を最後まで行えるかを、状態の写しで試す。選択が必要になった時点で「行える」とみなす */
-function activationPossible(s           , uid        , p          , eff              )          {
+function activationPossible(s           , uid        , p          , eff              , data                          = {})          {
   const saveA = ANSWERS, saveI = AIDX;
   // 選択肢（どの効果を選ぶか・はい／いいえ）は順に試し、カードの選択は先頭から選んだものとして進める。どれかで最後まで行えれば発動できる
   const tries              = [[]];
@@ -1336,7 +1340,7 @@ function activationPossible(s           , uid        , p          , eff         
       ANSWERS = [...ans]; AIDX = 0;
       try {
         const c = structuredClone(s);
-        const link            = { player: p, uid, serial: c.cards[uid].serial, effect: eff.id, ss: eff.ss, cardActivation: false, cardKind: defOf(c, uid).kind, targets: [], targetSerials: [], data: {}, negated: false, effectNegated: false };
+        const link            = { player: p, uid, serial: c.cards[uid].serial, effect: eff.id, ss: eff.ss, cardActivation: false, cardKind: defOf(c, uid).kind, targets: [], targetSerials: [], data: { ...data }, negated: false, effectNegated: false };
         eff.activate (ctxOf(c, uid, p, link));
         return true;
       } catch (e) {
