@@ -291,6 +291,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   padding: calc(env(safe-area-inset-top, 0px) + 14px) 12px calc(env(safe-area-inset-bottom, 0px) + 16px) }
 .fan-layer.cpu { background: rgba(6,20,14,.38); pointer-events: none; justify-content: center }
 .fan-layer.done { pointer-events: none }
+.fan-layer.hand-add { background: rgba(6,20,14,.55) }
+.fan-area .card.new { box-shadow: 0 0 0 2px #ffe08a, 0 0 22px 6px rgba(255,224,138,.65) }
 .fan-head { color: #fff; text-align: center; display: flex; flex-direction: column; gap: 2px; margin: 6px 0 4px; max-width: 640px }
 .fan-head b { font-family: var(--display); font-weight: 400; font-size: 16px; line-height: 1.4 }
 .fan-head span { font-size: 12px; opacity: .8 }
