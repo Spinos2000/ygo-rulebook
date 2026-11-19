@@ -254,6 +254,10 @@ function summonLockedFor(s           , p          , src               )         
 /** player はこのターン特殊召喚できない（強欲で謙虚な壺・旗鼓堂々） */
 const specialLocked = (s           , p          ) => s.lingering.some(l => l.type === 'noSpecial' && l.player === p && l.turn === s.turn)
   || activeCards(s).some(u => scriptOf(s, u).blocksSpecialSummon?.(s, u));
+/** このターン、EXデッキからモンスターを特殊召喚できない（帝王の烈旋） */
+const extraLocked = (s           , p          ) => s.lingering.some(l => l.type === 'noExtraSpecial' && l.player === p && l.turn === s.turn);
+/** このターン、EXデッキからモンスターを特殊召喚したか（帝王の烈旋） */
+export const extraSummonedThisTurn = (s           , p          ) => s.opt[`${p}:extraAny`] === s.turn;
 /** 罠モンスター：モンスターゾーンにある間のモンスターとしての数値（罠カードとしても扱う） */
 export const TRAP_MONSTERS                                   = {
   '5686': { kind: 'monster', frame: 'effect', attribute: '水', race: '水族', level: 10, atk: 0, def: 3000 }                    ,
@@ -796,12 +800,14 @@ export function canSpecialSummon(s           , uid        , p          , how    
   const sc = scriptOf(s, uid);
   if (how === 'ignore') {
     if (summonLockedFor(s, p, src) || specialLocked(s, p)) return false;
+    if (c.zone === 'extra' && extraLocked(s, p)) return false;
     // 「召喚条件を無視して特殊召喚する」：ただし正規の召喚をしていないものは墓地・除外からは出せない
     if ((c.zone === 'gy' || c.zone === 'banished') && (sc.specialSummonOk || d.frame === 'ritual' || d.frame === 'fusion') && !c.proper) return false;
     if (d.frame === 'fusion' && c.zone === 'extra') return extraSummonZone(s, p, released) !== null;
     return freeMZones(s, p, released).length > 0;
   }
   if (summonLockedFor(s, p, src) || specialLocked(s, p)) return false;
+  if (c.zone === 'extra' && extraLocked(s, p)) return false;
   if (sc.fusionOnly && how !== 'fusion') return false;
   if (sc.specialSummonOk && !sc.specialSummonOk(s, uid, how, src)) return false;
   if (d.frame === 'ritual' && how !== 'ritual') {
@@ -828,6 +834,7 @@ export function specialSummon(x     , uids          , opt                       
     const c = s.cards[uid];
     const sc = scriptOf(s, uid);
     fromZones[uid] = c.zone;
+    if (c.zone === 'extra') s.opt[`${p}:extraAny`] = s.turn;
     const faceUp = pos !== 'faceDownDef';
     const position = pos === 'atk' ? 'atk' : 'def';
     if (defOf(s, uid).frame === 'fusion' && c.zone === 'extra') {
@@ -955,6 +962,8 @@ export function equipCard(s           , equip        , target        , opt      
   e.equippedTo = target;
   e.equipSerial = s.cards[target].serial;
   e.equipBy = opt.by !== undefined ? `${opt.by}:${s.cards[opt.by].serial}` : null;
+  // モンスターが装備カードになった時（ユニオン）：そのモンスターに装備されていたカードは装備対象を失うので破壊する
+  cleanupOrphans(s);
   return true;
 }
 export function linkCards(s           , card        , monster        )       {
@@ -1080,6 +1089,7 @@ function doProcSummon(s           , p          , uid        )       {
   s.activating = p;
   try { sc.pay(x); } finally { s.activating = null; }
   const fromExtra = s.cards[uid].zone === 'extra';
+  if (fromExtra) s.opt[`${p}:extraAny`] = s.turn;
   const ez = fromExtra ? extraSummonZone(s, p) : null;
   if (fromExtra ? !ez : !freeMZones(s, p).length) throw new RuleError('モンスターゾーンに空きがありません');
   newStep(s);
@@ -1306,6 +1316,8 @@ export function activatableList(s           , p          )                {
     if (!sameCard(s, u, l.serial ) || s.cards[u].zone !== 'gy') continue;
     const eff = (scriptOf(s, u).effects || []).find(e => e.type === 'card');
     if (!eff || (eff.can && !eff.can(ctxOf(s, u, p, { data: { dg: true } }                        )))) continue;
+    // 対象を選べるかなど、最後まで発動できるかを試す（ダイヤモンドガイの効果ではコストは払わない）
+    if (eff.activate && !activationPossible(s, u, p, eff, { dg: true })) continue;
     res.push({ uid: u, effect: 'dg:' + eff.id, label: `（ダイヤモンドガイ）${eff.label}` });
   }
   return res;
@@ -1325,7 +1337,7 @@ function targetGuardOn(s           )          {
   return [...fieldCards(s, 0), ...fieldCards(s, 1)].some(u => !targetable(s, u)) || gyLocked(s, 0, null) || gyLocked(s, 1, null);
 }
 /** 発動の手順（コスト・対象）を最後まで行えるかを、状態の写しで試す。選択が必要になった時点で「行える」とみなす */
-function activationPossible(s           , uid        , p          , eff              )          {
+function activationPossible(s           , uid        , p          , eff              , data                          = {})          {
   const saveA = ANSWERS, saveI = AIDX;
   // 選択肢（どの効果を選ぶか・はい／いいえ）は順に試し、カードの選択は先頭から選んだものとして進める。どれかで最後まで行えれば発動できる
   const tries              = [[]];
@@ -1336,7 +1348,7 @@ function activationPossible(s           , uid        , p          , eff         
       ANSWERS = [...ans]; AIDX = 0;
       try {
         const c = structuredClone(s);
-        const link            = { player: p, uid, serial: c.cards[uid].serial, effect: eff.id, ss: eff.ss, cardActivation: false, cardKind: defOf(c, uid).kind, targets: [], targetSerials: [], data: {}, negated: false, effectNegated: false };
+        const link            = { player: p, uid, serial: c.cards[uid].serial, effect: eff.id, ss: eff.ss, cardActivation: false, cardKind: defOf(c, uid).kind, targets: [], targetSerials: [], data: { ...data }, negated: false, effectNegated: false };
         eff.activate (ctxOf(c, uid, p, link));
         return true;
       } catch (e) {
@@ -1885,6 +1897,26 @@ function battleProc(s           , step            )       {
 /* =====================================================================
  * 行える行動
  * ===================================================================== */
+/**
+ * アドバンス召喚（リリースが1体以上）で使えるリリースの組み合わせを全部返す。
+ * 普通のリリース数・リリースの数を選べるモンスター（神獣王バルバロス）・別のリリース（墓守の審神者・竜脚獣ブラキオン）・
+ * リリースを助けるカード（アドバンス・フォース）・相手のモンスターをリリースに含める（帝王の烈旋）をまとめて考える
+ */
+export function advanceTributeSets(s           , p          , uid        )             {
+  const myMons = monstersOf(s, p);
+  const rel = myMons.filter(u => !scriptOf(s, u).noAdvanceTribute && releasable(s, u));
+  const sc = scriptOf(s, uid);
+  const counts = (sc.tributeOptions ?? [tributesFor(s, uid)]).filter(n => n > 0);
+  const out             = [];
+  for (const n of counts) out.push(...combos(rel, n));
+  if (s.lingering.some(l => l.type === 'tributeOpp' && l.player === p && l.turn === s.turn)) {
+    for (const n of counts) for (const o of monstersOf(s, opp(p)).filter(u => releasable(s, u))) for (const tr of combos(rel, n - 1)) out.push([...tr, o]);
+  }
+  for (const aid of activeCards(s).map(u => scriptOf(s, u).tributeAid?.(s, u, uid, p)).filter(Boolean)) out.push(...combos(myMons.filter(u => aid .ok(s, u) && releasable(s, u) && !scriptOf(s, u).noAdvanceTribute), aid .count));
+  for (const alt of [sc.altTribute ?? []].flat()) out.push(...combos(myMons.filter(u => alt.ok(s, u) && releasable(s, u) && !scriptOf(s, u).noAdvanceTribute), alt.count));
+  const seen = new Set        ();
+  return out.filter(tr => { const k = [...tr].sort((a, b) => a - b).join(','); if (seen.has(k) || !freeMZones(s, p, tr).length) return false; seen.add(k); return true; });
+}
 function combos   (arr     , k        )        {
   if (k === 0) return [[]];
   const res        = [];
@@ -1924,6 +1956,13 @@ function mainActions(s           )           {
             if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
             if (!scriptOf(s, uid).cannotSet && n < 3) acts.push({ type: 'setMonster', card: uid, tributes: tr }); // 3体リリースの方法は表側表示の召喚のみ（神獣王バルバロス）
           }
+          // アドバンス・フォース：レベル5以上のモンスター1体のリリースで、リリース2体の召喚として行える
+          for (const aid of activeCards(s).map(u => scriptOf(s, u).tributeAid?.(s, u, uid, p)).filter(Boolean)) {
+            for (const tr of combos(myMons.filter(u => aid .ok(s, u) && releasable(s, u) && !scriptOf(s, u).noAdvanceTribute), aid .count)) if (freeMZones(s, p, tr).length) {
+              if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
+              if (!scriptOf(s, uid).cannotSet) acts.push({ type: 'setMonster', card: uid, tributes: tr });
+            }
+          }
           // 帝王の烈旋：リリースのうち1体を相手のモンスターにできる（例：バルバロスを自分2体＋相手1体の3体リリースで召喚）
           if (s.lingering.some(l => l.type === 'tributeOpp' && l.player === p && l.turn === s.turn)) {
             for (const n of opts.filter(k => k > 0)) for (const o of monstersOf(s, opp(p)).filter(u => releasable(s, u))) for (const tr of combos(myMons.filter(u => !scriptOf(s, u).noAdvanceTribute && releasable(s, u)), n - 1)) {
@@ -1935,7 +1974,7 @@ function mainActions(s           )           {
           continue;
         }
         for (const aid of activeCards(s).map(u => scriptOf(s, u).tributeAid?.(s, u, uid, p)).filter(Boolean)) {
-          for (const tr of combos(myMons.filter(u => aid .ok(s, u) && releasable(s, u)), aid .count)) if (freeMZones(s, p, tr).length) {
+          for (const tr of combos(myMons.filter(u => aid .ok(s, u) && releasable(s, u) && !scriptOf(s, u).noAdvanceTribute), aid .count)) if (freeMZones(s, p, tr).length) {
             if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
             if (!scriptOf(s, uid).cannotSet) acts.push({ type: 'setMonster', card: uid, tributes: tr });
           }
@@ -1957,7 +1996,7 @@ function mainActions(s           )           {
           if (!scriptOf(s, uid).cannotSet) acts.push({ type: 'setMonster', card: uid, tributes: tr });
         }
         // 別のリリースでのアドバンス召喚（表側表示のみ）
-        for (const alt of [scriptOf(s, uid).altTribute ?? []].flat()) if (!summonBlocked) for (const tr of combos(myMons.filter(u => alt.ok(s, u) && releasable(s, u)), alt.count)) if (freeMZones(s, p, tr).length) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
+        for (const alt of [scriptOf(s, uid).altTribute ?? []].flat()) if (!summonBlocked) for (const tr of combos(myMons.filter(u => alt.ok(s, u) && releasable(s, u) && !scriptOf(s, u).noAdvanceTribute), alt.count)) if (freeMZones(s, p, tr).length) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
       }
     }
     for (const uid of myMons) {
@@ -1979,7 +2018,7 @@ function mainActions(s           )           {
     for (const uid of [...me.hand, ...me.gy, ...me.extra]) {
       const ps = scriptOf(s, uid).procSummon;
       if (ps && ps.opt && s.opt[`${p}:proc:${s.cards[uid].code}`] === s.turn) continue;
-      if (ps && !lockAll && !specialLocked(s, p) && ps.zones.includes(s.cards[uid].zone) && !gyCardLocked(s, uid, null) && ps.can(s, uid, p)) acts.push({ type: 'procSummon', card: uid });
+      if (ps && !lockAll && !specialLocked(s, p) && !(s.cards[uid].zone === 'extra' && extraLocked(s, p)) && ps.zones.includes(s.cards[uid].zone) && !gyCardLocked(s, uid, null) && ps.can(s, uid, p)) acts.push({ type: 'procSummon', card: uid });
     }
   }
   if (ph === 'battle') {
@@ -2080,8 +2119,8 @@ function explainIllegal(s           , a        )         {
       if (activationBlockedByName(s, a.card, actorOf(s))) return 'このターン、このカード名の効果は発動できません';
       // 混沌帝龍：「このカードの効果を発動するターン、自分は他の効果を発動できない」
       { const q = actorOf(s), only = s.lingering.find(l => l.type === 'onlyThisCard' && l.player === q && l.turn === s.turn && l.uid !== a.card);
-        if (only) return `このターンは「${nameOf(s, only.uid )}」の効果を発動したので、他の効果は発動できません`;
-        if (scriptOf(s, a.card).exclusive && s.activatedTurn?.[String(q)] === s.turn) { const f = s.activatedFirst?.[String(q)]; return `このターンはすでに${f && f.turn === s.turn ? `「${nameOf(s, f.uid)}」` : '他のカード'}の効果を発動しているので、「${nameOf(s, a.card)}」の効果は発動できません（このカードの効果を発動するターン、自分は他の効果を発動できない）`; } }
+        if (only) return `このターンは${nameOf(s, only.uid )}の効果を発動したので、他の効果は発動できません`;
+        if (scriptOf(s, a.card).exclusive && s.activatedTurn?.[String(q)] === s.turn) { const f = s.activatedFirst?.[String(q)]; return `このターンはすでに${f && f.turn === s.turn ? nameOf(s, f.uid) : '他のカード'}の効果を発動しているので、${nameOf(s, a.card)}の効果は発動できません（このカードの効果を発動するターン、自分は他の効果を発動できない）`; } }
       return '今は発動条件を満たしていません';
     }
     case 'nextPhase':
