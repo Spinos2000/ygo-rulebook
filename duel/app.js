@@ -187,10 +187,10 @@ function sigInfo(prev, next, x, fresh) {
   const center = el => { if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
   const p = x.player, me = p === 0, boardEl = q('#board');
   if (!boardEl) return null;
-  const br = boardEl.getBoundingClientRect(), mid = q('#board .row.r2');
-  const rowY = cls => { const r = q(`#board .row.${cls}`); return r ? center(r).y : br.top + br.height / 2; };
+  const br = boardEl.getBoundingClientRect(), mid = q('#board [data-pile="0:banished"]');
+  const rowY = key => { const r = q(`#board [data-zone="${key}"]`); return r ? center(r).y : br.top + br.height / 2; };
   const board = { left: br.left, top: br.top, right: br.right, bottom: br.bottom, cx: br.left + br.width / 2, cy: mid ? center(mid).y : br.top + br.height / 2,
-    myMonY: rowY(me ? 'r3' : 'r1'), oppMonY: rowY(me ? 'r1' : 'r3'), myStY: rowY(me ? 'r4' : 'r0') };
+    myMonY: rowY(`${p}:mz:0`), oppMonY: rowY(`${1 - p}:mz:0`), myStY: rowY(`${p}:st:0`) };
   const fieldMons = [0, 1].flatMap(pp => prev.players[pp].mzone).concat(prev.emz).filter(u => u !== null && u !== undefined);
   const destU = fresh.filter(y => y.kind === 'destroy' && y.src === x.uid).map(y => y.uid);
   const dest = destU.map(cardOf).filter(Boolean);
@@ -210,8 +210,7 @@ function sigInfo(prev, next, x, fresh) {
   let land = null;
   const nt = tgtU !== undefined ? next.cards[tgtU] : null;
   if (nt && nt.zone === 'mzone' && nt.index !== null) {
-    const nth = nt.controller === 0 ? nt.index + 2 : 6 - nt.index;
-    land = center(q(`#board .row.${nt.controller === 0 ? 'r3' : 'r1'} > :nth-child(${nth})`));
+    land = center(q(`#board [data-zone="${nt.controller}:mz:${nt.index}"]`));
   }
   return {
     sig: true, seq: x.seq, skip,
@@ -522,10 +521,12 @@ function faceHtml(uid, d, field) {
 }
 /** カードの表側の class（種類の色とレア度） */
 function faceCls(d) { return `card f-${frameOf(d)} r-${rarityOf(d)}`; }
-function zone(uid, label, cls = '') {
-  return `<div class="zone ${cls}">${uid !== null && uid !== undefined ? cardHtml(uid, { field: true }) : `<span class="zl">${label}</span>`}</div>`;
+function zone(uid, label, cls = '', key = '', at = '') {
+  return `<div class="zone ${cls}"${key ? ` data-zone="${key}"` : ''}${at ? ` style="${at}"` : ''}>${uid !== null && uid !== undefined ? cardHtml(uid, { field: true }) : `<span class="zl">${label}</span>`}</div>`;
 }
-function pile(p, kind) {
+/** 盤面の格子の位置（列 1〜7、段は半分の高さ 1〜10） */
+const gridAt = (col, row) => `grid-column:${col};grid-row:${row} / span 2`;
+function pile(p, kind, place = '') {
   const list = S.players[p][kind];
   const label = { deck: 'デッキ', gy: '墓地', extra: 'EX', banished: '除外' }[kind];
   const top = list.length ? list[list.length - 1] : null;
@@ -535,20 +536,26 @@ function pile(p, kind) {
   const stack = `box-shadow: ${[...edges, `${(n * .6 + 1).toFixed(1)}px ${(n * .9 + 2).toFixed(1)}px 4px rgba(0,0,0,.45)`].join(', ')}; translate: ${(-n * .3).toFixed(1)}px ${(-n * .45).toFixed(1)}px`;
   // 置き場のボタンの中にボタンは入れられない（ブラウザが外側のボタンを閉じてしまう）ので、一番上のカードは span にする
   const face = open && top !== null ? cardHtml(top, { style: stack }).replace(/^<button/, '<span').replace(/<\/button>$/, '</span>') : list.length ? `<span class="card back mini" style="${stack}"></span>` : '';
-  return `<button class="zone pile" data-pile="${p}:${kind}" aria-label="${NAME(p)}の${label}（${list.length}枚）" title="長押しで一覧">${face}<span class="pl">${label}</span><span class="cnt">${list.length}</span>${kind === 'banished' ? sarcoHtml(p) : ''}</button>`;
+  return `<button class="zone pile${p === 1 ? ' opp' : ''}" data-pile="${p}:${kind}"${place ? ` style="${place}"` : ''} aria-label="${NAME(p)}の${label}（${list.length}枚）" title="長押しで一覧">${face}<span class="pl">${label}</span><span class="cnt">${list.length}</span>${kind === 'banished' ? sarcoHtml(p) : ''}</button>`;
 }
 function renderBoard() {
   const p1 = S.players[0], p2 = S.players[1];
-  const emz = i => zone(S.emz[i], 'EX', 'emz');
-  const rev = a => [...a].reverse();
-  const rows = [
-    pile(1, 'deck') + rev(p2.szone).map(u => zone(u, '魔・罠', 'st')).join('') + pile(1, 'extra'),
-    pile(1, 'gy') + rev(p2.mzone).map(u => zone(u, 'モンスター', 'mz')).join('') + zone(p2.fzone, 'フィールド', 'fz'),
-    `${pile(1, 'banished')}<div class="zone void"></div>${emz(0)}<div class="zone void"></div>${emz(1)}<div class="zone void"></div>${pile(0, 'banished')}`,
-    zone(p1.fzone, 'フィールド', 'fz') + p1.mzone.map(u => zone(u, 'モンスター', 'mz')).join('') + pile(0, 'gy'),
-    pile(0, 'extra') + p1.szone.map(u => zone(u, '魔・罠', 'st')).join('') + pile(0, 'deck'),
+  // 真ん中：上から 相手の魔法・罠／相手のモンスター／自分のモンスター／自分の魔法・罠（相手側は左右が逆）
+  const cells = [
+    ...p2.szone.map((u, i) => zone(u, '魔・罠', 'st opp', `1:st:${i}`, gridAt(6 - i, 2))),
+    ...p2.mzone.map((u, i) => zone(u, 'モンスター', 'mz opp', `1:mz:${i}`, gridAt(6 - i, 4))),
+    ...p1.mzone.map((u, i) => zone(u, 'モンスター', 'mz', `0:mz:${i}`, gridAt(i + 2, 6))),
+    ...p1.szone.map((u, i) => zone(u, '魔・罠', 'st', `0:st:${i}`, gridAt(i + 2, 8))),
+    // 左の列：相手の山札・相手の墓地・相手の除外・フィールド・EX
+    pile(1, 'deck', gridAt(1, 1)), pile(1, 'gy', gridAt(1, 3)), pile(1, 'banished', gridAt(1, 5)),
+    zone(p1.fzone, 'フィールド', 'fz', '0:fz:0', gridAt(1, 7)), pile(0, 'extra', gridAt(1, 9)),
+    // 右の列：相手のEX・相手のフィールド・自分の除外・墓地・山札
+    pile(1, 'extra', gridAt(7, 1)), zone(p2.fzone, 'フィールド', 'fz opp', '1:fz:0', gridAt(7, 3)), pile(0, 'banished', gridAt(7, 5)),
+    pile(0, 'gy', gridAt(7, 7)), pile(0, 'deck', gridAt(7, 9)),
   ];
-  $('#board').innerHTML = rows.map((r, i) => `<div class="row r${i}">${r}</div>`).join('');
+  const keep = $('#board .mat-skin');
+  $('#board').innerHTML = cells.join('');
+  if (keep) $('#board').prepend(keep);
 }
 /* ---------- 手札の並べ替え（自分の手札だけ。CPUの手札は並べ替えると種類が分かってしまうので、来た順のまま） ----------
  * モンスター（レベルの低い順）→ 儀式・特殊召喚系のモンスター → 魔法（通常・永続・装備・フィールド・儀式・速攻）→ 罠（通常・永続・カウンター）。
@@ -1438,9 +1445,13 @@ function measureBottom() {
   const bh = narrow() ? (trayOpen ? Math.ceil(t.getBoundingClientRect().height) : dh + 62) : dh;
   r.style.setProperty('--bottom-h', bh + 'px');
   const b = $('#board');
-  if (b && narrow() && !trayOpen) {
+  if (b && narrow()) {
     const top = b.getBoundingClientRect().top - r.getBoundingClientRect().top;
-    r.style.setProperty('--board-h', Math.max(220, Math.floor(window.innerHeight - top - bh - 10)) + 'px');
+    r.style.setProperty('--board-h', Math.max(260, Math.floor(window.innerHeight - top - dh - 8)) + 'px');
+  } else if (b) {
+    // マスの幅 × 86/59 がカードの高さ。段はその半分
+    const w = b.clientWidth - 16, zw = (w - 6 * 5) / 6.48;
+    r.style.setProperty('--hr', Math.max(16, Math.round(zw * 86 / 59 / 2 - 2)) + 'px');
   }
 }
 /** 返事が要る時（チェーンの確認・選択・決着）は自動で閉じてボタンを見せ、自分の番に戻ったら開き直す */
@@ -1537,6 +1548,15 @@ function showPile(p, kind) {
   const list = S.players[p][kind];
   const label = { deck: 'デッキ', gy: '墓地', extra: 'EXデッキ', banished: '除外' }[kind];
   const hiddenExtra = kind === 'extra' && isCpu(p);
+  // 自分のデッキ：次に引くカードが分からないように、手札と同じ順に並べ替え、同じカードはまとめて「×枚数」で見せる
+  if (kind === 'deck' && !isCpu(p) && list.length) {
+    const groups = [];
+    for (const u of sortHand(S, list)) { const g = groups.find(x => S.cards[x.u].code === S.cards[u].code); if (g) g.n++; else groups.push({ u, n: 1 }); }
+    const body = `<p class="menu-note">並び順は山札の順番ではありません（種類・レベル順）。カードを押すと効果を見られます。</p><div class="pilelist">${groups.map(g => `<span class="deck-g">${cardHtml(g.u)}${g.n > 1 ? `<b class="deck-n">×${g.n}</b>` : ''}</span>`).join('')}</div>`;
+    $('#pileBox').innerHTML = `<div class="box-head"><h3>${NAME(p)}のデッキ（${list.length}枚）</h3><button class="btn small ghost" id="pileClose">閉じる</button></div>${body}`;
+    $('#pileDlg').hidden = false;
+    return;
+  }
   const body = kind === 'deck' || hiddenExtra ? `<p class="menu-note">中身は見られません（${list.length}枚）。</p>` :
     list.length ? `<div class="pilelist">${[...list].reverse().map(u => cardHtml(u)).join('')}</div>` : '<p class="menu-note">カードはありません。</p>';
   $('#pileBox').innerHTML = `<div class="box-head"><h3>${NAME(p)}の${label}（${list.length}枚）</h3><button class="btn small ghost" id="pileClose">閉じる</button></div>${body}`;
@@ -1599,7 +1619,7 @@ function wireTray(root) {
   let lastCard = null, strummed = false, sx = null, sy = 0;
   const strumStart = (x, y) => { lastCard = null; strummed = false; sx = x; sy = y; };
   const strumMove = (x, y) => {
-    if (sx === null || !trayOpen || !narrow()) return;
+    if (sx === null || !trayOpen || !narrow() || aim || place) return;
     if (!strummed && (Math.abs(x - sx) < 8 || Math.abs(x - sx) < Math.abs(y - sy))) return;
     strummed = true;
     const c = cardAt(x, y);
@@ -1611,6 +1631,7 @@ function wireTray(root) {
   t.addEventListener('touchstart', e => { const p = e.touches[0]; if (p) strumStart(p.clientX, p.clientY); }, { passive: true });
   ['pointerup', 'pointercancel', 'touchend'].forEach(ev => t.addEventListener(ev, () => { sx = null; }));
   const swipeEnd = (dx, dy) => {
+    if (aim || place || (handPress && handPress.fired)) return; // 手札の長押し・矢印の操作は、そちらで「押した」を止める
     if (Math.abs(dy) > 28 && Math.abs(dy) > Math.abs(dx) * 1.2) { swiped = true; setTray(dy < 0); return; }
     if (strummed) swiped = true;
   };
@@ -1623,6 +1644,165 @@ function wireTray(root) {
   }, true);
   root.querySelector('#trayHandle').addEventListener('click', e => { e.stopPropagation(); setTray(!trayOpen); });
 }
+/* ---------- スマホの手札の操作 ----------
+ * 長押し：カードの効果を見る（もう一度押すと閉じる）
+ * 1回押す：カードが手札から少し飛び出して光る（選んだ状態）。もう一度押すと戻る
+ * 選んだカードを長押し：置ける場所に矢印が伸び、残りの手札は下に沈む。そのまま指を滑らせた先のマスに置く
+ *   （指を速く払って置き場所が決まらない時は、空いている一番左のマスに置く。指を離しても矢印は残り、マスを押しても置ける）
+ * 置いた後：上下左右に払うと「表・裏（攻撃表示で召喚・裏側でセット／発動・セット）」が切り替わり、押すと決定 */
+let aim = null;    // { u, acts, targets, layer, ghost, sx, sy, moved, hover, held }
+let place = null;  // { u, acts, t, modes, m, layer }
+let handPress = null; // { u, x, y, timer, fired }
+const HAND_TYPES = ['normalSummon', 'setMonster', 'setSpellTrap', 'activate', 'procSummon'];
+function handActs(u) {
+  if (!humanActing() || S.pending) return [];
+  return legalActions(S).filter(a => a.card === u && HAND_TYPES.includes(a.type));
+}
+const zoneEl = key => ROOT.querySelector(`#board [data-zone="${key}"]`);
+/** 選んだカードを置けるマス */
+function aimTargets(u, acts) {
+  const d = defOf(S, u), P = S.players[0], out = [];
+  const mon = acts.some(a => ['normalSummon', 'setMonster', 'procSummon'].includes(a.type));
+  if (mon) {
+    let idx = P.mzone.map((v, i) => (v === null ? i : -1)).filter(i => i >= 0);
+    if (!idx.length) idx = [0, 1, 2, 3, 4]; // アドバンス召喚でリリースして空くマス
+    idx.forEach(i => out.push({ kind: 'mz', idx: i, key: `0:mz:${i}` }));
+  }
+  const stActs = acts.some(a => a.type === 'setSpellTrap' || (a.type === 'activate' && d.kind === 'spell'));
+  if (stActs && d.kind !== 'monster') {
+    if (d.subtype === 'フィールド') out.push({ kind: 'fz', idx: 0, key: '0:fz:0' });
+    else P.szone.forEach((v, i) => { if (v === null) out.push({ kind: 'st', idx: i, key: `0:st:${i}` }); });
+  }
+  return out.map(t => ({ ...t, el: zoneEl(t.key) })).filter(t => t.el);
+}
+/** 置き場所のない「手札から発動する効果」（モンスターの効果など） */
+const zonelessActs = (u, acts) => acts.filter(a => a.type === 'activate' && defOf(S, u).kind === 'monster');
+
+function startAim(u, x, y) {
+  const acts = handActs(u);
+  const targets = aimTargets(u, acts), loose = zonelessActs(u, acts);
+  if (!targets.length && !loose.length) { toast('今は手札から出せません'); return; }
+  const cardEl = ROOT.querySelector(`#hand0 [data-uid="${u}"]`);
+  const cr = cardEl ? cardEl.getBoundingClientRect() : { left: x - 30, top: y - 40, width: 60, height: 88 };
+  const from = { x: cr.left + cr.width / 2, y: cr.top + cr.height * .25 };
+  const layer = document.createElement('div');
+  layer.className = 'aim-layer';
+  const arrows = targets.map(t => {
+    const r = t.el.getBoundingClientRect(), to = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    const mx = (from.x + to.x) / 2, my = Math.min(from.y, to.y) - 40;
+    return `<path d="M${from.x.toFixed(0)},${from.y.toFixed(0)} Q${mx.toFixed(0)},${my.toFixed(0)} ${to.x.toFixed(0)},${to.y.toFixed(0)}" marker-end="url(#aimHead)"/>`;
+  }).join('');
+  layer.innerHTML = `<svg aria-hidden="true"><defs><marker id="aimHead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>${arrows}</svg>`
+    + `<div class="aim-tip">${targets.length ? '置きたいマスへ指を滑らせてください' : ''}${loose.length ? '' : ''}</div>`
+    + (loose.length ? `<button class="btn primary aim-act" type="button">${esc(defOf(S, u).name)}の効果を発動</button>` : '');
+  $('.droot').appendChild(layer);
+  const ghost = document.createElement('span');
+  ghost.className = faceCls(defOf(S, u)) + ' aim-ghost';
+  ghost.innerHTML = faceHtml(u, defOf(S, u), false);
+  ghost.style.left = x + 'px'; ghost.style.top = y + 'px';
+  layer.appendChild(ghost);
+  targets.forEach(t => t.el.classList.add('aim-ok'));
+  $('#hand0').classList.add('aiming');
+  aim = { u, acts, targets, loose, layer, ghost, sx: x, sy: y, t0: performance.now(), moved: 0, hover: null, held: true };
+  if (navigator.vibrate) try { navigator.vibrate(12); } catch { /* 振動できない端末 */ }
+}
+function aimHit(x, y) {
+  return aim.targets.find(t => { const r = t.el.getBoundingClientRect(); return x >= r.left - 6 && x <= r.right + 6 && y >= r.top - 6 && y <= r.bottom + 6; }) || null;
+}
+function aimMove(x, y) {
+  if (!aim) return;
+  aim.moved = Math.max(aim.moved, Math.hypot(x - aim.sx, y - aim.sy));
+  aim.ghost.style.left = x + 'px'; aim.ghost.style.top = y + 'px';
+  const h = aimHit(x, y);
+  if (h !== aim.hover) { if (aim.hover) aim.hover.el.classList.remove('aim-hover'); aim.hover = h; if (h) h.el.classList.add('aim-hover'); }
+}
+function endAim() {
+  if (!aim) return;
+  aim.targets.forEach(t => t.el.classList.remove('aim-ok', 'aim-hover'));
+  aim.layer.remove();
+  const h = $('#hand0'); if (h) h.classList.remove('aiming');
+  aim = null;
+}
+/** 指を離した時：マスの上なら置く。速く払って置き場所が決まらない時は、空いている一番左のマスへ */
+function aimRelease(x, y) {
+  if (!aim) return;
+  let t = aimHit(x, y);
+  const fast = !t && aim.moved > 40 && aim.targets.length;
+  if (fast) t = [...aim.targets].sort((a, b) => a.el.getBoundingClientRect().left - b.el.getBoundingClientRect().left)[0];
+  if (t) { const { u, acts } = aim; endAim(); startPlace(u, acts, t); return; }
+  // 指を離しても矢印は残す（マスを押す・発動ボタン・それ以外を押すと取りやめ）
+  aim.held = false;
+  aim.ghost.style.display = 'none';
+}
+function aimTap(x, y, target) {
+  if (!aim) return;
+  if (target.closest('.aim-act')) {
+    const { u, loose } = aim; endAim();
+    if (loose.length === 1) { selected = null; run(loose[0]); } else { selected = u; sheet = 'detail'; render(); }
+    return;
+  }
+  const t = aimHit(x, y);
+  if (t) { const { u, acts } = aim; endAim(); startPlace(u, acts, t); return; }
+  endAim();
+}
+
+/* ----- 置いた後：表・裏を切り替えて決定 ----- */
+const MODE_LABEL = { summon: '攻撃表示で召喚', mset: '裏側守備表示でセット', activate: '発動', sset: 'セット' };
+function placeModes(acts, t, u) {
+  const d = defOf(S, u);
+  if (t.kind === 'mz') return [acts.some(a => a.type === 'normalSummon' || a.type === 'procSummon') && 'summon', acts.some(a => a.type === 'setMonster') && 'mset'].filter(Boolean);
+  return [acts.some(a => a.type === 'activate' && d.kind === 'spell') && 'activate', acts.some(a => a.type === 'setSpellTrap') && 'sset'].filter(Boolean);
+}
+function startPlace(u, acts, t) {
+  const modes = placeModes(acts, t, u);
+  if (!modes.length) return;
+  if (modes.length === 1) { placeConfirm(u, acts, t, modes[0]); return; }
+  const layer = document.createElement('div');
+  layer.className = 'place-layer';
+  $('.droot').appendChild(layer);
+  place = { u, acts, t, modes, m: 0, layer };
+  t.el.classList.add('aim-hover');
+  drawPlace();
+}
+function drawPlace() {
+  const { u, t, modes, m, layer } = place, mode = modes[m], d = defOf(S, u);
+  const r = t.el.getBoundingClientRect();
+  const back = mode === 'mset' || mode === 'sset', def = mode === 'mset';
+  const w = Math.min(r.width, r.height * 59 / 86) * (def ? .7 : .92);
+  const cls = back ? 'card back' : faceCls(d);
+  layer.innerHTML = `<span class="${cls} place-ghost${def ? ' def' : ''}" style="left:${(r.left + r.width / 2).toFixed(0)}px;top:${(r.top + r.height / 2).toFixed(0)}px;width:${w.toFixed(0)}px;font-size:${(w / 8).toFixed(1)}px">${back ? '' : faceHtml(u, d, false)}</span>`
+    + `<div class="place-chip" style="left:${(r.left + r.width / 2).toFixed(0)}px;top:${(r.bottom + 8).toFixed(0)}px"><b>${MODE_LABEL[mode]}</b><small>上下左右に払うと${MODE_LABEL[modes[1 - m]] || '切り替え'}／押すと決定</small><button class="place-x" type="button" aria-label="やめる">✕</button></div>`;
+}
+function endPlace() {
+  if (!place) return;
+  place.t.el.classList.remove('aim-hover');
+  place.layer.remove();
+  place = null;
+}
+function placeGesture(dx, dy, target) {
+  if (!place) return;
+  if (target && target.closest('.place-x')) { endPlace(); return; }
+  if (Math.hypot(dx, dy) > 30) { place.m = (place.m + 1) % place.modes.length; drawPlace(); return; }
+  const { u, acts, t, modes, m } = place;
+  endPlace();
+  placeConfirm(u, acts, t, modes[m]);
+}
+/** 決定：選んだマスに召喚・セット・発動。リリースの組み合わせなど、まだ選ぶことがある時はカードの説明の欄から選ぶ */
+function placeConfirm(u, acts, t, mode) {
+  const pickOf = {
+    summon: acts.filter(a => a.type === 'normalSummon' || a.type === 'procSummon'),
+    mset: acts.filter(a => a.type === 'setMonster'),
+    activate: acts.filter(a => a.type === 'activate'),
+    sset: acts.filter(a => a.type === 'setSpellTrap'),
+  }[mode] || [];
+  if (pickOf.length !== 1) { selected = u; sheet = 'detail'; render(); return; }
+  const a = pickOf[0];
+  const withZone = (a.type === 'normalSummon' || a.type === 'setMonster') && S.players[0].mzone[t.idx] === null ? { ...a, zone: t.idx }
+    : a.type === 'setSpellTrap' && t.kind === 'st' ? { ...a, zone: t.idx } : a;
+  selected = null;
+  run(withZone);
+}
+
 function wire(root) {
 /* 墓地・除外・デッキ・EX：長押し（パソコンは右クリックでも）で中身の一覧。スマホでは普通に押すと一番上のカードの説明 */
 let pressT = null, pressEl = null, pressXY = null, pressFired = false;
@@ -1636,6 +1816,39 @@ root.addEventListener('pointerdown', e => {
   pressT = setTimeout(() => { const [p, k] = el.dataset.pile.split(':'); pressFired = true; pressEnd(); if (navigator.vibrate) try { navigator.vibrate(15); } catch { /* 振動できない端末 */ } showPile(Number(p), k); }, 450);
 });
 root.addEventListener('pointermove', e => { if (pressT && pressXY && Math.hypot(e.clientX - pressXY[0], e.clientY - pressXY[1]) > 10) pressEnd(); });
+/* スマホの手札：長押し・選んだカードの長押し（矢印）・置いた後の切り替え */
+let handPressFired = false, aimDown = null, placeDown = null;
+root.addEventListener('pointerdown', e => {
+  if (place) { placeDown = { x: e.clientX, y: e.clientY }; return; }
+  if (aim && !aim.held) { aimDown = { x: e.clientX, y: e.clientY }; return; }
+  handPressFired = false;
+  const el = narrow() && trayOpen && e.target.closest && e.target.closest('#hand0 [data-uid]');
+  if (!el || e.button > 0) return;
+  const u = Number(el.dataset.uid);
+  if (S.pending && S.pending.request.kind === 'cards' && S.pending.request.options.includes(u)) return;
+  clearTimeout(handPress?.timer);
+  handPress = { u, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, fired: false };
+  handPress.timer = setTimeout(() => {
+    const hp = handPress; if (!hp) return;
+    hp.fired = true;
+    if (selected === u && handActs(u).length) startAim(u, hp.lx, hp.ly);
+    else { if (navigator.vibrate) try { navigator.vibrate(10); } catch { /* 振動できない端末 */ } selected = u; sheet = 'detail'; render(); }
+  }, 420);
+});
+root.addEventListener('pointermove', e => {
+  if (aim && aim.held) { aimMove(e.clientX, e.clientY); return; }
+  if (handPress) {
+    handPress.lx = e.clientX; handPress.ly = e.clientY;
+    if (!handPress.fired && Math.hypot(e.clientX - handPress.x, e.clientY - handPress.y) > 10) { clearTimeout(handPress.timer); handPress = null; }
+  }
+});
+root.addEventListener('pointerup', e => {
+  if (place && placeDown) { const dx = e.clientX - placeDown.x, dy = e.clientY - placeDown.y; placeDown = null; placeGesture(dx, dy, e.target); handPressFired = true; return; }
+  if (aim && aim.held) { aimRelease(e.clientX, e.clientY); handPressFired = true; handPress = null; return; }
+  if (aim && aimDown) { aimDown = null; aimTap(e.clientX, e.clientY, e.target); handPressFired = true; return; }
+  if (handPress) { clearTimeout(handPress.timer); handPressFired = handPress.fired; handPress = null; }
+});
+root.addEventListener('pointercancel', () => { if (handPress) { clearTimeout(handPress.timer); handPress = null; } if (aim && aim.held) endAim(); });
 ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => root.addEventListener(ev, () => { if (pressT) pressEnd(); }));
 root.addEventListener('contextmenu', e => {
   const el = e.target.closest && e.target.closest('#board [data-pile]');
@@ -1646,6 +1859,8 @@ root.addEventListener('contextmenu', e => {
 root.addEventListener('click', e => {
   // 長押しで一覧を開いた直後の「押した」は無視する
   if (pressFired) { pressFired = false; e.preventDefault(); return; }
+  if (handPressFired) { handPressFired = false; e.preventDefault(); return; }
+  if (aim || place) return;
   const t = e.target;
   if (t.closest('[data-fanok]')) { if (fan) fanFinish(fan.sel); return; }
   if (t.closest('[data-fanskip]')) { fanFinish([]); return; }
@@ -1694,6 +1909,8 @@ root.addEventListener('click', e => {
     const u = Number(cardEl.dataset.uid);
     // 選択中なら、盤面のカードを押しても選べる
     if (S.pending && S.pending.request.kind === 'cards' && S.pending.request.options.includes(u) && !isCpu(S.pending.request.player)) { togglePick(u); return; }
+    // スマホの自分の手札：1回押すと飛び出して光る（選ぶ）、もう一度押すと戻る。効果は長押しで見る
+    if (narrow() && cardEl.closest('#hand0')) { if (selected === u) { selected = null; sheet = null; } else { selected = u; sheet = null; } render(); return; }
     selected = u; sheet = 'detail';
     if (cardEl.closest('#pileDlg')) $('#pileDlg').hidden = true;
     render();

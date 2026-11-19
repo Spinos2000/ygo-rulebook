@@ -473,16 +473,6 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .fan-layer { padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) }
   .fan-layer > .fan-head { margin-top: auto }
   .fan-area .card:not(.dim) { box-shadow: 0 0 0 2px #fff, 0 6px 14px rgba(0, 0, 0, .45) }
-  /* 手札を閉じた時：盤面のマスを縦長にしてカードを大きく、カード名なども出す */
-  /* 手札を閉じた時：盤面を画面の端から端まで、上のLPから下のボタンまでの高さいっぱいに広げる（高さ --board-h は app.js が測る） */
-  .droot.tray-closed #board { width: 100vw; max-width: none; margin-left: calc(50% - 50vw); border-radius: 0; border-left: none; border-right: none; box-shadow: none;
-    height: var(--board-h, auto); padding: 4px 3px; gap: 3px; grid-template-rows: 1fr 1fr .58fr 1fr 1fr }
-  .droot.tray-closed #board .row { gap: 3px; min-height: 0; grid-template-columns: .74fr repeat(5, minmax(0, 1fr)) .74fr }
-  .droot.tray-closed #board .r2 { margin-block: 0 }
-  .droot.tray-closed #board .zone { aspect-ratio: auto; height: 100%; min-height: 0; container-type: size }
-  /* カードはマスの幅と高さの小さいほうに合わせて最大に（守備表示は横向きで収まる大きさ） */
-  .droot.tray-closed #board .zone > .card { width: min(92cqw, 94cqh * 59 / 86); font-size: calc(min(92cqw, 94cqh * 59 / 86) / 8) }
-  .droot.tray-closed #board .zone > .card.def { width: min(64cqw, 92cqh); font-size: calc(min(64cqw, 92cqh) / 8) }
 }
 /* 選ぶ画面：カードを横に並べてスクロール */
 .optlist.cards { display: flex; gap: 10px; overflow-x: auto; overflow-y: visible; max-height: none; scroll-snap-type: x mandatory; padding: 10px 2px 8px; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain }
@@ -540,13 +530,13 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #phases li.cur span { background: var(--accent); border: 2px solid var(--edge); color: var(--accent-ink); box-shadow: 2px 2px 0 var(--edge) }
 #phases li button { border: 1.5px dashed var(--edge) }
 /* プレイヤーの帯：左端に寮の色 */
-.pstrip { border: 2px solid var(--edge); border-left-width: 8px; border-left-color: var(--me); box-shadow: 3px 3px 0 var(--edge); border-radius: 12px }
+.pstrip { border: 2px solid var(--edge); border-left-width: 8px; border-left-color: var(--me); box-shadow: none; border-radius: 12px }
 .pstrip.opp { border-left-color: var(--opp) }
 .pstrip .who::before { width: 12px; height: 12px; background: var(--me); border: 2px solid var(--edge) }
 .pstrip.opp .who::before { background: var(--opp) }
 .pstrip .lp { font-family: var(--num); font-weight: 600; letter-spacing: .02em }
 .pstrip .tag { background: var(--accent); border: 1.5px solid var(--edge); color: var(--accent-ink) }
-.pstrip.acting { border-color: var(--edge); border-left-color: var(--me); box-shadow: 3px 3px 0 var(--edge), 0 0 0 3px color-mix(in srgb, var(--accent) 70%, transparent) }
+.pstrip.acting { border-color: var(--accent); border-left-color: var(--me); box-shadow: none }
 .pstrip.opp.acting { border-left-color: var(--opp) }
 /* デュエルマット（緑のまま）を外枠で囲む */
 #board { border: 2px solid var(--edge); box-shadow: 4px 4px 0 var(--edge), inset 0 0 0 1px color-mix(in srgb, var(--mat-line) 40%, transparent) }
@@ -649,6 +639,65 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #board .zone { transition: background .35s }
 #board.skin-on .zone:not(.void) { background: rgba(0, 0, 0, .16); border-color: rgba(255, 255, 255, .45) }
 
+
+/* ===== 盤面（EXモンスターゾーンなし）：7列 × 半分の高さの段 10段。端の列は真ん中の列と半分ずつずれる ===== */
+#board { grid-template-columns: .74fr repeat(5, minmax(0, 1fr)) .74fr; grid-template-rows: repeat(10, var(--hr, 34px)); gap: 3px 4px; align-content: center }
+#board > .zone { aspect-ratio: auto; height: auto; min-height: 0; container-type: size; position: relative; z-index: 1 }
+#board > .zone > .card { width: min(92cqw, 94cqh * 59 / 86); font-size: calc(min(92cqw, 94cqh * 59 / 86) / 8) }
+#board > .zone > .card.def { width: min(64cqw, 92cqh); font-size: calc(min(64cqw, 92cqh) / 8) }
+#board > .zone > .card:not(.back) { font-size: calc(min(92cqw, 94cqh * 59 / 86) / 8 * .9) }
+#board > .zone > .card.def:not(.back) { font-size: calc(min(64cqw, 92cqh) / 8 * .9) }
+#board > .zone.opp:not(.pile) { border-color: color-mix(in srgb, var(--mat-line) 60%, var(--opp) 40%) }
+@media (max-width: 860px) {
+  /* スマホ：盤面は手札の開け閉めに関係なく、画面の端から端まで、上のLPから下のボタンまで（手札は盤面の下の方に重ねて出す） */
+  .table { padding-bottom: calc(var(--dock-h, 76px) + 8px) }
+  #board { width: 100vw; max-width: none; margin-left: calc(50% - 50vw); border-radius: 0; border-left: none; border-right: none; box-shadow: none;
+    height: var(--board-h, auto); padding: 4px 3px; gap: 3px; grid-template-rows: repeat(10, minmax(0, 1fr)) }
+  /* 「下にスワイプでしまう」：手札の扇の左上に、扇の傾きに合わせて */
+  .tray-handle { justify-content: flex-start; padding-left: 18px; height: 20px; transform: rotate(-7deg) translateY(10px); transform-origin: left center; position: relative; z-index: 2 }
+  .tray-handle .grip { width: 24px }
+}
+/* 自分のデッキの一覧：同じカードの枚数 */
+.deck-g { position: relative; display: inline-block }
+.deck-n { position: absolute; right: -4px; bottom: -4px; z-index: 3; background: var(--accent); color: var(--accent-ink); border: 1.5px solid var(--edge); border-radius: 999px; font-family: var(--num); font-size: 12px; padding: 0 6px; line-height: 1.5 }
+/* ===== スマホの手札の操作：矢印で置く ===== */
+@media (max-width: 860px) {
+  #hand0 .card.sel { transform: translate(var(--tx, 0px), calc(var(--ty, 0px) - 30px)) rotate(0deg) scale(1.08); z-index: 40;
+    box-shadow: 0 0 0 3px var(--accent), 0 0 22px 6px color-mix(in srgb, var(--accent) 70%, transparent); outline: none }
+  #hand0.aiming .card { transform: translate(var(--tx, 0px), 92%) rotate(var(--rot, 0deg)); opacity: .55 }
+  #hand0.aiming .card.sel { opacity: .2 }
+}
+.aim-layer { position: fixed; inset: 0; z-index: 35; touch-action: none }
+.aim-layer svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible }
+.aim-layer svg path { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 7 6; filter: drop-shadow(0 0 4px rgba(0,0,0,.6)); animation: aimDash .6s linear infinite }
+.aim-layer svg marker path { fill: var(--accent); stroke: none; animation: none }
+@keyframes aimDash { to { stroke-dashoffset: -13 } }
+.aim-tip { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); background: rgba(10,14,20,.82); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; white-space: nowrap; pointer-events: none }
+.aim-tip:empty { display: none }
+.aim-ghost { position: fixed; width: 72px; font-size: 9px; transform: translate(-50%, -70%) rotate(-5deg); pointer-events: none; z-index: 2;
+  box-shadow: 0 0 0 3px var(--accent), 0 0 24px 8px color-mix(in srgb, var(--accent) 65%, transparent), 0 10px 20px rgba(0,0,0,.5) }
+.aim-act { position: absolute; left: 50%; bottom: calc(var(--dock-h, 76px) + 150px); transform: translateX(-50%); white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis }
+#board .zone.aim-ok { outline: 2px dashed var(--accent); outline-offset: -2px; background: color-mix(in srgb, var(--accent) 16%, transparent) }
+#board .zone.aim-hover { outline-style: solid; outline-width: 3px; box-shadow: 0 0 16px 4px color-mix(in srgb, var(--accent) 70%, transparent) }
+.place-layer { position: fixed; inset: 0; z-index: 35; background: rgba(4,10,8,.3); touch-action: none }
+.place-ghost { position: fixed; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 0 3px var(--accent), 0 0 20px 6px color-mix(in srgb, var(--accent) 65%, transparent); transition: transform .2s }
+.place-ghost.def { transform: translate(-50%, -50%) rotate(90deg) }
+.place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: nowrap; max-width: calc(100vw - 24px) }
+.place-chip b { font-family: var(--display); font-size: 15px }
+.place-chip small { font-size: 10.5px; color: var(--sub) }
+.place-x { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); font-size: 13px; line-height: 1; cursor: pointer }
+@media (prefers-reduced-motion: reduce) { .aim-layer svg path { animation: none } }
+/* 手札の開け閉め：盤面はそのまま、手札とボタンだけがゆっくりなめらかに出入りする */
+@media (max-width: 860px) {
+  .tray { transition: bottom .42s cubic-bezier(.22, .9, .25, 1), transform .42s cubic-bezier(.22, .9, .25, 1) }
+  .dock { transition: transform .42s cubic-bezier(.22, .9, .25, 1), opacity .3s }
+  .droot:not(.tray-closed) .dock { opacity: 0 }
+  #hand0 { transition: height .42s cubic-bezier(.22, .9, .25, 1) }
+  #hand0 .card { transition: transform .42s cubic-bezier(.22, .9, .25, 1), box-shadow .12s, opacity .25s }
+  .tray-handle { transition: opacity .3s }
+}
+/* パソコン：盤面は縦の方が長い（カードの縦横比）ので、画面の高さに収まる幅にする */
+@media (min-width: 861px) { #board { max-width: max(300px, calc((100vh - 330px) / 1.14)) } }
 `;
 
 export const MARKUP = `
