@@ -1136,11 +1136,53 @@ function closeSheets() {
   render();
 }
 
+/* ---------- スマホの手札トレイ：上下のスワイプで開け閉め。閉じるとドック（エンドなど）が出る ---------- */
+let trayOpen = true, trayAuto = false;
+function setTray(open, auto = false) {
+  trayOpen = open; trayAuto = auto && !open;
+  const r = $('.droot'); if (!r) return;
+  r.classList.toggle('tray-closed', !open);
+  const h = $('#trayHandle'); if (h) h.setAttribute('aria-expanded', String(open));
+  const n = S ? S.players[0].hand.length : 0;
+  const l = $('#trayLbl'); if (l) l.textContent = open ? '▼ 手札をしまう（ボタンを出す）' : `▲ 手札を開く（${n}枚）`;
+  measureBottom();
+}
+function measureBottom() {
+  const r = $('.droot'), t = $('#tray'), d = $('#dock'); if (!r || !t || !d) return;
+  const dh = Math.ceil(d.getBoundingClientRect().height);
+  r.style.setProperty('--dock-h', dh + 'px');
+  r.style.setProperty('--bottom-h', (narrow() ? (trayOpen ? Math.ceil(t.getBoundingClientRect().height) : dh + 46) : dh) + 'px');
+}
+/** 返事が要る時（チェーンの確認・選択・決着）は自動で閉じてボタンを見せ、自分の番に戻ったら開き直す */
+function autoTray() {
+  if (!narrow() || !S) return;
+  const needs = S.winner !== null || (humanActing() && (S.pending || (S.window.kind === 'priority' && activatableList(S, actorOf(S)).length)));
+  if (needs && trayOpen) setTray(false, true);
+  else if (!needs && !trayOpen && trayAuto && humanActing() && S.turnPlayer === actorOf(S) && S.window.kind !== 'priority') setTray(true);
+  else setTray(trayOpen, trayAuto);
+}
+/* 罠カードが手札に来たら、シャカパチ（手札が跳ねてパチパチ音） */
+let handSeen = null;
+function checkPachi() {
+  const me = 0, h = S.players[me].hand; // 下の手札（#hand0）はいつもP1
+  const prev = handSeen; handSeen = { p: me, set: new Set(h) };
+  if (!prev || prev.p !== me) return;
+  const fresh = h.filter(u => !prev.set.has(u) && defOf(S, u).kind === 'trap');
+  if (!fresh.length) return;
+  const el = $('#hand0'); if (!el) return;
+  setTimeout(() => {
+    fresh.forEach(u => { const c = el.querySelector(`.card[data-uid="${u}"]`); if (c) { c.classList.add('newtrap'); setTimeout(() => c.classList.remove('newtrap'), 1400); } });
+    el.classList.remove('pachi'); void el.offsetWidth; el.classList.add('pachi');
+    setTimeout(() => el.classList.remove('pachi'), 900);
+    if (narrow() && !trayOpen) setTray(true);
+    play(['pachi']);
+  }, 450);
+}
 function render() {
   if ((fxN > 0)) { renderSheets(); return; } // 演出が終わってから画面を更新する（開いていたシートは先に閉じる）
   if (fan && !(S.pending && !isCpu(S.pending.request.player) && isDeckPick(S.pending.request))) closeFan();
   canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
-  renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets();
+  renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets(); autoTray(); checkPachi();
   $('#result').hidden = S.winner === null;
   if (S.winner !== null) $('#result').textContent = S.winner === 'draw' ? `引き分け：${S.winReason}` : `${NAME(S.winner)}の勝利：${S.winReason}`;
   // カードの移動・召喚の演出があれば、それが終わるまでCPUの手番と自動パスを待つ
@@ -1196,6 +1238,24 @@ function surrender() {
 }
 
 /* ---------- イベント（boot から呼ぶ） ---------- */
+function wireTray(root) {
+  const t = root.querySelector('#tray'); if (!t) return;
+  let y0 = null, x0 = 0, swiped = false;
+  t.addEventListener('pointerdown', e => { if (!narrow()) return; y0 = e.clientY; x0 = e.clientX; swiped = false; });
+  t.addEventListener('pointerup', e => {
+    if (y0 === null) return;
+    const dy = e.clientY - y0, dx = e.clientX - x0; y0 = null;
+    if (Math.abs(dy) > 28 && Math.abs(dy) > Math.abs(dx) * 1.2) { swiped = true; setTray(dy < 0); }
+  });
+  t.addEventListener('pointercancel', () => { y0 = null; });
+  // スマホのブラウザによっては指の動きが pointer で届かないので、touch でも受ける（同じ向きに何度開け閉めしても結果は同じ）
+  let ty0 = null, tx0 = 0;
+  t.addEventListener('touchstart', e => { if (!narrow() || e.touches.length !== 1) return; ty0 = e.touches[0].clientY; tx0 = e.touches[0].clientX; }, { passive: true });
+  t.addEventListener('touchend', e => { if (ty0 === null) return; const p = e.changedTouches[0], dy = p.clientY - ty0, dx = p.clientX - tx0; ty0 = null; if (Math.abs(dy) > 28 && Math.abs(dy) > Math.abs(dx) * 1.2) { swiped = true; setTray(dy < 0); } }, { passive: true });
+  // スワイプした後の「押した」は、カードを選ばないようにする
+  t.addEventListener('click', e => { if (swiped) { swiped = false; e.stopPropagation(); e.preventDefault(); } }, true);
+  root.querySelector('#trayHandle').addEventListener('click', e => { e.stopPropagation(); setTray(!trayOpen); });
+}
 function wire(root) {
 /* 墓地・除外・デッキ・EX：長押し（パソコンは右クリックでも）で中身の一覧。スマホでは普通に押すと一番上のカードの説明 */
 let pressT = null, pressEl = null, pressXY = null, pressFired = false;
@@ -1317,11 +1377,10 @@ export function boot(root, opts = {}) {
   for (const i of [0, 1]) $(`#deck${i}`).addEventListener('change', showDeckFmt);
   $('#closeDuel').hidden = !opts.onClose;
   wire(root);
-  // スマホでは下に固定したドックの実際の高さだけ、盤面の下を空ける
-  const dock = root.querySelector('#dock'), droot = root.querySelector('.droot') || root;
-  const setDockH = () => { if (dock) droot.style.setProperty('--dock-h', Math.ceil(dock.getBoundingClientRect().height) + 'px'); };
-  if (dock && typeof ResizeObserver !== 'undefined') new ResizeObserver(setDockH).observe(dock);
-  setDockH();
+  // スマホでは、下に固定したドック・手札トレイの高さだけ盤面の下を空ける
+  if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(() => measureBottom()); ['#dock', '#tray'].forEach(q => { const e = root.querySelector(q); if (e) ro.observe(e); }); }
+  wireTray(root);
+  measureBottom();
   const start = data => {
     if (data && data.mode) $('#mode').value = data.mode;
     if (data && data.d0 && DECKS[data.d0]) $('#deck0').value = data.d0;

@@ -382,6 +382,45 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   #closeDuel .long { display: none }
 }
 @media (min-width: 861px) { #scrim { display: none } }
+/* 手札のトレイ：パソコンでは何もしない（手札はいつもの場所） */
+.tray { display: contents }
+.tray-handle { display: none }
+/* シャカパチ：罠カードが手札に来たら、手札のカードが小刻みに跳ねる */
+@keyframes pachi { 0%, 100% { translate: 0 0 } 20% { translate: 0 -7px } 40% { translate: 0 1px } 60% { translate: 0 -5px } 80% { translate: 0 0 } }
+.hand.me.pachi .card { animation: pachi .16s ease-in-out 4 }
+.hand.me.pachi .card:nth-child(2n) { animation-delay: .05s }
+.hand.me.pachi .card:nth-child(3n) { animation-delay: .09s }
+.hand.me .card.newtrap { box-shadow: 0 0 0 2px var(--trap, #c2558f), 0 0 14px var(--trap, #c2558f) }
+@media (prefers-reduced-motion: reduce) { .hand.me.pachi .card { animation: none } }
+@media (max-width: 860px) {
+  /* LPは上に2つ並べる（左が相手、右が自分） */
+  .table { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 6px; row-gap: 6px; align-content: start; padding-bottom: calc(var(--bottom-h, 210px) + 10px) }
+  .table > * { grid-column: 1 / -1 }
+  #side1 { grid-column: 1; order: 1 } #side0 { grid-column: 2; order: 1 }
+  .pstrip { padding: 4px 8px; gap: 0 6px; border-left-width: 6px; align-content: center; min-width: 0 }
+  .pstrip .who { font-size: 12px; gap: 4px }
+  .pstrip .who::before { width: 9px; height: 9px }
+  .pstrip .lp { font-size: 20px; min-width: 0 }
+  .pstrip .lp::before { font-size: 9px; margin-right: 2px }
+  .pstrip .tag { font-size: 9px; padding: 0 5px }
+  .pstrip .meta { width: 100%; margin-left: 0; text-align: left; font-size: 10px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  /* 手札のトレイ：画面の下に固定。上下のスワイプ（または取っ手）で開け閉め */
+  .tray { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; background: var(--panel); border: 2px solid var(--edge); border-bottom: none; border-radius: 18px 18px 0 0;
+    box-shadow: 0 -4px 14px rgba(0, 0, 0, .18); padding: 0 max(6px, env(safe-area-inset-right, 0px)) calc(4px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px));
+    transition: transform .28s cubic-bezier(.2, .8, .2, 1); touch-action: pan-x }
+  .tray-handle { display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; height: 28px; padding: 0; background: none; border: 0; color: var(--sub); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer }
+  .tray-handle .grip { width: 38px; height: 5px; border-radius: 5px; background: var(--line) }
+  .tray-handle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 12px }
+  #hand0 { --cw: 104px; position: relative; z-index: auto; margin: 0; height: calc(var(--ch) * .9 + 22px) }
+  #hand0 .card { font-size: 10px }
+  /* 閉じた時：取っ手と手札の上の端だけ見せ、その下にドック（エンドなどのボタン） */
+  .droot.tray-closed .tray { transform: translateY(calc(100% - 46px - var(--dock-h))); z-index: 6 }
+  .dock { z-index: 8; transition: transform .28s cubic-bezier(.2, .8, .2, 1) }
+  .droot:not(.tray-closed) .dock { transform: translateY(110%); pointer-events: none }
+  #toast { bottom: calc(var(--bottom-h, 210px) + 12px) }
+}
+@media (max-width: 380px) { #hand0 { --cw: 94px } }
+@media (max-width: 860px) and (max-height: 700px) { #hand0 { --cw: 94px } }
 /* 縦が短いスマホ：手札を少し小さくして、1画面に収まりやすくする */
 @media (max-width: 860px) and (max-height: 720px) { .hand { --cw: 62px } .hand.opp { --cw: 30px } }
 #turnInfo .ts { display: none }
@@ -487,7 +526,7 @@ export const MARKUP = `
     <div id="board"></div>
     <div id="result" hidden></div>
     <section class="panel" id="chain" hidden aria-live="polite"></section>
-    <div class="hand me" id="hand0"></div>
+    <div class="tray" id="tray"><button class="tray-handle" id="trayHandle" type="button" aria-expanded="true" aria-controls="hand0"><span class="grip" aria-hidden="true"></span><span class="tray-lbl" id="trayLbl">手札をしまう</span></button><div class="hand me" id="hand0"></div></div>
     <div class="pstrip me" id="side0"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="meta"></span></div>
     <div class="dock" id="dock">
       <div class="dock-status"><span id="actor"></span><span id="actorHint"></span></div>

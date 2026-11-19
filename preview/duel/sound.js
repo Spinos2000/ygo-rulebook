@@ -87,6 +87,8 @@ const SOUNDS = {
   destroy: s => { noise(s, 0.45, { gain: 0.45, freq: 2500, to: 200 }); tone(90, s, 0.3, { type: 'triangle', gain: 0.3, to: 45 }); },
   // 無効：下がるブザー
   negate: s => { tone(440, s, 0.35, { type: 'sawtooth', gain: 0.18, to: 140 }); tone(445, s, 0.35, { type: 'square', gain: 0.1, to: 145 }); },
+  // シャカパチ：カードをはじく乾いた音を細かく
+  pachi: s => { [0, .07, .12, .2, .26, .34, .4, .47].forEach((d, i) => { noise(s + d, 0.025, { gain: 0.42 - i * 0.02, filter: 'highpass', freq: 3200 + (i % 3) * 600 }); tone(1900 + (i % 2) * 400, s + d, 0.012, { type: 'square', gain: 0.05 }); }); },
   // ドロー：小さな音
   draw: s => { noise(s, 0.05, { gain: 0.2, filter: 'highpass', freq: 2500 }); },
   // 勝利・敗北
