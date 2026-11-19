@@ -1077,7 +1077,7 @@ function runProc(s           , proc      , answers           )       {
 
 function execProc(s           , proc      )       {
   switch (proc.type) {
-    case 'activate': return doActivate(s, proc.player, proc.uid, proc.effect);
+    case 'activate': return doActivate(s, proc.player, proc.uid, proc.effect, proc.zone);
     case 'resolveLink': return resolveLink(s);
     case 'settle': return settle(s, proc.chained);
     case 'handLimit': return handLimit(s);
@@ -1371,7 +1371,7 @@ function activationPossible(s           , uid        , p          , eff         
 }
 
 /* ---------- 発動 ---------- */
-function activateEffect(s           , p          , uid        , effectId        )            {
+function activateEffect(s           , p          , uid        , effectId        , zone         )            {
   const dg = effectId.startsWith('dg:');
   const eff = (scriptOf(s, uid).effects || []).find(e => e.id === effectId.replace(/^dg:/, '')) ;
   const d = defOf(s, uid);
@@ -1383,7 +1383,7 @@ function activateEffect(s           , p          , uid        , effectId        
         const old = s.players[p].fzone;
         if (old !== null) sendToGy(s, [old], 'rule');
         moveCard(s, uid, 'fzone', { faceUp: true, controller: p });
-      } else moveCard(s, uid, 'szone', { index: freeSZones(s, p)[0], faceUp: true, controller: p });
+      } else { const free = freeSZones(s, p); moveCard(s, uid, 'szone', { index: zone !== undefined && free.includes(zone) ? zone : free[0], faceUp: true, controller: p }); }
     } else c.faceUp = true;
   }
   const link            = {
@@ -1407,10 +1407,10 @@ function activateEffect(s           , p          , uid        , effectId        
   return link;
 }
 
-function doActivate(s           , p          , uid        , effectId        )       {
+function doActivate(s           , p          , uid        , effectId        , zone         )       {
   const mode = s.window.kind === 'priority' ? s.window.mode : 'normal';
   if (!s.chain.length && !s.chainCont) s.chainCont = s.window.kind === 'priority' ? s.window.cont : { type: 'none' };
-  const link = activateEffect(s, p, uid, effectId);
+  const link = activateEffect(s, p, uid, effectId, zone);
   forcedResponses(s, link);
   s.window = { kind: 'priority', player: opp(p), passes: 0, mode, cont: s.chainCont ?? { type: 'none' } };
 }
@@ -1731,7 +1731,7 @@ function performMain(s           , a        )       {
     }
     case 'attack': return declareAttack(s, a.attacker, a.target);
     case 'procSummon': s.queue.push({ type: 'procSummon', player: p, uid: a.card }); return;
-    case 'activate': s.queue.push({ type: 'activate', player: p, uid: a.card, effect: a.effect }); return;
+    case 'activate': s.queue.push({ type: 'activate', player: p, uid: a.card, effect: a.effect, zone: a.zone }); return;
     case 'nextPhase':
       s.window = { kind: 'priority', player: opp(p), passes: 1, mode: 'normal', cont: { type: 'phase', to: a.to } };
       return;
@@ -2083,7 +2083,7 @@ export function applyAction(prev           , action        )            {
   if (action.type === 'pass') { passPriority(s); flow(s); return s; }
   const w = s.window;
   if (action.type === 'activate' && !(w.kind === 'open' && w.respondDue)) {
-    s.queue.push({ type: 'activate', player: actorOf(s), uid: action.card, effect: action.effect });
+    s.queue.push({ type: 'activate', player: actorOf(s), uid: action.card, effect: action.effect, zone: action.zone });
     flow(s);
     return s;
   }
