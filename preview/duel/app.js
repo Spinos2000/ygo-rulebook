@@ -1682,57 +1682,72 @@ function startAim(u, x, y) {
   const acts = handActs(u);
   const targets = aimTargets(u, acts), loose = zonelessActs(u, acts);
   if (!targets.length && !loose.length) { toast('今は手札から出せません'); return; }
-  const cardEl = ROOT.querySelector(`#hand0 [data-uid="${u}"]`);
-  const cr = cardEl ? cardEl.getBoundingClientRect() : { left: x - 30, top: y - 40, width: 60, height: 88 };
-  const from = { x: cr.left + cr.width / 2, y: cr.top + cr.height * .25 };
   const layer = document.createElement('div');
   layer.className = 'aim-layer';
-  const arrows = targets.map(t => {
-    const r = t.el.getBoundingClientRect(), to = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-    const mx = (from.x + to.x) / 2, my = Math.min(from.y, to.y) - 40;
-    return `<path d="M${from.x.toFixed(0)},${from.y.toFixed(0)} Q${mx.toFixed(0)},${my.toFixed(0)} ${to.x.toFixed(0)},${to.y.toFixed(0)}" marker-end="url(#aimHead)"/>`;
-  }).join('');
-  layer.innerHTML = `<svg aria-hidden="true"><defs><marker id="aimHead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>${arrows}</svg>`
-    + `<div class="aim-tip">${targets.length ? '置きたいマスへ指を滑らせてください' : ''}${loose.length ? '' : ''}</div>`
+  layer.innerHTML = `<svg aria-hidden="true"><defs><marker id="aimHead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs><path class="aim-line" marker-end="url(#aimHead)"/></svg>`
+    + `<div class="aim-tip">${targets.length ? '矢印の先のマスへ、上に投げるように払ってください' : ''}</div>`
     + (loose.length ? `<button class="btn primary aim-act" type="button">${esc(defOf(S, u).name)}の効果を発動</button>` : '');
   $('.droot').appendChild(layer);
   const ghost = document.createElement('span');
   ghost.className = faceCls(defOf(S, u)) + ' aim-ghost';
   ghost.innerHTML = faceHtml(u, defOf(S, u), false);
-  ghost.style.left = x + 'px'; ghost.style.top = y + 'px';
   layer.appendChild(ghost);
-  targets.forEach(t => t.el.classList.add('aim-ok'));
   $('#hand0').classList.add('aiming');
-  aim = { u, acts, targets, loose, layer, ghost, sx: x, sy: y, t0: performance.now(), moved: 0, hover: null, held: true };
+  aim = { u, acts, targets, loose, layer, ghost, sx: x, sy: y, moved: 0, hover: null, held: true, trail: [{ x, y, t: performance.now() }] };
+  aimMove(x, y);
   if (navigator.vibrate) try { navigator.vibrate(12); } catch { /* 振動できない端末 */ }
 }
-function aimHit(x, y) {
-  return aim.targets.find(t => { const r = t.el.getBoundingClientRect(); return x >= r.left - 6 && x <= r.right + 6 && y >= r.top - 6 && y <= r.bottom + 6; }) || null;
+const zoneCenter = t => { const r = t.el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+/** 指に一番近い置けるマス（矢印はそこに吸い付く） */
+function aimNearest(x, y) {
+  let best = null, bd = Infinity;
+  for (const t of aim.targets) { const c = zoneCenter(t), d = Math.hypot(c.x - x, (c.y - y) * 1.2); if (d < bd) { bd = d; best = t; } }
+  return best;
 }
 function aimMove(x, y) {
   if (!aim) return;
   aim.moved = Math.max(aim.moved, Math.hypot(x - aim.sx, y - aim.sy));
+  const now = performance.now();
+  aim.trail.push({ x, y, t: now });
+  while (aim.trail.length > 2 && now - aim.trail[0].t > 140) aim.trail.shift();
+  // カードは指についてくる（指で隠れないよう少し上）
   aim.ghost.style.left = x + 'px'; aim.ghost.style.top = y + 'px';
-  const h = aimHit(x, y);
+  if (!aim.targets.length) return;
+  const h = aimNearest(x, y - 40);
   if (h !== aim.hover) { if (aim.hover) aim.hover.el.classList.remove('aim-hover'); aim.hover = h; if (h) h.el.classList.add('aim-hover'); }
+  // 矢印は1本：カードの上の端から、吸い付いたマスへ
+  const line = aim.layer.querySelector('.aim-line'), c = zoneCenter(h);
+  const fx = x, fy = y - 64, mx = (fx + c.x) / 2 + (c.x - fx) * .15, my = Math.min(fy, c.y) - 30;
+  line.setAttribute('d', `M${fx.toFixed(0)},${fy.toFixed(0)} Q${mx.toFixed(0)},${my.toFixed(0)} ${c.x.toFixed(0)},${c.y.toFixed(0)}`);
 }
 function endAim() {
   if (!aim) return;
-  aim.targets.forEach(t => t.el.classList.remove('aim-ok', 'aim-hover'));
+  aim.targets.forEach(t => t.el.classList.remove('aim-hover'));
   aim.layer.remove();
   const h = $('#hand0'); if (h) h.classList.remove('aiming');
   aim = null;
 }
-/** 指を離した時：マスの上なら置く。速く払って置き場所が決まらない時は、空いている一番左のマスへ */
+/** 指を離した時：上に投げるように払ったら、矢印の先のマスへカードが飛んでいく。マスの上で離しても置ける。それ以外は取りやめ（発動ボタンがある時は残す） */
 function aimRelease(x, y) {
   if (!aim) return;
-  let t = aimHit(x, y);
-  const fast = !t && aim.moved > 40 && aim.targets.length;
-  if (fast) t = [...aim.targets].sort((a, b) => a.el.getBoundingClientRect().left - b.el.getBoundingClientRect().left)[0];
-  if (t) { const { u, acts } = aim; endAim(); startPlace(u, acts, t); return; }
-  // 指を離しても矢印は残す（マスを押す・発動ボタン・それ以外を押すと取りやめ）
-  aim.held = false;
-  aim.ghost.style.display = 'none';
+  const tr = aim.trail, first = tr[0], dt = Math.max(1, performance.now() - first.t), vy = (y - first.y) / dt;
+  const flick = aim.targets.length && (vy < -0.35 || (y - aim.sy < -70 && vy < -0.15));
+  const onZone = aim.targets.find(t => { const r = t.el.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; });
+  const t = flick ? aim.hover : onZone || null;
+  if (t) { throwTo(t, x, y); return; }
+  if (aim.loose.length) { aim.held = false; aim.ghost.style.display = 'none'; aim.layer.querySelector('.aim-line')?.setAttribute('d', ''); return; }
+  endAim();
+}
+/** カードを投げる：指の位置から矢印の先のマスへ飛ばしてから、置く */
+function throwTo(t, x, y) {
+  const { u, acts, ghost } = aim;
+  aim.layer.querySelector('.aim-line')?.setAttribute('d', '');
+  const c = zoneCenter(t), r = t.el.getBoundingClientRect();
+  const sc = Math.min(r.width, r.height * 59 / 86) * .92 / Math.max(1, ghost.getBoundingClientRect().width);
+  const a = ghost.animate([{ left: x + 'px', top: y + 'px', transform: 'translate(-50%, -70%) rotate(-5deg)' },
+    { left: c.x + 'px', top: (c.y - 26) + 'px', transform: `translate(-50%, -50%) rotate(0deg) scale(${(sc * 1.15).toFixed(2)})` }],
+  { duration: 230, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' });
+  a.finished.then(() => { endAim(); startPlace(u, acts, t); });
 }
 function aimTap(x, y, target) {
   if (!aim) return;
@@ -1741,8 +1756,6 @@ function aimTap(x, y, target) {
     if (loose.length === 1) { selected = null; run(loose[0]); } else { selected = u; sheet = 'detail'; render(); }
     return;
   }
-  const t = aimHit(x, y);
-  if (t) { const { u, acts } = aim; endAim(); startPlace(u, acts, t); return; }
   endAim();
 }
 
@@ -1801,6 +1814,15 @@ function placeConfirm(u, acts, t, mode) {
     : a.type === 'setSpellTrap' && t.kind === 'st' ? { ...a, zone: t.idx } : a;
   selected = null;
   run(withZone);
+  // セットした時：カードが上からふわっと着地する（召喚・発動は、それぞれの演出がある）
+  if (mode === 'mset' || mode === 'sset') landOnBoard(u);
+}
+function landOnBoard(u, tries = 0) {
+  const el = ROOT.querySelector();
+  if (!el || el.style.visibility === 'hidden') { if (tries < 30) setTimeout(() => landOnBoard(u, tries + 1), 60); return; }
+  el.animate([{ translate: '0 -46px', scale: '1.28', opacity: 0, filter: 'drop-shadow(0 26px 14px rgba(0,0,0,.45))' },
+    { translate: '0 3px', scale: '.98', opacity: 1, offset: .72 }, { translate: '0 0', scale: '1', opacity: 1, filter: 'none' }],
+  { duration: 420, easing: 'cubic-bezier(.2,.75,.3,1)' });
 }
 
 function wire(root) {

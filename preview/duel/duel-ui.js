@@ -664,8 +664,9 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 @media (max-width: 860px) {
   #hand0 .card.sel { transform: translate(var(--tx, 0px), calc(var(--ty, 0px) - 30px)) rotate(0deg) scale(1.08); z-index: 40;
     box-shadow: 0 0 0 3px var(--accent), 0 0 22px 6px color-mix(in srgb, var(--accent) 70%, transparent); outline: none }
-  #hand0.aiming .card { transform: translate(var(--tx, 0px), 92%) rotate(var(--rot, 0deg)); opacity: .55 }
-  #hand0.aiming .card.sel { opacity: .2 }
+  /* 選んだカードを長押し中：手札はそのまま、選んだカードは指についてくる（元の場所は薄く） */
+  #hand0.aiming .card:not(.sel) { opacity: .7 }
+  #hand0.aiming .card.sel { opacity: .15 }
 }
 .aim-layer { position: fixed; inset: 0; z-index: 35; touch-action: none }
 .aim-layer svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible }
@@ -698,6 +699,11 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 }
 /* パソコン：盤面は縦の方が長い（カードの縦横比）ので、画面の高さに収まる幅にする */
 @media (min-width: 861px) { #board { max-width: max(300px, calc((100vh - 330px) / 1.14)) } }
+/* 矢印は1本（吸い付いたマスへ）。置いた時：上からふわっと着地 */
+.aim-line { transition: d .12s }
+.place-ghost { animation: landIn .42s cubic-bezier(.2,.75,.3,1) both }
+@keyframes landIn { 0% { translate: 0 -46px; scale: 1.28; opacity: 0 } 72% { translate: 0 3px; scale: .98; opacity: 1 } 100% { translate: 0 0; scale: 1; opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .place-ghost { animation: none } }
 `;
 
 export const MARKUP = `
