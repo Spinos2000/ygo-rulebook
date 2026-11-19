@@ -38,6 +38,8 @@ export const DEFAULT_WEIGHTS = {
                                          
                      
                              
+                                                                
+                         
  
 
 /* ===================== 盤面の点数 ===================== */
@@ -170,7 +172,8 @@ const isFreeDecision = (s           ) => !s.pending && s.window.kind === 'open' 
 class Thinker {
   w         ;
   me          ;
-  constructor(w         , me          ) { this.w = w; this.me = me; }
+  full         ;
+  constructor(w         , me          , full = false) { this.w = w; this.me = me; this.full = full; }
 
   score(s           , viewer           = this.me)         { return evalW(s, viewer, this.w); }
 
@@ -195,7 +198,7 @@ class Thinker {
 
   /** 先読みの中の相手の応答：表側のフィールドのカードの効果を使うと良くなるなら使う */
   opponentReply(s           , p          )         {
-    const pub = legalActions(s).filter(a => a.type === 'activate' && isOnField(s.cards[a.card]) && s.cards[a.card].faceUp);
+    const pub = legalActions(s).filter(a => a.type === 'activate' && (this.full || (isOnField(s.cards[a.card]) && s.cards[a.card].faceUp)));
     if (!pub.length) return { type: 'pass' };
     const t = (a        ) => { try { return this.score(this.rollout(applyAction(s, a), p, -1, s.turn), p); } catch { return -Infinity; } };
     let best         = { type: 'pass' }, bestScore = t(best) + this.w.margin;
@@ -278,53 +281,73 @@ function phaseAdvance(s           , acts          )                {
   return acts.find(a => a.type === 'endTurn') ?? null;
 }
 
-/** 今の手番で CPU が取る行動（選択待ちなら答え） */
-export function cpuDecide(s           , opt             = {})         {
+/** 候補と点数。base：何もしない（パス・フェイズを進める）場合の行動。点数は先読み後の盤面の点数 */
+                                                                            
+                                                                                  
+
+/** 今の手番の候補を全て点数にする（選択待ちなら答えの候補） */
+export function scoreCandidates(s           , opt             = {})            {
   const me = actorOf(s);
   const depth = opt.depth ?? 1;
-  const T = new Thinker({ ...DEFAULT_WEIGHTS, ...opt.weights }, me);
-  if (s.pending) return { type: 'answer', value: T.bestAnswer(s, me, depth) };
+  const T = new Thinker({ ...DEFAULT_WEIGHTS, ...opt.weights }, me, !!opt.fullOpponent);
+  const margin = T.w.margin;
+  if (s.pending) {
+    const list           = [];
+    for (const v of answerCandidates(s, s.pending.request)) {
+      try { const after = T.rollout(applyAction(s, { type: 'answer', value: v }), me, depth, s.turn); list.push({ action: { type: 'answer', value: v }, score: T.score(after, me), after }); } catch { /* 選べない答え */ }
+    }
+    return { list, base: null, margin: 0 };
+  }
 
   const acts = legalActions(s);
   if (!acts.length) throw new Error('行動がありません');
   const turn = s.turn;
-  const score = (a        )         => {
-    try { return T.score(T.rollout(applyAction(s, a), me, depth, turn)); } catch { return -Infinity; }
+  const one = (a        )         => {
+    try { const after = T.rollout(applyAction(s, a), me, depth, turn); return { action: a, score: T.score(after), after }; } catch { return { action: a, score: -Infinity }; }
   };
 
   if (s.window.kind === 'priority') {
-    let best         = { type: 'pass' }, bestScore = score(best) + T.w.margin;
-    for (const a of acts) {
-      if (a.type === 'pass') continue;
-      const sc = score(a);
-      if (sc > bestScore) { bestScore = sc; best = a; }
-    }
-    return best;
+    const list = acts.filter(a => a.type !== 'pass').map(one);
+    return { list, base: one({ type: 'pass' }), margin };
   }
 
   const advance = phaseAdvance(s, acts);
   const preview = T.w.previewMix > 0 && s.phase === 'main1' && s.turn > 1;
   const plan = (s.phase === 'main1' || s.phase === 'main2') ? (opt.planSteps ?? 3) : 0;
   const scoreMain = (a        )         => {
-    if (a.type === 'nextPhase') return score(a);
+    if (a.type === 'nextPhase') return one(a);
     try {
       const n = T.rollout(applyAction(s, a), me, depth, turn);
-      if (preview) return T.withBattlePreview(n, turn);
-      return plan > 0 ? T.continuePlan(n, turn, plan, depth) : T.score(n);
-    } catch { return -Infinity; }
+      const score = preview ? T.withBattlePreview(n, turn) : plan > 0 ? T.continuePlan(n, turn, plan, depth) : T.score(n);
+      return { action: a, score, after: n };
+    } catch { return { action: a, score: -Infinity }; }
   };
   // フェイズを進める行動も、同じ物差し（バトルの結果込み）で比べる
-  const base = advance ? (preview && advance.type === 'nextPhase' && advance.to === 'battle' ? T.withBattlePreview(s, turn) : score(advance)) : -Infinity;
+  const base                = advance ? (preview && advance.type === 'nextPhase' && advance.to === 'battle' ? { action: advance, score: T.withBattlePreview(s, turn) } : one(advance)) : null;
   let plays = acts.filter(a => a.type !== 'nextPhase' && a.type !== 'endTurn');
   // バトルフェイズに入る前は、罠・魔法のセットを後回しにする（バトルの結果を見てからメインフェイズ2でセットする）
   if (s.phase === 'main1' && advance?.type === 'nextPhase' && advance.to === 'battle') plays = plays.filter(a => a.type !== 'setSpellTrap');
   plays = plays.slice(0, opt.maxCandidates ?? 60);
-  let best                = null, bestScore = base + T.w.margin;
-  for (const a of plays) {
-    const sc = scoreMain(a);
-    if (sc > bestScore) { bestScore = sc; best = a; }
+  return { list: plays.map(scoreMain), base: base ?? (acts[0] ? { action: acts[0], score: -Infinity } : null), margin };
+}
+
+/** 点数の一番高い行動（何もしない行動は margin だけ有利に扱う） */
+export function pickBest(set           )         {
+  let best = set.base, bestScore = set.base ? set.base.score + set.margin : -Infinity;
+  for (const c of set.list) if (c.score > bestScore) { bestScore = c.score; best = c; }
+  if (!best) throw new Error('行動がありません');
+  return best.action;
+}
+
+/** 今の手番で CPU が取る行動（選択待ちなら答え） */
+export function cpuDecide(s           , opt             = {})         {
+  const set = scoreCandidates(s, opt);
+  if (s.pending) {
+    let best = set.list[0], bs = -Infinity;
+    for (const c of set.list) if (c.score > bs) { bs = c.score; best = c; }
+    return best ? best.action : { type: 'answer', value: defaultAnswer(s, s.pending.request) };
   }
-  return best ?? advance ?? acts[0];
+  return pickBest(set);
 }
 
 /** 自由に行動できる場面での各候補の点数（調査用） */

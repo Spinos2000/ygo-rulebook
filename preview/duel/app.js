@@ -1,6 +1,7 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { cpuDecide } from './ai/cpu.js';
+import { idealThink, acesOf } from './ai/ideal.js';
+import { lineFor } from './lines.js';
 import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js';
 import { playBattle, playSummon, rarityOf } from './fx.js';
 import { playSignature, sigKey } from './sig.js';
@@ -25,6 +26,7 @@ let pick = [];         // 選択中の答え（カード）
 let sheet = null;      // スマホで開いているシート：'detail' | 'log' | null
 let peek = false;      // 選択の途中でシートを閉じて盤面を見ている
 let lastLp = [8000, 8000];
+let trace = [];        // CPU の勝率の見積もりの記録（対戦後の振り返り用）：{ turn, rate, romance }
 const CPU = 1;
 const cpuMode = () => $('#mode').value === 'cpu';
 const isCpu = p => cpuMode() && p === CPU;
@@ -251,17 +253,133 @@ function cpuDelay() {
   if (S.window.kind === 'priority') return base * 0.7;    // 応答するかどうか
   return base;                                            // 召喚・発動・攻撃・フェイズ移行
 }
+/* ---------- 理想のCPU：画面とは別の場所（Web Worker）で考える ---------- */
+let worker = null, workerBroken = false, reqId = 0;
+const waiting = new Map();
+function getWorker() {
+  if (worker || workerBroken) return worker;
+  try {
+    worker = new Worker(new URL('./ai/worker.js', import.meta.url), { type: 'module' });
+    worker.onmessage = e => { const w = waiting.get(e.data.id); if (w) { waiting.delete(e.data.id); w(e.data); } };
+    worker.onerror = e => {
+      console.warn('CPUの考える場所を作れませんでした。この画面の中で考えます', e);
+      workerBroken = true; worker = null;
+      for (const w of waiting.values()) w({ ok: false, retry: true });
+      waiting.clear();
+    };
+  } catch (e) { console.warn(e); workerBroken = true; worker = null; }
+  return worker;
+}
+const deckCodes = () => [$('#deck0').value, $('#deck1').value];
+const deckNames = () => deckCodes().map(c => DECKS[c]?.name ?? '');
+/** 今の状態で CPU の考えを出す（Worker が使えなければこの画面の中で） */
+function think(state) {
+  const local = () => new Promise(res => setTimeout(() => {
+    try { res({ ok: true, thought: idealThink(state, {}, deckNames()) }); } catch (e) { res({ ok: false, error: e.message }); }
+  }, 30));
+  const w = getWorker();
+  if (!w) return local();
+  return new Promise(res => {
+    const id = ++reqId;
+    waiting.set(id, r => (r.retry ? local().then(res) : res(r)));
+    try { w.postMessage({ id, state, deckNames: deckNames() }); } catch { waiting.delete(id); local().then(res); }
+  });
+}
+let thinking = null; // 考えている最中の状態（同じ状態で2回考えない）
+function setThinking(on) { const el = $('#cpuThink'); if (el) el.hidden = !on; }
 function scheduleCpu() {
   clearTimeout(cpuTimer);
   if (!S || S.winner !== null || !isCpu(actorOf(S))) return;
-  cpuTimer = setTimeout(() => {
-    if (!S || S.winner !== null || !isCpu(actorOf(S))) return;
-    let a;
-    try { a = cpuDecide(S); } catch (e) { console.error(e); toast(`CPUのエラー：${e.message}`, true); return; }
-    try { commit(applyAction(S, a)); } catch (e) { console.error(e); toast(`CPUのエラー：${e.message}`, true); return; }
-    pick = [];
-    render();
-  }, cpuDelay());
+  if (thinking === S) return;
+  // 考え終わった答えがあれば、考え直さずに指す（演出の後などで呼ばれ直した時）
+  if (ready && ready.state === S) { const th = ready.th; cpuTimer = setTimeout(() => playCpu(S, th), cpuDelay() * 0.5); return; }
+  const state = S, t0 = performance.now(), delay = cpuDelay();
+  thinking = state;
+  const showT = setTimeout(() => { if (thinking === state) setThinking(true); }, 450);
+  think(state).then(r => {
+    clearTimeout(showT);
+    if (thinking === state) thinking = null;
+    setThinking(false);
+    if (S !== state || !S || S.winner !== null) return; // 考えている間に状態が変わった（元に戻す・新しいデュエルなど）
+    if (!r.ok) { console.error(r.error); toast(`CPUのエラー：${r.error}`, true); return; }
+    const th = r.thought;
+    ready = { state, th };
+    cpuTimer = setTimeout(() => playCpu(state, th), Math.max(0, delay - (performance.now() - t0)));
+  });
+}
+let ready = null; // 考え終わった答え { state, th }
+function playCpu(state, th) {
+  if (S !== state) return;
+  ready = null;
+  let next;
+  try { next = applyAction(S, th.action); } catch (e) { console.error(e); toast(`CPUのエラー：${e.message}`, true); return; }
+  if (!state.pending && state.window.kind === 'open' && state.turnPlayer === CPU) trace.push({ turn: state.turn, rate: th.winRate, romance: th.romance });
+  if (th.romance) speakRomance(state, next, th);
+  commit(next);
+  pick = [];
+  render();
+}
+
+/* ---------- CPU の台詞 ---------- */
+let speechT;
+function speak(text, side = 'opp') {
+  const el = $('#speech');
+  if (!el || !text) return;
+  el.querySelector('.speech-who').textContent = side === 'opp' ? NAME(CPU) : NAME(0);
+  el.querySelector('.speech-text').textContent = text;
+  el.dataset.side = side;
+  el.hidden = true; void el.offsetWidth; el.hidden = false;
+  clearTimeout(speechT);
+  speechT = setTimeout(() => { el.hidden = true; }, 2900);
+}
+const cardNameOf = (s, u) => (u !== undefined && u !== null && s.cards[u] ? defOf(s, u).name : '');
+/** p の表側の切り札（台詞の「迎え撃つ」用） */
+function faceUpAce(s, p) {
+  const aces = acesOf(s, p, deckNames()[p]);
+  return monstersOf(s, p).find(u => s.cards[u].faceUp && aces.has(s.cards[u].code));
+}
+function speakRomance(prev, next, th) {
+  const oppAce = faceUpAce(prev, 0);
+  const kind = th.romance === 'ace' ? (oppAce !== undefined ? 'meet' : 'ace') : 'burst';
+  speak(lineFor(deckCodes()[CPU], kind, { ace: cardNameOf(next, th.aceUid) || cardNameOf(prev, th.aceUid), opp: cardNameOf(prev, oppAce) }));
+}
+/** あなたが切り札を出した時、CPU が一言反応する */
+function reactToAce(prev, next) {
+  if (!cpuMode() || next.winner !== null) return;
+  const aces = acesOf(next, 0, deckNames()[0]);
+  const was = new Set(monstersOf(prev, 0).filter(u => prev.cards[u].faceUp).map(u => `${u}:${prev.cards[u].serial}`));
+  const u = monstersOf(next, 0).find(x => next.cards[x].faceUp && aces.has(next.cards[x].code) && !was.has(`${x}:${next.cards[x].serial}`));
+  if (u !== undefined) speak(lineFor(deckCodes()[CPU], 'react', { opp: cardNameOf(next, u) }));
+}
+
+/* ---------- 対戦後の振り返り：CPU から見た勝率の変化 ---------- */
+function showReview() {
+  const pts = trace.filter(x => Number.isFinite(x.rate));
+  const box = $('#reviewBox');
+  const head = '<div class="box-head"><h3 id="reviewTitle">勝率の振り返り（CPUから見た勝率）</h3><button class="btn small ghost" id="reviewClose">閉じる</button></div>';
+  if (pts.length < 2) { box.innerHTML = head + '<p class="menu-note">記録が少ないため、グラフを描けません。</p>'; $('#reviewDlg').hidden = false; return; }
+  const W = 600, H = 220, L = 38, R = 10, T = 12, B = 26;
+  const x = i => L + (W - L - R) * (i / (pts.length - 1)), y = r => T + (H - T - B) * (1 - r);
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.rate).toFixed(1)}`).join('');
+  const area = `${line}L${x(pts.length - 1).toFixed(1)},${y(0)}L${x(0)},${y(0)}Z`;
+  const turns = [...new Set(pts.map(p => p.turn))];
+  const step = Math.ceil(turns.length / 8);
+  const ticks = turns.filter((_, i) => i % step === 0).map(tn => { const i = pts.findIndex(p => p.turn === tn); return `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">T${tn}</text>`; }).join('');
+  const roms = pts.map((p, i) => (p.romance ? `<circle class="rom" cx="${x(i)}" cy="${y(p.rate)}" r="5"><title>T${p.turn}：ロマンの手（勝率${Math.round(p.rate * 100)}%）</title></circle>` : '')).join('');
+  const grid = [0, 0.25, 0.75, 1].map(r => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(r)}" y2="${y(r)}"/><text x="${L - 6}" y="${y(r) + 4}" text-anchor="end">${r * 100}%</text>`).join('');
+  const svg = `<svg class="wr-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="CPUから見た勝率の変化">${grid}`
+    + `<line class="half" x1="${L}" x2="${W - R}" y1="${y(0.5)}" y2="${y(0.5)}"/><text x="${L - 6}" y="${y(0.5) + 4}" text-anchor="end">50%</text>`
+    + `<path class="area" d="${area}"/><path class="ln" d="${line}"/>${roms}${ticks}</svg>`;
+  // 勝率が大きく動いた場面（勝負所）を3つ
+  const swings = pts.slice(1).map((p, i) => ({ turn: p.turn, d: p.rate - pts[i].rate, from: pts[i].rate, to: p.rate }))
+    .sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 3).sort((a, b) => a.turn - b.turn);
+  const pct = r => Math.round(r * 100) + '%';
+  const list = swings.map(w => `<li>T${w.turn}：CPUの勝率 ${pct(w.from)} → <b>${pct(w.to)}</b>（${w.d > 0 ? 'CPUに有利' : 'あなたに有利'}になった場面）</li>`).join('');
+  const nRom = pts.filter(p => p.romance).length;
+  box.innerHTML = head + svg
+    + '<p class="wr-note">● はCPUがロマンの手（切り札・大ダメージ）を選んだ場面。CPUは見えないカードを確率で推測して勝率を見積もっています。</p>'
+    + `<h4>勝率が大きく動いた場面</h4><ol class="wr-list">${list}</ol><p class="wr-note">CPUがロマンを選んだ回数：${nRom}回</p>`;
+  $('#reviewDlg').hidden = false;
 }
 
 /* ---------- 新しいデュエル ---------- */
@@ -283,7 +401,7 @@ function newDuel() {
   const d0 = DECKS[$('#deck0').value] ?? first, d1 = DECKS[$('#deck1').value] ?? first;
   const f = $('#first').value;
   S = createGame({ pool: CARD_POOL, decks: [d0, d1], firstPlayer: f === 'r' ? undefined : Number(f) });
-  history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp];
+  history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp]; trace = []; thinking = null;
   closeMenu();
   render();
 }
@@ -293,6 +411,7 @@ function run(action) {
   if (S.winner === null && isCpu(actorOf(S))) { toast('CPUが考えています'); return; }
   try {
     const next = applyAction(S, action);
+    reactToAce(S, next);
     history.push(S); commit(next); pick = []; peek = false;
     // スマホでは、操作したらシートを閉じて盤面に戻る
     if (narrow() && sheet === 'detail') { sheet = null; selected = null; }
@@ -552,6 +671,7 @@ function renderDock() {
   $('#stopBtn').hidden = chainMode() === 'always' || S.winner !== null;
   $('#stopBtn').setAttribute('aria-pressed', String(stopNext));
 
+  const rb = $('#reviewBtn'); if (rb) rb.hidden = !(S.winner !== null && cpuMode() && trace.length > 1);
   if (S.winner !== null) {
     actor.textContent = S.winner === 'draw' ? '引き分け' : `${NAME(S.winner)}の勝利`;
     hint.textContent = S.winReason || '';
@@ -1292,7 +1412,7 @@ function saveSoon() {
   saveT = setTimeout(() => {
     try {
       if (!S || S.winner !== null) localStorage.removeItem(OPTS.storageKey);
-      else localStorage.setItem(OPTS.storageKey, JSON.stringify({ v: SAVE_V, S, mode: $('#mode').value, d0: $('#deck0').value, d1: $('#deck1').value }));
+      else localStorage.setItem(OPTS.storageKey, JSON.stringify({ v: SAVE_V, S, trace, mode: $('#mode').value, d0: $('#deck0').value, d1: $('#deck1').value }));
     } catch { /* 保存できない環境では覚えない */ }
   }, 400);
 }
@@ -1427,6 +1547,8 @@ root.addEventListener('click', e => {
   if (t.closest('#again') || t.closest('[data-again="1"]')) { newDuel(); return; }
   if (t.closest('[data-reopen="1"]')) { peek = false; render(); return; }
   if (t.closest('#stopBtn')) { stopNext = !stopNext; renderDock(); return; }
+  if (t.closest('#reviewBtn')) { showReview(); return; }
+  if (t.closest('#reviewClose') || t.id === 'reviewDlg') { $('#reviewDlg').hidden = true; return; }
   if (t.closest('#closeDuel')) { clearTimeout(cpuTimer); OPTS.onClose?.(); return; }
   if (t.closest('#reopen')) { peek = false; render(); return; }
   if (t.closest('[data-close]') || t.id === 'scrim') { closeSheets(); return; }
@@ -1540,7 +1662,7 @@ export function boot(root, opts = {}) {
     $('#hideOppRow').hidden = cpuMode();
     showDeckFmt();
     if (data && data.S && (data.v === 4 || data.v === SAVE_V)) {
-      try { S = data.S; history = data.history || []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); return; }
+      try { S = data.S; history = data.history || []; trace = Array.isArray(data.trace) ? data.trace : []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); return; }
       catch (e) { console.warn('保存していたデュエルを開けませんでした', e); }
     }
     newDuel();
@@ -1548,7 +1670,7 @@ export function boot(root, opts = {}) {
     if (opts.menuFirst) openMenu();
   };
   // 動作確認用：開発者ツールから状態を読み書きできるようにする
-  window.__duel = { get state() { return S; }, load(s) { clearTimeout(cpuTimer); S = s; history = []; selected = null; pick = []; lastLp = [s.players[0].lp, s.players[1].lp]; render(); } };
+  window.__duel = { get state() { return S; }, speak(t) { speak(t); }, review(tr) { if (tr) trace = tr; showReview(); }, get cpu() { return { thinking: thinking === S, ready: !!ready, waiting: waiting.size, worker: !!worker, workerBroken, timer: cpuTimer, trace: trace.length }; }, load(s) { clearTimeout(cpuTimer); S = s; history = []; selected = null; pick = []; lastLp = [s.players[0].lp, s.players[1].lp]; render(); } };
   if (opts.standalone) {
     window.claude?.hot?.snapshot?.(() => ({ v: 4, S, history: history.slice(-30), mode: $('#mode').value }));
     window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
