@@ -149,7 +149,7 @@ function playPendingSummons() {
       el.style.visibility = 'hidden';
       const flipFace = j.how === 'flip';
       try {
-        await playSummon(ROOT, { rect: el.getBoundingClientRect(), d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, from: j.from, fromRect: j.fromRect, mat: matCanvas(), speed: fxMode() === 'short' ? 2 : 1 });
+        await playSummon(ROOT, { rect: el.getBoundingClientRect(), track: () => el.isConnected ? el.getBoundingClientRect() : null, onLand: () => { el.style.visibility = ''; }, d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, from: j.from, fromRect: j.fromRect, mat: matCanvas(), speed: fxMode() === 'short' ? 2 : 1 });
       } catch (e) { console.error(e); }
       el.style.visibility = '';
     }
@@ -844,11 +844,30 @@ function openFan() {
   // 開き終わったら、選べるカードを下の段にまとめる（押しやすいように）
   if (src !== 'hand' && els.some(el => el.classList.contains('dim'))) opened.then(() => {
     if (!fan || fan.layer !== layer) return;
-    const order = [...els.filter(el => el.classList.contains('dim')), ...els.filter(el => !el.classList.contains('dim'))];
+    const picks = sortForFan(els.filter(el => !el.classList.contains('dim')).map(el => Number(el.dataset.fan))).map(uid => els.find(el => Number(el.dataset.fan) === uid));
+    const rest = els.filter(el => el.classList.contains('dim'));
+    // 下の列へ：今の位置を覚えてから移し、そこから飛んでくるように動かす（FLIP）
+    const row = document.createElement('div'); row.className = 'fan-pick';
+    layer.insertBefore(row, layer.querySelector('.fan-btns'));
+    const before = picks.map(el => el.getBoundingClientRect());
+    picks.forEach(el => { el.style.left = ''; el.style.top = ''; el.style.width = ''; el.style.zIndex = ''; row.appendChild(el); });
+    picks.forEach((el, i) => { const r = el.getBoundingClientRect(), b = before[i]; el.animate([{ transform: `translate(${b.left - r.left}px,${b.top - r.top}px) scale(${b.width / r.width}) rotate(${el.dataset.rot || 0}deg)` }, { transform: 'none' }], { duration: fanDur(520), delay: fanDur(i * 50), easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }); });
     area.classList.add('sorting');
-    layoutFan(area, order, false, true);
+    layoutFan(area, rest);
     setTimeout(() => area.classList.remove('sorting'), 600);
+    const tip = layer.querySelector('.fan-head span'); if (tip && narrow()) tip.textContent = '下に並んだカードから選べます（1回目で効果、もう1回で決定）';
   });
+}
+/** 山札を広げている時に、押したカードの効果を見せる（もう一度押すと選ぶ） */
+function fanPeek(el, u) {
+  if (!fan) return;
+  fan.peek = u;
+  fan.layer.querySelectorAll('[data-fan]').forEach(x => x.classList.toggle('peek', x === el));
+  let box = fan.layer.querySelector('.fan-info');
+  if (!box) { box = document.createElement('div'); box.className = 'fan-info'; box.setAttribute('aria-live', 'polite'); fan.layer.insertBefore(box, fan.layer.querySelector('.fan-pick') || fan.layer.querySelector('.fan-btns')); }
+  const d = defOf(S, u), ok = fan.req.options.includes(u);
+  const type = d.kind === 'monster' ? `★${d.level ?? '-'}・${d.attribute || ''}・${d.race || ''}　ATK ${d.atk ?? '?'} / DEF ${d.def ?? '?'}` : `${d.subtype || ''}${d.kind === 'spell' ? '魔法' : '罠'}`;
+  box.innerHTML = `<b>${esc(d.name)}</b><small>${esc(type)}</small><p>${esc(d.text || '')}</p><span class="fan-hint">${ok ? (fan.req.max > 1 ? 'もう一度押すと選びます' : 'もう一度押すと手札に加えます') : 'このカードは選べません'}</span>`;
 }
 function fanPick(u) {
   if (!fan || !fan.req.options.includes(u)) return;
@@ -1394,7 +1413,11 @@ root.addEventListener('click', e => {
   if (t.closest('[data-fanok]')) { if (fan) fanFinish(fan.sel); return; }
   if (t.closest('[data-fanskip]')) { fanFinish([]); return; }
   const fanEl = t.closest('[data-fan]');
-  if (fanEl) { fanPick(Number(fanEl.dataset.fan)); return; }
+  if (fanEl) {
+    const fu = Number(fanEl.dataset.fan);
+    if (narrow() && fan && (!fan.peek || fan.peek !== fu || !fan.req.options.includes(fu))) { fanPeek(fanEl, fu); return; }
+    fanPick(fu); return;
+  }
   if (t.closest('#again') || t.closest('[data-again="1"]')) { newDuel(); return; }
   if (t.closest('[data-reopen="1"]')) { peek = false; render(); return; }
   if (t.closest('#stopBtn')) { stopNext = !stopNext; renderDock(); return; }
@@ -1406,7 +1429,11 @@ root.addEventListener('click', e => {
   if (t.closest('#menuClose') || t.id === 'menu') { closeMenu(); return; }
   if (t.closest('#surrender')) { surrender(); return; }
   const actEl = t.closest('[data-act]');
-  if (actEl) { run(JSON.parse(actEl.dataset.act)); return; }
+  if (actEl) {
+    // カードの説明から操作した時は、説明を閉じて盤面の演出が見えるようにする
+    if (actEl.closest('#detailSheet')) { sheet = null; selected = null; }
+    run(JSON.parse(actEl.dataset.act)); return;
+  }
   const ansEl = t.closest('[data-ans]');
   if (ansEl) { sheet = null; selected = null; run({ type: 'answer', value: JSON.parse(ansEl.dataset.ans) }); return; }
   const optEl = t.closest('[data-opt]');
