@@ -902,6 +902,7 @@ function renderLog() {
 
 /* ---------- デッキから選ぶ時：山札を扇形に広げて、カードを直接選ぶ ---------- */
 let fan = null;           // { key, layer, sel, req }
+let recentAdd = null;     // 引いた直後に手札から選ぶ時の、引いたカード { p, uids }
 const fanDur = ms => (fxMode() === 'short' ? ms / 2 : ms);
 /** 扇を広げて選ぶ選択なら、広げる場所（'deck'：山札から選ぶ、'hand'：手札から捨てる・墓地へ送る）。演出が「なし」の時は、今までどおり文字の一覧 */
 function fanSrc(r) {
@@ -968,7 +969,7 @@ function openFan() {
   const r = S.pending.request, key = JSON.stringify([S.step, r.prompt, r.options, S.pending.answers.length]);
   if (fan && fan.key === key) return;
   closeFan();
-  const p = r.player, src = fanSrc(r), all = src === 'hand' ? [...S.players[p].hand] : sortForFan(S.players[p].deck);
+  const p = r.player, src = fanSrc(r), all = src === 'hand' ? (sortsHand(p) ? sortHand(S, S.players[p].hand) : [...S.players[p].hand]) : sortForFan(S.players[p].deck);
   const layer = document.createElement('div');
   layer.className = 'fan-layer';
   const range = r.min === r.max ? `${r.min}枚選ぶ` : `${r.min}〜${r.max}枚選ぶ`;
@@ -979,7 +980,16 @@ function openFan() {
   area.innerHTML = all.map(u => fanCardHtml(u, false)).join('');
   const els = [...area.children];
   els.forEach(el => { if (!r.options.includes(Number(el.dataset.fan))) el.classList.add('dim'); });
-  layoutFan(area, els, src === 'hand');
+  // 引いた直後に手札から選ぶ時（暗黒界の取引など）：引いたカードを右、残りの手札を左の扇に置く
+  const fresh = src === 'hand' && recentAdd && recentAdd.p === p ? recentAdd.uids.filter(u => all.includes(u)) : [];
+  recentAdd = null;
+  if (fresh.length) {
+    const elOf = u => els.find(el => Number(el.dataset.fan) === u);
+    const kept = all.filter(u => !fresh.includes(u)).map(elOf), added = fresh.map(elOf);
+    added.forEach(el => el.classList.add('new'));
+    area.append(...kept, ...added);
+    layoutHandAdd(area, kept, added);
+  } else layoutFan(area, els, src === 'hand');
   fan = { key, layer, sel: [], req: r, p, src };
   // 山札（または手札）の場所から、カードが扇の形に開く
   const from = src === 'hand' ? $(`#hand${p}`) : pileEl(p, 'deck');
@@ -1216,6 +1226,8 @@ function queueMoves(prev, next) {
     if (!sortsHand(p)) continue;
     const added = next.players[p].hand.filter(u => !prev.players[p].hand.includes(u) && prev.cards[u] && !fanDoneUids.has(u));
     if (!added.length) continue;
+    // 引いた直後に手札から選ぶ（暗黒界の取引など）時は、選ぶ画面に手札が全部出るので、この演出はしない
+    if (next.pending && next.pending.request.player === p && fanSrc(next.pending.request) === 'hand') { added.forEach(u => skip.add(u)); recentAdd = { p, uids: added }; continue; }
     const from = Object.fromEntries(added.map(u => [u, prev.cards[u].zone]));
     const kept = sortHand(prev, prev.players[p].hand.filter(u => next.players[p].hand.includes(u)));
     pendingSummons.push({ handAdd: true, p, kept, added, from, drew: added.every(u => from[u] === 'deck') && (next.anim || []).every(x => !(x.kind === 'search' && added.includes(x.uid))),
