@@ -1923,6 +1923,14 @@ function mainActions(s           )           {
             if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
             if (!scriptOf(s, uid).cannotSet && n < 3) acts.push({ type: 'setMonster', card: uid, tributes: tr }); // 3体リリースの方法は表側表示の召喚のみ（神獣王バルバロス）
           }
+          // 帝王の烈旋：リリースのうち1体を相手のモンスターにできる（例：バルバロスを自分2体＋相手1体の3体リリースで召喚）
+          if (s.lingering.some(l => l.type === 'tributeOpp' && l.player === p && l.turn === s.turn)) {
+            for (const n of opts.filter(k => k > 0)) for (const o of monstersOf(s, opp(p)).filter(u => releasable(s, u))) for (const tr of combos(myMons.filter(u => !scriptOf(s, u).noAdvanceTribute && releasable(s, u)), n - 1)) {
+              if (!freeMZones(s, p, tr).length) continue;
+              if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: [...tr, o] });
+              if (!scriptOf(s, uid).cannotSet && n < 3) acts.push({ type: 'setMonster', card: uid, tributes: [...tr, o] });
+            }
+          }
           continue;
         }
         for (const aid of activeCards(s).map(u => scriptOf(s, u).tributeAid?.(s, u, uid, p)).filter(Boolean)) {
