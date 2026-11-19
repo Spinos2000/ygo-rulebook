@@ -1183,54 +1183,74 @@ async function handOpenFx(j) {
 async function handAddFx(j) {
   const hand = $(`#hand${j.p}`);
   if (!hand) return;
-  const pause = ms => new Promise(res => setTimeout(res, fanDur(ms)));
+  // ドローの演出：①引いたカードを中央に見せる → ②下から手札が出てきて、一番右に引いたカードが入る
+  // → ③中央で重なるように閉じながら裏返る → ④表に返りながら、並べ替えた順で開く → ⑤手札の場所へ
+  // 動きは全部 transform（位置・回転・裏返し）だけで、始まりと終わりの形をこちらで決めてつなぐ（途中で引っかからないように）
+  const T = ms => fanDur(ms);
+  const wait = ms => new Promise(res => setTimeout(res, T(ms)));
   const layer = document.createElement('div');
-  layer.className = 'fan-layer cpu hand-add';
+  layer.className = 'fan-layer cpu hand-add draw-fx';
   const names = j.added.map(u => `「${j.ds[u].name}」`).join('');
   const verb = j.drew ? 'ドロー' : '手札に加えた';
-  layer.innerHTML = `<div class="fan-head"><b>${esc(verb)}：${esc(names)}</b><span>手札 ${j.kept.length + j.added.length}枚</span></div><div class="fan-area"></div>`;
+  layer.innerHTML = `<div class="fan-head"><b>${esc(verb)}：${esc(names)}</b><span>手札 ${j.kept.length + j.added.length}枚</span></div><div class="dfx-stage"></div>`;
   $('.droot').appendChild(layer);
-  const area = layer.querySelector('.fan-area');
-  const face = u => `<span class="${faceCls(j.ds[u])}${j.added.includes(u) ? ' new' : ''}" data-fan="${u}">${faceHtml(u, j.ds[u], false)}</span>`;
-  const order0 = [...j.kept, ...j.added];
-  area.innerHTML = order0.map(face).join('');
-  const els = [...area.children];
-  const elOf = u => els.find(el => Number(el.dataset.fan) === u);
-  // 残りの手札は扇（左）、加わったカードは少し離して右に、大きく
-  layoutHandAdd(area, j.kept.map(elOf), j.added.map(elOf));
-  const deck = pileEl(j.p, 'deck');
-  // 下の手札（と、閉じた時の左手）は隠し、代わりに空っぽの左手を出す
-  const bare = null; // 空っぽの左手はいったんやめる
   if (j.p === 0 && narrow()) $('.droot').classList.add('hand-lifted');
-  if (bare) {
-    bare.className = 'fx-hand';
-    bare.innerHTML = emptyHandSvg();
-    const cw = narrow() ? 76 : 100; // 演出のカードの幅に合わせた大きさ（手のひら ≒ カードの幅の1.44倍）
-    bare.style.width = (130 / HAND_UNIT_CARD_W * cw).toFixed(0) + 'px';
-    $('.droot').appendChild(bare);
-    $('.droot').classList.add('hand-lifted');
-    bare.animate([{ transform: 'translate(-50%, 40%)', opacity: 0 }, { transform: 'translate(-50%, 0)', opacity: 1 }], { duration: fanDur(380), easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'both' });
+  const stage = layer.querySelector('.dfx-stage');
+  const W = stage.clientWidth || innerWidth, H = stage.clientHeight || innerHeight;
+  const cw = narrow() ? 78 : 100, ch = cw * 86 / 59;
+  const cx = W / 2, cy = H * .5;
+  // カード（表と裏を持ち、裏返しは rotateY）
+  const order0 = [...j.kept, ...j.added];
+  const els = new Map();
+  for (const u of order0) {
+    const el = document.createElement('span');
+    el.className = 'dfx-card' + (j.added.includes(u) ? ' new' : '');
+    el.style.width = cw + 'px'; el.style.height = ch + 'px';
+    el.innerHTML = `<span class="${faceCls(j.ds[u])} dfx-face" style="font-size:${(cw / 8).toFixed(1)}px">${faceHtml(u, j.ds[u], false)}</span><span class="card back dfx-back"></span>`;
+    stage.appendChild(el); els.set(u, el);
   }
+  // 扇の形：n 枚のうち i 番目の位置（中央が cx）
+  const fanPos = (i, n) => {
+    const t = n === 1 ? 0 : i / (n - 1) - .5;
+    const step = n > 1 ? Math.min(cw * .64, (W - cw - 16) / (n - 1)) : 0;
+    return { x: cx + t * step * (n - 1), y: cy + t * t * 40, r: t * Math.min(26, 4 * n) };
+  };
+  const tf = (p, flip = 0, s = 1) => `translate(${(p.x - cw / 2).toFixed(1)}px, ${(p.y - ch / 2).toFixed(1)}px) rotate(${(p.r || 0).toFixed(1)}deg) rotateY(${flip}deg) scale(${s})`;
+  const anim = (el, from, to, ms, delay = 0, ease = 'cubic-bezier(.22,.8,.25,1)') =>
+    el.animate([{ transform: from }, { transform: to }], { duration: T(ms), delay: T(delay), easing: ease, fill: 'both' }).finished;
+  const n = order0.length;
+  const slot = new Map(order0.map((u, i) => [u, fanPos(i, n)]));
+  const center = { x: cx, y: cy - 10, r: 0 };
+  const deck = pileEl(j.p, 'deck'), dr = deck ? rectOf(deck) : null, sr = rectOf(stage);
+  const fromDeck = dr ? { x: dr.left + dr.width / 2 - sr.left, y: dr.top + dr.height / 2 - sr.top, r: 0 } : { x: cx, y: H + ch, r: 0 };
+  const below = i => ({ x: cx + (i - n / 2) * 18, y: H + ch * .7, r: (i - n / 2) * 4 });
+  // 最初は全部見えない場所に置いておく
+  j.kept.forEach((u, i) => { els.get(u).style.transform = tf(below(i)); });
+  j.added.forEach(u => { els.get(u).style.transform = tf(j.drew ? fromDeck : below(n), 0, .5); });
+  // ① 引いたカードを中央に大きく
+  await Promise.all(j.added.map((u, k) => anim(els.get(u), tf(j.drew ? fromDeck : below(n), 0, .5), tf({ x: cx + (k - (j.added.length - 1) / 2) * cw * .7, y: cy - 30, r: 0 }, 0, 1.25), 420, k * 60)));
+  await wait(380);
+  // ② 下から手札が出てきて扇に。引いたカードは一番右へ
   await Promise.all([
-    flyIn(j.kept.map(elOf), centerOf(rectOf(hand))),
-    flyIn(j.added.map(elOf), centerOf(rectOf(j.drew && deck ? deck : hand))),
+    ...j.kept.map((u, i) => anim(els.get(u), tf(below(i)), tf(slot.get(u)), 460, i * 25)),
+    ...j.added.map((u, k) => anim(els.get(u), tf({ x: cx + (k - (j.added.length - 1) / 2) * cw * .7, y: cy - 30, r: 0 }, 0, 1.25), tf(slot.get(u)), 460, 80)),
   ]);
-  await pause(900);
-  // 並べ替え：今の位置を覚えて並べ直し、そこから動かす（FLIP）
-  const sorted = sortHand(S, order0).filter(u => order0.includes(u)).map(elOf);
-  const before = new Map(els.map(el => [el, rectOf(el)]));
-  layoutFan(area, sorted, true);
-  await Promise.all(sorted.map((el, i) => {
-    const b = before.get(el), r = rectOf(el);
-    return el.animate([{ transform: `translate(${b.left - r.left}px,${b.top - r.top}px)` }, { transform: `rotate(${el.dataset.rot}deg)` }],
-      { duration: fanDur(480), delay: fanDur(i * 18), easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }).finished;
-  }));
-  await pause(450);
-  const to = centerOf(rectOf(hand));
-  if (bare) bare.animate([{ transform: 'translate(-50%, 0)', opacity: 1 }, { transform: 'translate(-50%, 60%)', opacity: 0 }], { duration: fanDur(420), easing: 'ease-in', fill: 'forwards' });
-  await Promise.all(sorted.map((el, i) => flyTo(el, to, { dur: 380, delay: Math.min(i * 14, 200), scale: .55, ease: 'ease-in', fade: true })));
+  await wait(420);
+  // ③ 中央で重なるように閉じながら裏返る
+  const stack = i => ({ x: center.x + (i - (n - 1) / 2) * 1.2, y: center.y - i * .6, r: 0 });
+  await Promise.all(order0.map((u, i) => anim(els.get(u), tf(slot.get(u)), tf(stack(i), 180), 420, 0, 'cubic-bezier(.45,0,.25,1)')));
+  await wait(160);
+  // ④ 表に返りながら、並べ替えた順で開く
+  const sorted = sortHand(S, order0).filter(u => order0.includes(u));
+  sorted.forEach((u, i) => { els.get(u).style.zIndex = String(i + 1); });
+  await Promise.all(sorted.map((u, i) => anim(els.get(u), tf(stack(order0.indexOf(u)), 180), tf(fanPos(i, n), 360), 480, 0, 'cubic-bezier(.22,.8,.25,1)')));
+  await wait(480);
+  // ⑤ 手札の場所へ
+  const hr = rectOf(hand), to = { x: hr.left + hr.width / 2 - sr.left, y: hr.top + hr.height / 2 - sr.top, r: 0 };
+  await Promise.all(sorted.map((u, i) => anim(els.get(u), tf(fanPos(i, n), 360), tf({ x: to.x + (i - n / 2) * 10, y: to.y, r: 0 }, 360, .6), 360, Math.min(i * 16, 160), 'cubic-bezier(.5,0,.75,.4)')));
+  layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T(160), fill: 'forwards' });
+  await wait(160);
   layer.remove();
-  if (bare) bare.remove();
   $('.droot').classList.remove('hand-lifted');
 }
 /** 残りの手札（左の扇）と加わったカード（右）を並べる */

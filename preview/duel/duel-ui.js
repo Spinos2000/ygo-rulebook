@@ -770,6 +770,14 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 }
 /* スマホ：対戦画面の上下に払う操作を、ページのスクロールにしない（手札の開け閉めに使う） */
 @media (max-width: 860px) { .table, #board, .dock, .hand-hold { touch-action: none; overscroll-behavior: contain } }
+/* ドローの演出：カードは表と裏を持ち、位置・回転・裏返しを transform だけで動かす */
+.draw-fx { justify-content: flex-start }
+.dfx-stage { position: fixed; inset: 0; perspective: 900px; pointer-events: none }
+.dfx-card { position: absolute; left: 0; top: 0; transform-style: preserve-3d; will-change: transform }
+.dfx-card > .dfx-face, .dfx-card > .dfx-back { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: 0 8px 18px rgba(0,0,0,.45) }
+.dfx-card > .dfx-back { transform: rotateY(180deg) }
+.dfx-card.new > .dfx-face { box-shadow: 0 0 0 2px #ffe08a, 0 0 22px 6px rgba(255,224,138,.6) }
+.draw-fx .fan-head { position: fixed; left: 50%; top: 23%; transform: translateX(-50%); z-index: 3; margin: 0; width: max-content; max-width: calc(100vw - 24px); text-shadow: 0 2px 6px rgba(0,0,0,.6) }
 `;
 
 export const MARKUP = `
@@ -834,7 +842,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261119-2246</p>
+    <p class="menu-note ver">版：20261119-2258</p>
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>
