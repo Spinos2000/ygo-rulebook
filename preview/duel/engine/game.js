@@ -254,6 +254,10 @@ function summonLockedFor(s           , p          , src               )         
 /** player はこのターン特殊召喚できない（強欲で謙虚な壺・旗鼓堂々） */
 const specialLocked = (s           , p          ) => s.lingering.some(l => l.type === 'noSpecial' && l.player === p && l.turn === s.turn)
   || activeCards(s).some(u => scriptOf(s, u).blocksSpecialSummon?.(s, u));
+/** このターン、EXデッキからモンスターを特殊召喚できない（帝王の烈旋） */
+const extraLocked = (s           , p          ) => s.lingering.some(l => l.type === 'noExtraSpecial' && l.player === p && l.turn === s.turn);
+/** このターン、EXデッキからモンスターを特殊召喚したか（帝王の烈旋） */
+export const extraSummonedThisTurn = (s           , p          ) => s.opt[`${p}:extraAny`] === s.turn;
 /** 罠モンスター：モンスターゾーンにある間のモンスターとしての数値（罠カードとしても扱う） */
 export const TRAP_MONSTERS                                   = {
   '5686': { kind: 'monster', frame: 'effect', attribute: '水', race: '水族', level: 10, atk: 0, def: 3000 }                    ,
@@ -796,12 +800,14 @@ export function canSpecialSummon(s           , uid        , p          , how    
   const sc = scriptOf(s, uid);
   if (how === 'ignore') {
     if (summonLockedFor(s, p, src) || specialLocked(s, p)) return false;
+    if (c.zone === 'extra' && extraLocked(s, p)) return false;
     // 「召喚条件を無視して特殊召喚する」：ただし正規の召喚をしていないものは墓地・除外からは出せない
     if ((c.zone === 'gy' || c.zone === 'banished') && (sc.specialSummonOk || d.frame === 'ritual' || d.frame === 'fusion') && !c.proper) return false;
     if (d.frame === 'fusion' && c.zone === 'extra') return extraSummonZone(s, p, released) !== null;
     return freeMZones(s, p, released).length > 0;
   }
   if (summonLockedFor(s, p, src) || specialLocked(s, p)) return false;
+  if (c.zone === 'extra' && extraLocked(s, p)) return false;
   if (sc.fusionOnly && how !== 'fusion') return false;
   if (sc.specialSummonOk && !sc.specialSummonOk(s, uid, how, src)) return false;
   if (d.frame === 'ritual' && how !== 'ritual') {
@@ -828,6 +834,7 @@ export function specialSummon(x     , uids          , opt                       
     const c = s.cards[uid];
     const sc = scriptOf(s, uid);
     fromZones[uid] = c.zone;
+    if (c.zone === 'extra') s.opt[`${p}:extraAny`] = s.turn;
     const faceUp = pos !== 'faceDownDef';
     const position = pos === 'atk' ? 'atk' : 'def';
     if (defOf(s, uid).frame === 'fusion' && c.zone === 'extra') {
@@ -1082,6 +1089,7 @@ function doProcSummon(s           , p          , uid        )       {
   s.activating = p;
   try { sc.pay(x); } finally { s.activating = null; }
   const fromExtra = s.cards[uid].zone === 'extra';
+  if (fromExtra) s.opt[`${p}:extraAny`] = s.turn;
   const ez = fromExtra ? extraSummonZone(s, p) : null;
   if (fromExtra ? !ez : !freeMZones(s, p).length) throw new RuleError('モンスターゾーンに空きがありません');
   newStep(s);
@@ -1904,8 +1912,8 @@ export function advanceTributeSets(s           , p          , uid        )      
   if (s.lingering.some(l => l.type === 'tributeOpp' && l.player === p && l.turn === s.turn)) {
     for (const n of counts) for (const o of monstersOf(s, opp(p)).filter(u => releasable(s, u))) for (const tr of combos(rel, n - 1)) out.push([...tr, o]);
   }
-  for (const aid of activeCards(s).map(u => scriptOf(s, u).tributeAid?.(s, u, uid, p)).filter(Boolean)) out.push(...combos(myMons.filter(u => aid .ok(s, u) && releasable(s, u)), aid .count));
-  for (const alt of [sc.altTribute ?? []].flat()) out.push(...combos(myMons.filter(u => alt.ok(s, u) && releasable(s, u)), alt.count));
+  for (const aid of activeCards(s).map(u => scriptOf(s, u).tributeAid?.(s, u, uid, p)).filter(Boolean)) out.push(...combos(myMons.filter(u => aid .ok(s, u) && releasable(s, u) && !scriptOf(s, u).noAdvanceTribute), aid .count));
+  for (const alt of [sc.altTribute ?? []].flat()) out.push(...combos(myMons.filter(u => alt.ok(s, u) && releasable(s, u) && !scriptOf(s, u).noAdvanceTribute), alt.count));
   const seen = new Set        ();
   return out.filter(tr => { const k = [...tr].sort((a, b) => a - b).join(','); if (seen.has(k) || !freeMZones(s, p, tr).length) return false; seen.add(k); return true; });
 }
@@ -1950,7 +1958,7 @@ function mainActions(s           )           {
           }
           // アドバンス・フォース：レベル5以上のモンスター1体のリリースで、リリース2体の召喚として行える
           for (const aid of activeCards(s).map(u => scriptOf(s, u).tributeAid?.(s, u, uid, p)).filter(Boolean)) {
-            for (const tr of combos(myMons.filter(u => aid .ok(s, u) && releasable(s, u)), aid .count)) if (freeMZones(s, p, tr).length) {
+            for (const tr of combos(myMons.filter(u => aid .ok(s, u) && releasable(s, u) && !scriptOf(s, u).noAdvanceTribute), aid .count)) if (freeMZones(s, p, tr).length) {
               if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
               if (!scriptOf(s, uid).cannotSet) acts.push({ type: 'setMonster', card: uid, tributes: tr });
             }
@@ -1966,7 +1974,7 @@ function mainActions(s           )           {
           continue;
         }
         for (const aid of activeCards(s).map(u => scriptOf(s, u).tributeAid?.(s, u, uid, p)).filter(Boolean)) {
-          for (const tr of combos(myMons.filter(u => aid .ok(s, u) && releasable(s, u)), aid .count)) if (freeMZones(s, p, tr).length) {
+          for (const tr of combos(myMons.filter(u => aid .ok(s, u) && releasable(s, u) && !scriptOf(s, u).noAdvanceTribute), aid .count)) if (freeMZones(s, p, tr).length) {
             if (!summonBlocked) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
             if (!scriptOf(s, uid).cannotSet) acts.push({ type: 'setMonster', card: uid, tributes: tr });
           }
@@ -1988,7 +1996,7 @@ function mainActions(s           )           {
           if (!scriptOf(s, uid).cannotSet) acts.push({ type: 'setMonster', card: uid, tributes: tr });
         }
         // 別のリリースでのアドバンス召喚（表側表示のみ）
-        for (const alt of [scriptOf(s, uid).altTribute ?? []].flat()) if (!summonBlocked) for (const tr of combos(myMons.filter(u => alt.ok(s, u) && releasable(s, u)), alt.count)) if (freeMZones(s, p, tr).length) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
+        for (const alt of [scriptOf(s, uid).altTribute ?? []].flat()) if (!summonBlocked) for (const tr of combos(myMons.filter(u => alt.ok(s, u) && releasable(s, u) && !scriptOf(s, u).noAdvanceTribute), alt.count)) if (freeMZones(s, p, tr).length) acts.push({ type: 'normalSummon', card: uid, tributes: tr });
       }
     }
     for (const uid of myMons) {
@@ -2010,7 +2018,7 @@ function mainActions(s           )           {
     for (const uid of [...me.hand, ...me.gy, ...me.extra]) {
       const ps = scriptOf(s, uid).procSummon;
       if (ps && ps.opt && s.opt[`${p}:proc:${s.cards[uid].code}`] === s.turn) continue;
-      if (ps && !lockAll && !specialLocked(s, p) && ps.zones.includes(s.cards[uid].zone) && !gyCardLocked(s, uid, null) && ps.can(s, uid, p)) acts.push({ type: 'procSummon', card: uid });
+      if (ps && !lockAll && !specialLocked(s, p) && !(s.cards[uid].zone === 'extra' && extraLocked(s, p)) && ps.zones.includes(s.cards[uid].zone) && !gyCardLocked(s, uid, null) && ps.can(s, uid, p)) acts.push({ type: 'procSummon', card: uid });
     }
   }
   if (ph === 'battle') {

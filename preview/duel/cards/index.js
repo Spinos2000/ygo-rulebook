@@ -6,7 +6,7 @@ import {
   canSpecialSummon, specialSummon, sendToGy, addToHand, destroy, release, payLp, equipCard, equippedBySelf, linkCards,
   negateActivation, negateSummon, targetValid, addLingering, newStep, log, pl, currentAtk, FIELD_ZONES, sameCard,
   placeCounters, scriptOf, removeCounters, counterHolders, counterRoom, addStatMod, drawCards, gainLp, effectDamage, negateAttack,
-  banish, isOnField, isImmune, emit, millTop, randomOf, freeMZones, moveCard, currentDef, targetable, swapControl, advanceSummonNow, pushAnim, releasable, paysCost, normalSummonNow, createTokens, takeControl, setFaceDown, changePositionByEffect, isToken, summonedThisTurn, shuffleDeck, specialSummonedThisTurn, tributesFor, freeSZones, advanceTributeSets,
+  banish, isOnField, isImmune, emit, millTop, randomOf, freeMZones, moveCard, currentDef, targetable, swapControl, advanceSummonNow, pushAnim, releasable, paysCost, normalSummonNow, createTokens, takeControl, setFaceDown, changePositionByEffect, isToken, summonedThisTurn, shuffleDeck, specialSummonedThisTurn, tributesFor, freeSZones, advanceTributeSets, extraSummonedThisTurn,
 } from '../engine/game.js';
                                                               
 import {
@@ -523,7 +523,7 @@ export const SCRIPTS                             = {
     effects: [{
       id: 'e1', label: '①：フィールドのカード1枚に魔力カウンターを1つ置く', type: 'trigger', ss: 1, damageStep: true,
       trigger: { mandatory: true, when: false, match: (s, self, ev) => ev.type === 'summoned' && ev.uid === self },
-      // 置けるカードが無くても発動する（処理は何もしない）
+      // 置けるカードが無くても発動する（補足情報。処理は何もしない）
       activate: x => { const h = counterHolders(x.s); if (h.length) target(x, '魔力カウンターを置くカードを選んでください', h); },
       resolve: x => { if (x.link .targets.length && targetValid(x.s, x.link )) placeCounters(x.s, x.link .targets[0], 1); },
     }, {
@@ -2608,6 +2608,7 @@ export const SCRIPTS                             = {
     }, {
       id: 'e3', label: '自分フィールドのカードを全て破壊し、墓地のモンスター1体を特殊召喚', type: 'trigger', ss: 1, zones: ['gy'], damageStep: true,
       trigger: { mandatory: true, when: false, match: (s, self, ev) => ev.type === 'destroyed' && ev.uid === self && s.cards[self].zone === 'gy' },
+      // 補足情報：墓地に特殊召喚可能なモンスターがいない場合や、自分フィールドにカードが無い場合でも発動する
       activate: x => {
         const opts = gyOf(x.s, x.player).filter(u => u !== x.self && canSpecialSummon(x.s, u, x.player, 'special', fieldCards(x.s, x.player)));
         if (opts.length) target(x, '特殊召喚するモンスターを選んでください', opts);
@@ -2644,6 +2645,9 @@ export const SCRIPTS                             = {
   '11275': {
     effects: [{
       id: 'e1', label: 'このターン1度だけ、アドバンス召喚で相手のモンスター1体をリリースできる', type: 'card', ss: 2, hardOpt: true,
+      // このカードを発動するターン、自分はEXデッキからモンスターを特殊召喚できない（既に特殊召喚したターンには発動できない。公式Q&A [10972]）
+      can: x => !extraSummonedThisTurn(x.s, x.player),
+      activate: x => { if (paysCost(x)) addLingering(x.s, { type: 'noExtraSpecial', player: x.player, turn: x.s.turn }); },
       resolve: x => { addLingering(x.s, { type: 'tributeOpp', player: x.player, turn: x.s.turn }); log(x.s, `${pl(x.player)}：このターン1度だけ、アドバンス召喚で相手のモンスター1体をリリースできる`); },
     }],
   },
@@ -3391,4 +3395,6 @@ function summonByEffect(x     , u        )       {
 }
 /** 「フィールドの魔法・罠カードを破壊する」効果を持つ魔法カードか（アヌビスの裁き） */
 const destroysSpellTrap = (s           , u        ) => /魔法・罠カード[^。]*破壊|魔法・罠[^。]*全て破壊/.test(defOf(s, u).text || '');
-const anubisTargets = (s           ) => allMonsters(s).filter(u => isFaceUpMonster(s, u) && s.cards[u].position === 'atk' && defOf(s, u).frame === 'effect');
+/** 効果モンスターか（儀式・融合でも効果を持つものは効果モンスター。サクリファイス・F・G・Dなど） */
+const isEffectMonster = (s           , u        ) => defOf(s, u).frame === 'effect' || (defOf(s, u).monsterTypes ?? []).includes('効果');
+const anubisTargets = (s           ) => allMonsters(s).filter(u => isFaceUpMonster(s, u) && s.cards[u].position === 'atk' && isEffectMonster(s, u));
