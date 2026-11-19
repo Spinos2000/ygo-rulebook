@@ -2,7 +2,7 @@
 // 考え方：候補の行動を1つずつ試し、その先を自分の次の判断の場面まで進め、盤面を点数にして一番高いものを選ぶ。
 // 点数には公開情報だけを使う（相手の手札・裏側のカード・デッキの中身は見ない）。
 // 先読みの中の相手は、表側でフィールドにあるカード（公開情報）の効果だけを使うと考える。
-import { applyAction, legalActions, validateAnswer, actorOf, defOf, monstersOf, spellTrapsOf, currentStats, canAttack, opp, isOnField, couldAttackNextBattle } from '../engine/game.js';
+import { applyAction, legalActions, validateAnswer, actorOf, defOf, monstersOf, spellTrapsOf, currentStats, canAttack, opp, isOnField, couldAttackNextBattle, scriptOf, isFaceUpMonster, monsterNegated } from '../engine/game.js';
                                                                                      
 
 /** 盤面の点数の重み（scripts/cpu-tune.mjs で CPU 同士を対戦させて調整した値） */
@@ -25,6 +25,7 @@ export const DEFAULT_WEIGHTS = {
   gyProper: 60,         // 墓地の正規の召喚をした儀式・融合モンスター
   threatW: 0.5,         // 相手の次のバトルで受ける損害（LPと倒されるモンスター）の重み。相手の手札・伏せカードで変わるので割り引く
   lethal: 20000,        // 相手の場のモンスターだけで次のバトルで負ける盤面の減点
+  doomed: 0.15,         // エンドフェイズに全て破壊される（ユベル－Das Abscheulich Ritter など）モンスターの価値の割合
   margin: 30,           // これ以上良くならない行動はしない
   previewMix: 0,        // メインフェイズ1の判断で、その後のバトルの結果をどれだけ混ぜるか（0〜1）
 };
@@ -72,9 +73,14 @@ const handCardValue = (s           , uid        , w         ) => {
  * 自分のモンスターがいなくなったら残りはダイレクトアタックする。裏側のモンスターは、相手から見えないので守備力1500とみなす
  */
 export function battleThreat(s           , p          , viewer          )                                     {
-  const attackers = monstersOf(s, opp(p)).filter(u => couldAttackNextBattle(s, u)).map(u => currentStats(s, u).atk).sort((a, b) => b - a);
-  const blockers = monstersOf(s, p).map(u => {
+  // エンドフェイズに全て破壊されるモンスターは、次のバトルまで残らない
+  const wipers = endWipers(s);
+  const doomed = (u        ) => wipers.some(x => x !== u);
+  const attackers = monstersOf(s, opp(p)).filter(u => couldAttackNextBattle(s, u) && !doomed(u)).map(u => currentStats(s, u).atk).sort((a, b) => b - a);
+  const blockers = monstersOf(s, p).filter(u => !doomed(u)).map(u => {
     const c = s.cards[u];
+    // 戦闘では破壊されないモンスターは倒せない（攻撃しない）
+    if (c.faceUp && scriptOf(s, u).battleIndestructible) return { u, atkPos: false, v: Infinity };
     if (!c.faceUp) return { u, atkPos: false, v: viewer === p ? (defOf(s, u).def ?? 0) : 1500 };
     const st = currentStats(s, u);
     return c.position === 'atk' ? { u, atkPos: true, v: st.atk } : { u, atkPos: false, v: st.def };
@@ -93,6 +99,11 @@ export function battleThreat(s           , p          , viewer          )       
     blockers.splice(pick, 1);
   }
   return { damage, lost };
+}
+
+/** エンドフェイズに自分以外のモンスターを全て破壊するカード（ユベル－Das Abscheulich Ritter など）。表側で効果が無効になっていないもの */
+function endWipers(s           )           {
+  return [...monstersOf(s, 0), ...monstersOf(s, 1)].filter(u => isFaceUpMonster(s, u) && scriptOf(s, u).endWipe && !monsterNegated(s, u));
 }
 
 /** 相手の次のバトルで受ける損害の見積もり（LPの減少と、倒されるモンスターの価値） */
@@ -114,11 +125,14 @@ export function evaluate(s           , viewer          , weights                
 function evalW(s           , viewer          , w         )         {
   if (s.winner !== null) return s.winner === viewer ? WIN : -WIN;
   let score = 0;
+  // エンドフェイズに自分以外のモンスターを全て破壊するカード：それ以外のモンスターは、もうすぐ消えるので価値を割り引く
+  const wipers = endWipers(s);
   for (const p of [0, 1]              ) {
     const sign = p === viewer ? 1 : -1;
     const pl = s.players[p];
     let v = 8000 * (1 - Math.exp(-pl.lp / w.lpScale));
-    for (const u of [...monstersOf(s, p), ...spellTrapsOf(s, p)]) v += cardValueOnField(s, u, viewer, w);
+    for (const u of monstersOf(s, p)) v += cardValueOnField(s, u, viewer, w) * (wipers.some(x => x !== u) ? w.doomed : 1);
+    for (const u of spellTrapsOf(s, p)) v += cardValueOnField(s, u, viewer, w);
     v += p === viewer ? pl.hand.reduce((a, u) => a + handCardValue(s, u, w), 0) : pl.hand.length * w.oppHand;
     for (const u of pl.gy) {
       const d = defOf(s, u);
