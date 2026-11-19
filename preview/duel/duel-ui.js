@@ -736,6 +736,15 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .droot.tray-closed #goBtn { grid-area: go; width: auto; min-width: 118px; max-width: 46vw; align-self: stretch }
   .droot.tray-closed #oppInfo { display: block; font-size: 10.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 }
+/* 手札を閉じた時：左半分に扇形の手札（手は描かない）、右半分に説明とボタン。下の枠はなし */
+@media (max-width: 860px) {
+  .hand-hold { width: 48vw; left: 1vw; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)) }
+  .droot.tray-closed .dock { border: none; border-radius: 0; box-shadow: none; background: var(--bg); padding-left: 50vw;
+    grid-template-columns: minmax(0, 1fr); grid-template-areas: "st" "ex" "ph" "go"; row-gap: 6px }
+  .droot.tray-closed #goBtn { width: 100%; max-width: none; min-height: 52px; min-width: 0 }
+  .droot.tray-closed .dock-extra .btn, .droot.tray-closed #phaseBtns .btn { min-height: 32px; padding: 2px 10px; font-size: 12px }
+  .droot.tray-closed #actorHint { -webkit-line-clamp: 1 }
+}
 `;
 
 export const MARKUP = `
@@ -800,7 +809,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261119-2219</p>
+    <p class="menu-note ver">版：20261119-2226</p>
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>

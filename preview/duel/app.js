@@ -481,7 +481,8 @@ function heldFan(cards) {
 }
 /** 手札を持った左手（手札を閉じた時） */
 function holdingHandSvg(frames) {
-  return `<svg viewBox="0 0 130 200" aria-hidden="true">${handBack(true)}${heldFan(frames)}${handThumb(true)}</svg>`;
+  // 手のイラストはいったんやめて、扇形の手札だけを見せる
+  return `<svg viewBox="-12 2 164 128" aria-hidden="true">${heldFan(frames)}</svg>`;
 }
 /** 空っぽの左手（手札を持ち上げた時） */
 function emptyHandSvg() {
@@ -1173,7 +1174,8 @@ async function handAddFx(j) {
   layoutHandAdd(area, j.kept.map(elOf), j.added.map(elOf));
   const deck = pileEl(j.p, 'deck');
   // 下の手札（と、閉じた時の左手）は隠し、代わりに空っぽの左手を出す
-  const bare = j.p === 0 && narrow() ? document.createElement('div') : null;
+  const bare = null; // 空っぽの左手はいったんやめる
+  if (j.p === 0 && narrow()) $('.droot').classList.add('hand-lifted');
   if (bare) {
     bare.className = 'fx-hand';
     bare.innerHTML = emptyHandSvg();
@@ -1202,7 +1204,8 @@ async function handAddFx(j) {
   if (bare) bare.animate([{ transform: 'translate(-50%, 0)', opacity: 1 }, { transform: 'translate(-50%, 60%)', opacity: 0 }], { duration: fanDur(420), easing: 'ease-in', fill: 'forwards' });
   await Promise.all(sorted.map((el, i) => flyTo(el, to, { dur: 380, delay: Math.min(i * 14, 200), scale: .55, ease: 'ease-in', fade: true })));
   layer.remove();
-  if (bare) { bare.remove(); $('.droot').classList.remove('hand-lifted'); }
+  if (bare) bare.remove();
+  $('.droot').classList.remove('hand-lifted');
 }
 /** 残りの手札（左の扇）と加わったカード（右）を並べる */
 function layoutHandAdd(area, kept, added) {
