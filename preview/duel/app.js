@@ -1855,7 +1855,7 @@ root.addEventListener('pointerdown', e => {
     hp.fired = true;
     if (selected === u && handActs(u).length) startAim(u, hp.lx, hp.ly);
     else { if (navigator.vibrate) try { navigator.vibrate(10); } catch { /* 振動できない端末 */ } selected = u; sheet = 'detail'; render(); }
-  }, 420);
+  }, selected === u ? 230 : 380); // 選んだカード（矢印）は短く、効果を見る長押しは少し長め（なぞる・払う操作と区別する）
 });
 root.addEventListener('pointermove', e => {
   if (aim && aim.held) { aimMove(e.clientX, e.clientY); return; }
