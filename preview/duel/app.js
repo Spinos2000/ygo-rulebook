@@ -425,7 +425,7 @@ function run(action) {
   }
 }
 // CPU の行動は記録しないので、元に戻すと自分が前に判断した場面まで戻る
-function undo() { if (!history.length) return; clearTimeout(cpuTimer); S = history.pop(); pick = []; render(); }
+function undo() { if (!history.length) return; clearTimeout(cpuTimer); closeFan(); S = history.pop(); pick = []; render(); }
 
 let toastT;
 function toast(msg, bad) {
@@ -973,7 +973,7 @@ function openFan() {
   layer.className = 'fan-layer';
   const range = r.min === r.max ? `${r.min}枚選ぶ` : `${r.min}〜${r.max}枚選ぶ`;
   layer.innerHTML = `<div class="fan-head"><b>${esc(r.prompt)}</b><span>${src === 'hand' ? '手札' : '山札'} ${all.length}枚から${range}（明るいカードが選べます）</span></div><div class="fan-area"></div>`
-    + `<div class="fan-btns">${r.min === 0 ? '<button class="btn" data-fanskip>選ばない</button>' : ''}${r.max > 1 ? '<button class="btn primary" data-fanok disabled>決定</button>' : ''}</div>`;
+    + `<div class="fan-btns">${history.length ? '<button class="btn ghost" data-fanundo aria-label="元に戻す">↶ 元に戻す</button>' : ''}${r.min === 0 ? '<button class="btn" data-fanskip>選ばない</button>' : ''}${r.max > 1 ? '<button class="btn primary" data-fanok disabled>決定</button>' : ''}</div>`;
   $('.droot').appendChild(layer);
   const area = layer.querySelector('.fan-area');
   area.innerHTML = all.map(u => fanCardHtml(u, false)).join('');
@@ -1637,6 +1637,7 @@ root.addEventListener('click', e => {
   const t = e.target;
   if (t.closest('[data-fanok]')) { if (fan) fanFinish(fan.sel); return; }
   if (t.closest('[data-fanskip]')) { fanFinish([]); return; }
+  if (t.closest('[data-fanundo]')) { closeFan(); undo(); return; }
   const fanEl = t.closest('[data-fan]');
   if (fanEl) {
     const fu = Number(fanEl.dataset.fan);

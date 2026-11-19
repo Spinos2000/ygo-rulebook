@@ -301,7 +301,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .fan-area .card.dim { filter: grayscale(.85) brightness(.5); cursor: default }
 .fan-area .card:not(.dim):not(.back):hover { transform: translateY(-10px) rotate(0deg) scale(1.06); z-index: 80 !important }
 .fan-area .card.picked { transform: translateY(-20px) scale(1.12); z-index: 90 !important; box-shadow: 0 0 0 3px var(--accent), 0 0 22px 6px color-mix(in srgb, var(--accent) 70%, transparent) }
-.fan-btns { display: flex; gap: 10px; margin: 8px 0 }
+.fan-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 8px 0 }
+.fan-btns .btn.ghost { color: #fff; background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.55) }
 .fan-btns:empty { display: none }
 @media (max-width: 860px) { .fan-area .card { font-size: 8.5px } }
 /* カードの移動・発動・ターン・勝敗の演出（押した操作は下の画面に通す） */
