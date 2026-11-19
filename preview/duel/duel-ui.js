@@ -710,6 +710,32 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .menu-note.ver { font-size: 11px; opacity: .7; margin-top: 4px }
 /* カードを選んでいる間は「下にスワイプでしまう」を隠す（選んだカードの名前に重なるため） */
 @media (max-width: 860px) { .tray:has(#hand0 .card.sel) .tray-handle, .tray:has(#hand0.aiming) .tray-handle { opacity: 0 } }
+/* ===== 左手：手札を閉じた時は左下に手札を持った左手、ドローの演出中は空っぽの左手 ===== */
+.hand-hold { display: none }
+#oppInfo { display: none }
+@media (max-width: 860px) {
+  .hand-hold { display: block; position: fixed; left: max(2px, env(safe-area-inset-left, 0px)); bottom: -14px; width: 104px; z-index: 9; padding: 0; border: 0; background: none; cursor: pointer;
+    transition: transform .42s cubic-bezier(.22, .9, .25, 1), opacity .3s; filter: drop-shadow(0 4px 8px rgba(0,0,0,.45)) }
+  .hand-hold svg { display: block; width: 100%; height: auto }
+  .droot:not(.tray-closed) .hand-hold, .droot.hand-lifted .hand-hold { transform: translateY(70%); opacity: 0; pointer-events: none }
+  /* 閉じた時の小さく重なった手札は出さない（左手が持つ） */
+  .droot.tray-closed #hand0 .card { opacity: 0; pointer-events: none }
+  .droot.tray-closed #hand0 { height: 0 }
+  /* ドローの演出中は下の手札を隠す */
+  .droot.hand-lifted #hand0 .card { opacity: 0 }
+  .fx-hand { position: fixed; left: 50%; bottom: -60px; z-index: 29; pointer-events: none; filter: drop-shadow(0 6px 12px rgba(0,0,0,.4)) }
+  .fx-hand svg { display: block; width: 100%; height: auto }
+  /* 手札を閉じた時のドック：左下は左手、右側に説明・ボタンをまとめる */
+  .droot.tray-closed .dock { padding-left: 112px; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "st go" "ex go" "ph ph"; row-gap: 5px }
+  .droot.tray-closed .dock-status { grid-area: st; display: grid; gap: 1px }
+  .droot.tray-closed .dock-extra { grid-area: ex; justify-content: flex-start; flex-wrap: wrap }
+  .droot.tray-closed .dock-acts { display: contents }
+  .droot.tray-closed #phaseBtns { grid-area: ph; justify-content: flex-start }
+  .droot.tray-closed #phaseBtns .btn { flex: 0 1 auto; min-height: 34px; padding: 2px 10px; font-size: 12px }
+  .droot.tray-closed #phaseBtns:empty { display: none }
+  .droot.tray-closed #goBtn { grid-area: go; width: auto; min-width: 118px; max-width: 46vw; align-self: stretch }
+  .droot.tray-closed #oppInfo { display: block; font-size: 10.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+}
 `;
 
 export const MARKUP = `
@@ -735,7 +761,7 @@ export const MARKUP = `
     <div class="tray" id="tray"><button class="tray-handle" id="trayHandle" type="button" aria-expanded="true" aria-controls="hand0"><span class="grip" aria-hidden="true"></span><span class="tray-lbl" id="trayLbl">手札をしまう</span></button><div class="hand me" id="hand0"></div></div>
     <div class="pstrip me" id="side0"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="meta"></span></div>
     <div class="dock" id="dock">
-      <div class="dock-status"><span id="actor"></span><span id="actorHint"></span></div>
+      <div class="dock-status"><span id="actor"></span><span id="actorHint"></span><span id="oppInfo"></span></div>
       <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できるタイミングで、必ず止めて聞く">✋ 次で止める</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">ログ</button></div>
       <div class="dock-acts"><div id="phaseBtns"></div><button class="btn primary go" id="goBtn"></button></div>
     </div>
@@ -751,6 +777,7 @@ export const MARKUP = `
     </section>
   </aside>
 </div>
+<button type="button" id="handHold" class="hand-hold"></button>
 <div id="scrim" hidden></div>
 
 <div class="overlay" id="menu" hidden role="dialog" aria-modal="true" aria-labelledby="menuTitle">
@@ -773,7 +800,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261119-2147</p>
+    <p class="menu-note ver">版：20261119-2219</p>
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>
