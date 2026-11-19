@@ -1238,13 +1238,13 @@ async function handAddFx(j) {
   await wait(420);
   // ③ 中央で重なるように閉じながら裏返る
   const stack = i => ({ x: center.x + (i - (n - 1) / 2) * 1.2, y: center.y - i * .6, r: 0 });
-  await Promise.all(order0.map((u, i) => anim(els.get(u), tf(slot.get(u)), tf(stack(i), 180), 420, 0, 'cubic-bezier(.45,0,.25,1)')));
-  await wait(160);
+  await Promise.all(order0.map((u, i) => anim(els.get(u), tf(slot.get(u)), tf(stack(i), 180), 260, 0, 'cubic-bezier(.45,0,.25,1)')));
+  await wait(60);
   // ④ 表に返りながら、並べ替えた順で開く
   const sorted = sortHand(S, order0).filter(u => order0.includes(u));
   sorted.forEach((u, i) => { els.get(u).style.zIndex = String(i + 1); });
-  await Promise.all(sorted.map((u, i) => anim(els.get(u), tf(stack(order0.indexOf(u)), 180), tf(fanPos(i, n), 360), 480, 0, 'cubic-bezier(.22,.8,.25,1)')));
-  await wait(480);
+  await Promise.all(sorted.map((u, i) => anim(els.get(u), tf(stack(order0.indexOf(u)), 180), tf(fanPos(i, n), 360), 300, 0, 'cubic-bezier(.22,.8,.25,1)')));
+  await wait(320);
   // ⑤ 手札の場所へ
   const hr = rectOf(hand), to = { x: hr.left + hr.width / 2 - sr.left, y: hr.top + hr.height / 2 - sr.top, r: 0 };
   await Promise.all(sorted.map((u, i) => anim(els.get(u), tf(fanPos(i, n), 360), tf({ x: to.x + (i - n / 2) * 10, y: to.y, r: 0 }, 360, .6), 360, Math.min(i * 16, 160), 'cubic-bezier(.5,0,.75,.4)')));
