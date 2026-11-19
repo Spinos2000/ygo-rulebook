@@ -226,8 +226,9 @@ function battleInfo(prev, next, x) {
   const a = { rect: aEl.getBoundingClientRect(), d: defOf(next, x.attacker), ...stats(x.attacker) };
   let t, tEl = null;
   if (x.target === null) {
-    const strip = $(`#side${defP}`);
-    t = { rect: strip.getBoundingClientRect() };
+    // スマホではLPの帯が上にまとまっているので、盤面のすぐ外（自分なら下、相手なら上）をねらう
+    const b = $('#board').getBoundingClientRect();
+    t = { rect: narrow() ? { left: b.left + b.width * .25, width: b.width * .5, top: defP === 0 ? b.bottom + 6 : b.top - 66, height: 60, right: b.left + b.width * .75, bottom: defP === 0 ? b.bottom + 66 : b.top - 6 } : $(`#side${defP}`).getBoundingClientRect() };
   } else {
     tEl = elOf(x.target);
     if (!tEl) return null;
@@ -725,7 +726,7 @@ function renderChoice() {
   const label = u => { const c = S.cards[u]; return (c.faceUp || c.zone !== 'mzone' || c.controller === r.player) ? defOf(S, u).name : '裏側のモンスター'; };
   const range = r.min === r.max ? `${r.min}枚` : `${r.min}〜${r.max}枚`;
   const ok = pick.length >= r.min && pick.length <= r.max;
-  return head + `<p class="tl">${range}選んでください（${pick.length}枚選択中）。盤面のカードを押しても選べます。</p><div class="optlist">${r.options.map(u => `<button class="opt${pick.includes(u) ? ' on' : ''}" data-opt="${u}"><span>${esc(label(u))}</span><small>${NAME(S.cards[u].controller)}・${where(u)}${defOf(S, u).kind === 'monster' ? `・★${defOf(S, u).level}・${defOf(S, u).atk}/${defOf(S, u).def}` : ''}</small></button>`).join('')}</div>
+  return head + `<p class="tl">${range}選んでください（${pick.length}枚選択中）。盤面のカードを押しても選べます。</p><div class="optlist cards" role="listbox" aria-multiselectable="${r.max > 1}">${r.options.map(u => { const c = S.cards[u], show = c.faceUp || c.zone !== 'mzone' || c.controller === r.player; const d = defOf(S, u); return `<button class="opt cardopt${pick.includes(u) ? ' on' : ''}" data-opt="${u}" role="option" aria-selected="${pick.includes(u)}" aria-label="${esc(label(u))}"><span class="${show ? faceCls(d) : 'card back'}">${show ? faceHtml(u, d, false) : ''}</span><span class="on-mark" aria-hidden="true">✓</span><small>${esc(label(u))}</small><small class="wh">${NAME(c.controller)}・${where(u)}</small></button>`; }).join('')}</div>
     <button class="btn primary confirm" id="confirmPick" ${ok ? '' : 'disabled'}>決定</button>`;
 }
 
@@ -1020,6 +1021,11 @@ function ghost(m, rect) {
 }
 /** カード1枚を、前の場所から今の場所へ飛ばす */
 async function flyOne(m, P, i) {
+  // これから召喚の演出をするカードは、ここでは飛ばさない（演出が始まるまで見えないままにする）
+  if (pendingSummons.some(j => j && j.uid === m.u && !j.search && !j.handOpen)) {
+    const el = ROOT.querySelector(`#board [data-uid="${m.u}"]`); if (el) el.style.visibility = 'hidden';
+    return;
+  }
   const pileRect = (p, z) => P.piles[`${p}:${z}`];
   const fromR = P.from.get(m.u) || pileRect(m.fromP, m.from);
   const destEl = ROOT.querySelector(`#board [data-uid="${m.u}"], #hand0 [data-uid="${m.u}"], #hand1 [data-uid="${m.u}"]`);
@@ -1087,6 +1093,26 @@ async function banner(text, cls, ms) {
   await b.animate([{ transform: 'translate(-50%,-50%) scaleX(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scaleX(1)', opacity: 1, offset: .2 }, { transform: 'translate(-50%,-50%) scaleX(1)', opacity: 1, offset: .8 }, { transform: 'translate(-50%,-50%) scaleX(1.05)', opacity: 0 }], { duration: dur(ms), easing: 'ease-out' }).finished;
   b.remove();
 }
+/** 選んだカードにロックオンの演出（照準が縮んで重なり、光る）。色は効果の内容に合わせる */
+async function lockOn(uids, prompt = '') {
+  if (fxMode() === 'none' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const col = /破壊|墓地へ送/.test(prompt) ? '#ff5a4d' : /手札に戻|デッキに戻|除外/.test(prompt) ? '#5aa9ff' : /特殊召喚|蘇生|手札に加/.test(prompt) ? '#ffd24a' : /コントロール|奪/.test(prompt) ? '#c58cff' : '#ff8ad8';
+  // 盤面・手札にあればそのカード、墓地・除外・デッキなどにあれば、その置き場をねらう
+  const els = uids.map(u => ROOT.querySelector(`#board [data-uid="${u}"], #hand0 [data-uid="${u}"], #hand1 [data-uid="${u}"]`) || (S.cards[u] && pileEl(S.cards[u].owner, S.cards[u].zone))).filter(Boolean);
+  if (!els.length) return;
+  play(['target']);
+  await Promise.all(els.map(async (el, i) => {
+    const r = el.getBoundingClientRect(), ring = document.createElement('span');
+    ring.className = 'fx-lock'; ring.style.setProperty('--lc', col);
+    const sz = Math.max(r.width, r.height) * 1.25;
+    Object.assign(ring.style, { left: (r.left + r.width / 2 - sz / 2) + 'px', top: (r.top + r.height / 2 - sz / 2) + 'px', width: sz + 'px', height: sz + 'px' });
+    flyLayer().appendChild(ring);
+    await wait(i * 90);
+    await ring.animate([{ transform: 'scale(2.2) rotate(-90deg)', opacity: 0 }, { transform: 'scale(1) rotate(0deg)', opacity: 1, offset: .55 }, { transform: 'scale(.92)', opacity: 1, offset: .75 }, { transform: 'scale(1.05)', opacity: 0 }], { duration: dur(560), easing: 'cubic-bezier(.2,.8,.2,1)' }).finished;
+    ring.remove();
+    el.animate([{ filter: 'none' }, { filter: `brightness(1.6) drop-shadow(0 0 10px ${col})` }, { filter: 'none' }], { duration: dur(320) });
+  }));
+}
 /** 画面を更新した後：たまっている移動・発動・ターン・勝敗の演出を再生する */
 function playPendingMoves() {
   if (!pendingMoves || (fxN > 0)) return false;
@@ -1144,14 +1170,14 @@ function setTray(open, auto = false) {
   r.classList.toggle('tray-closed', !open);
   const h = $('#trayHandle'); if (h) h.setAttribute('aria-expanded', String(open));
   const n = S ? S.players[0].hand.length : 0;
-  const l = $('#trayLbl'); if (l) l.textContent = open ? '▼ 手札をしまう（ボタンを出す）' : `▲ 手札を開く（${n}枚）`;
+  const l = $('#trayLbl'); if (l) l.textContent = open ? '下にスワイプでしまう' : `上にスワイプで手札（${n}枚）`;
   measureBottom();
 }
 function measureBottom() {
   const r = $('.droot'), t = $('#tray'), d = $('#dock'); if (!r || !t || !d) return;
   const dh = Math.ceil(d.getBoundingClientRect().height);
   r.style.setProperty('--dock-h', dh + 'px');
-  r.style.setProperty('--bottom-h', (narrow() ? (trayOpen ? Math.ceil(t.getBoundingClientRect().height) : dh + 46) : dh) + 'px');
+  r.style.setProperty('--bottom-h', (narrow() ? (trayOpen ? Math.ceil(t.getBoundingClientRect().height) : dh + 62) : dh) + 'px');
 }
 /** 返事が要る時（チェーンの確認・選択・決着）は自動で閉じてボタンを見せ、自分の番に戻ったら開き直す */
 function autoTray() {
@@ -1160,6 +1186,18 @@ function autoTray() {
   if (needs && trayOpen) setTray(false, true);
   else if (!needs && !trayOpen && trayAuto && humanActing() && S.turnPlayer === actorOf(S) && S.window.kind !== 'priority') setTray(true);
   else setTray(trayOpen, trayAuto);
+}
+/** 手札を左右にスワイプ：スワイプした向きに、カードが1枚ずつ震えてパチパチ鳴る */
+let pachiBusy = false;
+async function shakaPachi(toRight) {
+  if (pachiBusy) return; pachiBusy = true;
+  const cs = [...ROOT.querySelectorAll('#hand0 .card')]; if (!toRight) cs.reverse();
+  for (const c of cs) {
+    play(['pachi1']);
+    c.animate([{ translate: '0 0', rotate: '0deg' }, { translate: '0 -9px', rotate: '-3deg' }, { translate: '0 2px', rotate: '2deg' }, { translate: '0 -4px', rotate: '-1deg' }, { translate: '0 0', rotate: '0deg' }], { duration: 170, easing: 'ease-out' });
+    await wait(70);
+  }
+  pachiBusy = false;
 }
 /* 罠カードが手札に来たら、シャカパチ（手札が跳ねてパチパチ音） */
 let handSeen = null;
@@ -1183,6 +1221,8 @@ function render() {
   if (fan && !(S.pending && !isCpu(S.pending.request.player) && isDeckPick(S.pending.request))) closeFan();
   canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
   renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets(); autoTray(); checkPachi();
+  // これから召喚の演出をするカードは、演出が始まるまで盤面に出さない（先に置かれてから巻き戻って見えないように）
+  for (const j of pendingSummons) if (j && j.uid != null && !j.search && !j.handOpen) { const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`); if (el) el.style.visibility = 'hidden'; }
   $('#result').hidden = S.winner === null;
   if (S.winner !== null) $('#result').textContent = S.winner === 'draw' ? `引き分け：${S.winReason}` : `${NAME(S.winner)}の勝利：${S.winReason}`;
   // カードの移動・召喚の演出があれば、それが終わるまでCPUの手番と自動パスを待つ
@@ -1245,15 +1285,22 @@ function wireTray(root) {
   t.addEventListener('pointerup', e => {
     if (y0 === null) return;
     const dy = e.clientY - y0, dx = e.clientX - x0; y0 = null;
-    if (Math.abs(dy) > 28 && Math.abs(dy) > Math.abs(dx) * 1.2) { swiped = true; setTray(dy < 0); }
+    swipeEnd(dx, dy);
   });
   t.addEventListener('pointercancel', () => { y0 = null; });
   // スマホのブラウザによっては指の動きが pointer で届かないので、touch でも受ける（同じ向きに何度開け閉めしても結果は同じ）
   let ty0 = null, tx0 = 0;
+  const swipeEnd = (dx, dy) => {
+    if (Math.abs(dy) > 28 && Math.abs(dy) > Math.abs(dx) * 1.2) { swiped = true; setTray(dy < 0); return; }
+    if (trayOpen && Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.2) { swiped = true; shakaPachi(dx > 0); }
+  };
   t.addEventListener('touchstart', e => { if (!narrow() || e.touches.length !== 1) return; ty0 = e.touches[0].clientY; tx0 = e.touches[0].clientX; }, { passive: true });
-  t.addEventListener('touchend', e => { if (ty0 === null) return; const p = e.changedTouches[0], dy = p.clientY - ty0, dx = p.clientX - tx0; ty0 = null; if (Math.abs(dy) > 28 && Math.abs(dy) > Math.abs(dx) * 1.2) { swiped = true; setTray(dy < 0); } }, { passive: true });
+  t.addEventListener('touchend', e => { if (ty0 === null) return; const p = e.changedTouches[0], dy = p.clientY - ty0, dx = p.clientX - tx0; ty0 = null; swipeEnd(dx, dy); }, { passive: true });
   // スワイプした後の「押した」は、カードを選ばないようにする
-  t.addEventListener('click', e => { if (swiped) { swiped = false; e.stopPropagation(); e.preventDefault(); } }, true);
+  t.addEventListener('click', e => {
+    if (swiped) { swiped = false; e.stopPropagation(); e.preventDefault(); return; }
+    if (narrow() && !trayOpen && !e.target.closest('#trayHandle')) { e.stopPropagation(); e.preventDefault(); setTray(true); }
+  }, true);
   root.querySelector('#trayHandle').addEventListener('click', e => { e.stopPropagation(); setTray(!trayOpen); });
 }
 function wire(root) {
@@ -1297,10 +1344,16 @@ root.addEventListener('click', e => {
   const actEl = t.closest('[data-act]');
   if (actEl) { run(JSON.parse(actEl.dataset.act)); return; }
   const ansEl = t.closest('[data-ans]');
-  if (ansEl) { run({ type: 'answer', value: JSON.parse(ansEl.dataset.ans) }); return; }
+  if (ansEl) { sheet = null; selected = null; run({ type: 'answer', value: JSON.parse(ansEl.dataset.ans) }); return; }
   const optEl = t.closest('[data-opt]');
   if (optEl) { togglePick(Number(optEl.dataset.opt)); return; }
-  if (t.closest('#confirmPick')) { run({ type: 'answer', value: pick }); return; }
+  if (t.closest('#confirmPick')) {
+    // 選ぶ画面を先に閉じて、盤面の選んだカードにロックオンしてから答える
+    const chosen = pick.slice(), prompt = S.pending.request.prompt;
+    sheet = null; selected = null; $('#detailSheet').classList.remove('open'); $('#scrim').hidden = true;
+    lockOn(chosen, prompt).then(() => run({ type: 'answer', value: chosen }));
+    return;
+  }
   if (t.closest('#pileClose') || t.id === 'pileDlg') { $('#pileDlg').hidden = true; return; }
   // パソコン（広い画面）では、置き場を押すと一覧。スマホでは一番上のカードの説明（一覧は長押し）
   const pileHit = t.closest('#board [data-pile]');

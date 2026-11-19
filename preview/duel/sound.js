@@ -89,6 +89,10 @@ const SOUNDS = {
   negate: s => { tone(440, s, 0.35, { type: 'sawtooth', gain: 0.18, to: 140 }); tone(445, s, 0.35, { type: 'square', gain: 0.1, to: 145 }); },
   // シャカパチ：カードをはじく乾いた音を細かく
   pachi: s => { [0, .07, .12, .2, .26, .34, .4, .47].forEach((d, i) => { noise(s + d, 0.025, { gain: 0.42 - i * 0.02, filter: 'highpass', freq: 3200 + (i % 3) * 600 }); tone(1900 + (i % 2) * 400, s + d, 0.012, { type: 'square', gain: 0.05 }); }); },
+  // シャカパチの1枚ぶん
+  pachi1: s => { noise(s, 0.022, { gain: 0.45, filter: 'highpass', freq: 3000 + Math.random() * 1500 }); tone(2100 + Math.random() * 500, s, 0.01, { type: 'square', gain: 0.05 }); },
+  // 対象を選んだ：照準が合う音
+  target: s => { tone(1320, s, 0.05, { type: 'square', gain: 0.12 }); tone(1760, s + 0.06, 0.08, { type: 'square', gain: 0.12 }); noise(s + 0.06, 0.08, { gain: 0.15, filter: 'highpass', freq: 4000 }); },
   // ドロー：小さな音
   draw: s => { noise(s, 0.05, { gain: 0.2, filter: 'highpass', freq: 2500 }); },
   // 勝利・敗北

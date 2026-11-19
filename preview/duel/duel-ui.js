@@ -420,6 +420,40 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   #toast { bottom: calc(var(--bottom-h, 210px) + 12px) }
 }
 @media (max-width: 380px) { #hand0 { --cw: 94px } }
+/* 選ぶ画面：カードを横に並べてスクロール */
+.optlist.cards { display: flex; gap: 10px; overflow-x: auto; overflow-y: visible; max-height: none; scroll-snap-type: x mandatory; padding: 10px 2px 8px; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain }
+.opt.cardopt { flex: 0 0 auto; width: 104px; scroll-snap-align: center; align-items: center; text-align: center; padding: 6px; gap: 3px; position: relative; min-height: 0; border-radius: 12px }
+.opt.cardopt > .card { position: relative; width: 100%; font-size: 8.5px; pointer-events: none }
+.opt.cardopt small { font-size: 11px; line-height: 1.3; color: var(--ink); font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; width: 100% }
+.opt.cardopt small.wh { font-weight: 500; color: var(--sub); font-size: 10px }
+.opt.cardopt .on-mark { position: absolute; top: 2px; right: 2px; z-index: 3; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); border: 2px solid var(--edge); font-weight: 900; line-height: 20px; display: none }
+.opt.cardopt.on .on-mark { display: block }
+.opt.cardopt.on > .card { box-shadow: 0 0 0 3px var(--accent) }
+/* ロックオンの照準 */
+.fx-lock { position: fixed; z-index: 30; pointer-events: none; border-radius: 50%; border: 3px solid var(--lc); box-shadow: 0 0 12px var(--lc), inset 0 0 12px var(--lc);
+  background: radial-gradient(circle, transparent 46%, transparent 47%), linear-gradient(var(--lc), var(--lc)) center / 3px 100% no-repeat, linear-gradient(var(--lc), var(--lc)) center / 100% 3px no-repeat;
+  -webkit-mask: radial-gradient(circle, transparent 18%, #000 19%); mask: radial-gradient(circle, transparent 18%, #000 19%) }
+@media (max-width: 860px) {
+  /* 盤面のカードには文字を出さない（攻撃力・守備力の数字だけ残す） */
+  #board .card .top { display: none }
+  #board .card .tb { border: none; background: transparent; top: auto; bottom: 2%; padding: 0 }
+  #board .card .tb .ad { position: static; border: none; justify-content: center; gap: .3em; font-size: 1.15em; text-shadow: 0 0 2px #fff, 0 0 3px #fff }
+  #board .card.f-spell .tb, #board .card.f-trap .tb { display: none }
+  /* 手札：枠なし（取っ手の線だけ） */
+  .tray { background: transparent; border: none; box-shadow: none; touch-action: none; pointer-events: none }
+  .tray > * { pointer-events: auto }
+  .tray-handle { height: 22px; font-size: 10px; color: var(--sub); text-shadow: 0 0 3px var(--bg), 0 0 6px var(--bg) }
+  #hand0 .card { box-shadow: 0 6px 14px rgba(0, 0, 0, .28) }
+  /* しまう時：カードが真ん中に集まって小さく重なり、真ん中の下（ボタンの上）に収まる */
+  .tray { transition: bottom .28s cubic-bezier(.2, .8, .2, 1) }
+  .droot.tray-closed .tray { transform: none; bottom: var(--dock-h); z-index: 6 }
+  #hand0 { transition: height .28s cubic-bezier(.2, .8, .2, 1) }
+  .droot.tray-closed #hand0 { height: 40px; cursor: pointer }
+  .droot.tray-closed .tray-handle { height: 0; overflow: hidden; opacity: 0 }
+  #hand0 .card { transition: transform .3s cubic-bezier(.2, .8, .2, 1), box-shadow .12s }
+  .droot.tray-closed #hand0 .card { transform: translate(calc((var(--z, 1) - 3) * 3px), 0) rotate(calc((var(--z, 1) - 3) * 2deg)) scale(.46); transform-origin: 50% 100% }
+  .droot.tray-closed #hand0 .card.sel { transform: translate(0, 0) scale(.46) }
+}
 @media (max-width: 860px) and (max-height: 700px) { #hand0 { --cw: 94px } }
 /* 縦が短いスマホ：手札を少し小さくして、1画面に収まりやすくする */
 @media (max-width: 860px) and (max-height: 720px) { .hand { --cw: 62px } .hand.opp { --cw: 30px } }
