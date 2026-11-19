@@ -1682,10 +1682,12 @@ function startAim(u, x, y) {
   const acts = handActs(u);
   const targets = aimTargets(u, acts), loose = zonelessActs(u, acts);
   if (!targets.length && !loose.length) { toast('今は手札から出せません'); return; }
+  // 魔法カード（発動できる時）：払えば発動。置く場所は空いている魔法＆罠ゾーンからランダム（フィールド魔法はフィールドゾーン）
+  const spellAct = defOf(S, u).kind === 'spell' && acts.some(a => a.type === 'activate');
   const layer = document.createElement('div');
   layer.className = 'aim-layer';
   layer.innerHTML = `<svg aria-hidden="true"><defs><marker id="aimHead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z"/></marker></defs><path class="aim-line" marker-end="url(#aimHead)"/></svg>`
-    + `<div class="aim-tip">${targets.length ? '矢印の先のマスへ、上に投げるように払ってください' : ''}</div>`
+    + `<div class="aim-tip">${spellAct ? '上に払うと発動します' : targets.length ? '矢印の先のマスへ、上に投げるように払ってください' : ''}</div>`
     + (loose.length ? `<button class="btn primary aim-act" type="button">${esc(defOf(S, u).name)}の効果を発動</button>` : '');
   $('.droot').appendChild(layer);
   const ghost = document.createElement('span');
@@ -1693,7 +1695,7 @@ function startAim(u, x, y) {
   ghost.innerHTML = faceHtml(u, defOf(S, u), false);
   layer.appendChild(ghost);
   $('#hand0').classList.add('aiming');
-  aim = { u, acts, targets, loose, layer, ghost, sx: x, sy: y, moved: 0, hover: null, held: true, trail: [{ x, y, t: performance.now() }] };
+  aim = { u, acts, targets, loose, spellAct, layer, ghost, sx: x, sy: y, moved: 0, hover: null, held: true, trail: [{ x, y, t: performance.now() }] };
   aimMove(x, y);
   if (navigator.vibrate) try { navigator.vibrate(12); } catch { /* 振動できない端末 */ }
 }
@@ -1712,7 +1714,7 @@ function aimMove(x, y) {
   while (aim.trail.length > 2 && now - aim.trail[0].t > 140) aim.trail.shift();
   // カードは指についてくる（指で隠れないよう少し上）
   aim.ghost.style.left = x + 'px'; aim.ghost.style.top = y + 'px';
-  if (!aim.targets.length) return;
+  if (!aim.targets.length || aim.spellAct) return;
   const h = aimNearest(x, y - 40);
   if (h !== aim.hover) { if (aim.hover) aim.hover.el.classList.remove('aim-hover'); aim.hover = h; if (h) h.el.classList.add('aim-hover'); }
   // 矢印は1本：カードの上の端から、吸い付いたマスへ
@@ -1732,11 +1734,29 @@ function aimRelease(x, y) {
   if (!aim) return;
   const tr = aim.trail, first = tr[0], dt = Math.max(1, performance.now() - first.t), vy = (y - first.y) / dt;
   const flick = aim.targets.length && (vy < -0.35 || (y - aim.sy < -70 && vy < -0.15));
+  if (aim.spellAct && (flick || y - aim.sy < -60)) { castSpell(x, y); return; }
   const onZone = aim.targets.find(t => { const r = t.el.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; });
   const t = flick ? aim.hover : onZone || null;
   if (t) { throwTo(t, x, y); return; }
   if (aim.loose.length) { aim.held = false; aim.ghost.style.display = 'none'; aim.layer.querySelector('.aim-line')?.setAttribute('d', ''); return; }
   endAim();
+}
+/** 魔法を払って発動：空いているマスをランダムに選び、そこへ飛ばして発動する */
+function castSpell(x, y) {
+  const { u, acts } = aim;
+  const list = acts.filter(a => a.type === 'activate');
+  if (list.length !== 1) { endAim(); selected = u; sheet = 'detail'; render(); return; }
+  const field = defOf(S, u).subtype === 'フィールド';
+  const free = S.players[0].szone.map((v, i) => (v === null ? i : -1)).filter(i => i >= 0);
+  const idx = field ? 0 : free.length ? free[Math.floor(Math.random() * free.length)] : 0;
+  const el = zoneEl(field ? '0:fz:0' : `0:st:${idx}`);
+  const go = () => { endAim(); selected = null; run(field ? list[0] : { ...list[0], zone: idx }); };
+  if (!el) { go(); return; }
+  const r = el.getBoundingClientRect(), g = aim.ghost;
+  aim.layer.querySelector('.aim-tip')?.remove();
+  g.animate([{ left: x + 'px', top: y + 'px', transform: 'translate(-50%, -70%) rotate(-5deg)' },
+    { left: (r.left + r.width / 2) + 'px', top: (r.top + r.height / 2) + 'px', transform: 'translate(-50%, -50%) rotate(0deg) scale(.7)' }],
+  { duration: 240, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' }).finished.then(go);
 }
 /** カードを投げる：指の位置から矢印の先のマスへ飛ばしてから、置く */
 function throwTo(t, x, y) {
