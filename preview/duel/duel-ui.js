@@ -726,24 +726,24 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .fx-hand { position: fixed; left: 50%; bottom: -60px; z-index: 29; pointer-events: none; filter: drop-shadow(0 6px 12px rgba(0,0,0,.4)) }
   .fx-hand svg { display: block; width: 100%; height: auto }
   /* 手札を閉じた時のドック：左下は左手、右側に説明・ボタンをまとめる */
-  .droot.tray-closed .dock { padding-left: 112px; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "st go" "ex go" "ph ph"; row-gap: 5px }
-  .droot.tray-closed .dock-status { grid-area: st; display: grid; gap: 1px }
-  .droot.tray-closed .dock-extra { grid-area: ex; justify-content: flex-start; flex-wrap: wrap }
-  .droot.tray-closed .dock-acts { display: contents }
-  .droot.tray-closed #phaseBtns { grid-area: ph; justify-content: flex-start }
-  .droot.tray-closed #phaseBtns .btn { flex: 0 1 auto; min-height: 34px; padding: 2px 10px; font-size: 12px }
-  .droot.tray-closed #phaseBtns:empty { display: none }
-  .droot.tray-closed #goBtn { grid-area: go; width: auto; min-width: 118px; max-width: 46vw; align-self: stretch }
-  .droot.tray-closed #oppInfo { display: block; font-size: 10.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  .droot .dock { padding-left: 112px; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "st go" "ex go" "ph ph"; row-gap: 5px }
+  .droot .dock-status { grid-area: st; display: grid; gap: 1px }
+  .droot .dock-extra { grid-area: ex; justify-content: flex-start; flex-wrap: wrap }
+  .droot .dock-acts { display: contents }
+  .droot #phaseBtns { grid-area: ph; justify-content: flex-start }
+  .droot #phaseBtns .btn { flex: 0 1 auto; min-height: 34px; padding: 2px 10px; font-size: 12px }
+  .droot #phaseBtns:empty { display: none }
+  .droot #goBtn { grid-area: go; width: auto; min-width: 118px; max-width: 46vw; align-self: stretch }
+  .droot #oppInfo { display: block; font-size: 10.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 }
 /* 手札を閉じた時：左半分に扇形の手札（手は描かない）、右半分に説明とボタン。下の枠はなし */
 @media (max-width: 860px) {
   .hand-hold { width: 48vw; left: 1vw; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)) }
-  .droot.tray-closed .dock { border: none; border-radius: 0; box-shadow: none; background: var(--bg); padding-left: 50vw;
+  .droot .dock { border: none; border-radius: 0; box-shadow: none; background: var(--bg); padding-left: 50vw;
     grid-template-columns: minmax(0, 1fr); grid-template-areas: "st" "ex" "ph" "go"; row-gap: 6px }
-  .droot.tray-closed #goBtn { width: 100%; max-width: none; min-height: 52px; min-width: 0 }
-  .droot.tray-closed .dock-extra .btn, .droot.tray-closed #phaseBtns .btn { min-height: 32px; padding: 2px 10px; font-size: 12px }
-  .droot.tray-closed #actorHint { -webkit-line-clamp: 1 }
+  .droot #goBtn { width: 100%; max-width: none; min-height: 52px; min-width: 0 }
+  .droot .dock-extra .btn, .droot #phaseBtns .btn { min-height: 32px; padding: 2px 10px; font-size: 12px }
+  .droot #actorHint { -webkit-line-clamp: 1 }
 }
 /* 手札を閉じた時：開いた時と同じ大きさのカードが左下の角から扇形に飛び出す（下の方は画面の外） */
 @media (max-width: 860px) {
@@ -755,19 +755,21 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* 手札を閉じた時のボタン：フェイズの説明・ログ・ひとつ戻す・✋・エンド（2回押し）・次のフェイズへ（小さめ） */
 .mini-only { display: none }
 @media (max-width: 860px) {
-  .droot.tray-closed .mini-only:not([hidden]) { display: inline-flex }
-  .droot.tray-closed #actorHint, .droot.tray-closed #oppInfo { display: none }
-  .droot.tray-closed .dock.free #phaseBtns { display: none }
-  .droot.tray-closed .dock { grid-template-areas: "st" "ex" "ph" "go"; row-gap: 6px; padding-top: 8px }
-  .droot.tray-closed .dock-extra { gap: 5px }
-  .droot.tray-closed .dock-extra .btn { min-height: 30px; padding: 1px 9px; font-size: 12px; box-shadow: 1px 1px 0 var(--edge) }
-  .droot.tray-closed #stopBtn { font-size: 0; padding: 1px 8px }
-  .droot.tray-closed #stopBtn::before { content: "✋"; font-size: 15px }
-  .droot.tray-closed #goBtn { min-height: 40px; font-size: 14px; padding: 2px 8px }
-  .droot.tray-closed #goBtn small { display: none }
+  .droot .mini-only:not([hidden]) { display: inline-flex }
+  .droot #actorHint, .droot #oppInfo { display: none }
+  .droot .dock.free #phaseBtns { display: none }
+  .droot .dock { grid-template-areas: "st" "ex" "ph" "go"; row-gap: 6px; padding-top: 8px }
+  .droot .dock-extra { gap: 5px }
+  .droot .dock-extra .btn { min-height: 30px; padding: 1px 9px; font-size: 12px; box-shadow: 1px 1px 0 var(--edge) }
+  .droot #stopBtn { font-size: 0; padding: 1px 8px }
+  .droot #stopBtn::before { content: "✋"; font-size: 15px }
+  .droot #goBtn { min-height: 40px; font-size: 14px; padding: 2px 8px }
+  .droot #goBtn small { display: none }
   .end-btn { background: color-mix(in srgb, var(--opp) 20%, var(--panel)) }
   .end-btn.armed { background: var(--opp); color: #fff }
 }
+/* スマホ：対戦画面の上下に払う操作を、ページのスクロールにしない（手札の開け閉めに使う） */
+@media (max-width: 860px) { .table, #board, .dock, .hand-hold { touch-action: none; overscroll-behavior: contain } }
 `;
 
 export const MARKUP = `
@@ -832,7 +834,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261119-2235</p>
+    <p class="menu-note ver">版：20261119-2246</p>
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>

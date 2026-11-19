@@ -1894,7 +1894,7 @@ function castSpell(x, y) {
   aim.layer.querySelector('.aim-tip')?.remove();
   g.animate([{ left: x + 'px', top: y + 'px', transform: 'translate(-50%, -70%) rotate(-5deg)' },
     { left: (r.left + r.width / 2) + 'px', top: (r.top + r.height / 2) + 'px', transform: 'translate(-50%, -50%) rotate(0deg) scale(.7)' }],
-  { duration: 240, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' }).finished.then(go);
+  { duration: 240, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' }); setTimeout(go, 260); // アニメーションの終わりを待たずに時間で進める（画面が裏にある時などに止まらないように）
 }
 /** カードを投げる：指の位置から矢印の先のマスへ飛ばしてから、置く */
 function throwTo(t, x, y) {
@@ -1905,7 +1905,7 @@ function throwTo(t, x, y) {
   const a = ghost.animate([{ left: x + 'px', top: y + 'px', transform: 'translate(-50%, -70%) rotate(-5deg)' },
     { left: c.x + 'px', top: (c.y - 26) + 'px', transform: `translate(-50%, -50%) rotate(0deg) scale(${(sc * 1.15).toFixed(2)})` }],
   { duration: 230, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' });
-  a.finished.then(() => { endAim(); startPlace(u, acts, t); });
+  setTimeout(() => { if (aim && aim.u === u) { endAim(); startPlace(u, acts, t); } }, 250); void a;
 }
 function aimTap(x, y, target) {
   if (!aim) return;
@@ -1979,7 +1979,7 @@ function placeConfirm(u, acts, t, mode) {
   if (mode === 'mset' || mode === 'sset') landOnBoard(u);
 }
 function landOnBoard(u, tries = 0) {
-  const el = ROOT.querySelector();
+  const el = ROOT.querySelector(`#board [data-uid="${u}"]`);
   if (!el || el.style.visibility === 'hidden') { if (tries < 30) setTimeout(() => landOnBoard(u, tries + 1), 60); return; }
   el.animate([{ translate: '0 -46px', scale: '1.28', opacity: 0, filter: 'drop-shadow(0 26px 14px rgba(0,0,0,.45))' },
     { translate: '0 3px', scale: '.98', opacity: 1, offset: .72 }, { translate: '0 0', scale: '1', opacity: 1, filter: 'none' }],
@@ -2037,15 +2037,27 @@ root.addEventListener('pointerup', e => {
   if (handPress) { clearTimeout(handPress.timer); handPressFired = handPress.fired; handPress = null; }
 });
 /* 手札を閉じていて、何も選んでいない普通の状態なら、画面のどこを上に払っても手札が開く */
-let openSwipe = null;
-const plainState = () => narrow() && !trayOpen && S && S.winner === null && !(S.pending && !isCpu(S.pending.request.player)) && !fan && !sheet && selected === null && !aim && !place
+/* 手札の開け閉め：何も選んでいない普通の状態なら、画面のどこを上に払っても開き、下に払っても閉じる
+ * （スマホでは上下に払うとページのスクロールとして先に取られ、pointer の「離した」が届かないことがあるので、touch でも受ける） */
+let trayGesture = null;
+const calmState = () => narrow() && S && S.winner === null && !(S.pending && !isCpu(S.pending.request.player)) && !fan && !sheet && selected === null && !aim && !place && !handPress
   && $('#menu').hidden && $('#pileDlg').hidden && $('#reviewDlg').hidden;
-root.addEventListener('pointerdown', e => { openSwipe = plainState() ? { x: e.clientX, y: e.clientY } : null; });
-root.addEventListener('pointerup', e => {
-  if (!openSwipe) return;
-  const dx = e.clientX - openSwipe.x, dy = e.clientY - openSwipe.y; openSwipe = null;
-  if (dy < -40 && Math.abs(dy) > Math.abs(dx) * 1.2 && plainState()) { setTray(true); handPressFired = true; }
-});
+function trayGestureStart(x, y, target) {
+  // ボタン・選ぶ画面の中から始めた操作は対象外
+  trayGesture = calmState() && !(target && target.closest && target.closest('button, .btn, .fan-layer, .sheet, .overlay')) ? { x, y, t: performance.now() } : null;
+}
+function trayGestureEnd(x, y) {
+  const g = trayGesture; trayGesture = null;
+  if (!g || !calmState()) return;
+  const dx = x - g.x, dy = y - g.y;
+  if (Math.abs(dy) < 40 || Math.abs(dy) < Math.abs(dx) * 1.2) return;
+  if (dy < 0 && !trayOpen) { setTray(true); handPressFired = true; }
+  else if (dy > 0 && trayOpen) { setTray(false); handPressFired = true; }
+}
+root.addEventListener('pointerdown', e => trayGestureStart(e.clientX, e.clientY, e.target));
+root.addEventListener('pointerup', e => trayGestureEnd(e.clientX, e.clientY));
+root.addEventListener('touchstart', e => { const p = e.touches[0]; if (p && e.touches.length === 1) trayGestureStart(p.clientX, p.clientY, e.target); }, { passive: true });
+root.addEventListener('touchend', e => { const p = e.changedTouches[0]; if (p) trayGestureEnd(p.clientX, p.clientY); }, { passive: true });
 root.addEventListener('pointercancel', () => { if (handPress) { clearTimeout(handPress.timer); handPress = null; } if (aim && aim.held) endAim(); });
 ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => root.addEventListener(ev, () => { if (pressT) pressEnd(); }));
 root.addEventListener('contextmenu', e => {
