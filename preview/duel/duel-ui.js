@@ -785,8 +785,15 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .su-sum b { font-family: var(--display); font-size: 16px; overflow-wrap: anywhere }
 .su-sum small { grid-column: 2; font-size: 11px; color: var(--sub) }
 .su-start { width: 100%; padding: 16px; border-radius: 16px; border: 2px solid var(--edge); background: var(--me); color: #fff; font: inherit; font-family: var(--display); font-size: 20px; letter-spacing: .06em; cursor: pointer; box-shadow: 0 4px 0 var(--edge) }
+.su-rand { margin-bottom: 10px }
+.su-reveal { display: grid; justify-items: center; gap: 6px; padding: 34px 10px; text-align: center; animation: suReveal .5s cubic-bezier(.2,.8,.3,1) both }
+.su-reveal small { font-size: 14px; color: var(--sub) }
+.su-reveal b { font-family: var(--display); font-size: 26px }
+.su-reveal span { font-size: 12px; color: var(--sub) }
+@keyframes suReveal { from { transform: scale(.7); opacity: 0 } to { transform: none; opacity: 1 } }
 .su-more { width: 100%; margin-top: 10px; padding: 10px; border-radius: 12px; border: 1.5px solid var(--line); background: transparent; color: var(--sub); font: inherit; font-size: 13px; cursor: pointer }
-.place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: nowrap; max-width: calc(100vw - 24px) }
+.place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: normal; width: max-content; max-width: min(calc(100vw - 24px), 360px) }
+.place-chip small { line-height: 1.45 }
 .place-chip b { font-family: var(--display); font-size: 15px }
 .place-chip .place-n { margin-left: 6px; font-size: 11px; color: var(--sub); font-family: var(--body) }
 .place-dots { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin: 2px 0 }
@@ -872,7 +879,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .droot #stopBtn::before { content: "✋"; font-size: 15px }
   .droot #goBtn { min-height: 40px; font-size: 14px; padding: 2px 8px }
   .droot #goBtn small { display: none }
-  .end-btn { background: color-mix(in srgb, var(--opp) 20%, var(--panel)) }
+  .end-btn { background: color-mix(in srgb, var(--opp) 20%, var(--panel)); width: 5.6em; justify-content: center; flex: none } /* 2回押しの間に幅が変わってボタンの並びがずれないように固定 */
   .end-btn.armed { background: var(--opp); color: #fff }
 }
 /* スマホ：対戦画面の上下に払う操作を、ページのスクロールにしない（手札の開け閉めに使う） */
@@ -949,7 +956,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261120-1405</p>
+    <p class="menu-note ver">版：20261120-1537</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
