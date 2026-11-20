@@ -1,6 +1,6 @@
 // カード効果（最新エラッタ後のテキストと公式データベースの補足情報に基づく）
                                                                        
-                                                    
+                                                               
 import {
   defOf, nameOf, opp, choose, chooseOne, monstersOf, allMonsters, spellTrapsOf, fieldCards, isFaceUpMonster, isMonsterZone,
   canSpecialSummon, specialSummon, sendToGy, addToHand, destroy, release, payLp, equipCard, equippedBySelf, linkCards,
@@ -427,6 +427,48 @@ export const SCRIPTS                             = {
         const s = x.s, d = x.link .data;
         if (d.mode === 1) negateActivation(s, s.chain[d.index          ]);
         else if (sameCard(s, d.uid          , d.serial          ) && s.cards[d.uid          ].summoning) negateSummon(s, d.uid          , d.how                                 );
+      },
+    }],
+  },
+
+  /* ================= デッキ dno8（サイバーダーク）の更新（2026-11-20）で追加 ================= */
+  /* 神の警告 */
+  '9008': {
+    effects: [{
+      id: 'e1', label: '2000LPを払い、召喚する効果の発動または召喚を無効にし破壊', type: 'card', ss: 3, damageStep: true, summonWindow: true,
+      can: x => x.s.players[x.player].lp >= 2000 && warningModes(x).length > 0,
+      activate: x => {
+        const s = x.s;
+        const modes = warningModes(x);
+        const m = modes.length > 1 ? modes[choose(x, { kind: 'option', prompt: 'どちらの効果を発動しますか？', options: modes.map(v => v === 1 ? '召喚する効果の発動を無効' : '召喚を無効') })] : modes[0];
+        payLp(s, x.player, 2000);
+        if (m === 1) x.link .data = { mode: 1, index: s.chain.length - 1 };
+        else {
+          const w = s.window;
+          if (w.kind !== 'priority' || w.cont.type !== 'summon') throw new Error('召喚する際ではありません');
+          x.link .data = { mode: 2, uid: w.cont.uid, serial: s.cards[w.cont.uid].serial, how: w.cont.how };
+        }
+      },
+      resolve: x => {
+        const s = x.s, d = x.link .data;
+        if (d.mode === 1) negateActivation(s, s.chain[d.index          ]);
+        else if (sameCard(s, d.uid          , d.serial          ) && s.cards[d.uid          ].summoning) negateSummon(s, d.uid          , d.how                                 );
+      },
+    }],
+  },
+  /* 万能地雷グレイモヤ */
+  '4692': {
+    effects: [{
+      id: 'e1', label: '相手の攻撃表示モンスターの内、攻撃力が一番高いモンスター1体を破壊', type: 'card', ss: 2,
+      can: x => !!x.s.battle && x.s.battle.step === 'declared' && x.s.cards[x.s.battle.attacker].controller === opp(x.player) && oppAtkMonsters(x).length > 0,
+      // 対象を取らない。処理する時に、攻撃表示モンスターの中で攻撃力が一番高いもの（同じなら選ぶ）を破壊する
+      resolve: x => {
+        const list = oppAtkMonsters(x);
+        if (!list.length) return;
+        const max = Math.max(...list.map(u => currentAtk(x.s, u)));
+        const top = list.filter(u => currentAtk(x.s, u) === max);
+        const u = top.length > 1 ? chooseOne(x, '破壊するモンスターを選んでください（攻撃力が一番高いモンスターが複数）', top) : top[0];
+        if (u !== null) destroy(x.s, [u], 'effect');
       },
     }],
   },
@@ -3195,6 +3237,22 @@ function bottomlessTargets(x     )           {
     if (isFaceUpMonster(s, ev.uid) && currentAtk(s, ev.uid) >= 1500 && !res.includes(ev.uid)) res.push(ev.uid);
   }
   return res;
+}
+/** 神の警告：①モンスターを召喚・特殊召喚する効果を含む、効果モンスターの効果・魔法・罠カードの発動／②召喚・反転召喚・特殊召喚する際 */
+function warningModes(x     )            {
+  const s = x.s, res            = [];
+  const top = s.chain[s.chain.length - 1];
+  if (top && !top.negated && summonsByEffect(s, top)) res.push(1);
+  const w = s.window;
+  if (!top && w.kind === 'priority' && w.mode === 'summoning' && w.cont.type === 'summon' && s.cards[w.cont.uid].summoning && !scriptOf(s, w.cont.uid).summonUnnegatable) res.push(2);
+  return res;
+}
+/** その発動が、モンスターを召喚・特殊召喚する効果を含むか（効果の説明に「召喚」がある。「召喚できない」などの制限は除く） */
+function summonsByEffect(s           , l           )          {
+  const e = (scriptOf(s, l.uid).effects || []).find(v => v.id === l.effect.replace(/^dg:/, ''));
+  if (!e) return false;
+  if (l.cardKind !== 'monster' && !l.cardActivation && !l.effect.startsWith('dg:')) return false;
+  return /召喚/.test(e.label) && !/召喚できない|召喚を無効|召喚・反転召喚・特殊召喚された|召喚された/.test(e.label);
 }
 function judgmentModes(x     )            {
   const s = x.s, res            = [];
