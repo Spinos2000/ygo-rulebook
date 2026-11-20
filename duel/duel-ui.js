@@ -741,7 +741,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 @keyframes actGlow { 0%, 100% { filter: brightness(1) } 50% { filter: brightness(1.18) } }
 #board .zone.zone-pick { outline: 3px dashed var(--accent); outline-offset: -3px; box-shadow: 0 0 16px 4px color-mix(in srgb, var(--accent) 60%, transparent); animation: zonePick 1s ease-in-out infinite; cursor: pointer }
 @keyframes zonePick { 0%, 100% { filter: brightness(1) } 50% { filter: brightness(1.35) } }
-.zone-tip { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 96px); transform: translateX(-50%); z-index: 36; background: rgba(10,14,20,.88); color: #fff; font-weight: 800; font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--accent); white-space: nowrap; max-width: calc(100vw - 24px); overflow: hidden; text-overflow: ellipsis; pointer-events: none }
+.zone-tip { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 96px); transform: translateX(-50%); z-index: 36; background: rgba(10,14,20,.88); color: #fff; font-weight: 800; font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--accent); white-space: normal; max-width: calc(100vw - 24px); width: max-content; text-align: center; display: grid; gap: 1px; pointer-events: none }
+.zone-tip b { font-size: 14px } .zone-tip small { font-size: 11px; font-weight: 600; opacity: .85; overflow-wrap: anywhere }
 .mill-layer { position: fixed; inset: 0; z-index: 30; background: rgba(6,14,10,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; pointer-events: none }
 .mill-head { display: grid; justify-items: center; gap: 2px; color: #fff; text-align: center }
 .mill-head b { font-family: var(--display); font-size: clamp(1rem, 4.6vw, 1.4rem) }
@@ -763,10 +764,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .su-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px }
 .su-head b { font-family: var(--display); font-size: 15px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .su-x { width: 36px; height: 36px; border-radius: 10px; border: 1.5px solid var(--line); background: transparent; color: var(--ink); font-size: 18px; cursor: pointer; flex: none }
-.su-dots { display: flex; gap: 5px }
-.su-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line) }
+.su-dots { display: flex; gap: 3px; flex: none }
+.su-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line) }
 .su-dots i.done { background: color-mix(in srgb, var(--accent) 50%, var(--line)) }
-.su-dots i.on { background: var(--accent); width: 18px; border-radius: 4px }
+.su-dots i.on { background: var(--accent); width: 12px; border-radius: 3px }
 .su-q { font-family: var(--display); font-size: 19px; margin: 14px 0 12px; display: grid; gap: 2px }
 .su-q small { font-family: var(--body); font-size: 12px; color: var(--sub) }
 .su-opts { display: grid; gap: 10px }
@@ -785,8 +786,21 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .su-sum b { font-family: var(--display); font-size: 16px; overflow-wrap: anywhere }
 .su-sum small { grid-column: 2; font-size: 11px; color: var(--sub) }
 .su-start { width: 100%; padding: 16px; border-radius: 16px; border: 2px solid var(--edge); background: var(--me); color: #fff; font: inherit; font-family: var(--display); font-size: 20px; letter-spacing: .06em; cursor: pointer; box-shadow: 0 4px 0 var(--edge) }
+.su-rand { margin-bottom: 10px }
+.su-reveal { display: grid; justify-items: center; gap: 6px; padding: 34px 10px; text-align: center; animation: suReveal .5s cubic-bezier(.2,.8,.3,1) both }
+.su-reveal small { font-size: 14px; color: var(--sub) }
+.su-reveal b { font-family: var(--display); font-size: 26px }
+.su-reveal span { font-size: 12px; color: var(--sub) }
+@keyframes suReveal { from { transform: scale(.7); opacity: 0 } to { transform: none; opacity: 1 } }
 .su-more { width: 100%; margin-top: 10px; padding: 10px; border-radius: 12px; border: 1.5px solid var(--line); background: transparent; color: var(--sub); font: inherit; font-size: 13px; cursor: pointer }
-.place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: nowrap; max-width: calc(100vw - 24px) }
+/* 準備画面の⚙️から開いた時は、対戦の設定（チェーンの確認・演出・CPUの速さ）だけ */
+#menu.from-setup label[for="deck0"], #menu.from-setup label[for="deck1"], #menu.from-setup label[for="mode"], #menu.from-setup label[for="first"], #menu.from-setup #hideOppRow, #menu.from-setup .menu-row, #menu.from-setup .menu-note:not(.ver) { display: none }
+@media (max-width: 860px) {
+  .droot #chain:not([hidden]) { position: fixed; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 150px); z-index: 31; max-height: 30vh; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,.45); padding: 8px 10px; pointer-events: none }
+  .droot #chain h3 { font-size: 12px } .droot #chain li { font-size: 12px }
+}
+.place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: normal; width: max-content; max-width: min(calc(100vw - 24px), 360px) }
+.place-chip small { line-height: 1.45 }
 .place-chip b { font-family: var(--display); font-size: 15px }
 .place-chip .place-n { margin-left: 6px; font-size: 11px; color: var(--sub); font-family: var(--body) }
 .place-dots { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin: 2px 0 }
@@ -872,7 +886,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .droot #stopBtn::before { content: "✋"; font-size: 15px }
   .droot #goBtn { min-height: 40px; font-size: 14px; padding: 2px 8px }
   .droot #goBtn small { display: none }
-  .end-btn { background: color-mix(in srgb, var(--opp) 20%, var(--panel)) }
+  .end-btn { background: color-mix(in srgb, var(--opp) 20%, var(--panel)); width: 5.6em; justify-content: center; flex: none } /* 2回押しの間に幅が変わってボタンの並びがずれないように固定 */
   .end-btn.armed { background: var(--opp); color: #fff }
 }
 /* スマホ：対戦画面の上下に払う操作を、ページのスクロールにしない（手札の開け閉めに使う） */
@@ -941,6 +955,7 @@ export const MARKUP = `
       <label for="fxMode">攻撃の演出<select id="fxMode"><option value="full">あり</option><option value="short">短く（2倍速）</option><option value="none">なし</option></select></label>
       <label for="cpuSpeed">CPUの速さ<select id="cpuSpeed"><option value="slow">ゆっくり</option><option value="normal" selected>ふつう</option><option value="fast">はやい</option></select></label>
     </div>
+    <p class="menu-note" id="menuLevel" hidden></p>
     <label class="check" id="hideOppRow"><input type="checkbox" id="hideOpp"> 手番でない側の手札を伏せる</label>
     <div class="menu-row">
       <button class="btn primary" id="newDuel">新しいデュエルを始める</button>
@@ -949,7 +964,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261120-1405</p>
+    <p class="menu-note ver">版：20261120-1620</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

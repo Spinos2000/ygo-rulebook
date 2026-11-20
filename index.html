@@ -2203,16 +2203,17 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     <summary>📖 使い方・できること</summary>
     <div class="fold-body">
     <ul class="can">
-      <li><b>🃏 デッキ</b><span>効果を組み込んだ登録デッキから、自分と相手のデッキを選びます</span></li>
+      <li><b>🃏 準備</b><span>電卓と同じように1ページずつ選びます：あなたのデッキ → CPUのデッキ（🎲おまかせも可）→ 先攻・後攻 → ▶デュエル開始</span></li>
       <li><b>⚙️ 自動処理</b><span>チェーン・優先権・タイミングを逃す・ダメージステップまで、OCGの公式ルールと公式Q&amp;Aどおりに処理します</span></li>
-      <li><b>👆 操作</b><span>カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます</span></li>
+      <li><b>👆 操作</b><span>手札のカードは押して選び、置きたいマスへ指で引っ張って置きます（横に払うと召喚・セットや発動・セットの切り替え、下に払うとやめる）。攻撃は自分のモンスターを相手に向けて引っ張ります。選んだカードを2回押すと効果を見られます</span></li>
+      <li><b>🗣️ CPU</b><span>毎回ランダムな5つの性格で、先攻・後攻のあいさつや、カードを発動した時の説明などを話します</span></li>
       <li><b>🔁 チェーン</b><span>相手の発動に応答できる時は「〜にチェーンしますか？」と聞かれます</span></li>
       <li><b>↶ 元に戻す</b><span>自分の操作を1つずつ取り消せます</span></li>
       <li><b>👥 2人で</b><span>メニューの「対戦相手」を「2人で交互に操作」にすると、1台を2人で使って対戦できます</span></li>
       <li><b>💾 続きから</b><span>途中で閉じても、同じ端末なら続きから再開できます</span></li>
     </ul>
     <div class="field"><span>使えるデッキ</span><div class="cpu-decks">
-      <span class="ow-t">バニラサクリファイスマジシャン</span><span class="ow-t">遊戯デッキ</span><span class="ow-t">暗黒混沌ユベル界</span><span class="ow-t">サイバーダーク</span>
+      <span class="ow-t">バニラサクリファイスマジシャン</span><span class="ow-t">武藤遊戯デッキ</span><span class="ow-t">混沌ユベルライロ暗黒界</span><span class="ow-t">サイバーダーク</span><span class="ow-t">A召喚</span><span class="ow-t">墓守り</span><span class="ow-t">D-HERO</span><span class="ow-t">絵札の騎士</span><span class="ow-t">月書恐竜</span><span class="ow-t">海馬瀬戸デッキ</span>
     </div></div>
     <p class="note">⚠️ CPU対戦の結果は、📊 戦績には記録されません。登録デッキ以外のデッキは、カードの効果を組み込むまで使えません。</p>
     </div>
@@ -4478,6 +4479,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     },function(){empty(faqEl,'読み込めませんでした。ページを開き直してください。');});
     /* 更新履歴：サイトの更新はここに書けば自動で載る（管理者が追加した分と合わせて表示） */
     var AUTO_LOG=[
+      {id:'auto-2026-11-20-cpu-level',createdAt:1795159307601,text:'🤖 CPU対戦：CPUの強さを「やさしい／ふつう」から選べるように（準備画面の先攻・後攻の次）。準備画面・メニューの使い勝手、開始の帯とセリフの順番、エンドの2回押しの押し間違い、置く場所を選ぶ案内、選ぶ画面の言葉、伏せカードのカウンター表示（中身が推測できた）などを修正。ログやメニューも「あなた／CPU」の表示に'},
       {id:'auto-2026-11-20-cpu-big-update',createdAt:1795151145030,text:'🎮 CPU対戦の大型アップデート：デュエルの準備を電卓と同じ1ページずつの形に（持ち主 → デッキテーマ → CPUのデッキ（🎲おまかせも可）→ 先攻・後攻 → ▶デュエル開始）。CPUは毎回ランダムな5つの性格で、先攻・後攻のあいさつ、カードを発動した時の説明、罠で切り返された時の悔しがりなど場面ごとに話します。攻撃は自分のモンスターを相手に向けて引っ張る形（力の差を表示）、魔法は置いたゾーンで発動かセットかを選び、効果の特殊召喚や死皇帝の陵墓でも出すマスを選べます。奈落の落とし穴などは召喚の直後に発動、告知は1つずつ、召喚でカードが2回出る問題やドローの演出も改善。強欲で謙虚な壺・光の援軍・死者蘇生の演出、墓地・除外の扇形の確認画面、相手の伏せカードの中身が見えていた問題の修正、サイバーダークデッキの更新（神の警告・万能地雷グレイモヤ）なども'},
       {id:'auto-2026-11-20-hand-controls',createdAt:1795135890168,text:'✋ 手札の操作を見直しました：選んで光っているカードは動かすだけでついてきて、離すか上に払うと矢印のマスに置けます。置いた後はタップで攻撃表示・横に払うと守備表示・下に払うとやめて手札へ。効果は選んだカードのダブルタップで見られます。画面のどこを上下に払っても手札が開け閉めでき、閉じた時は同じ大きさのカードが左下から出て、右にログ・ひとつ戻す・エンド（2回押し）・次のフェイズへのボタンが並びます。ドローの演出を作り直し、シャカパチはゆっくりなぞった時だけ鳴るように。戦闘ダメージや破壊の直後にダメージ・ゲートなどを発動できるか聞くように、召喚でカードが2枚に見える・演出と選ぶ画面が重なる問題も直しました'},
       {id:'auto-2026-11-19-hand-throw',createdAt:1795092136697,text:'👆 手札の置き方を変えました：選んだカードを長押しすると指についてきて、矢印が近くのマスに吸い付きます。上に投げるように払うとそのマスへ置けます（セットは上からふわっと着地）。魔法カードは払うだけで、空いているゾーンにそのまま発動します。長押しの時間も短くしました'},
@@ -6133,7 +6135,8 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
 <script type="module">
 /* ===== CPU対戦：対戦卓を開く・閉じる ===== */
 (function(){
-  var KEY='ygo-cpu-duel-v1', btn=document.getElementById('cpu-open'), host=document.getElementById('cpu-host'), st=document.getElementById('cpu-st'), busy=false;
+  /* お試し版（/preview/）で開いた時は、途中の対戦を本番とは別の場所に保存する（試しても本番の続きが消えないように） */
+  var KEY=location.pathname.indexOf('/preview/')>=0?'ygo-cpu-duel-preview-v1':'ygo-cpu-duel-v1', btn=document.getElementById('cpu-open'), host=document.getElementById('cpu-host'), st=document.getElementById('cpu-st'), busy=false;
   function label(){var saved=false;try{saved=!!localStorage.getItem(KEY);}catch(e){}btn.textContent=saved?'🤖 CPU対戦を再開する':'🤖 CPUと対戦する';}
   function close(){if(host.hidden)return;host.hidden=true;document.documentElement.style.overflow='';setTimeout(label,500);}
   label();
