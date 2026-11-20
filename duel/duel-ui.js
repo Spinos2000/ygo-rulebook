@@ -261,7 +261,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .confirm { width: 100% }
 .loghead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px }
 .loghead h3 { margin: 0; font-size: 13px; letter-spacing: .06em }
-#log { list-style: none; margin: 0; padding: 0; max-height: 340px; overflow: auto; font-size: 12px }
+#log { list-style: none; margin: 0; padding: 0; max-height: 340px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; font-size: 12px }
 #log li { padding: 3px 0; border-bottom: 1px solid var(--line) }
 #log li.turn { color: var(--accent); font-weight: 700; padding-top: 8px }
 
@@ -683,8 +683,115 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .place-layer { position: fixed; inset: 0; z-index: 35; background: rgba(4,10,8,.3); touch-action: none }
 .place-ghost { position: fixed; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 0 3px var(--accent), 0 0 20px 6px color-mix(in srgb, var(--accent) 65%, transparent); transition: transform .2s }
 .place-ghost.def { transform: translate(-50%, -50%) rotate(90deg) }
+.atk-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 5px 12px; display: grid; gap: 1px; text-align: center; white-space: nowrap; max-width: calc(100vw - 24px); pointer-events: none; box-shadow: 0 6px 16px rgba(0,0,0,.4) }
+.atk-chip b { font-family: var(--display); font-size: 15px }
+.atk-chip small { font-size: 11px; color: var(--sub) }
+.atk-chip.win { border-color: #3fae6a } .atk-chip.win b { color: #3fae6a }
+.atk-chip.lose { border-color: #d65a5a } .atk-chip.lose b { color: #d65a5a }
+.atk-chip.unk b { color: var(--accent) }
+.atk-chip .atk-how { color: var(--ink); font-weight: 700 }
+#board .atk-src { filter: drop-shadow(0 0 10px var(--accent)) }
+.atk-hover { outline: 3px solid #d65a5a; outline-offset: 2px; box-shadow: 0 0 18px 4px rgba(214,90,90,.6) }
+#speech.long .speech-text { font-size: clamp(1.05rem, 4.6vw, 1.7rem) }
+#speech.long { animation-duration: 3.7s }
+.phase-cue { position: fixed; left: 50%; top: 30%; transform: translate(-50%, -50%); z-index: 44; pointer-events: none; display: grid; justify-items: center; gap: 2px; padding: 8px 26px; border-radius: 14px; background: rgba(10,14,20,.78); border: 2px solid #e0787c; color: #fff; animation: phaseCue 1.5s ease forwards }
+.phase-cue small { font-size: 11px; letter-spacing: .1em; color: #e0787c; font-weight: 700 }
+.phase-cue b { font-family: var(--display); font-size: clamp(1.2rem, 5.5vw, 1.8rem); white-space: nowrap }
+@keyframes phaseCue { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.9) } 15% { opacity: 1; transform: translate(-50%, -50%) scale(1) } 80% { opacity: 1 } 100% { opacity: 0; transform: translate(-50%, -60%) } }
+.tg-layer { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 33; pointer-events: none; overflow: visible }
+.tg-line { fill: none; stroke-width: 3; stroke-dasharray: 7 6; stroke-linecap: round; animation: aimDash .6s linear infinite; filter: drop-shadow(0 0 4px rgba(0,0,0,.6)) }
+.tg-line.opp, .tg-ring.opp { stroke: #ff6b6b } .tg-head.opp { fill: #ff6b6b }
+.tg-line.me, .tg-ring.me { stroke: var(--accent) } .tg-head.me { fill: var(--accent) }
+.tg-ring { fill: none; stroke-width: 3; stroke-dasharray: 6 4; animation: aimDash .6s linear infinite }
+.fan-layer.topreveal { background: #0b0f14; justify-content: center; overflow: hidden }
+.hb-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none }
+.hb-bg i { position: absolute; top: -20%; bottom: -20%; width: 70%; display: block }
+.hb-flame::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(98deg, transparent 0 34px, rgba(255,110,90,.35) 34px 52px, transparent 52px 80px); filter: blur(5px); animation: hbTongue 2.2s linear infinite }
+@keyframes hbTongue { from { transform: translateY(8%) } to { transform: translateY(-8%) } }
+.fan-layer.topreveal > .fan-head { margin-top: auto }
+.fan-layer.topreveal > .fan-btns { margin-bottom: auto }
+.hb-flame { left: -10%; background:
+  radial-gradient(14% 34% at 22% 72%, rgba(255,150,110,.85), transparent 70%),
+  radial-gradient(11% 30% at 44% 58%, rgba(255,85,75,.8), transparent 70%),
+  radial-gradient(16% 38% at 30% 32%, rgba(235,55,75,.75), transparent 70%),
+  radial-gradient(10% 26% at 56% 24%, rgba(255,125,95,.65), transparent 70%),
+  radial-gradient(12% 30% at 12% 45%, rgba(255,70,70,.7), transparent 70%),
+  linear-gradient(90deg, #4a0810, #8e1626 50%, transparent);
+  filter: blur(9px); animation: hbFlame 1.4s ease-in-out infinite alternate;
+  -webkit-mask-image: linear-gradient(90deg, #000 55%, transparent); mask-image: linear-gradient(90deg, #000 55%, transparent) }
+.hb-swirl { right: -10%; background: repeating-radial-gradient(circle at 60% 50%, rgba(170,225,205,.55) 0 6px, rgba(60,140,120,.35) 6px 14px, rgba(120,200,180,.15) 14px 22px);
+  animation: hbSwirl 9s linear infinite;
+  -webkit-mask-image: linear-gradient(270deg, #000 50%, transparent); mask-image: linear-gradient(270deg, #000 50%, transparent) }
+@keyframes hbFlame { 0% { transform: translateY(0) skewY(-4deg) scale(1) } 100% { transform: translateY(-6%) skewY(4deg) scale(1.08) } }
+@keyframes hbSwirl { 0% { transform: scale(1) rotate(0deg) } 50% { transform: scale(1.15) rotate(180deg) } 100% { transform: scale(1) rotate(360deg) } }
+.topreveal .fan-head, .topreveal .hb-row, .topreveal .fan-btns, .topreveal .fan-info { position: relative; z-index: 1 }
+.hb-row { display: flex; gap: clamp(10px, 3vw, 22px); justify-content: center; align-items: center; margin: 22px 0 }
+.hb-card { position: relative; width: clamp(92px, 27vw, 150px); aspect-ratio: 59 / 86; perspective: 900px; cursor: pointer; display: block }
+.hb-flip { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateY(180deg); transition: transform .45s cubic-bezier(.3,.7,.3,1) }
+.hb-flip.up { transform: rotateY(0deg) }
+.hb-flip > .hb-face, .hb-flip > .hb-back { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: 0 10px 24px rgba(0,0,0,.55) }
+.hb-flip > .hb-face { font-size: clamp(11px, 3.3vw, 18px) }
+.hb-flip > .hb-back { transform: rotateY(180deg) }
+.hb-card:hover .hb-flip.up, .hb-card.peek .hb-flip.up { transform: translateY(-8px) }
+.hb-card.peek .hb-face { box-shadow: 0 0 0 3px #ffe08a, 0 0 24px 6px rgba(255,224,138,.6) }
+.btn.act-card { color: #fff; font-weight: 800; border: 2px solid var(--edge); box-shadow: 0 0 0 2px rgba(255,255,255,.12), 0 4px 12px rgba(0,0,0,.35); animation: actGlow 1.6s ease-in-out infinite }
+.btn.act-card.k-trap { background: linear-gradient(160deg, #c2307f, #7d0d52) }
+.btn.act-card.k-spell { background: linear-gradient(160deg, #18a585, #06654f) }
+.btn.act-card.k-mon { background: linear-gradient(160deg, #d8692a, #8f3d0c) }
+@keyframes actGlow { 0%, 100% { filter: brightness(1) } 50% { filter: brightness(1.18) } }
+#board .zone.zone-pick { outline: 3px dashed var(--accent); outline-offset: -3px; box-shadow: 0 0 16px 4px color-mix(in srgb, var(--accent) 60%, transparent); animation: zonePick 1s ease-in-out infinite; cursor: pointer }
+@keyframes zonePick { 0%, 100% { filter: brightness(1) } 50% { filter: brightness(1.35) } }
+.zone-tip { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 96px); transform: translateX(-50%); z-index: 36; background: rgba(10,14,20,.88); color: #fff; font-weight: 800; font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--accent); white-space: nowrap; max-width: calc(100vw - 24px); overflow: hidden; text-overflow: ellipsis; pointer-events: none }
+.mill-layer { position: fixed; inset: 0; z-index: 30; background: rgba(6,14,10,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; pointer-events: none }
+.mill-head { display: grid; justify-items: center; gap: 2px; color: #fff; text-align: center }
+.mill-head b { font-family: var(--display); font-size: clamp(1rem, 4.6vw, 1.4rem) }
+.mill-head span { font-size: 12px; opacity: .8 }
+.mill-row { display: flex; gap: 10px; justify-content: center }
+.mill-row .mill-card { position: relative; flex: none; box-shadow: 0 10px 22px rgba(0,0,0,.5) }
+#pileBox.pile-fan { width: min(96vw, 640px); max-width: none; overflow: hidden }
+.pile-car { --pw: clamp(130px, 44vw, 210px); display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; padding: 26px calc(50% - var(--pw) / 2) 30px; margin: 0 -14px; touch-action: pan-x; overscroll-behavior: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch }
+.pile-car::-webkit-scrollbar { display: none }
+.pile-it { flex: none; width: var(--pw); margin: 0 calc(var(--pw) * -.18); scroll-snap-align: center; position: relative; transform: translateY(var(--y, 0px)) rotate(var(--r, 0deg)) scale(var(--k, 1)); transform-origin: 50% 120%; transition: transform .08s linear }
+.pile-it .pile-face { position: relative; display: block; width: 100%; font-size: calc(var(--pw) / 8); box-shadow: 0 10px 24px rgba(0,0,0,.5) }
+.pile-it.on .pile-face { box-shadow: 0 0 0 3px #ffe08a, 0 12px 28px rgba(0,0,0,.55) }
+.pile-info { display: block; padding: 8px 4px 0; height: clamp(140px, 26vh, 220px); overflow-y: auto; overscroll-behavior: contain } /* どのカードでも同じ高さ（長い効果はこの中でスクロール） */
+.pile-info b, .pile-info small { display: block }
+.pile-info b { font-family: var(--display); font-size: 16px } .pile-info small { color: var(--sub); font-size: 12px } .pile-info p { margin: 4px 0 0; font-size: 13px; line-height: 1.6 }
+.pile-tip { margin: 0 }
+.fx-banner.with-draw { position: fixed; top: 20%; z-index: 40; pointer-events: none }
+#setup .su-box { width: min(94vw, 520px); max-height: 88vh; overflow-y: auto }
+.su-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px }
+.su-head b { font-family: var(--display); font-size: 15px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.su-x { width: 36px; height: 36px; border-radius: 10px; border: 1.5px solid var(--line); background: transparent; color: var(--ink); font-size: 18px; cursor: pointer; flex: none }
+.su-dots { display: flex; gap: 5px }
+.su-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line) }
+.su-dots i.done { background: color-mix(in srgb, var(--accent) 50%, var(--line)) }
+.su-dots i.on { background: var(--accent); width: 18px; border-radius: 4px }
+.su-q { font-family: var(--display); font-size: 19px; margin: 14px 0 12px; display: grid; gap: 2px }
+.su-q small { font-family: var(--body); font-size: 12px; color: var(--sub) }
+.su-opts { display: grid; gap: 10px }
+.su-opt { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; text-align: left; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; cursor: pointer }
+.su-opt span { grid-row: span 2; font-size: 26px }
+.su-opt b { font-family: var(--display); font-size: 16px }
+.su-opt small { color: var(--sub); font-size: 12px }
+.su-opt.on, .su-deck.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset }
+.su-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px }
+.su-deck { display: grid; gap: 4px; align-content: start; text-align: left; padding: 12px; min-height: 76px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; cursor: pointer; min-width: 0 }
+.su-deck b { font-family: var(--display); font-size: 15px; line-height: 1.3; overflow-wrap: anywhere }
+.su-deck small { color: var(--sub); font-size: 11px; overflow-wrap: anywhere }
+.su-sum { display: grid; gap: 8px; margin-bottom: 16px }
+.su-sum div { display: grid; grid-template-columns: 4.5em 1fr; gap: 0 10px; align-items: baseline; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line) }
+.su-sum span { grid-row: span 2; font-size: 12px; color: var(--sub); font-weight: 700 }
+.su-sum b { font-family: var(--display); font-size: 16px; overflow-wrap: anywhere }
+.su-sum small { grid-column: 2; font-size: 11px; color: var(--sub) }
+.su-start { width: 100%; padding: 16px; border-radius: 16px; border: 2px solid var(--edge); background: var(--me); color: #fff; font: inherit; font-family: var(--display); font-size: 20px; letter-spacing: .06em; cursor: pointer; box-shadow: 0 4px 0 var(--edge) }
+.su-more { width: 100%; margin-top: 10px; padding: 10px; border-radius: 12px; border: 1.5px solid var(--line); background: transparent; color: var(--sub); font: inherit; font-size: 13px; cursor: pointer }
 .place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: nowrap; max-width: calc(100vw - 24px) }
 .place-chip b { font-family: var(--display); font-size: 15px }
+.place-chip .place-n { margin-left: 6px; font-size: 11px; color: var(--sub); font-family: var(--body) }
+.place-dots { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin: 2px 0 }
+.place-dots i { font-style: normal; font-size: 10px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--sub); white-space: nowrap }
+.place-dots i.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700 }
 .place-chip small { font-size: 10.5px; color: var(--sub) }
 .place-x { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); font-size: 13px; line-height: 1; cursor: pointer }
 @media (prefers-reduced-motion: reduce) { .aim-layer svg path { animation: none } }
@@ -748,8 +855,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* 手札を閉じた時：開いた時と同じ大きさのカードが左下の角から扇形に飛び出す（下の方は画面の外） */
 @media (max-width: 860px) {
   .hand-hold { left: 0; bottom: 0; width: 50vw; height: calc(var(--hh-cw, 104px) * 86 / 59 * .62); overflow: visible; filter: none }
-  .hand-hold .hh-card { position: absolute; left: calc(4px + var(--i) * 6px); bottom: calc(var(--hh-cw, 104px) * 86 / 59 * -.5); width: var(--hh-cw, 104px); font-size: calc(var(--hh-cw, 104px) / 10.4);
-    transform-origin: 30% 150%; transform: rotate(var(--a)); pointer-events: none; box-shadow: 0 6px 14px rgba(0,0,0,.4) }
+  .hand-hold .hh-card { position: absolute; left: calc(26vw - var(--hh-cw, 104px) / 2); bottom: calc(var(--hh-cw, 104px) * 86 / 59 * var(--lift, .5) * -1); width: var(--hh-cw, 104px); font-size: calc(var(--hh-cw, 104px) / 10.4);
+    transform-origin: 50% 170%; transform: rotate(var(--a)); pointer-events: none; box-shadow: 0 6px 14px rgba(0,0,0,.4); transition: transform .35s cubic-bezier(.2,.8,.3,1), bottom .35s }
 }
 @media (max-width: 380px) { .hand-hold { --hh-cw: 94px } }
 /* 手札を閉じた時のボタン：フェイズの説明・ログ・ひとつ戻す・✋・エンド（2回押し）・次のフェイズへ（小さめ） */
@@ -773,7 +880,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* ドローの演出：カードは表と裏を持ち、位置・回転・裏返しを transform だけで動かす */
 .draw-fx { justify-content: flex-start }
 .dfx-stage { position: fixed; inset: 0; perspective: 900px; pointer-events: none }
-.dfx-card { position: absolute; left: 0; top: 0; transform-style: preserve-3d; will-change: transform }
+.dfx-card { position: absolute; left: 0; top: 0; transform-style: preserve-3d; will-change: transform; transform-origin: 50% 160% } /* 手札（.hand .card）と同じ回転の中心 */
 .dfx-card > .dfx-face, .dfx-card > .dfx-back { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: 0 8px 18px rgba(0,0,0,.45) }
 .dfx-card > .dfx-back { transform: rotateY(180deg) }
 .dfx-card.new > .dfx-face { box-shadow: 0 0 0 2px #ffe08a, 0 0 22px 6px rgba(255,224,138,.6) }
@@ -842,7 +949,13 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261120-0936</p>
+    <p class="menu-note ver">版：20261120-1405</p>
+  </div>
+</div>
+<div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
+  <div class="box su-box">
+    <div class="su-head"><button type="button" class="su-x" id="suBack" aria-label="戻る" hidden>‹</button><b id="suTitle">⚔️ デュエルの準備</b><span class="su-dots" id="suDots" aria-hidden="true"></span><button type="button" class="su-x" id="suClose" aria-label="閉じる">✕</button></div>
+    <div class="su-body"></div>
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>

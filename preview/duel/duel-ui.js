@@ -759,6 +759,33 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .pile-info b { font-family: var(--display); font-size: 16px } .pile-info small { color: var(--sub); font-size: 12px } .pile-info p { margin: 4px 0 0; font-size: 13px; line-height: 1.6 }
 .pile-tip { margin: 0 }
 .fx-banner.with-draw { position: fixed; top: 20%; z-index: 40; pointer-events: none }
+#setup .su-box { width: min(94vw, 520px); max-height: 88vh; overflow-y: auto }
+.su-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px }
+.su-head b { font-family: var(--display); font-size: 15px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.su-x { width: 36px; height: 36px; border-radius: 10px; border: 1.5px solid var(--line); background: transparent; color: var(--ink); font-size: 18px; cursor: pointer; flex: none }
+.su-dots { display: flex; gap: 5px }
+.su-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line) }
+.su-dots i.done { background: color-mix(in srgb, var(--accent) 50%, var(--line)) }
+.su-dots i.on { background: var(--accent); width: 18px; border-radius: 4px }
+.su-q { font-family: var(--display); font-size: 19px; margin: 14px 0 12px; display: grid; gap: 2px }
+.su-q small { font-family: var(--body); font-size: 12px; color: var(--sub) }
+.su-opts { display: grid; gap: 10px }
+.su-opt { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; text-align: left; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; cursor: pointer }
+.su-opt span { grid-row: span 2; font-size: 26px }
+.su-opt b { font-family: var(--display); font-size: 16px }
+.su-opt small { color: var(--sub); font-size: 12px }
+.su-opt.on, .su-deck.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset }
+.su-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px }
+.su-deck { display: grid; gap: 4px; align-content: start; text-align: left; padding: 12px; min-height: 76px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; cursor: pointer; min-width: 0 }
+.su-deck b { font-family: var(--display); font-size: 15px; line-height: 1.3; overflow-wrap: anywhere }
+.su-deck small { color: var(--sub); font-size: 11px; overflow-wrap: anywhere }
+.su-sum { display: grid; gap: 8px; margin-bottom: 16px }
+.su-sum div { display: grid; grid-template-columns: 4.5em 1fr; gap: 0 10px; align-items: baseline; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line) }
+.su-sum span { grid-row: span 2; font-size: 12px; color: var(--sub); font-weight: 700 }
+.su-sum b { font-family: var(--display); font-size: 16px; overflow-wrap: anywhere }
+.su-sum small { grid-column: 2; font-size: 11px; color: var(--sub) }
+.su-start { width: 100%; padding: 16px; border-radius: 16px; border: 2px solid var(--edge); background: var(--me); color: #fff; font: inherit; font-family: var(--display); font-size: 20px; letter-spacing: .06em; cursor: pointer; box-shadow: 0 4px 0 var(--edge) }
+.su-more { width: 100%; margin-top: 10px; padding: 10px; border-radius: 12px; border: 1.5px solid var(--line); background: transparent; color: var(--sub); font: inherit; font-size: 13px; cursor: pointer }
 .place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: nowrap; max-width: calc(100vw - 24px) }
 .place-chip b { font-family: var(--display); font-size: 15px }
 .place-chip .place-n { margin-left: 6px; font-size: 11px; color: var(--sub); font-family: var(--body) }
@@ -922,7 +949,13 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261120-1348</p>
+    <p class="menu-note ver">版：20261120-1405</p>
+  </div>
+</div>
+<div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
+  <div class="box su-box">
+    <div class="su-head"><button type="button" class="su-x" id="suBack" aria-label="戻る" hidden>‹</button><b id="suTitle">⚔️ デュエルの準備</b><span class="su-dots" id="suDots" aria-hidden="true"></span><button type="button" class="su-x" id="suClose" aria-label="閉じる">✕</button></div>
+    <div class="su-body"></div>
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>

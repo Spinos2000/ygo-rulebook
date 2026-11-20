@@ -830,6 +830,13 @@ export function canSpecialSummon(s           , uid        , p          , how    
 }
 
 /** 特殊召喚する。position を省略すると表側攻撃表示・表側守備表示をプレイヤーが選ぶ */
+/** 効果などで特殊召喚するマス。画面で遊ぶ人（s.askZone）には聞く（空いているマスが1つなら聞かない）。それ以外は左から詰める */
+export function pickMZone(x     , uid        , p          )         {
+  const s = x.s, free = freeMZones(s, p);
+  if (free.length <= 1 || !s.askZone?.includes(p)) return free[0];
+  const i = choose(x, { kind: 'option', prompt: `${nameOf(s, uid)}を出すモンスターゾーン`, options: free.map(z => `モンスターゾーン${z + 1}`), player: p });
+  return free[i] ?? free[0];
+}
 export function specialSummon(x     , uids          , opt                                                                                   = {})           {
   const s = x.s, p = opt.player ?? x.player, how = opt.how ?? 'special';
   const done           = [];
@@ -847,7 +854,7 @@ export function specialSummon(x     , uids          , opt                       
       const z = extraSummonZone(s, p) ;
       moveCard(s, uid, z.zone, { index: z.index, faceUp, position, controller: p });
     } else {
-      moveCard(s, uid, 'mzone', { index: freeMZones(s, p)[0], faceUp, position, controller: p });
+      moveCard(s, uid, 'mzone', { index: pickMZone(x, uid, p), faceUp, position, controller: p });
     }
     const n = s.cards[uid];
     if (how === 'ritual' || how === 'fusion') n.proper = true;
@@ -874,6 +881,7 @@ export function setFaceDown(s           , uids          )           {
   for (const u of uids) {
     const c = s.cards[u];
     if (!isMonsterZone(c) || (!c.faceUp && c.position === 'def') || isImmune(s, u)) continue;
+    if (c.faceUp) c.pub = true; // 表側の間にカード名は見られている（裏側にしても相手は中身を知っている）
     c.faceUp = false; c.position = 'def'; c.mods = []; c.counters = {};
     done.push(u);
   }
@@ -908,7 +916,8 @@ export function normalSummonNow(x     , uid        , set         )          {
   const s = x.s, p = x.player, me = s.players[p];
   const z = freeMZones(s, p);
   if (me.normalSummonUsed || !z.length || s.cards[uid].zone !== 'hand') return false;
-  moveCard(s, uid, 'mzone', { index: z[0], faceUp: !set, position: set ? 'def' : 'atk', controller: p });
+  const want = x.link?.data.zone                      ;
+  moveCard(s, uid, 'mzone', { index: want !== undefined && z.includes(want) ? want : pickMZone(x, uid, p), faceUp: !set, position: set ? 'def' : 'atk', controller: p });
   me.normalSummonUsed = true;
   const c = s.cards[uid];
   if (set) { log(s, `${pl(p)}：モンスターをセット`); emit(s, { type: 'set', uid, player: p }); pushAnim(s, { kind: 'summon', uid, how: 'set', mats: [] }); return true; }
@@ -1101,7 +1110,7 @@ function doProcSummon(s           , p          , uid        )       {
   newStep(s);
   const pos = choose(x, { kind: 'option', prompt: `${nameOf(s, uid)}の表示形式`, options: ['表側攻撃表示', '表側守備表示'] }) === 0 ? 'atk' : 'def';
   if (ez) moveCard(s, uid, ez.zone, { index: ez.index, faceUp: true, position: pos, controller: p });
-  else moveCard(s, uid, 'mzone', { index: freeMZones(s, p)[0], faceUp: true, position: pos, controller: p });
+  else moveCard(s, uid, 'mzone', { index: pickMZone(x, uid, p), faceUp: true, position: pos, controller: p });
   s.cards[uid].summoning = true;
   s.cards[uid].counters.byProc = 1; // 「この方法で特殊召喚した場合」（D-HERO ドグマガイ）
   // 「この方法による特殊召喚は1ターンに1度」：成功した時に記録する（無効にされた場合はもう一度できる）
@@ -1390,6 +1399,7 @@ function activateEffect(s           , p          , uid        , effectId        
     player: p, uid, serial: s.cards[uid].serial, effect: effectId, ss: eff.ss, cardActivation: eff.type === 'card' && !dg, cardKind: d.kind,
     targets: [], targetSerials: [], data: {}, negated: false, effectNegated: false,
   };
+  if (zone !== undefined && !(eff.type === 'card' && !dg)) link.data.zone = zone;
   if (eff.opt || eff.hardOpt) s.opt[`${p}:${optKey(s, uid, eff)}`] = s.turn;
   log(s, `${pl(p)}：${nameOf(s, uid)}${eff.type === 'card' && !dg ? 'を発動' : `の効果を発動`}（チェーン${s.chain.length + 1}）`);
   // このターンに効果を発動した記録（混沌帝龍：「このカードの効果を発動するターン、自分は他の効果を発動できない」）
@@ -2078,6 +2088,16 @@ export function applyAction(prev           , action        )            {
     return s;
   }
   if (action.type === 'answer') throw new RuleError('選択を求められていません');
+  // 召喚成功の直後など、相手が応答できる時：ターンプレイヤーが次の行動をする前に、相手に応答の機会を渡す（奈落の落とし穴などがすぐ発動できるように）
+  if (action.type === 'offer') {
+    const w = s.window;
+    if (!(w.kind === 'open' && w.respondDue) || s.winner !== null) throw new RuleError('今は相手に応答の機会を渡す場面ではありません');
+    w.respondDue = false;
+    s.window = { kind: 'priority', player: opp(s.turnPlayer), passes: 1, mode: 'normal', cont: { type: 'none' } };
+    if (activatableList(s, opp(s.turnPlayer)).length > 0) { flow(s); return s; }
+    s.window = { kind: 'open', respondDue: false };
+    return s;
+  }
   if (!legalActions(s).some(a => sameAction(a, action))) throw new RuleError(explainIllegal(s, action));
 
   if (action.type === 'pass') { passPriority(s); flow(s); return s; }

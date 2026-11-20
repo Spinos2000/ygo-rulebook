@@ -7,7 +7,7 @@ const TAU = Math.PI * 2;
 const SIG = {
   'ブラック・ホール': 'hole', 'ライトニング・ボルテックス': 'vortex', '激流葬': 'torrent', '聖なるバリアミラーフォース': 'mirror',
   '大嵐': 'storm', 'サイクロン': 'cyclone', 'ハーピィの羽根帚': 'harpie', 'ナイト・ショット': 'night', '神の宣告': 'judgment', '神の警告': 'warning',
-  '強欲な壺': 'greed', '強欲で謙虚な壺': 'humble', '増援': 'reinforce', '封印の黄金櫃': 'sarco', '死者蘇生': 'revive',
+  '強欲な壺': 'greed', '増援': 'reinforce', '封印の黄金櫃': 'sarco', '死者蘇生': 'revive',
   '早すぎた埋葬': 'burial', 'リビングデッドの呼び声': 'call', '超融合': 'superfusion', '未来融合フューチャー・フュージョン': 'future',
   '洗脳ブレインコントロール': 'brain', '光の護封剣': 'swords', '王宮のお触れ': 'decree', 'スキルドレイン': 'drain',
 };
@@ -489,9 +489,9 @@ const FX = {
       return !!S.sigil;
     });
     at(S, 1550, () => { S.sigil.flare = S.t; S.flash = .6; S.shake = 6; S.rings.push({ x: L.x, y: ay, r: 20, v: 9 * S.U, a: 1, c: '#fff2b0', lw: 4 }); S.pillar = { x: L.x, t: S.t, c: '#fff2b0' }; burst(S, L.x, ay, 50, ['#fff2b0', '#9fe6ff', '#ffffff'], 6, 40, 2.8); });
-    at(S, 2300, () => { S.sigil = null; S.ankh = null; });
-    at(S, 2500, () => { S.pillar = null; });
-    S.end = 2800;
+    at(S, 2050, () => { S.sigil = null; S.ankh = null; });
+    at(S, 2150, () => { S.pillar = null; });
+    S.end = 2200;
   },
 
   /* 早すぎた埋葬：大地がひび割れ、土を跳ね上げる */

@@ -214,7 +214,17 @@ export function idealThink(s           , opt               = {}, deckNames      
 
   const all = [...acc.values()].filter(a => a.n > 0).map(a => ({ ...a, rate: a.p / a.n }));
   // 点数が数にならない候補（計算のおかしな世界）は除く。全部だめなら最初の候補
-  const list = all.filter(a => Number.isFinite(a.rate)).length ? all.filter(a => Number.isFinite(a.rate)) : all.map(a => ({ ...a, rate: 0.5 }));
+  const list0 = all.filter(a => Number.isFinite(a.rate)).length ? all.filter(a => Number.isFinite(a.rate)) : all.map(a => ({ ...a, rate: 0.5 }));
+  // 中身が分かっていて、負けが決まっている攻撃（守備力の高い裏守備・攻撃力の高い表側のモンスターへの攻撃）は、ほかに手がある時は選ばない
+  // （勝率の見積もりがほぼ同じになり、見積もりのばらつきで選んでしまうことがあるため）
+  const sureLoss = (x        ) => {
+    if (x.type !== 'attack' || x.target === null || !s.cards[x.target]) return false;
+    const t = s.cards[x.target];
+    if (!t.faceUp && !t.pub) return false;
+    const atk = currentStats(s, x.attacker).atk, st = currentStats(s, x.target);
+    return t.position === 'def' ? atk < st.def : atk < st.atk;
+  };
+  const list = list0.some(x => !sureLoss(x.action)) ? list0.filter(x => !sureLoss(x.action)) : list0;
   if (!list.length) throw new Error('行動がありません');
   // 深い先読み：有望な候補（と、ロマンの候補）だけ、相手の次のターンの終わりまで指してみて勝率を出し直す
   const K = critical ? (opt.criticalDeepK ?? 4) : (opt.deepK ?? 3), DW = critical ? (opt.criticalDeepWorlds ?? 5) : (opt.deepWorlds ?? 3);

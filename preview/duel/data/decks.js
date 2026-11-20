@@ -1,5 +1,5 @@
 // 自動生成ファイル（scripts/make-cardpool.mjs）。手で編集しないこと。
-                                                                                                                                                        
+                                                                                                                                                                                        
 
 export const DECKS                          = {
   "7n2h41w": {
@@ -61,7 +61,9 @@ export const DECKS                          = {
       "ctr": [
         "mag"
       ]
-    }
+    },
+    "owner": "もぎ",
+    "theme": "バニラサクリファイスマジシャン"
   },
   "5m2qcka": {
     "code": "5m2qcka",
@@ -118,7 +120,9 @@ export const DECKS                          = {
         "封印の黄金櫃",
         "光の護封剣"
       ]
-    }
+    },
+    "owner": "もぎ",
+    "theme": "武藤遊戯デッキ"
   },
   "dno7": {
     "code": "dno7",
@@ -175,7 +179,9 @@ export const DECKS                          = {
         "光の援軍（2. GX以降の専用カード）"
       ],
       "ctr": []
-    }
+    },
+    "owner": "もぎ",
+    "theme": "混沌ユベルライロ暗黒界"
   },
   "dno8": {
     "code": "dno8",
@@ -236,7 +242,9 @@ export const DECKS                          = {
       "ctr": [
         "封印の黄金櫃"
       ]
-    }
+    },
+    "owner": "もぎ",
+    "theme": "サイバーダーク"
   },
   "dno9": {
     "code": "dno9",
@@ -290,7 +298,9 @@ export const DECKS                          = {
       "ctr": [
         "邪神アバター"
       ]
-    }
+    },
+    "owner": "もぎ",
+    "theme": "A召喚"
   },
   "dno10": {
     "code": "dno10",
@@ -354,7 +364,9 @@ export const DECKS                          = {
       "ctr": [
         "封印の黄金櫃"
       ]
-    }
+    },
+    "owner": "もぎ",
+    "theme": "墓守り"
   },
   "dno11": {
     "code": "dno11",
@@ -408,7 +420,9 @@ export const DECKS                          = {
       "ctr": [
         "幽獄の時計塔"
       ]
-    }
+    },
+    "owner": "もぎ",
+    "theme": "D-HERO"
   },
   "dno12": {
     "code": "dno12",
@@ -464,7 +478,9 @@ export const DECKS                          = {
       "kind": "std",
       "why": [],
       "ctr": []
-    }
+    },
+    "owner": "もぎ",
+    "theme": "絵札の騎士"
   },
   "dno13": {
     "code": "dno13",
@@ -520,7 +536,9 @@ export const DECKS                          = {
         "光の護封剣",
         "闇の護封剣"
       ]
-    }
+    },
+    "owner": "もぎ",
+    "theme": "月書恐竜"
   },
   "dno14": {
     "code": "dno14",
@@ -590,6 +608,8 @@ export const DECKS                          = {
       "ctr": [
         "光の護封剣"
       ]
-    }
+    },
+    "owner": "もぎ",
+    "theme": "海馬瀬戸デッキ"
   }
 };
