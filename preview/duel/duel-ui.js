@@ -792,6 +792,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .su-reveal span { font-size: 12px; color: var(--sub) }
 @keyframes suReveal { from { transform: scale(.7); opacity: 0 } to { transform: none; opacity: 1 } }
 .su-more { width: 100%; margin-top: 10px; padding: 10px; border-radius: 12px; border: 1.5px solid var(--line); background: transparent; color: var(--sub); font: inherit; font-size: 13px; cursor: pointer }
+/* 準備画面の⚙️から開いた時は、対戦の設定（チェーンの確認・演出・CPUの速さ）だけ */
+#menu.from-setup label[for="deck0"], #menu.from-setup label[for="deck1"], #menu.from-setup label[for="mode"], #menu.from-setup label[for="first"], #menu.from-setup #hideOppRow, #menu.from-setup .menu-row, #menu.from-setup .menu-note:not(.ver) { display: none }
 .place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: normal; width: max-content; max-width: min(calc(100vw - 24px), 360px) }
 .place-chip small { line-height: 1.45 }
 .place-chip b { font-family: var(--display); font-size: 15px }
@@ -956,7 +958,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261120-1537</p>
+    <p class="menu-note ver">版：20261120-1557</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

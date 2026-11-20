@@ -6134,7 +6134,8 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
 <script type="module">
 /* ===== CPU対戦：対戦卓を開く・閉じる ===== */
 (function(){
-  var KEY='ygo-cpu-duel-v1', btn=document.getElementById('cpu-open'), host=document.getElementById('cpu-host'), st=document.getElementById('cpu-st'), busy=false;
+  /* お試し版（/preview/）で開いた時は、途中の対戦を本番とは別の場所に保存する（試しても本番の続きが消えないように） */
+  var KEY=location.pathname.indexOf('/preview/')>=0?'ygo-cpu-duel-preview-v1':'ygo-cpu-duel-v1', btn=document.getElementById('cpu-open'), host=document.getElementById('cpu-host'), st=document.getElementById('cpu-st'), busy=false;
   function label(){var saved=false;try{saved=!!localStorage.getItem(KEY);}catch(e){}btn.textContent=saved?'🤖 CPU対戦を再開する':'🤖 CPUと対戦する';}
   function close(){if(host.hidden)return;host.hidden=true;document.documentElement.style.overflow='';setTimeout(label,500);}
   label();

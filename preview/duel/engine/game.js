@@ -1637,15 +1637,15 @@ function handLimit(s           )       {
 function lose(s           , p          , reason        )       {
   if (s.winner !== null) return;
   s.winner = opp(p);
-  s.winReason = `${pl(p)}が${reason}`;
+  s.winReason = `${pl(p)}${reason.startsWith('の') ? '' : 'が'}${reason}`;
   log(s, `${pl(opp(p))}の勝利（${s.winReason}）`);
 }
 export function checkLp(s           )       {
   if (s.winner !== null) return;
   const a = s.players[0].lp <= 0, b = s.players[1].lp <= 0;
   if (a && b) { s.winner = 'draw'; s.winReason = 'お互いのLPが同時に0になった'; log(s, '引き分け（お互いのLPが0）'); }
-  else if (a) lose(s, 0, 'LPが0になった');
-  else if (b) lose(s, 1, 'LPが0になった');
+  else if (a) lose(s, 0, 'のLPが0になった');
+  else if (b) lose(s, 1, 'のLPが0になった');
 }
 
 /* =====================================================================

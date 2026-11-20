@@ -310,9 +310,10 @@ function think(state) {
 }
 let thinking = null; // 考えている最中の状態（同じ状態で2回考えない）
 function setThinking(on) { const el = $('#cpuThink'); if (el) el.hidden = !on; }
+const pausedUi = () => setupOpen() || ($('#menu') && !$('#menu').hidden);
 function scheduleCpu() {
   clearTimeout(cpuTimer);
-  if (setupOpen()) return;
+  if (pausedUi()) return;
   if (!S || S.winner !== null || !isCpu(actorOf(S))) return;
   if (thinking === S) return;
   // 考え終わった答えがあれば、考え直さずに指す（演出の後などで呼ばれ直した時）
@@ -328,7 +329,7 @@ function scheduleCpu() {
     if (!r.ok) { console.error(r.error); toast(`CPUのエラー：${r.error}`, true); return; }
     const th = r.thought;
     ready = { state, th };
-    if (setupOpen() || fxN > 0) return; // 準備画面や演出の間は指さない（終わったら、この答えで指す）
+    if (pausedUi() || fxN > 0) return; // 準備画面・メニュー・演出の間は指さない（終わったら、この答えで指す）
     cpuTimer = setTimeout(() => playCpu(state, th), Math.max(0, delay - (performance.now() - t0)));
   });
 }
@@ -357,7 +358,7 @@ function continueEnd() {
 }
 function playCpu(state, th) {
   if (S !== state) return;
-  if (fxN > 0 || setupOpen()) return; // 演出・準備画面の間は指さない（終わった時に、考えた答えで指し直す）
+  if (fxN > 0 || pausedUi()) return; // 演出・準備画面・メニューの間は指さない（終わった時に、考えた答えで指し直す）
   ready = null;
   let next;
   try { next = applyAction(S, th.action); } catch (e) { console.error(e); toast(`CPUのエラー：${e.message}`, true); return; }
@@ -612,7 +613,7 @@ function setupClick(t) {
   if (k === 'own') { if (me) SU.p0own = v; else { SU.p1own = v; SU.rand = false; } suGo(me ? 'p0deck' : 'p1deck'); return true; }
   if (k === 'deck') { if (me) SU.p0 = v; else { SU.p1 = v; SU.rand = false; } suGo(me ? 'p1own' : 'first'); return true; }
   if (k === 'first') { SU.first = v; suGo('go'); return true; }
-  if (k === 'more') { suKeep = SU; $('#setup').hidden = true; suReturn = true; openMenu(); return true; }
+  if (k === 'more') { suKeep = SU; $('#setup').hidden = true; suReturn = true; openMenu(); $('#menu').classList.add('from-setup'); return true; }
   if (k === 'start') {
     const all = Object.keys(DECKS);
     $('#mode').value = 'cpu'; $('#hideOppRow').hidden = true;
@@ -927,7 +928,7 @@ function renderSide() {
     const tag = el.querySelector('.tag');
     tag.hidden = !(S.turnPlayer === p && S.winner === null);
     tag.textContent = 'ターン中';
-    el.querySelector('.meta').textContent = `手札 ${P.hand.length}・デッキ ${P.deck.length}${S.turnPlayer === p && S.winner === null ? `・通常召喚 ${P.normalSummonUsed ? '済' : '未'}` : ''}`;
+    el.querySelector('.meta').textContent = `手札${P.hand.length}・デッキ${P.deck.length}${S.turnPlayer === p && S.winner === null ? `・召喚${P.normalSummonUsed ? '済' : '未'}` : ''}`;
   });
   $('#hand0').innerHTML = renderHand(0);
   $('#hand1').innerHTML = renderHand(1);
@@ -960,7 +961,7 @@ const humanActing = () => S.winner === null && !isCpu(actorOf(S));
 
 let shownPhase = null; // 告知を順番に出している間、上のフェイズ表示もその告知に合わせる
 function renderTop() {
-  const cur = PHASES.indexOf(shownPhase ?? (cueQ.length ? cueQ[0] : S.phase));
+  const cur = PHASES.indexOf(shownPhase ?? (pendingMoves && pendingMoves.turn !== null ? 'end' : cueQ.length ? cueQ[0] : S.phase));
   const legal = humanActing() && !S.pending ? legalActions(S) : [];
   // 移れるフェイズは押せるボタンにする
   $('#phases').innerHTML = PHASES.map((ph, i) => {
@@ -1924,9 +1925,27 @@ function zonePick() {
   r.options.forEach((o, i) => { const z = Number((o.match(/(\d+)$/) || [])[1]) - 1; if (z >= 0) map.set(`${p}:mz:${z}`, i); });
   return { r, map };
 }
+/** 説明欄のボタンで置く時の、置けるマス（mz / st のキー）。選ぶ必要が無ければ null */
+let actPick = null;
+function actZones(a) {
+  if (!S.cards[a.card] || S.cards[a.card].zone !== 'hand' || a.zone !== undefined) return null;
+  const P = S.players[0], d = defOf(S, a.card);
+  if (a.type === 'normalSummon' || a.type === 'setMonster') {
+    const free = P.mzone.map((v, i) => (v === null || (a.tributes || []).includes(v) ? i : -1)).filter(i => i >= 0);
+    return free.map(i => `0:mz:${i}`);
+  }
+  if ((a.type === 'setSpellTrap' || a.type === 'activate') && d.kind !== 'monster' && d.subtype !== 'フィールド') return P.szone.map((v, i) => (v === null ? `0:st:${i}` : null)).filter(Boolean);
+  return null;
+}
 function renderZonePick() {
   ROOT.querySelectorAll('#board .zone-pick').forEach(el => el.classList.remove('zone-pick'));
   let tip = $('.zone-tip');
+  if (actPick && !fxSoon() && fxN === 0) {
+    for (const k of actPick.zones) { const el = ROOT.querySelector(`#board [data-zone="${k}"]`); if (el) el.classList.add('zone-pick'); }
+    if (!tip) { tip = document.createElement('div'); tip.className = 'zone-tip'; $('.droot').appendChild(tip); }
+    tip.textContent = `「${defOf(S, actPick.a.card).name}」を置くマスを押してください（ほかを押すとやめる）`;
+    return;
+  }
   const zp = fxSoon() || fxN > 0 ? null : zonePick();
   if (!zp) { if (tip) tip.remove(); return; }
   for (const k of zp.map.keys()) { const el = ROOT.querySelector(`#board [data-zone="${k}"]`); if (el) el.classList.add('zone-pick'); }
@@ -2068,7 +2087,7 @@ function render() {
   if (narrow() && pendingSummons.some(j => j && j.handAdd && j.p === 0)) $('.droot').classList.add('hand-lifted');
   for (const j of pendingSummons) if (j && j.uid != null && !j.search && !j.handOpen && !j.handAdd) { const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`); if (el) el.style.visibility = 'hidden'; }
   $('#result').hidden = S.winner === null;
-  if (S.winner !== null) $('#result').textContent = S.winner === 'draw' ? `引き分け：${S.winReason}` : `${NAME(S.winner)}の勝利：${S.winReason}`;
+  if (S.winner !== null) $('#result').textContent = S.winner === 'draw' ? `引き分け：${S.winReason}` : `${NAME(S.winner)}の勝利：${cpuMode() ? S.winReason.replace(/P1/g, 'あなた').replace(/P2/g, 'CPU') : S.winReason}`;
   // カードの移動・召喚の演出があれば、それが終わるまでCPUの手番と自動パスを待つ
   if (playPendingMoves()) { saveSoon(); return; }
   if (playPendingSummons()) { saveSoon(); return; }
@@ -2157,8 +2176,8 @@ function showPile(p, kind) {
 }
 
 /* ---------- メニュー ---------- */
-function openMenu() { $('#menu').hidden = false; $('#menuBtn').setAttribute('aria-expanded', 'true'); disarm(); }
-function closeMenu() { $('#menu').hidden = true; $('#menuBtn').setAttribute('aria-expanded', 'false'); disarm(); }
+function openMenu() { $('#menu').hidden = false; $('#menuBtn').setAttribute('aria-expanded', 'true'); disarm(); clearTimeout(cpuTimer); }
+function closeMenu() { $('#menu').hidden = true; $('#menu').classList.remove('from-setup'); $('#menuBtn').setAttribute('aria-expanded', 'false'); disarm(); setTimeout(() => { if (S && !pausedUi()) scheduleCpu(); }, 0); }
 let armT;
 function disarm() { const b = $('#surrender'); b.classList.remove('armed'); b.textContent = 'サレンダーする'; clearTimeout(armT); }
 function surrender() {
@@ -2692,7 +2711,7 @@ root.addEventListener('click', e => {
     if (t.id === 'setup') return; // 外側を押しても閉じない（押し間違いで、選んでいないデッキの対戦が始まらないように）
     setupClick(t); return;
   }
-  if (t.closest('#again') || t.closest('[data-again="1"]')) { if (cpuMode()) openSetup('go'); else newDuel(); return; }
+  if (t.closest('#again') || t.closest('[data-again="1"]')) { if (cpuMode()) { const sp = $('#speech'); if (sp && !sp.hidden) setTimeout(() => openSetup('go'), 1500); else openSetup('go'); } else newDuel(); return; }
   if (t.closest('[data-reopen="1"]')) { peek = false; render(); return; }
   if (t.closest('#stopBtn')) { stopNext = !stopNext; renderDock(); return; }
   if (t.closest('#handHold')) { setTray(true); return; }
@@ -2707,7 +2726,14 @@ root.addEventListener('click', e => {
   if (t.closest('#menuBtn')) { openMenu(); return; }
   if (t.closest('#menuClose') || t.id === 'menu') { closeMenu(); if (suReturn) { suReturn = false; openSetup('go'); } return; }
   if (t.closest('#surrender')) { surrender(); return; }
+  { const ap = actPick; const zEl = ap && t.closest && t.closest('#board [data-zone]');
+    if (ap) { actPick = null; if (zEl && ap.zones.has(zEl.dataset.zone)) { run({ ...ap.a, zone: Number(zEl.dataset.zone.split(':')[2]) }); return; } render(); if (zEl) return; } }
   const actEl = t.closest('[data-act]');
+  if (actEl && cpuMode() && actEl.closest('#detailSheet, #detail')) {
+    const a = JSON.parse(actEl.dataset.act);
+    const zs = actZones(a);
+    if (zs && zs.length > 1) { sheet = null; selected = null; actPick = { a, zones: new Set(zs) }; render(); return; }
+  }
   if (actEl) {
     // カードの説明から操作した時は、説明を閉じて盤面の演出が見えるようにする
     if (actEl.closest('#detailSheet')) { sheet = null; selected = null; }
