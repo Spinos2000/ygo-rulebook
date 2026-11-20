@@ -754,7 +754,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .pile-it { flex: none; width: var(--pw); margin: 0 calc(var(--pw) * -.18); scroll-snap-align: center; position: relative; transform: translateY(var(--y, 0px)) rotate(var(--r, 0deg)) scale(var(--k, 1)); transform-origin: 50% 120%; transition: transform .08s linear }
 .pile-it .pile-face { position: relative; display: block; width: 100%; font-size: calc(var(--pw) / 8); box-shadow: 0 10px 24px rgba(0,0,0,.5) }
 .pile-it.on .pile-face { box-shadow: 0 0 0 3px #ffe08a, 0 12px 28px rgba(0,0,0,.55) }
-.pile-info { display: grid; gap: 2px; padding: 8px 4px 0; min-height: 96px; max-height: 32vh; overflow-y: auto }
+.pile-info { display: grid; gap: 2px; padding: 8px 4px 0; height: clamp(150px, 30vh, 260px); align-content: start; overflow-y: auto; overscroll-behavior: contain }
 .pile-info b { font-family: var(--display); font-size: 16px } .pile-info small { color: var(--sub); font-size: 12px } .pile-info p { margin: 4px 0 0; font-size: 13px; line-height: 1.6 }
 .pile-tip { margin: 0 }
 .place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: nowrap; max-width: calc(100vw - 24px) }

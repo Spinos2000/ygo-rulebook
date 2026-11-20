@@ -2018,6 +2018,7 @@ function showPile(p, kind) {
         const u = Number(best.dataset.u), d = defOf(S, u);
         const type = d.kind === 'monster' ? `★${d.level ?? '-'}・${d.attribute || ''}・${d.race || ''}　ATK ${d.atk ?? '?'} / DEF ${d.def ?? '?'}` : `${d.subtype || ''}${d.kind === 'spell' ? '魔法' : '罠'}`;
         info.innerHTML = `<b>${esc(d.name)}</b><small>${esc(type)}</small><p>${esc(d.text || '')}</p>`;
+        info.scrollTop = 0;
       }
     };
     car.addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });

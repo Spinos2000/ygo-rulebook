@@ -2075,7 +2075,7 @@ export const SCRIPTS                             = {
   '5889': {
     canDirectAttack: (s, self) => {
       const o = opp(s.cards[self].controller), mons = monstersOf(s, o);
-      return mons.length > 0 && mons.every(u => s.cards[u].position === 'def') && spellTrapsOf(s, o).length === 0;
+      return mons.length > 0 && mons.every(u => s.cards[u].position === 'def');
     },
   },
   /* 究極恐獣 */
