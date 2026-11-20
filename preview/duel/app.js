@@ -641,7 +641,7 @@ function renderSetup() {
     const d0 = DECKS[SU.p0], d1 = DECKS[SU.p1];
     const firstTxt = { 0: 'あなたが先攻', 1: 'CPUが先攻', r: 'ランダム（開始の時に決める）' }[SU.first];
     el.innerHTML = `<p class="su-q">この内容でデュエルを始めます</p><div class="su-sum">`
-      + `<div><span>あなた</span><b>${esc(themeOf(d0))}</b><small>${esc(ownerOf(d0))}・${esc(fmtTag(d0))}</small>${(() => { const a = deckAces(d0); return a.length ? `<small>👑 切り札：${esc(a.join('・'))}</small>` : ''; })()}</div>`
+      + `<div><span>あなた</span><b>${esc(themeOf(d0))}</b><small>${esc(ownerOf(d0))}・${esc(fmtTag(d0))}</small>${(() => { const a = deckAces(d0); return a.length ? `<small>👑 切り札：${esc(a.map(n => `「${n}」`).join('／'))}</small>` : ''; })()}</div>`
       + `<div><span>CPU</span><b>${SU.rand ? '🎲 おまかせ' : esc(themeOf(d1))}</b><small>${SU.rand ? 'あなたと違うデッキからランダム（開始の時に発表）' : `${esc(ownerOf(d1))}・${esc(fmtTag(d1))}`}</small></div>`
       + `<div><span>先攻</span><b>${esc(firstTxt)}</b></div>`
       + `<div><span>強さ</span><b>${esc(LEVEL_LABEL[SU.level] || 'ふつう')}</b></div></div>`

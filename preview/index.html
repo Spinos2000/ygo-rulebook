@@ -3774,7 +3774,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     var blk=el('div','block cpu-blk');blk.appendChild(el('h3','','📜 最近のCPU戦'));var ul=el('ul','rl-list');
     L.slice(0,30).forEach(function(r){var li=el('li','rl-item cpu-item');var d=new Date(r.at||0);
       li.appendChild(el('b','',(r.result==='win'?'🏆 勝ち':r.result==='lose'?(r.surrender?'🏳️ サレンダー':'💀 負け'):'🤝 引き分け')+'　'+(r.myDeck||'')+' vs '+(r.cpuDeck||'')));
-      var tags=[(d.getMonth()+1)+'/'+d.getDate(),LV[r.level]||'',r.first?'先攻':'後攻','T'+(r.turn||0),'あなたLP '+(r.myLp!=null?r.myLp:'-')+'／CPU LP '+(r.cpuLp!=null?r.cpuLp:'-')];if(r.aces&&r.aces.length)tags.push('切り札：'+r.aces.join('・'));if(r.aceFinish)tags.push('👑 切り札でとどめ');if(r.undo)tags.push('↶ 戻すあり');if(r.preview)tags.push('🧪 お試し版');
+      var tags=[(d.getMonth()+1)+'/'+d.getDate(),LV[r.level]||'',r.first?'先攻':'後攻','T'+(r.turn||0),'あなたLP '+(r.myLp!=null?r.myLp:'-')+'／CPU LP '+(r.cpuLp!=null?r.cpuLp:'-')];if(r.aceFinish)tags.push('👑 切り札でとどめ');if(r.undo)tags.push('↶ 戻すあり');if(r.preview)tags.push('🧪 お試し版');
       li.appendChild(el('small','',tags.filter(Boolean).join('　')));ul.appendChild(li);});blk.appendChild(ul);box.appendChild(blk);}
   function logsF(){return pf.log.filter(function(r){return (r.fmt==='bo3')===(fmtView==='bo3');});}
   function matchesOf(list){var M={},order=[];list.forEach(function(r){if(!r.matchId)return;var m=M[r.matchId];if(!m){m=M[r.matchId]={id:r.matchId,w:0,l:0,d:0,n:0,done:false,res:null,at:r.at,theme:r.myTheme,opp:r.oppName};order.push(m);}
