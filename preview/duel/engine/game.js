@@ -576,6 +576,10 @@ export const currentAtk = (s           , uid        ) => currentStats(s, uid).at
 export const currentDef = (s           , uid        ) => currentStats(s, uid).def;
 
 function activeCards(s           )           { return [...fieldCards(s, 0), ...fieldCards(s, 1)].filter(u => isActive(s, u)); }
+/** p が受ける戦闘ダメージが今0になる状態か（チキンレース・幽獄の時計塔など。CPUのとどめの判定用） */
+export function battleDamageZero(s           , p          )          {
+  return damageZero(s, p) || activeCards(s).some(u => scriptOf(s, u).noBattleDamageFor?.(s, u, p));
+}
 
 export function canAttack(s           , uid        )          {
   const c = s.cards[uid];
@@ -654,6 +658,13 @@ export function cleanupOrphans(s           )       {
   }
 }
 
+/** 墓地へ送り、送ったカードの名前を記録に出す（墓地は公開の場所なので、手札・デッキ・裏側から送るカードも名前を出してよい）。
+ *  効果を受けないカードは送られないので、記録にも出さない */
+export function sendToGyLogged(s           , uids          , reason        , by                  )       {
+  const moving = uids.filter(x => !(reason === 'effect' && isImmune(s, x)));
+  if (moving.length) log(s, `${moving.map(u => nameOf(s, u)).join('、')}を墓地へ送る`);
+  sendToGy(s, uids, reason, by);
+}
 /** 墓地へ送る。手札を捨てる場合（reason 'discard'）は、誰の効果で捨てたか（by）を記録する。
  *  by を省略すると、処理中の効果のプレイヤー、または発動の手続き中（コスト）のプレイヤー。どちらでもなければルールによるもの（null） */
 export function sendToGy(s           , uids          , reason        , by                  )       {

@@ -3,7 +3,7 @@
                                                                
 import {
   defOf, nameOf, opp, choose, chooseOne, monstersOf, allMonsters, spellTrapsOf, fieldCards, isFaceUpMonster, isMonsterZone,
-  canSpecialSummon, specialSummon, sendToGy, addToHand, destroy, release, payLp, equipCard, equippedBySelf, linkCards,
+  canSpecialSummon, specialSummon, sendToGy, sendToGyLogged, addToHand, destroy, release, payLp, equipCard, equippedBySelf, linkCards,
   negateActivation, negateSummon, targetValid, addLingering, newStep, log, pl, currentAtk, FIELD_ZONES, sameCard,
   placeCounters, scriptOf, removeCounters, counterHolders, counterRoom, addStatMod, drawCards, gainLp, effectDamage, negateAttack,
   banish, isOnField, isImmune, emit, millTop, randomOf, freeMZones, moveCard, currentDef, targetable, swapControl, advanceSummonNow, pushAnim, pickMZone, releasable, paysCost, normalSummonNow, createTokens, takeControl, setFaceDown, changePositionByEffect, isToken, summonedThisTurn, shuffleDeck, specialSummonedThisTurn, tributesFor, freeSZones, advanceTributeSets, extraSummonedThisTurn,
@@ -317,7 +317,7 @@ export const SCRIPTS                             = {
         const g = chooseOne(x, '墓地へ送るレベル4以下の通常モンスターを選んでください', pairsInDeck(x));
         if (g === null) return;
         const same = deckOf(s, x.player).filter(u => u !== g && defOf(s, u).name === defOf(s, g).name);
-        sendToGy(s, [g], 'effect');
+        sendToGyLogged(s, [g], 'effect');
         addToHand(s, [same[0]]);
       },
     }],
@@ -342,7 +342,7 @@ export const SCRIPTS                             = {
       activate: x => {
         const s = x.s;
         const cost = chooseOne(x, '墓地へ送る自分フィールドの通常モンスターを選んでください（コスト）', ownFaceUpNormalsOnField(x)) ;
-        sendToGy(s, [cost], 'cost');
+        sendToGyLogged(s, [cost], 'cost');
         target(x, '特殊召喚するモンスターを選んでください（自分か相手の墓地）', [...gyOf(s, 0), ...gyOf(s, 1)].filter(u => canSpecialSummon(s, u, x.player)));
       },
       resolve: x => {
@@ -486,7 +486,7 @@ export const SCRIPTS                             = {
       id: 'e3', label: '③：このカードを墓地へ送り「サイレント・マジシャン LV８」を特殊召喚', type: 'trigger', ss: 1,
       trigger: { mandatory: false, when: false, match: (s, self, ev) => ev.type === 'phase' && ev.phase === 'standby' && ev.player === s.cards[self].controller && isFaceUpMonster(s, self) && lv4Ready(s, self) },
       can: x => lv4Ready(x.s, x.self) && levelTargets(x.s, x.player, '6170', [x.self], x.self).length > 0,
-      activate: x => { sendToGy(x.s, [x.self], 'cost'); },
+      activate: x => { sendToGyLogged(x.s, [x.self], 'cost'); },
       resolve: x => {
         const u = chooseOne(x, '特殊召喚する「サイレント・マジシャン LV８」を選んでください（手札・デッキ）', levelTargets(x.s, x.player, '6170', [], x.self));
         if (u !== null) specialSummon(x, [u]);
@@ -532,7 +532,7 @@ export const SCRIPTS                             = {
     }, {
       id: 'e5', label: '⑤：特殊召喚されている場合、エンドフェイズに墓地へ送る', type: 'trigger', ss: 1,
       trigger: { mandatory: true, when: false, match: (s, self, ev) => ev.type === 'phase' && ev.phase === 'end' && isFaceUpMonster(s, self) && isSpecialSummoned(s, self) },
-      resolve: x => { if (sameCard(x.s, x.self, x.link .serial) && isMonsterZone(x.s.cards[x.self])) sendToGy(x.s, [x.self], 'effect'); },
+      resolve: x => { if (sameCard(x.s, x.self, x.link .serial) && isMonsterZone(x.s.cards[x.self])) sendToGyLogged(x.s, [x.self], 'effect'); },
     }],
   },
   /* 破壊竜ガンドラ */
@@ -557,7 +557,7 @@ export const SCRIPTS                             = {
         mandatory: true, when: false,
         match: (s, self, ev) => ev.type === 'phase' && ev.phase === 'end' && isFaceUpMonster(s, self) && s.cards[self].summonedTurn === s.turn && ['normal', 'advance', 'flip'].includes(s.cards[self].summonedHow ?? ''),
       },
-      resolve: x => { if (sameCard(x.s, x.self, x.link .serial) && isMonsterZone(x.s.cards[x.self])) sendToGy(x.s, [x.self], 'effect'); },
+      resolve: x => { if (sameCard(x.s, x.self, x.link .serial) && isMonsterZone(x.s.cards[x.self])) sendToGyLogged(x.s, [x.self], 'effect'); },
     }],
   },
   /* 見習い魔術師 */
@@ -586,7 +586,7 @@ export const SCRIPTS                             = {
       activate: x => {
         const m = chooseOne(x, '墓地へ送る「LV」モンスターを選んでください（コスト）', levelUpSources(x)) ;
         x.link .data.to = scriptOf(x.s, m).levelUpTo;
-        sendToGy(x.s, [m], 'cost');
+        sendToGyLogged(x.s, [m], 'cost');
       },
       resolve: x => {
         // 召喚条件を無視して、手札またはデッキから特殊召喚する
@@ -831,7 +831,7 @@ export const SCRIPTS                             = {
     effects: [{
       id: 'e1', label: '攻撃を無効にし、その攻撃力分のダメージを相手に与える', type: 'card', ss: 2,
       can: x => !!x.s.battle && x.s.battle.step === 'declared' && !x.s.battle.negated && x.s.cards[x.s.battle.attacker].controller === opp(x.player),
-      activate: x => { x.link .targets.push(x.s.battle .attacker); log(x.s, `対象：${nameOf(x.s, x.s.battle .attacker)}`); },
+      activate: x => { x.link .targets.push(x.s.battle .attacker); }, // 「対象：」の記録は発動の処理（エンジン）がまとめて出す
       resolve: x => {
         const s = x.s, t = x.link .targets[0];
         if (!targetValid(s, x.link ) || !isFaceUpMonster(s, t) || !s.battle || s.battle.attacker !== t) return;
@@ -983,7 +983,7 @@ export const SCRIPTS                             = {
       can: x => deckOf(x.s, x.player).some(u => defOf(x.s, u).kind === 'monster' && defOf(x.s, u).attribute === '闇'),
       resolve: x => {
         const u = chooseOne(x, '墓地へ送る闇属性モンスターを選んでください', deckOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'monster' && defOf(x.s, u).attribute === '闇'));
-        if (u !== null) sendToGy(x.s, [u], 'effect');
+        if (u !== null) sendToGyLogged(x.s, [u], 'effect');
       },
     }],
   },
@@ -1181,7 +1181,7 @@ export const SCRIPTS                             = {
       can: x => deckOf(x.s, x.player).some(u => defOf(x.s, u).kind === 'monster'),
       resolve: x => {
         const u = chooseOne(x, '墓地へ送るモンスターを選んでください', deckOf(x.s, x.player).filter(u => defOf(x.s, u).kind === 'monster'));
-        if (u !== null) sendToGy(x.s, [u], 'effect');
+        if (u !== null) sendToGyLogged(x.s, [u], 'effect');
       },
     }],
   },
@@ -2012,7 +2012,7 @@ export const SCRIPTS                             = {
     }, {
       id: 'e3', label: '③：このカードを墓地へ送る', type: 'trigger', ss: 1, zones: ['szone'], damageStep: true,
       trigger: { mandatory: true, when: false, match: (s, self, ev) => ev.type === 'damage' && ev.battle && ev.amount >= 2000 && s.cards[self].zone === 'szone' && s.cards[self].faceUp && ev.player === s.cards[self].controller },
-      resolve: x => { if (sameCard(x.s, x.self, x.link .serial) && isOnField(x.s.cards[x.self])) sendToGy(x.s, [x.self], 'effect'); },
+      resolve: x => { if (sameCard(x.s, x.self, x.link .serial) && isOnField(x.s.cards[x.self])) sendToGyLogged(x.s, [x.self], 'effect'); },
     }],
     aura: (s, self, t) => (s.cards[self].equippedTo === t ? { atk: 2000, def: 0 } : null),
     bothTakeBattleDamage: (s, self, m) => s.cards[self].equippedTo === m,
@@ -2031,7 +2031,7 @@ export const SCRIPTS                             = {
     effects: [{
       id: 'e1', label: '攻撃を無効にし、このカードをそのままセットする', type: 'card', ss: 2,
       can: x => !!x.s.battle && x.s.battle.step === 'declared' && !x.s.battle.negated && x.s.cards[x.s.battle.attacker].controller === opp(x.player),
-      activate: x => { x.link .targets.push(x.s.battle .attacker); log(x.s, `対象：${nameOf(x.s, x.s.battle .attacker)}`); },
+      activate: x => { x.link .targets.push(x.s.battle .attacker); }, // 「対象：」の記録は発動の処理（エンジン）がまとめて出す
       resolve: x => {
         const s = x.s, t = x.link .targets[0];
         if (targetValid(s, x.link ) && s.battle && s.battle.attacker === t) negateAttack(s);
@@ -2202,10 +2202,10 @@ export const SCRIPTS                             = {
         const s = x.s, deck = s.players[x.player].deck, revealed           = [];
         let hit                = null;
         for (let i = deck.length - 1; i >= 0; i--) { revealed.push(deck[i]); if (normalSummonable(s, deck[i])) { hit = deck[i]; break; } }
-        log(s, `${pl(x.player)}：デッキの上から${revealed.length}枚をめくる`);
+        log(s, `${pl(x.player)}：デッキの上から${revealed.length}枚をめくる（${revealed.map(u => nameOf(s, u)).join('、')}）`);
         const rest = revealed.filter(u => u !== hit);
         if (hit !== null && canSpecialSummon(s, hit, x.player)) specialSummon(x, [hit]);
-        if (rest.length) sendToGy(s, rest, 'effect');
+        if (rest.length) sendToGyLogged(s, rest, 'effect');
       },
     }],
   },
@@ -2323,7 +2323,7 @@ export const SCRIPTS                             = {
     }, {
       id: 'e5', label: '⑤：特殊召喚されたこのカードを墓地へ送る', type: 'trigger', ss: 1,
       trigger: { mandatory: true, when: false, match: (s, self, ev) => ev.type === 'phase' && ev.phase === 'end' && isFaceUpMonster(s, self) && s.cards[self].summonedHow === 'special' },
-      resolve: x => { if (sameCard(x.s, x.self, x.link .serial) && isMonsterZone(x.s.cards[x.self])) sendToGy(x.s, [x.self], 'effect'); },
+      resolve: x => { if (sameCard(x.s, x.self, x.link .serial) && isMonsterZone(x.s.cards[x.self])) sendToGyLogged(x.s, [x.self], 'effect'); },
     }],
   },
   /* シャインエンジェル */
@@ -2527,7 +2527,7 @@ export const SCRIPTS                             = {
         const s = x.s, t = x.link .targets[0];
         const h = chooseOne(x, '墓地へ送る手札を選んでください', handOf(s, x.player));
         if (h === null) return;
-        sendToGy(s, [h], 'effect'); // 手札を墓地へ送る処理と特殊召喚は同時に行われる
+        sendToGyLogged(s, [h], 'effect'); // 手札を墓地へ送る処理と特殊召喚は同時に行われる
         if (targetValid(s, x.link ) && s.cards[t].zone === 'gy') specialSummon(x, [t]);
       },
     }],
@@ -2945,7 +2945,7 @@ export const SCRIPTS                             = {
       resolve: x => {
         const u = chooseOne(x, '墓地へ送るカードを選んでください', rudraCosts(x));
         if (u === null) return;
-        sendToGy(x.s, [u], 'effect');
+        sendToGyLogged(x.s, [u], 'effect');
         if (x.s.cards[u].zone === 'gy') drawCards(x.s, x.player, 2);
       },
     }],

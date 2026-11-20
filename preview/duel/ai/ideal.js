@@ -5,7 +5,7 @@
 import { actorOf, defOf, scriptOf, monstersOf, fieldCards, opp, isOnField, poolDef } from '../engine/game.js';
 import { cloneState } from '../engine/types.js';
                                                                       
-import { scoreCandidates, cpuDecide, evaluate,                                            } from './cpu.js';
+import { scoreCandidates, cpuDecide, evaluate, answerCandidates,                                            } from './cpu.js';
 import { DECK_WEIGHTS } from './deck-weights.js';
 import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js';
 
@@ -27,6 +27,8 @@ import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js
                   
                                          
                        
+                                                                       
+                               
                                                             
                  
                    
@@ -187,7 +189,7 @@ export function idealThink(s           , opt               = {}, deckNames      
   const first = scoreCandidates(w0, { ...cpuOpt, fullOpponent: opt.fullOpponent ?? true });
   const critical = isCritical(s, me, first.list.length);
   // 処理の量の上限：普段 1500回・勝負所 5000回（PCで約2秒・約6秒。遅い端末では時間が延びるが、考える量は同じ）
-  const budget = opt.budget ?? (critical ? 5000 : 1500) * (opt.budgetScale ?? 1);
+  const budget = opt.budget ?? (critical ? 5000 * (opt.criticalBudgetScale ?? opt.budgetScale ?? 1) : 1500 * (opt.budgetScale ?? 1));
   // 1つの世界にかかった量から、上限の半分に収まる世界の数にする（残りの半分は深い先読みに使う）
   const per = Math.max(1, WORK.n - w0start);
   const N = Math.max(1, Math.min(critical ? o.criticalSamples : o.samples, Math.floor(budget / 2 / per)));
@@ -265,7 +267,9 @@ export function idealThink(s           , opt               = {}, deckNames      
     }
   }
   // リーサル：このターンに勝てる手順を総当たりで探す。見つかった最初の手は、その世界の割合だけ勝てるとみなす
-  if (free && (s.phase === 'main1' || s.phase === 'battle') && lethalPossible(s, me)) {
+  // 自分のターンの選択の途中（チキンレースのどの効果を選ぶか など）も、勝ち筋を探す
+  const myChoice = !!s.pending && s.turnPlayer === me && s.chain.length === 0;
+  if ((free || myChoice) && (s.phase === 'main1' || s.phase === 'battle') && lethalPossible(s, me)) {
     const LW = critical ? 3 : 2;
     const found = new Map                ();
     for (let i = 0; i < LW; i++) {
@@ -276,11 +280,24 @@ export function idealThink(s           , opt               = {}, deckNames      
     }
     for (const c of list) { const n = found.get(keyOf(c.action)); if (n) c.rate = Math.max(c.rate, n / LW); }
     for (const [k, n] of found) if (!list.some(c => keyOf(c.action) === k)) list.push({ action: JSON.parse(k), p: 0, n: 1, romance: 0, burst: 0, base: false, rate: n / LW });
+    // どの世界でもこのターンに勝てる手順が見つかった時は、ロマンや引き分けの乱数に関係なく、その手を選ぶ（MASTERの決定#60：勝てるのに見送らない）
+    const sure = [...found].find(([, n]) => n === LW);
+    if (sure) {
+      const c = list.find(x => keyOf(x.action) === sure[0]) ;
+      return { action: c.action, winRate: 1, bestRate: 1, romance: null, samples: N, critical, alts: [...list].sort((x, y) => y.rate - x.rate).slice(0, 5).map(a => ({ action: a.action, rate: a.rate })) };
+    }
   }
   const bestRate = Math.max(...list.map(a => a.rate));
   // 勝率がほぼ同じ手（差 tie 未満）からランダムに選ぶ
   const near = list.filter(a => a.rate >= bestRate - (opt.tie ?? 1e-9));
   let pick = near[Math.floor(rnd() * near.length)];
+  // 勝ちがほぼ決まっている時（95%以上）に、見込みがほぼ同じ（2%以内）なら、決着を早める手（攻撃 → バトルフェイズへ）を選ぶ。
+  // ターンを終える手ばかり選んで引き延ばさないため（MIMIの報告③）
+  if (free && bestRate >= 0.95) {
+    const fast = (a        ) => (a.type === 'attack' ? 2 : a.type === 'nextPhase' && a.to === 'battle' ? 1 : 0);
+    const cand = list.filter(a => a.rate >= bestRate - 0.02 && fast(a.action) > 0).sort((x, y) => fast(y.action) - fast(x.action) || y.rate - x.rate);
+    if (cand.length) pick = cand[0];
+  }
   let romance                     = null;
   if (free) {
     const rom = list.filter(a => a.rate >= bestRate - o.romanceWidth && (a.romance + a.burst) * 2 > a.n);
@@ -301,13 +318,29 @@ function lethalPossible(s           , me          )          {
   const inHand = s.players[me].hand.reduce((a, u) => Math.max(a, defOf(s, u).kind === 'monster' ? (defOf(s, u).atk ?? 0) : 0), 0);
   return s.players[o].lp <= (onField + inHand) * 1.5 + 1000;
 }
+/**
+ * リーサルの総当たりで試す順番：攻撃 → 効果の発動 → バトルフェイズへ → そのほか。
+ * 同じカード名の手札を同じ形で出す手は1つにまとめる（千眼の邪教神が5枚ある時に5通り試さない）
+ */
+function order(s           , acts          )           {
+  const seen = new Set        ();
+  const uniq = acts.filter(a => {
+    const k = JSON.stringify(a, (key, v) => (key === 'card' && typeof v === 'number' && s.cards[v] && s.players.some(p => p.hand.includes(v)) ? 'h:' + s.cards[v].code : v));
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+  const rank = (a        ) => (a.type === 'attack' ? 0 : a.type === 'activate' ? 1 : a.type === 'nextPhase' ? 2 : a.type === 'answer' ? 0 : 3);
+  return uniq.map((a, i) => ({ a, i })).sort((x, y) => rank(x.a) - rank(y.a) || x.i - y.i).map(x => x.a);
+}
 /** このターンに勝てる手順の最初の手（見つからなければ null）。自分の行動を順に試し、選択や相手の応答は速い判断で進める */
-function findLethal(s0           , me          , nodeLimit        )                {
+export function findLethal(s0           , me          , nodeLimit        )                {
   const turn = s0.turn, start = WORK.n;
   const settle = (s           )            => {
     for (let i = 0; i < 60 && s.winner === null && s.turn === turn; i++) {
       const free = !s.pending && s.window.kind === 'open' && s.chain.length === 0 && s.turnPlayer === me && actorOf(s) === me;
       if (free) return s;
+      // 自分の選択（チキンレースのどの効果を選ぶか など）も総当たりの枝にする（速い判断に任せると勝ち筋を見落とす）
+      if (s.pending && actorOf(s) === me) return s;
       try { s = applyAction(s, cpuDecide(s, { depth: 0, planSteps: 0 })); } catch { return s; }
     }
     return s;
@@ -315,10 +348,10 @@ function findLethal(s0           , me          , nodeLimit        )             
   const dfs = (s           , depth        )          => {
     if (s.winner === me) return true;
     if (s.winner !== null || s.turn !== turn || depth <= 0 || WORK.n - start > nodeLimit) return false;
-    let acts = legalActions(s).filter(a => a.type !== 'endTurn' && !(a.type === 'nextPhase' && a.to !== 'battle') && a.type !== 'setSpellTrap' && a.type !== 'setMonster');
-    // 攻撃を先に試す（決着に近い）
-    acts = [...acts.filter(a => a.type === 'attack'), ...acts.filter(a => a.type !== 'attack')];
-    for (const a of acts) {
+    // 自分の選択の途中なら、答えの候補を全部試す（多すぎる時は先頭の8つ）
+    let acts           = s.pending ? answerCandidates(s, s.pending.request, 8).map(value => ({ type: 'answer', value })          )
+      : legalActions(s).filter(a => a.type !== 'endTurn' && !(a.type === 'nextPhase' && a.to !== 'battle') && a.type !== 'setSpellTrap' && a.type !== 'setMonster');
+    for (const a of order(s, acts)) {
       let n           ;
       try { n = settle(applyAction(s, a)); } catch { continue; }
       if (dfs(n, depth - 1)) return true;
@@ -328,9 +361,8 @@ function findLethal(s0           , me          , nodeLimit        )             
   };
   const s = settle(s0);
   if (s !== s0 && s.winner === me) return null;
-  let acts = legalActions(s).filter(a => a.type !== 'endTurn' && !(a.type === 'nextPhase' && a.to !== 'battle'));
-  acts = [...acts.filter(a => a.type === 'attack'), ...acts.filter(a => a.type !== 'attack')];
-  for (const a of acts) {
+  const acts           = s.pending ? answerCandidates(s, s.pending.request, 8).map(value => ({ type: 'answer', value })          ) : legalActions(s).filter(a => a.type !== 'endTurn' && !(a.type === 'nextPhase' && a.to !== 'battle'));
+  for (const a of order(s, acts)) {
     let n           ;
     try { n = settle(applyAction(s, a)); } catch { continue; }
     if (dfs(n, 6)) return a;
