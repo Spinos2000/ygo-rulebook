@@ -1368,6 +1368,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 
 /* ===== 3本勝負 ===== */
 .rl-fmt{margin-bottom:-4px}
+#rl-fmt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}#rl-fmt button{font-size:12px;padding-left:4px;padding-right:4px;white-space:nowrap}
 #rl-cpu{display:grid;gap:12px}#rl-cpu[hidden]{display:none}.cpu-t{width:100%;border-collapse:collapse;font-size:13px}.cpu-t th,.cpu-t td{padding:6px 4px;border-bottom:1px solid var(--line,rgba(0,0,0,.12));text-align:right}.cpu-t th:first-child,.cpu-t tr th{text-align:left}.cpu-t tr:first-child th{font-size:11px;opacity:.75}.cpu-item{display:grid;gap:2px}.cpu-item small{opacity:.8}
 .rl-match{font-size:12px;font-weight:900;color:var(--edge);background:var(--ra);border-radius:999px;padding:1px 8px;margin-left:6px}
 #su-fmt button:disabled{opacity:.4;cursor:not-allowed}
@@ -2263,7 +2264,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
 
 <!-- 実績 -->
 <section id="ach">
-  <div class="sec-h"><span>ACHIEVEMENTS</span><h2>🏆 実績</h2><p class="note">デュエルを重ねると解除されます。みんなに公開されます</p></div>
+  <div class="sec-h"><span>ACHIEVEMENTS</span><h2>🏆 実績</h2><p class="note">デュエルを重ねると解除されます。みんなに公開されます。🤖の実績はCPU戦で、「ひとつ戻す」を使って勝った対戦とお試し版の対戦は数えません（戻して負けた対戦は負けとして数えます）</p></div>
   <div class="ach-sum"><b id="ach-n">0</b><span>/ <span id="ach-total">30</span> 解除</span></div>
   <div class="ach-legend"><span><i style="background:var(--osiris)"></i>オシリス・レッド級</span><span><i style="background:var(--ra)"></i>ラー・イエロー級</span><span><i style="background:var(--obelisk)"></i>オベリスク・ブルー級</span></div>
   <div class="ach-grid" id="ach-grid"></div>
@@ -3772,9 +3773,9 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     table('強さ別',function(r){return LV[r.level]||r.level;});table('自分のデッキ別',function(r){return r.myDeck;});table('CPUのデッキ別',function(r){return r.cpuDeck;});
     var blk=el('div','block cpu-blk');blk.appendChild(el('h3','','📜 最近のCPU戦'));var ul=el('ul','rl-list');
     L.slice(0,30).forEach(function(r){var li=el('li','rl-item cpu-item');var d=new Date(r.at||0);
-      li.appendChild(el('b','',(r.result==='win'?'🏆 勝ち':r.result==='lose'?'💀 負け':'🤝 引き分け')+'　'+(r.myDeck||'')+' vs '+(r.cpuDeck||'')));
-      var tags=[(d.getMonth()+1)+'/'+d.getDate(),LV[r.level]||'',r.first?'先攻':'後攻','T'+(r.turn||0),'LP '+(r.myLp!=null?r.myLp:'-')];if(r.aceFinish)tags.push('👑 切り札でとどめ');if(r.undo)tags.push('↶ 戻すあり');if(r.preview)tags.push('🧪 お試し版');
-      li.appendChild(el('small','',tags.filter(Boolean).join('・')));ul.appendChild(li);});blk.appendChild(ul);box.appendChild(blk);}
+      li.appendChild(el('b','',(r.result==='win'?'🏆 勝ち':r.result==='lose'?(r.surrender?'🏳️ サレンダー':'💀 負け'):'🤝 引き分け')+'　'+(r.myDeck||'')+' vs '+(r.cpuDeck||'')));
+      var tags=[(d.getMonth()+1)+'/'+d.getDate(),LV[r.level]||'',r.first?'先攻':'後攻','T'+(r.turn||0),'あなたLP '+(r.myLp!=null?r.myLp:'-')+'／CPU LP '+(r.cpuLp!=null?r.cpuLp:'-')];if(r.aces&&r.aces.length)tags.push('切り札：'+r.aces.join('・'));if(r.aceFinish)tags.push('👑 切り札でとどめ');if(r.undo)tags.push('↶ 戻すあり');if(r.preview)tags.push('🧪 お試し版');
+      li.appendChild(el('small','',tags.filter(Boolean).join('　')));ul.appendChild(li);});blk.appendChild(ul);box.appendChild(blk);}
   function logsF(){return pf.log.filter(function(r){return (r.fmt==='bo3')===(fmtView==='bo3');});}
   function matchesOf(list){var M={},order=[];list.forEach(function(r){if(!r.matchId)return;var m=M[r.matchId];if(!m){m=M[r.matchId]={id:r.matchId,w:0,l:0,d:0,n:0,done:false,res:null,at:r.at,theme:r.myTheme,opp:r.oppName};order.push(m);}
       m.n++;if(r.result==='win')m.w++;else if(r.result==='lose')m.l++;else m.d++;if(r.matchEnd){m.done=true;m.res=r.matchRes;}m.at=Math.max(m.at,r.at);});
@@ -5297,8 +5298,8 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     ms.slice().sort(function(a,b){return a.at-b.at;}).forEach(function(m){if(!m.done)return;s.mplayed++;if(m.res==='win'){s.mw++;mst++;s.mst=Math.max(s.mst,mst);if(m.l===0)s.mstraight++;}else mst=0;});
     log.filter(function(r){return r.fmt==='bo3'&&r.matchId;}).forEach(function(r){});
     ms.forEach(function(m){if(m.done&&m.res==='win'){var g=log.filter(function(r){return r.matchId===m.id;}).sort(function(a,b){return (a.game||0)-(b.game||0);});if(g[0]&&g[0].result==='lose')s.mcome++;}});
-    var cl=((Y.app&&Y.app.pf&&Y.app.pf().cpuLog)||[]).filter(function(r){return r&&!r.undo&&!r.preview;}).sort(function(a,b){return (a.at||0)-(b.at||0);}),cst=0;s.cw=0;s.cst=0;s.cEasy=0;s.cNormal=0;s.cPerfect=0;s.cAce=0;s.cClose=0;s.cSecond=0;var cdk={};
-    cl.forEach(function(r){if(r.result==='win'){s.cw++;cst++;s.cst=Math.max(s.cst,cst);if(r.level==='easy')s.cEasy++;if(r.level==='normal')s.cNormal++;if(r.myLp>=8000)s.cPerfect++;if(r.aceFinish)s.cAce++;if(r.myLp!=null&&r.myLp<=500)s.cClose++;if(r.first===false)s.cSecond++;if(r.myDeck)cdk[r.myDeck]=1;}else cst=0;});s.cDecks=Object.keys(cdk).length;
+    var cl=((Y.app&&Y.app.pf&&Y.app.pf().cpuLog)||[]).filter(function(r){return r&&!r.preview;}).sort(function(a,b){return (a.at||0)-(b.at||0);}),cst=0;s.cw=0;s.cst=0;s.cEasy=0;s.cNormal=0;s.cPerfect=0;s.cAce=0;s.cClose=0;s.cSecond=0;var cdk={};
+    cl.forEach(function(r){if(r.result==='win'&&r.undo)return;/* 戻すありの勝ち：数えないが連勝も止めない */if(r.result==='win'){s.cw++;cst++;s.cst=Math.max(s.cst,cst);if(r.level==='easy')s.cEasy++;if(r.level==='normal')s.cNormal++;if(r.myLp>=8000)s.cPerfect++;if(r.aceFinish)s.cAce++;if(r.myLp!=null&&r.myLp<=500)s.cClose++;if(r.first===false)s.cSecond++;if(r.myDeck)cdk[r.myDeck]=1;}else cst=0;});s.cDecks=Object.keys(cdk).length;
     var me=Y.user&&Y.user.uid;s.reports=(Y.reports||[]).filter(function(r){return me&&r.uid===me;}).length;return s;}
   var A=window.YGO_ACH=[
     ['first','⚔️','初デュエル','デュエルを1回記録する',1,function(s){return s.n;},1],
@@ -5340,16 +5341,16 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     ['mcome','💪','逆転のマッチ','1戦目を落としたマッチで勝つ',1,function(s){return s.mcome;},2],
     ['mw10','👑','マッチの覇者','3本勝負のマッチで10回勝つ',10,function(s){return s.mw;},3],
     ['mst3','⚡','マッチ3連勝','3本勝負のマッチで3連勝する',3,function(s){return s.mst;},3],
-    ['cpu_first','🤖','🤖 CPU初勝利','CPUに勝つ（「ひとつ戻す」を使わずに）',1,function(s){return s.cw;},1],
-    ['cpu_easy','🐣','🤖 やさしいCPUに勝利','強さ「やさしい」のCPUに勝つ',1,function(s){return s.cEasy;},1],
-    ['cpu_normal','🦾','🤖 ふつうのCPUに勝利','強さ「ふつう」のCPUに勝つ',1,function(s){return s.cNormal;},2],
-    ['cpu_10','🎯','🤖 CPUハンター','CPUに10回勝つ',10,function(s){return s.cw;},2],
-    ['cpu_st5','🔥','🤖 CPUに5連勝','CPUに5連勝する',5,function(s){return s.cst;},3],
-    ['cpu_decks','🗂️','🤖 デッキマスター','5つのデッキでCPUに勝つ',5,function(s){return s.cDecks;},3],
-    ['cpu_ace','👑','🤖 切り札でとどめ','切り札の攻撃でCPUのLPを0にする',1,function(s){return s.cAce;},2],
-    ['cpu_perfect','🛡️','🤖 CPUに完全勝利','LPを減らさずにCPUに勝つ',1,function(s){return s.cPerfect;},3],
-    ['cpu_close','😮‍💨','🤖 紙一重の勝利','LP500以下でCPUに勝つ',1,function(s){return s.cClose;},2],
-    ['cpu_second','🔄','🤖 後攻からの勝利','後攻でCPUに3回勝つ',3,function(s){return s.cSecond;},2]
+    ['cpu_first','🤖','🤖 CPU初勝利','CPUに勝つ（↶戻すなし）',1,function(s){return s.cw;},1],
+    ['cpu_easy','🐣','🤖 やさしいCPUに勝利','強さ「やさしい」のCPUに勝つ（↶戻すなし）',1,function(s){return s.cEasy;},1],
+    ['cpu_normal','🦾','🤖 ふつうのCPUに勝利','強さ「ふつう」のCPUに勝つ（↶戻すなし）',1,function(s){return s.cNormal;},2],
+    ['cpu_10','🎯','🤖 CPUハンター','CPUに10回勝つ（↶戻すなし）',10,function(s){return s.cw;},2],
+    ['cpu_st5','🔥','🤖 CPUに5連勝','CPUに5連勝する（↶戻すなし）',5,function(s){return s.cst;},3],
+    ['cpu_decks','🗂️','🤖 デッキマスター','5つのデッキでCPUに勝つ（↶戻すなし）',5,function(s){return s.cDecks;},3],
+    ['cpu_ace','👑','🤖 切り札でとどめ','切り札の攻撃でCPUのLPを0にする（↶戻すなし）',1,function(s){return s.cAce;},2],
+    ['cpu_perfect','🛡️','🤖 CPUに完全勝利','LPを減らさずにCPUに勝つ（↶戻すなし）',1,function(s){return s.cPerfect;},3],
+    ['cpu_close','😮‍💨','🤖 紙一重の勝利','LP500以下でCPUに勝つ（↶戻すなし）',1,function(s){return s.cClose;},2],
+    ['cpu_second','🔄','🤖 後攻からの勝利','後攻でCPUに3回勝つ（↶戻すなし）',3,function(s){return s.cSecond;},2]
   ];
   var TN={1:'オシリス・レッド級',2:'ラー・イエロー級',3:'オベリスク・ブルー級'};
   $('ach-total').textContent=String(A.length);

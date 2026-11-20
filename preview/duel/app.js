@@ -70,6 +70,10 @@ function soundsFor(prev, next) {
 /* ---------- CPU対戦の結果：サイトの戦績・実績へ渡す ----------
  * opts.onResult(rec) を、1回の対戦につき1回呼ぶ。「ひとつ戻す」を使った対戦は undo:true（実績には数えない） */
 let undoUsed = false, resultSent = false;
+/** 自分のデッキの切り札の名前（自動で決めたもの） */
+function acesNamesOf(st) {
+  try { const set = acesOf(st, 0, deckNames()[0]); const names = new Set(); for (const c of Object.values(st.cards)) if (c.owner === 0 && set.has(c.code)) names.add(defOf(st, c.uid).name); return [...names].slice(0, 4); } catch { return []; }
+}
 function reportResult(prev, next) {
   if (!cpuMode() || placeholder || resultSent || !OPTS.onResult) return;
   resultSent = true;
@@ -85,7 +89,7 @@ function reportResult(prev, next) {
     at: Date.now(), result: next.winner === 0 ? 'win' : next.winner === 1 ? 'lose' : 'draw', level: cpuLevel,
     myDeck: d0.theme || d0.name || '', myCode: d0.code || '', cpuDeck: d1.theme || d1.name || '', cpuCode: d1.code || '', cpuOwner: d1.owner || '',
     first: next.log.some(l => /先攻はP1/.test(l.text)), turn: next.turn, myLp: next.players[0].lp, cpuLp: next.players[1].lp,
-    undo: undoUsed, aceFinish, persona,
+    undo: undoUsed, aceFinish, persona, surrender: /サレンダー/.test(next.winReason || ''), aces: acesNamesOf(next),
   };
   try { OPTS.onResult(rec); } catch (e) { console.warn('戦績に渡せませんでした', e); }
 }
@@ -591,6 +595,15 @@ function openSetup(page = 'p0own') {
   $('#setup').hidden = false;
   renderSetup();
 }
+/** デッキの切り札の名前（準備画面で見せる。自動で決めたもの） */
+const aceCache2 = new Map();
+function deckAces(d) {
+  if (!d || !d.code) return [];
+  if (aceCache2.has(d.code)) return aceCache2.get(d.code);
+  let names = [];
+  try { const st = createGame({ pool: CARD_POOL, decks: [d, d], firstPlayer: 0 }); names = acesNamesOf(st); } catch { /* 分からない */ }
+  aceCache2.set(d.code, names); return names;
+}
 function closeSetup() { $('#setup').hidden = true; SU = null; render(); }
 const skipOwner = () => owners().length <= 1;
 function suGo(page) {
@@ -628,7 +641,7 @@ function renderSetup() {
     const d0 = DECKS[SU.p0], d1 = DECKS[SU.p1];
     const firstTxt = { 0: 'あなたが先攻', 1: 'CPUが先攻', r: 'ランダム（開始の時に決める）' }[SU.first];
     el.innerHTML = `<p class="su-q">この内容でデュエルを始めます</p><div class="su-sum">`
-      + `<div><span>あなた</span><b>${esc(themeOf(d0))}</b><small>${esc(ownerOf(d0))}・${esc(fmtTag(d0))}</small></div>`
+      + `<div><span>あなた</span><b>${esc(themeOf(d0))}</b><small>${esc(ownerOf(d0))}・${esc(fmtTag(d0))}</small>${(() => { const a = deckAces(d0); return a.length ? `<small>👑 切り札：${esc(a.join('・'))}</small>` : ''; })()}</div>`
       + `<div><span>CPU</span><b>${SU.rand ? '🎲 おまかせ' : esc(themeOf(d1))}</b><small>${SU.rand ? 'あなたと違うデッキからランダム（開始の時に発表）' : `${esc(ownerOf(d1))}・${esc(fmtTag(d1))}`}</small></div>`
       + `<div><span>先攻</span><b>${esc(firstTxt)}</b></div>`
       + `<div><span>強さ</span><b>${esc(LEVEL_LABEL[SU.level] || 'ふつう')}</b></div></div>`
@@ -1073,7 +1086,7 @@ function renderDock() {
   const rb = $('#reviewBtn'); if (rb) rb.hidden = !(S.winner !== null && cpuMode() && trace.length > 1);
   if (S.winner !== null) {
     actor.textContent = S.winner === 'draw' ? '引き分け' : `${NAME(S.winner)}の勝利`;
-    hint.textContent = S.winReason || '';
+    hint.textContent = cpuMode() ? (S.winReason || '').replace(/P1/g, 'あなた').replace(/P2/g, 'CPU') : (S.winReason || '');
     setGo('もう一度', '新しいデュエル', null, { again: true });
     return;
   }
