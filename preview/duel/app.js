@@ -1705,11 +1705,11 @@ async function activateOne(a, P, i) {
   await ring.animate([{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 1 }, { transform: 'translate(-50%,-50%) scale(2.4)', opacity: 0 }], { duration: dur(650), easing: 'ease-out' }).finished;
   ring.remove();
 }
-async function banner(text, cls, ms) {
+async function banner(text, cls, ms, parent = null) {
   const b = document.createElement('div');
   b.className = `fx-banner ${cls}`;
   b.innerHTML = `<b>${esc(text)}</b>`;
-  flyLayer().appendChild(b);
+  (parent || flyLayer()).appendChild(b);
   await b.animate([{ transform: 'translate(-50%,-50%) scaleX(0)', opacity: 0 }, { transform: 'translate(-50%,-50%) scaleX(1)', opacity: 1, offset: .2 }, { transform: 'translate(-50%,-50%) scaleX(1)', opacity: 1, offset: .8 }, { transform: 'translate(-50%,-50%) scaleX(1.05)', opacity: 0 }], { duration: dur(ms), easing: 'ease-out' }).finished;
   b.remove();
 }
@@ -1767,7 +1767,12 @@ function playPendingMoves() {
       await Promise.all(P.moves.map((m, i) => flyOne(m, P, i)));
       await Promise.all(P.acts.map((a, i) => activateOne(a, P, i)));
       if (P.win !== null) await banner(P.win === 'draw' ? '引き分け' : cpuMode() ? (P.win === 0 ? '勝利！' : '敗北…') : `${NAME(P.win)}の勝利！`, P.win === 0 || !cpuMode() ? 'win' : 'lose', 1800);
-      else if (P.turn !== null) await banner(cpuMode() ? (P.turn === 0 ? 'あなたのターン' : 'CPUのターン') : `${NAME(P.turn)}のターン`, P.turn === 0 ? 'me' : 'opp', 1000);
+      else if (P.turn !== null) {
+        const text = cpuMode() ? (P.turn === 0 ? 'あなたのターン' : 'CPUのターン') : `${NAME(P.turn)}のターン`;
+        const drawing = pendingSummons.some(j => j && j.handAdd && j.p === P.turn && sortsHand(P.turn));
+        if (drawing) banner(text, (P.turn === 0 ? 'me' : 'opp') + ' with-draw', 1600, $('.droot')); // 待たずに、すぐドローの演出へ
+        else await banner(text, P.turn === 0 ? 'me' : 'opp', 1000);
+      }
     } catch (e) { console.error(e); }
     const l = $('.fly-layer'); if (l) l.innerHTML = '';
     fxN = Math.max(0, fxN - 1);
@@ -1943,6 +1948,7 @@ function render() {
   canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
   renderBoard(); renderSide(); renderTop(); renderChain(); renderTargets(); tombAuto(); renderZonePick(); renderDetail(); renderLog(); renderDock(); renderSheets(fxSoon()); autoTray(); renderHandHold(); // シャカパチは手札をゆっくりなぞった時だけ（罠が来た時などの自動の演出はしない）
   // これから召喚の演出をするカードは、演出が始まるまで盤面に出さない（先に置かれてから巻き戻って見えないように）
+  if (narrow() && pendingSummons.some(j => j && j.handAdd && j.p === 0)) $('.droot').classList.add('hand-lifted');
   for (const j of pendingSummons) if (j && j.uid != null && !j.search && !j.handOpen && !j.handAdd) { const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`); if (el) el.style.visibility = 'hidden'; }
   $('#result').hidden = S.winner === null;
   if (S.winner !== null) $('#result').textContent = S.winner === 'draw' ? `引き分け：${S.winReason}` : `${NAME(S.winner)}の勝利：${S.winReason}`;
@@ -2018,6 +2024,7 @@ function showPile(p, kind) {
         const u = Number(best.dataset.u), d = defOf(S, u);
         const type = d.kind === 'monster' ? `★${d.level ?? '-'}・${d.attribute || ''}・${d.race || ''}　ATK ${d.atk ?? '?'} / DEF ${d.def ?? '?'}` : `${d.subtype || ''}${d.kind === 'spell' ? '魔法' : '罠'}`;
         info.innerHTML = `<b>${esc(d.name)}</b><small>${esc(type)}</small><p>${esc(d.text || '')}</p>`;
+        info.scrollTop = 0;
       }
     };
     car.addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
@@ -2270,6 +2277,8 @@ function aimTap(x, y, target) {
 }
 
 /* ----- 置いた後：表・裏を切り替えて決定 ----- */
+/** リリースが必要なモンスターの召喚・セットは「アドバンス召喚・アドバンスセット」 */
+const modeLabel = (mode, u) => { const n = u != null && defOf(S, u).kind === 'monster' ? tributesFor(S, u) : 0; if (n > 0 && mode === 'summon') return `アドバンス召喚（${n}体リリース）`; if (n > 0 && mode === 'mset') return `アドバンスセット（${n}体リリース）`; if (mode === 'tomb') return `陵墓の効果で召喚（${n * 1000}LP）`; if (mode === 'tombset') return `陵墓の効果でセット（${n * 1000}LP）`; return MODE_LABEL[mode]; };
 const MODE_LABEL = { summon: '攻撃表示で召喚', mset: '裏側守備表示でセット', activate: '発動', sset: 'セット', tomb: '陵墓の効果で召喚', tombset: '陵墓の効果でセット' };
 function placeModes(acts, t, u) {
   const d = defOf(S, u);
@@ -2294,7 +2303,7 @@ function drawPlace() {
   const w = Math.min(r.width, r.height * 59 / 86) * (def ? .7 : .92);
   const cls = back ? 'card back' : faceCls(d);
   layer.innerHTML = `<span class="${cls} place-ghost${def ? ' def' : ''}" style="left:${(r.left + r.width / 2).toFixed(0)}px;top:${(r.top + r.height / 2).toFixed(0)}px;width:${w.toFixed(0)}px;font-size:${(w / 8).toFixed(1)}px">${back ? '' : faceHtml(u, d, false)}</span>`
-    + `<div class="place-chip" style="left:${(r.left + r.width / 2).toFixed(0)}px;top:${(r.bottom + 8).toFixed(0)}px"><b>${MODE_LABEL[mode]}</b><small>タップで決定／横に払うと${MODE_LABEL[modes[1 - m]] || '切り替え'}／下に払うとやめる</small><button class="place-x" type="button" aria-label="やめる">✕</button></div>`;
+    + `<div class="place-chip" style="left:${(r.left + r.width / 2).toFixed(0)}px;top:${(r.bottom + 8).toFixed(0)}px"><b>${modeLabel(mode, u)}${modes.length > 2 ? `<span class="place-n">${m + 1}/${modes.length}</span>` : ''}</b>${modes.length > 2 ? `<span class="place-dots">${modes.map((x, i) => `<i class="${i === m ? 'on' : ''}">${esc(modeLabel(x, u))}</i>`).join('')}</span>` : ''}<small>タップで決定／横に払うと「${modes.length > 1 ? modeLabel(modes[(m + 1) % modes.length], u) : '切り替え'}」／下に払うとやめる</small><button class="place-x" type="button" aria-label="やめる">✕</button></div>`;
 }
 function endPlace() {
   if (!place) return;

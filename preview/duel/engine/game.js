@@ -917,7 +917,7 @@ export function normalSummonNow(x     , uid        , set         )          {
   const z = freeMZones(s, p);
   if (me.normalSummonUsed || !z.length || s.cards[uid].zone !== 'hand') return false;
   const want = x.link?.data.zone                      ;
-  moveCard(s, uid, 'mzone', { index: want !== undefined && z.includes(want) ? want : z[0], faceUp: !set, position: set ? 'def' : 'atk', controller: p });
+  moveCard(s, uid, 'mzone', { index: want !== undefined && z.includes(want) ? want : pickMZone(x, uid, p), faceUp: !set, position: set ? 'def' : 'atk', controller: p });
   me.normalSummonUsed = true;
   const c = s.cards[uid];
   if (set) { log(s, `${pl(p)}：モンスターをセット`); emit(s, { type: 'set', uid, player: p }); pushAnim(s, { kind: 'summon', uid, how: 'set', mats: [] }); return true; }

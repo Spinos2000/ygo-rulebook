@@ -754,11 +754,17 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .pile-it { flex: none; width: var(--pw); margin: 0 calc(var(--pw) * -.18); scroll-snap-align: center; position: relative; transform: translateY(var(--y, 0px)) rotate(var(--r, 0deg)) scale(var(--k, 1)); transform-origin: 50% 120%; transition: transform .08s linear }
 .pile-it .pile-face { position: relative; display: block; width: 100%; font-size: calc(var(--pw) / 8); box-shadow: 0 10px 24px rgba(0,0,0,.5) }
 .pile-it.on .pile-face { box-shadow: 0 0 0 3px #ffe08a, 0 12px 28px rgba(0,0,0,.55) }
-.pile-info { display: grid; gap: 2px; padding: 8px 4px 0; min-height: 96px; max-height: 32vh; overflow-y: auto }
+.pile-info { display: block; padding: 8px 4px 0; height: clamp(140px, 26vh, 220px); overflow-y: auto; overscroll-behavior: contain } /* どのカードでも同じ高さ（長い効果はこの中でスクロール） */
+.pile-info b, .pile-info small { display: block }
 .pile-info b { font-family: var(--display); font-size: 16px } .pile-info small { color: var(--sub); font-size: 12px } .pile-info p { margin: 4px 0 0; font-size: 13px; line-height: 1.6 }
 .pile-tip { margin: 0 }
+.fx-banner.with-draw { position: fixed; top: 20%; z-index: 40; pointer-events: none }
 .place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: nowrap; max-width: calc(100vw - 24px) }
 .place-chip b { font-family: var(--display); font-size: 15px }
+.place-chip .place-n { margin-left: 6px; font-size: 11px; color: var(--sub); font-family: var(--body) }
+.place-dots { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin: 2px 0 }
+.place-dots i { font-style: normal; font-size: 10px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--sub); white-space: nowrap }
+.place-dots i.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700 }
 .place-chip small { font-size: 10.5px; color: var(--sub) }
 .place-x { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); font-size: 13px; line-height: 1; cursor: pointer }
 @media (prefers-reduced-motion: reduce) { .aim-layer svg path { animation: none } }
@@ -916,7 +922,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261120-1328</p>
+    <p class="menu-note ver">版：20261120-1346</p>
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>
