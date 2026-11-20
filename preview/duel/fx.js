@@ -631,7 +631,7 @@ export function playSummon(root, info) {
     // レベル7以上（＝2体以上のリリースが必要なモンスター）は、エースとして特別な登場にする。儀式・融合・神は専用の演出のまま
     if (!info.faceDown && ['normal', 'advance', 'special', 'flip'].includes(how) && (info.d.level ?? 0) >= 7) how = 'ace';
     const fr = info.fromRect;
-    const S = { soul: how === 'ace' && fr ? { x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 } : null, how, c: how === 'ace' ? (ACE_COLOR[info.d.attribute] || '#ffd27a') : SUMMON_COLOR[how] || '#9fe6ff', U, d: info.d, atk: info.atk, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height,
+    const S = { soul: how === 'ace' && fr ? { x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 } : null, how, c: how === 'ace' ? (ACE_COLOR[info.d.attribute] || '#ffd27a') : SUMMON_COLOR[how] || '#9fe6ff', U, d: info.d, atk: info.atk, def: info.def, pos: info.pos, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height,
       img: info.faceDown && how !== 'flip' ? backImg() : cardImg(info.d, info.atk, info.def), parts: [], rings: [], shake: 0, flash: 0, dark: 0, quake: 0, t: 0, last: 0,
       speed: (info.speed || 1) * (window.__fxSlow || 1), L: SUMMON_LAND[how] || 600, hit: false, bolt: null, done: false,
       mats: (info.mats || []).map(m => ({ x: m.rect.left + m.rect.width / 2, y: m.rect.top + m.rect.height / 2, w: m.rect.width, h: m.rect.height, img: cardImg(m.d, m.atk, m.def), a: 1, s: 1 })) };
@@ -853,7 +853,7 @@ function summonDraw(S) {
       ctx.globalAlpha = k2 * fo; ctx.save(); ctx.translate((1 - k2) * -60, 0); ctx.transform(1, 0, -.2, 1, 0, 0);
       ctx.fillStyle = 'rgba(10,10,14,.88)'; ctx.fillRect(-40, yb - 26, W + 120, 52); ctx.fillStyle = S.c; ctx.fillRect(-40, yb - 26, W + 120, 3); ctx.fillRect(-40, yb + 23, W + 120, 3);
       ctx.restore(); ctx.textAlign = 'center'; ctx.fillStyle = S.c; ctx.font = '700 11px sans-serif'; ctx.fillText(`★${S.d.level}  ${S.d.attribute || ''}属性  ${S.d.race || ''}`, W / 2, yb - 8);
-      ctx.fillStyle = '#fff'; ctx.font = `700 ${Math.min(22, Math.max(15, W / 22))}px sans-serif`; ctx.fillText(`${S.d.name}　ATK ${S.atk}`, W / 2, yb + 15); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+      ctx.fillStyle = '#fff'; ctx.font = `700 ${Math.min(22, Math.max(15, W / 22))}px sans-serif`; ctx.fillText(`${S.d.name}　${S.pos === 'def' ? `DEF ${S.def}` : `ATK ${S.atk}`}`, W / 2, yb + 15); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
     }
   }
   if (k === 'god') {

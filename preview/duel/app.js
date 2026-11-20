@@ -173,7 +173,7 @@ function playPendingSummons() {
       el.style.visibility = 'hidden';
       const flipFace = j.how === 'flip';
       try {
-        await playSummon(ROOT, { rect: el.getBoundingClientRect(), track: () => el.isConnected ? el.getBoundingClientRect() : null, onLand: () => { el.style.visibility = ''; }, d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, from: j.from, fromRect: j.fromRect, mat: matCanvas(), speed: fxMode() === 'short' ? 2 : 1 });
+        await playSummon(ROOT, { rect: el.getBoundingClientRect(), track: () => el.isConnected ? el.getBoundingClientRect() : null, onLand: () => { el.style.visibility = ''; }, d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), pos: S.cards[j.uid] && S.cards[j.uid].position, how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, from: j.from, fromRect: j.fromRect, mat: matCanvas(), speed: fxMode() === 'short' ? 2 : 1 });
       } catch (e) { console.error(e); }
       el.style.visibility = '';
     }
@@ -600,7 +600,7 @@ function renderSetup() {
   } else if (p === 'level') {
     el.innerHTML = `<p class="su-q">CPUの強さは？</p><div class="su-opts">`
       + opt('level:easy', '🐣', 'やさしい', 'ときどき最善でない手を選ぶ。操作に慣れたい時に', SU.level === 'easy')
-      + opt('level:normal', '🤖', 'ふつう', '見えないカードを推測して勝率で選ぶ（今までのCPU）', SU.level === 'normal') + '</div>';
+      + opt('level:normal', '🤖', 'ふつう', '見えないカードを推測して、勝ちやすい手を選ぶ', SU.level === 'normal') + '</div>';
   } else {
     const d0 = DECKS[SU.p0], d1 = DECKS[SU.p1];
     const firstTxt = { 0: 'あなたが先攻', 1: 'CPUが先攻', r: 'ランダム（開始の時に決める）' }[SU.first];
@@ -1445,7 +1445,7 @@ function openTopReveal(r, key) {
 }
 /** 選ぶ画面の「もう一度押すと〜」の言葉：選ぶ目的（案内文）に合わせる */
 function pickVerb(prompt) {
-  return /捨て/.test(prompt) ? '捨てます' : /除外/.test(prompt) ? '除外します' : /墓地へ送|墓地に送/.test(prompt) ? '墓地へ送ります' : /特殊召喚/.test(prompt) ? '特殊召喚します' : /デッキ.*(戻|置)/.test(prompt) ? 'デッキに戻します' : /手札に加/.test(prompt) ? '手札に加えます' : '選びます';
+  return /特殊召喚/.test(prompt) ? '特殊召喚します' : /捨て/.test(prompt) ? '捨てます' : /除外/.test(prompt) ? '除外します' : /墓地へ送|墓地に送/.test(prompt) ? '墓地へ送ります' : /デッキ.*(戻|置)/.test(prompt) ? 'デッキに戻します' : /手札に加/.test(prompt) ? '手札に加えます' : '選びます';
 }
 /** 山札を広げている時に、押したカードの効果を見せる（もう一度押すと選ぶ） */
 function fanPeek(el, u) {
@@ -1952,6 +1952,8 @@ function actZones(a) {
   if ((a.type === 'setSpellTrap' || a.type === 'activate') && d.kind !== 'monster' && d.subtype !== 'フィールド') return P.szone.map((v, i) => (v === null ? `0:st:${i}` : null)).filter(Boolean);
   return null;
 }
+/** マス選びの案内と光るマスを、すぐ消す（マスを押した時。演出の間も残らないように） */
+function clearZoneTip() { ROOT.querySelectorAll('#board .zone-pick').forEach(el => el.classList.remove('zone-pick')); const t = $('.zone-tip'); if (t) t.remove(); }
 /** マス選びの案内を、盤面のすぐ上（LPの箱にかぶらない所）に出す */
 function placeTip(tip) { const b = $('#board'); if (!b) return; const r = b.getBoundingClientRect(); tip.style.top = Math.max(8, r.top + 6) + 'px'; }
 function renderZonePick() {
@@ -1960,14 +1962,14 @@ function renderZonePick() {
   if (actPick && !fxSoon() && fxN === 0) {
     for (const k of actPick.zones) { const el = ROOT.querySelector(`#board [data-zone="${k}"]`); if (el) el.classList.add('zone-pick'); }
     if (!tip) { tip = document.createElement('div'); tip.className = 'zone-tip'; $('.droot').appendChild(tip); }
-    tip.innerHTML = `<b>置くマスを押してください</b><small>${esc(defOf(S, actPick.a.card).name)}・ほかを押すとやめる</small>`; placeTip(tip);
+    tip.innerHTML = `<b>置くマスを押してください</b><small>「${esc(defOf(S, actPick.a.card).name)}」　ほかを押すとやめる</small>`; placeTip(tip);
     return;
   }
   const zp = fxSoon() || fxN > 0 ? null : zonePick();
   if (!zp) { if (tip) tip.remove(); return; }
   for (const k of zp.map.keys()) { const el = ROOT.querySelector(`#board [data-zone="${k}"]`); if (el) el.classList.add('zone-pick'); }
   if (!tip) { tip = document.createElement('div'); tip.className = 'zone-tip'; $('.droot').appendChild(tip); }
-  tip.innerHTML = `<b>出すマスを押してください</b><small>${esc(zp.r.prompt.replace(ZONE_Q, '').replace(/^「|」$/g, ''))}</small>`; placeTip(tip);
+  tip.innerHTML = `<b>出すマスを押してください</b><small>「${esc(zp.r.prompt.replace(ZONE_Q, '').replace(/^「|」$/g, ''))}」</small>`; placeTip(tip);
 }
 function renderSheets(duringFx = false) {
   const humanChoice = S.pending && !isCpu(S.pending.request.player) && !zonePick();
@@ -2198,7 +2200,7 @@ function menuNames() {
   L('deck0', cpu ? 'あなたのデッキ' : 'あなたのデッキ（P1）'); L('deck1', cpu ? 'CPUのデッキ' : '相手のデッキ（P2）');
   const f = $('#first'); if (f) { f.options[0].textContent = cpu ? 'あなた' : 'P1（あなた）'; f.options[1].textContent = cpu ? 'CPU' : 'P2'; }
 }
-function openMenu() { menuNames(); $('#menu').hidden = false; $('#menuBtn').setAttribute('aria-expanded', 'true'); disarm(); clearTimeout(cpuTimer); }
+function openMenu() { menuNames(); { const el = $('#menuLevel'); if (el) { el.hidden = !cpuMode(); el.textContent = `この対戦のCPUの強さ：${LEVEL_LABEL[cpuLevel] || 'ふつう'}（強さは準備画面で選びます）`; } } $('#menu').hidden = false; $('#menuBtn').setAttribute('aria-expanded', 'true'); disarm(); clearTimeout(cpuTimer); }
 function closeMenu() { $('#menu').hidden = true; $('#menu').classList.remove('from-setup'); $('#menuBtn').setAttribute('aria-expanded', 'false'); disarm(); setTimeout(() => { if (S && !pausedUi()) scheduleCpu(); }, 0); }
 let armT;
 function disarm() { const b = $('#surrender'); b.classList.remove('armed'); b.textContent = 'サレンダーする'; clearTimeout(armT); }
@@ -2717,7 +2719,7 @@ root.addEventListener('click', e => {
   if (aim || place) return;
   const t = e.target;
   { const zp = zonePick(), zEl = t.closest && t.closest('#board [data-zone]');
-    if (zp && zEl && zp.map.has(zEl.dataset.zone)) { run({ type: 'answer', value: zp.map.get(zEl.dataset.zone) }); return; } }
+    if (zp && zEl && zp.map.has(zEl.dataset.zone)) { clearZoneTip(); run({ type: 'answer', value: zp.map.get(zEl.dataset.zone) }); return; } }
   if (t.closest('[data-fanok]')) { if (fan) fanFinish(fan.sel); return; }
   if (t.closest('[data-fanskip]')) { fanFinish([]); return; }
   if (t.closest('[data-fanundo]')) { closeFan(); undo(); return; }
@@ -2749,7 +2751,7 @@ root.addEventListener('click', e => {
   if (t.closest('#menuClose') || t.id === 'menu') { closeMenu(); if (suReturn) { suReturn = false; openSetup('go'); } return; }
   if (t.closest('#surrender')) { surrender(); return; }
   { const ap = actPick; const zEl = ap && t.closest && t.closest('#board [data-zone]');
-    if (ap) { actPick = null; if (zEl && ap.zones.has(zEl.dataset.zone)) { run({ ...ap.a, zone: Number(zEl.dataset.zone.split(':')[2]) }); return; } render(); if (zEl) return; } }
+    if (ap) { actPick = null; clearZoneTip(); if (zEl && ap.zones.has(zEl.dataset.zone)) { run({ ...ap.a, zone: Number(zEl.dataset.zone.split(':')[2]) }); return; } render(); if (zEl) return; } }
   const actEl = t.closest('[data-act]');
   if (actEl && cpuMode() && actEl.closest('#detailSheet, #detail')) {
     const a = JSON.parse(actEl.dataset.act);

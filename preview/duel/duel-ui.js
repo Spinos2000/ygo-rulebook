@@ -764,10 +764,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .su-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px }
 .su-head b { font-family: var(--display); font-size: 15px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .su-x { width: 36px; height: 36px; border-radius: 10px; border: 1.5px solid var(--line); background: transparent; color: var(--ink); font-size: 18px; cursor: pointer; flex: none }
-.su-dots { display: flex; gap: 5px }
-.su-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line) }
+.su-dots { display: flex; gap: 3px; flex: none }
+.su-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line) }
 .su-dots i.done { background: color-mix(in srgb, var(--accent) 50%, var(--line)) }
-.su-dots i.on { background: var(--accent); width: 18px; border-radius: 4px }
+.su-dots i.on { background: var(--accent); width: 12px; border-radius: 3px }
 .su-q { font-family: var(--display); font-size: 19px; margin: 14px 0 12px; display: grid; gap: 2px }
 .su-q small { font-family: var(--body); font-size: 12px; color: var(--sub) }
 .su-opts { display: grid; gap: 10px }
@@ -955,6 +955,7 @@ export const MARKUP = `
       <label for="fxMode">攻撃の演出<select id="fxMode"><option value="full">あり</option><option value="short">短く（2倍速）</option><option value="none">なし</option></select></label>
       <label for="cpuSpeed">CPUの速さ<select id="cpuSpeed"><option value="slow">ゆっくり</option><option value="normal" selected>ふつう</option><option value="fast">はやい</option></select></label>
     </div>
+    <p class="menu-note" id="menuLevel" hidden></p>
     <label class="check" id="hideOppRow"><input type="checkbox" id="hideOpp"> 手番でない側の手札を伏せる</label>
     <div class="menu-row">
       <button class="btn primary" id="newDuel">新しいデュエルを始める</button>
@@ -963,7 +964,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261120-1614</p>
+    <p class="menu-note ver">版：20261120-1620</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
