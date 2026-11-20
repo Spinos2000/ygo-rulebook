@@ -67,9 +67,32 @@ function soundsFor(prev, next) {
   return out;
 }
 /** 状態を進めて、起きたことに合わせて効果音を鳴らし、攻撃があれば演出を再生する */
+/* ---------- CPU対戦の結果：サイトの戦績・実績へ渡す ----------
+ * opts.onResult(rec) を、1回の対戦につき1回呼ぶ。「ひとつ戻す」を使った対戦は undo:true（実績には数えない） */
+let undoUsed = false, resultSent = false;
+function reportResult(prev, next) {
+  if (!cpuMode() || placeholder || resultSent || !OPTS.onResult) return;
+  resultSent = true;
+  const d0 = DECKS[$('#deck0').value] || {}, d1 = DECKS[$('#deck1').value] || {};
+  // 切り札でとどめ：最後に相手のLPを0にしたのが、自分のデッキの切り札の攻撃だったか
+  let aceFinish = false;
+  if (next.winner === 0) {
+    const fresh = (next.anim || []).filter(x => x.seq > (prev.animSeq ?? 0) && x.kind === 'battle' && next.cards[x.attacker]?.controller === 0 && (x.damage || []).some(d => d.player === 1));
+    const last = fresh[fresh.length - 1];
+    if (last) { try { aceFinish = acesOf(next, 0, deckNames()[0]).has(next.cards[last.attacker].code); } catch { /* 切り札が分からない */ } }
+  }
+  const rec = {
+    at: Date.now(), result: next.winner === 0 ? 'win' : next.winner === 1 ? 'lose' : 'draw', level: cpuLevel,
+    myDeck: d0.theme || d0.name || '', myCode: d0.code || '', cpuDeck: d1.theme || d1.name || '', cpuCode: d1.code || '', cpuOwner: d1.owner || '',
+    first: next.log.some(l => /先攻はP1/.test(l.text)), turn: next.turn, myLp: next.players[0].lp, cpuLp: next.players[1].lp,
+    undo: undoUsed, aceFinish, persona,
+  };
+  try { OPTS.onResult(rec); } catch (e) { console.warn('戦績に渡せませんでした', e); }
+}
 function commit(next) {
   const prev = S;
   S = next;
+  if (prev && prev.winner === null && next.winner !== null) reportResult(prev, next);
   if (prev) play(soundsFor(prev, next));
   if (prev) queueBattleFx(prev, next);
   if (prev) queueMoves(prev, next);
@@ -683,7 +706,7 @@ function newDuel(quiet = false) {
   history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp]; trace = []; thinking = null;
   closeMenu();
   render();
-  newPersona(); moodTurn = -1;
+  newPersona(); moodTurn = -1; undoUsed = false; resultSent = false;
   if (cpuMode() && !quiet && !setupOpen() && $('#menu').hidden) startCue();
 }
 
@@ -704,7 +727,7 @@ function run(action) {
   }
 }
 // CPU の行動は記録しないので、元に戻すと自分が前に判断した場面まで戻る
-function undo() { if (!history.length) return; clearTimeout(cpuTimer); clearTimeout(offerT); cueQ = []; closeFan(); heldAnims = []; tombIntent = null; S = history.pop(); pick = []; render(); }
+function undo() { if (!history.length) return; undoUsed = true; clearTimeout(cpuTimer); clearTimeout(offerT); cueQ = []; closeFan(); heldAnims = []; tombIntent = null; S = history.pop(); pick = []; render(); }
 
 let toastT;
 function toast(msg, bad) {
@@ -2128,7 +2151,7 @@ function saveSoon() {
     try {
       if (placeholder) return;
       if (!S || S.winner !== null) localStorage.removeItem(OPTS.storageKey);
-      else localStorage.setItem(OPTS.storageKey, JSON.stringify({ v: SAVE_V, S, trace, mode: $('#mode').value, d0: $('#deck0').value, d1: $('#deck1').value, lv: cpuLevel }));
+      else localStorage.setItem(OPTS.storageKey, JSON.stringify({ v: SAVE_V, S, trace, mode: $('#mode').value, d0: $('#deck0').value, d1: $('#deck1').value, lv: cpuLevel, undo: undoUsed }));
     } catch { /* 保存できない環境では覚えない */ }
   }, 400);
 }
@@ -2863,6 +2886,7 @@ export function boot(root, opts = {}) {
     if (data && data.d0 && DECKS[data.d0]) $('#deck0').value = data.d0;
     if (data && data.d1 && DECKS[data.d1]) $('#deck1').value = data.d1;
     if (data && ['easy', 'normal', 'hard'].includes(data.lv)) cpuLevel = data.lv;
+    if (data && data.undo) undoUsed = true;
     $('#hideOppRow').hidden = cpuMode();
     showDeckFmt();
     if (data && data.S && (data.v === 4 || data.v === SAVE_V)) {

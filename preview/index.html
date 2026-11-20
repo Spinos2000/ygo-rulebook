@@ -1368,6 +1368,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 
 /* ===== 3本勝負 ===== */
 .rl-fmt{margin-bottom:-4px}
+#rl-cpu{display:grid;gap:12px}#rl-cpu[hidden]{display:none}.cpu-t{width:100%;border-collapse:collapse;font-size:13px}.cpu-t th,.cpu-t td{padding:6px 4px;border-bottom:1px solid var(--line,rgba(0,0,0,.12));text-align:right}.cpu-t th:first-child,.cpu-t tr th{text-align:left}.cpu-t tr:first-child th{font-size:11px;opacity:.75}.cpu-item{display:grid;gap:2px}.cpu-item small{opacity:.8}
 .rl-match{font-size:12px;font-weight:900;color:var(--edge);background:var(--ra);border-radius:999px;padding:1px 8px;margin-left:6px}
 #su-fmt button:disabled{opacity:.4;cursor:not-allowed}
 .match-msg{position:fixed;inset:0;z-index:88;background:color-mix(in srgb,#1b2235 55%,transparent);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -2223,7 +2224,8 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
 <!-- 戦績 -->
 <section id="results">
   <div class="sec-h"><span>RESULTS</span><h2>📊 戦績・リザルト</h2><p class="note" id="rl-where">デッキの見直しに</p></div>
-  <div class="su-first rl-fmt" id="rl-fmt" role="radiogroup" aria-label="戦績の種類"><button type="button" role="radio" data-v="bo1">⚔️ 1本勝負</button><button type="button" role="radio" data-v="bo3">🏆 3本勝負（マッチ）</button></div>
+  <div class="su-first rl-fmt" id="rl-fmt" role="radiogroup" aria-label="戦績の種類"><button type="button" role="radio" data-v="bo1">⚔️ 1本勝負</button><button type="button" role="radio" data-v="bo3">🏆 3本勝負（マッチ）</button><button type="button" role="radio" data-v="cpu">🤖 CPU戦</button></div>
+  <div id="rl-cpu" hidden></div>
   <div class="stats" id="rl-stats"></div>
   <div class="tstats-wrap" id="rl-theme"></div>
 
@@ -3704,7 +3706,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     who.hidden=true;pf=normP({id:u.uid});resetDraft();renderLog();
     var firstSnap=true;
     CL.ref.onSnapshot(function(d){var x=d.exists?(d.data()||{}):{};var dirty=!firstSnap&&isDirty();
-      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;pf.kinds=normK(x.kinds);pf.ctr=normC(x.ctr);pf.ryuWhy=normC(x.ryuWhy);pf.ach=(x.ach&&typeof x.ach==='object')?x.ach:{};
+      pf.name=str(x.name||'',20);pf.themes=Array.isArray(x.themes)?x.themes.map(function(t){return str(t,30);}).filter(Boolean):[];pf.lastTheme=x.lastTheme==null?null:str(x.lastTheme,30);pf.recDefault=x.recDefault!==false;pf.kinds=normK(x.kinds);pf.ctr=normC(x.ctr);pf.ryuWhy=normC(x.ryuWhy);pf.ach=(x.ach&&typeof x.ach==='object')?x.ach:{};pf.cpuLog=(Array.isArray(x.cpuLog)?x.cpuLog:[]).concat((pf.cpuLog||[]).filter(function(r){return r&&r.preview;}));
       if(!dirty)resetDraft();else renderCur();
       if(firstSnap&&!pf.name){$('profile').open=true;pfStatus('👋 はじめまして！ニックネームに苗字をひらがなで（例：やまだ）、デッキテーマも入れて「💾 プロフィールを保存」を押してください。','');}
       firstSnap=false;},function(){pfStatus('プロフィールを読み込めませんでした。ページを開き直してください。','err');});
@@ -3720,6 +3722,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     setTimeout(function(){document.dispatchEvent(new Event('ygo:log'));},0);
     var list=$('rl-list'),stats=$('rl-stats');list.innerHTML='';stats.innerHTML='';
     [].forEach.call(document.querySelectorAll('#rl-fmt button'),function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-v')===fmtView));});
+    var cpuV=fmtView==='cpu';['rl-stats','rl-theme','rx','all-res'].forEach(function(id){var e=$(id);if(e)e.hidden=cpuV;});var blk=document.querySelector('#results > .block');if(blk)blk.hidden=cpuV;$('rl-cpu').hidden=!cpuV;if(cpuV){renderCpu();return;}
     var LG=logsF(),w=0,l=0,d=0;
     if(fmtView==='bo3'){var ms=matchesOf(LG);ms.forEach(function(m){if(!m.done)return;if(m.res==='win')w++;else if(m.res==='lose')l++;else d++;});
       [['マッチ',w+l+d],['勝',w],['敗',l],['分',d]].forEach(function(s){var b=el('div','stat');b.appendChild(el('b','',String(s[1])));b.appendChild(el('span','',s[0]));stats.appendChild(b);});}
@@ -3756,6 +3759,22 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     if(!shown)list.appendChild(el('div','al-empty','条件に合う記録はありません。'));
   }
   var fRes='',fmtView='bo1';
+  /* 🤖 CPU戦の成績：強さ別・自分のデッキ別・CPUのデッキ別と、最近の対戦。「↶戻すあり」は実績には数えない */
+  function renderCpu(){var box=$('rl-cpu');box.innerHTML='';var L=(pf.cpuLog||[]).slice().sort(function(a,b){return (b.at||0)-(a.at||0);});
+    var cnt=function(arr){var w=0,l=0,d=0;arr.forEach(function(r){if(r.result==='win')w++;else if(r.result==='lose')l++;else d++;});return {n:arr.length,w:w,l:l,d:d};};
+    var c=cnt(L),st=el('div','stats');[['戦',c.n],['勝',c.w],['敗',c.l],['勝率',c.n?Math.round(c.w/c.n*100)+'%':'-']].forEach(function(x){var b=el('div','stat');b.appendChild(el('b','',String(x[1])));b.appendChild(el('span','',x[0]));st.appendChild(b);});box.appendChild(st);
+    if(L.some(function(r){return r.preview;}))box.appendChild(el('p','note','🧪 お試し版での対戦は、この画面にだけ表示しています（アカウントには保存しません）。'));
+    if(!L.length){box.appendChild(el('div','al-empty','まだCPU戦の記録はありません。🤖 CPUと対戦すると、ここに残ります（「ひとつ戻す」を使った対戦は「↶戻すあり」の印が付き、実績には数えません）。'));return;}
+    var LV={easy:'🐣 やさしい',normal:'🤖 ふつう',hard:'🔥 本気'};
+    function table(title,key){var g={},order=[];L.forEach(function(r){var k=key(r)||'—';if(!g[k]){g[k]=[];order.push(k);}g[k].push(r);});
+      var blk=el('div','block cpu-blk');blk.appendChild(el('h3','',title));var t=el('table','cpu-t'),hd=el('tr');['','戦','勝','敗','勝率'].forEach(function(h){hd.appendChild(el('th','',h));});t.appendChild(hd);
+      order.forEach(function(k){var x=cnt(g[k]),tr=el('tr');[k,x.n,x.w,x.l,x.n?Math.round(x.w/x.n*100)+'%':'-'].forEach(function(v,i){tr.appendChild(el(i?'td':'th','',String(v)));});t.appendChild(tr);});blk.appendChild(t);box.appendChild(blk);}
+    table('強さ別',function(r){return LV[r.level]||r.level;});table('自分のデッキ別',function(r){return r.myDeck;});table('CPUのデッキ別',function(r){return r.cpuDeck;});
+    var blk=el('div','block cpu-blk');blk.appendChild(el('h3','','📜 最近のCPU戦'));var ul=el('ul','rl-list');
+    L.slice(0,30).forEach(function(r){var li=el('li','rl-item cpu-item');var d=new Date(r.at||0);
+      li.appendChild(el('b','',(r.result==='win'?'🏆 勝ち':r.result==='lose'?'💀 負け':'🤝 引き分け')+'　'+(r.myDeck||'')+' vs '+(r.cpuDeck||'')));
+      var tags=[(d.getMonth()+1)+'/'+d.getDate(),LV[r.level]||'',r.first?'先攻':'後攻','T'+(r.turn||0),'LP '+(r.myLp!=null?r.myLp:'-')];if(r.aceFinish)tags.push('👑 切り札でとどめ');if(r.undo)tags.push('↶ 戻すあり');if(r.preview)tags.push('🧪 お試し版');
+      li.appendChild(el('small','',tags.filter(Boolean).join('・')));ul.appendChild(li);});blk.appendChild(ul);box.appendChild(blk);}
   function logsF(){return pf.log.filter(function(r){return (r.fmt==='bo3')===(fmtView==='bo3');});}
   function matchesOf(list){var M={},order=[];list.forEach(function(r){if(!r.matchId)return;var m=M[r.matchId];if(!m){m=M[r.matchId]={id:r.matchId,w:0,l:0,d:0,n:0,done:false,res:null,at:r.at,theme:r.myTheme,opp:r.oppName};order.push(m);}
       m.n++;if(r.result==='win')m.w++;else if(r.result==='lose')m.l++;else m.d++;if(r.matchEnd){m.done=true;m.res=r.matchRes;}m.at=Math.max(m.at,r.at);});
@@ -4363,7 +4382,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   function releaseWake(){if(wl){try{wl.release();}catch(e){}wl=null;}}
   document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&!overlay.hidden&&D&&D.phase==='play')acquireWake();});
 
-  YGO.app={role:function(){return role;},linked:function(){return !!(sub&&opp);},saveD:function(){saveD();},push:function(){pushPresence();},saveAch:function(o){if(CL)CL.ref.set({ach:o},{merge:true}).catch(function(){});},cloud:function(){return !!CL;},pf:function(){return pf;},opp:function(){return opp||null;},D:function(){return D;},
+  YGO.app={addCpu:function(r,local){pf.cpuLog=Array.isArray(pf.cpuLog)?pf.cpuLog:[];var o=JSON.parse(JSON.stringify(r||{}));if(local)o.preview=true;pf.cpuLog.push(o);if(CL&&!local){CL.ref.set({cpuLog:firebase.firestore.FieldValue.arrayUnion(o)},{merge:true}).catch(function(){});}else if(!local)savePf();renderLog();},role:function(){return role;},linked:function(){return !!(sub&&opp);},saveD:function(){saveD();},push:function(){pushPresence();},saveAch:function(o){if(CL)CL.ref.set({ach:o},{merge:true}).catch(function(){});},cloud:function(){return !!CL;},pf:function(){return pf;},opp:function(){return opp||null;},D:function(){return D;},
     editLog:function(r,patch){Object.assign(r,patch);if(CL&&r._id){CL.results.doc(r._id).set(cleanRec(r)).catch(function(){alert('保存できませんでした。通信状態を確認してください。');});}else savePf();renderLog();}};
   if(D&&D.phase==='result'){D.phase='play';saveD();}
   if(D&&D.phase==='play'){$('duel-open').textContent='⚔️ デュエルを再開する';}else if(getM()){$('duel-open').textContent='🏆 マッチの次のデュエルへ';}
@@ -5278,6 +5297,8 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     ms.slice().sort(function(a,b){return a.at-b.at;}).forEach(function(m){if(!m.done)return;s.mplayed++;if(m.res==='win'){s.mw++;mst++;s.mst=Math.max(s.mst,mst);if(m.l===0)s.mstraight++;}else mst=0;});
     log.filter(function(r){return r.fmt==='bo3'&&r.matchId;}).forEach(function(r){});
     ms.forEach(function(m){if(m.done&&m.res==='win'){var g=log.filter(function(r){return r.matchId===m.id;}).sort(function(a,b){return (a.game||0)-(b.game||0);});if(g[0]&&g[0].result==='lose')s.mcome++;}});
+    var cl=((Y.app&&Y.app.pf&&Y.app.pf().cpuLog)||[]).filter(function(r){return r&&!r.undo&&!r.preview;}).sort(function(a,b){return (a.at||0)-(b.at||0);}),cst=0;s.cw=0;s.cst=0;s.cEasy=0;s.cNormal=0;s.cPerfect=0;s.cAce=0;s.cClose=0;s.cSecond=0;var cdk={};
+    cl.forEach(function(r){if(r.result==='win'){s.cw++;cst++;s.cst=Math.max(s.cst,cst);if(r.level==='easy')s.cEasy++;if(r.level==='normal')s.cNormal++;if(r.myLp>=8000)s.cPerfect++;if(r.aceFinish)s.cAce++;if(r.myLp!=null&&r.myLp<=500)s.cClose++;if(r.first===false)s.cSecond++;if(r.myDeck)cdk[r.myDeck]=1;}else cst=0;});s.cDecks=Object.keys(cdk).length;
     var me=Y.user&&Y.user.uid;s.reports=(Y.reports||[]).filter(function(r){return me&&r.uid===me;}).length;return s;}
   var A=window.YGO_ACH=[
     ['first','⚔️','初デュエル','デュエルを1回記録する',1,function(s){return s.n;},1],
@@ -5318,7 +5339,17 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     ['mstraight','💨','ストレート勝ち','3本勝負を2-0で勝つ',1,function(s){return s.mstraight;},2],
     ['mcome','💪','逆転のマッチ','1戦目を落としたマッチで勝つ',1,function(s){return s.mcome;},2],
     ['mw10','👑','マッチの覇者','3本勝負のマッチで10回勝つ',10,function(s){return s.mw;},3],
-    ['mst3','⚡','マッチ3連勝','3本勝負のマッチで3連勝する',3,function(s){return s.mst;},3]
+    ['mst3','⚡','マッチ3連勝','3本勝負のマッチで3連勝する',3,function(s){return s.mst;},3],
+    ['cpu_first','🤖','🤖 CPU初勝利','CPUに勝つ（「ひとつ戻す」を使わずに）',1,function(s){return s.cw;},1],
+    ['cpu_easy','🐣','🤖 やさしいCPUに勝利','強さ「やさしい」のCPUに勝つ',1,function(s){return s.cEasy;},1],
+    ['cpu_normal','🦾','🤖 ふつうのCPUに勝利','強さ「ふつう」のCPUに勝つ',1,function(s){return s.cNormal;},2],
+    ['cpu_10','🎯','🤖 CPUハンター','CPUに10回勝つ',10,function(s){return s.cw;},2],
+    ['cpu_st5','🔥','🤖 CPUに5連勝','CPUに5連勝する',5,function(s){return s.cst;},3],
+    ['cpu_decks','🗂️','🤖 デッキマスター','5つのデッキでCPUに勝つ',5,function(s){return s.cDecks;},3],
+    ['cpu_ace','👑','🤖 切り札でとどめ','切り札の攻撃でCPUのLPを0にする',1,function(s){return s.cAce;},2],
+    ['cpu_perfect','🛡️','🤖 CPUに完全勝利','LPを減らさずにCPUに勝つ',1,function(s){return s.cPerfect;},3],
+    ['cpu_close','😮‍💨','🤖 紙一重の勝利','LP500以下でCPUに勝つ',1,function(s){return s.cClose;},2],
+    ['cpu_second','🔄','🤖 後攻からの勝利','後攻でCPUに3回勝つ',3,function(s){return s.cSecond;},2]
   ];
   var TN={1:'オシリス・レッド級',2:'ラー・イエロー級',3:'オベリスク・ブルー級'};
   $('ach-total').textContent=String(A.length);
@@ -6146,7 +6177,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     try{
       var m=await import('./duel/embed.js');
       host.hidden=false;document.documentElement.style.overflow='hidden';
-      m.mountDuel(host,{onClose:close,isOpen:function(){return !host.hidden;},storageKey:KEY,menuFirst:true});
+      m.mountDuel(host,{onClose:close,isOpen:function(){return !host.hidden;},storageKey:KEY,menuFirst:true,onResult:function(r){try{var pv=location.pathname.indexOf('/preview/')>=0;if(window.YGO&&YGO.app&&YGO.app.addCpu)YGO.app.addCpu(r,pv);}catch(e){console.warn(e);}}});
     }catch(e){console.error(e);st.className='status err';st.textContent='対戦卓を読み込めませんでした。ページを開き直してください。';}
     finally{busy=false;label();}
   });

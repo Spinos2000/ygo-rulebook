@@ -1,7 +1,7 @@
 // CPUの強さ（やさしい・ふつう・本気）
 // - やさしい：前のCPUの採点で候補を並べ、ときどき2番目・3番目の手を選ぶ（見えないカードは見ない）
 // - ふつう：理想のCPU（そのまま）
-// - 本気：理想のCPUに、考える量を約2倍・読む世界を多くして考えさせる（見えないカードは推測のまま。ズルはしない）
+// - 本気：理想のCPUに、考える量を約2倍・読む世界を多くして考えさせる。ロマンは無視して勝つことだけで手を選ぶ（見えないカードは推測のまま。ズルはしない）
 import { cpuDecide, scoreCandidates } from './cpu.js';
 import { idealThink,                                 } from './ideal.js';
                                                     
@@ -9,8 +9,8 @@ import { idealThink,                                 } from './ideal.js';
                                                   
 export const LEVELS             = ['easy', 'normal', 'hard'];
 
-/** 本気の考え方（ふつうに上乗せ） */
-export const HARD_OPTS               = { samples: 10, criticalSamples: 18, budgetScale: 2, deepK: 4, deepWorlds: 4, criticalDeepK: 5, criticalDeepWorlds: 6 };
+/** 本気の考え方（ふつうに上乗せ）。romanceWidth: 0 ＝ロマンの手を選ばない（MASTERの決定 2026-11-20） */
+export const HARD_OPTS               = { romanceWidth: 0, samples: 10, criticalSamples: 18, budgetScale: 2, deepK: 4, deepWorlds: 4, criticalDeepK: 5, criticalDeepWorlds: 6 };
 
 /** やさしい：約3回に1回、2番目か3番目に良い手を選ぶ（選ぶ手が1つしか無い時はそれ） */
 export function easyThink(s           , random               = Math.random)          {
