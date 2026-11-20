@@ -845,6 +845,9 @@ function shouldAutoPass() {
   const me = actorOf(S), w = S.window;
   const top = S.chain[S.chain.length - 1];
   if (top) return top.player === me;
+  // 自分がダメージを受けた・自分のカードが破壊された直後で、発動できるカードがある時も聞く（ダメージ・ゲート、復活の墓穴など）
+  const hit = S.lastEvents.some(e => (e.type === 'damage' && e.player === me) || (e.type === 'destroyed' && S.cards[e.uid] && S.cards[e.uid].owner === me));
+  if (hit && activatableList(S, me).length) return false;
   if (w.mode === 'summoning' && w.cont.type === 'summon') return w.cont.player === me;
   if (S.battle && S.battle.step === 'declared' && w.cont.type === 'battle' && w.cont.step === 'declared') return S.cards[S.battle.attacker].controller === me;
   const ev = S.lastEvents.find(e => e.type === 'summoned' || e.type === 'attackDeclared');
@@ -964,12 +967,14 @@ function renderChoice() {
     <button class="btn primary confirm" id="confirmPick" ${ok ? '' : 'disabled'}>決定</button>`;
 }
 
+/** これから再生する演出があるか（ある時は、選ぶ画面やシートを演出の後に開く） */
+const fxSoon = () => !!pendingMoves || pendingSummons.length > 0;
 function renderDetail() {
   const el = $('#detail');
   if (S.pending && isCpu(S.pending.request.player)) { el.innerHTML = `<h3>CPUが選んでいます</h3><p class="prompt">${esc(S.pending.request.prompt)}</p>`; return; }
   if (S.pending && isDeckPick(S.pending.request)) {
     el.innerHTML = `<h3>あなたの選択</h3><p class="prompt">${esc(S.pending.request.prompt)}</p><p class="tl">広げた${fanSrc(S.pending.request) === 'hand' ? '手札' : '山札'}から選んでください。</p>`;
-    openFan();
+    if (!fxSoon()) openFan(); // これから演出がある時は、演出が終わってから広げる
     return;
   }
   if (S.pending) { el.innerHTML = renderChoice(); return; }
@@ -1531,10 +1536,10 @@ function tweenLp(el, p, to) {
 }
 
 /* ---------- シート（スマホ） ---------- */
-function renderSheets() {
+function renderSheets(duringFx = false) {
   const humanChoice = S.pending && !isCpu(S.pending.request.player);
-  const detailOpen = narrow() && ((humanChoice && !peek && !fan) || (sheet === 'detail' && selected !== null));
-  const logOpen = narrow() && sheet === 'log' && !detailOpen;
+  const detailOpen = !duringFx && narrow() && ((humanChoice && !peek && !fan) || (sheet === 'detail' && selected !== null));
+  const logOpen = !duringFx && narrow() && sheet === 'log' && !detailOpen;
   $('#detailSheet').classList.toggle('open', detailOpen);
   $('#logSheet').classList.toggle('open', logOpen);
   $('#scrim').hidden = !(detailOpen || logOpen);
@@ -1654,10 +1659,10 @@ function checkPachi() {
   }, 450);
 }
 function render() {
-  if ((fxN > 0)) { renderSheets(); return; } // 演出が終わってから画面を更新する（開いていたシートは先に閉じる）
+  if ((fxN > 0)) { renderSheets(true); return; } // 演出が終わってから画面を更新する（演出の間はシートを閉じておき、選ぶ画面も演出の後に開く）
   if (fan && !(S.pending && !isCpu(S.pending.request.player) && isDeckPick(S.pending.request))) closeFan();
   canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
-  renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets(); autoTray(); renderHandHold(); // シャカパチは手札をゆっくりなぞった時だけ（罠が来た時などの自動の演出はしない）
+  renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets(fxSoon()); autoTray(); renderHandHold(); // シャカパチは手札をゆっくりなぞった時だけ（罠が来た時などの自動の演出はしない）
   // これから召喚の演出をするカードは、演出が始まるまで盤面に出さない（先に置かれてから巻き戻って見えないように）
   for (const j of pendingSummons) if (j && j.uid != null && !j.search && !j.handOpen && !j.handAdd) { const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`); if (el) el.style.visibility = 'hidden'; }
   $('#result').hidden = S.winner === null;
