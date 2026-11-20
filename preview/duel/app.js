@@ -79,13 +79,27 @@ function commit(next) {
 let fxN = 0;   // 再生中の演出の数（0 になった時だけ画面を更新する。演出が重なっても途中で描き直さない）
 const fxMode = () => ($('#fxMode') && $('#fxMode').value) || 'full';
 let pendingSummons = [];   // 画面を更新した後に再生する召喚の演出
-let heldAnims = [];        // 効果の処理の途中で選んでいる間、待たせているカードの演出
+let heldAnims = [];
+const earlySummon = new Set(); // 置いた時に召喚の演出を済ませたカード        // 効果の処理の途中で選んでいる間、待たせているカードの演出
 function queueBattleFx(prev, next) {
   if (fxMode() === 'none' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   let fresh = (next.anim || []).filter(x => x.seq > (prev.animSeq ?? 0));
   // 効果の処理の途中で選ぶこと（死者蘇生の表示形式など）がある間は、カードの演出を待たせ、選び終わってから召喚の演出と続けて流す
   if (next.pending) { heldAnims.push(...fresh.filter(x => x.kind === 'resolve')); fresh = fresh.filter(x => x.kind !== 'resolve'); }
   else if (heldAnims.length) { fresh = [...heldAnims, ...fresh]; heldAnims = []; }
+  // 召喚（通常・アドバンス・反転・決まった手順の特殊召喚）は、カードを場に置いた時にすぐ召喚の演出をする。
+  // 召喚が成功した時（相手の応答の後）に、もう一度演出してカードが2回出てくるように見えないようにする
+  for (const pp of [0, 1]) for (const u of next.players[pp].mzone) {
+    if (u === null || earlySummon.has(u)) continue;
+    const c = next.cards[u], pc = prev.cards[u];
+    if (!c || !c.summoning) continue;
+    const onField = pc && pc.zone === 'mzone';
+    if (onField && pc.faceUp === c.faceUp) continue; // もう置いてあって、向きも変わっていない
+    const j = summonInfo(prev, next, { uid: u, how: onField ? 'flip' : 'normal', mats: next.animMats ?? [], from: pc ? pc.zone : null });
+    if (j) { pendingSummons.push(j); earlySummon.add(u); }
+  }
+  fresh = fresh.filter(x => !(x.kind === 'summon' && earlySummon.delete(x.uid)));
+  for (const u of [...earlySummon]) { const c = next.cards[u]; if (!c || c.zone !== 'mzone' || !c.summoning) earlySummon.delete(u); }
   if (!fresh.length) return;
   // 融合・儀式の素材：召喚の前に墓地へ送られるので、元の場所（手札・場）を覚えておき、いつもの移動の演出はしない
   for (const u of next.animMats || []) {
@@ -282,6 +296,7 @@ const deckCodes = () => [$('#deck0').value, $('#deck1').value];
 const deckNames = () => deckCodes().map(c => DECKS[c]?.name ?? '');
 /** 今の状態で CPU の考えを出す（Worker が使えなければこの画面の中で） */
 function think(state) {
+  if (state.askZone) state = { ...state, askZone: undefined };
   const local = () => new Promise(res => setTimeout(() => {
     try { res({ ok: true, thought: idealThink(state, { deckCodes: deckCodes() }, deckNames()) }); } catch (e) { res({ ok: false, error: e.message }); }
   }, 30));
@@ -372,6 +387,14 @@ function narrate(prev, next) {
     return;
   }
   if (next.winner !== null && prev.winner === null) { say(next.winner === CPU ? 'win' : 'lose'); return; }
+  // あなたの罠で切り返された（攻撃が止まった・モンスターが破壊された・ダメージを受けた）
+  const done = prev.chain.filter(l => l.player === 0 && l.cardKind === 'trap' && !next.chain.some(n => n.uid === l.uid && n.serial === l.serial));
+  if (done.length) {
+    const lostMon = monstersOf(prev, CPU).some(u => !monstersOf(next, CPU).includes(u));
+    const hit = next.players[CPU].lp < prev.players[CPU].lp;
+    const stopped = prev.battle && next.cards[prev.battle.attacker]?.controller === CPU && (!next.battle || next.battle.attacker !== prev.battle.attacker);
+    if (lostMon || hit || stopped) { say('foiled', { card: defOf(next, done[done.length - 1].uid).name }); return; }
+  }
   const lost = prev.players[CPU].lp - next.players[CPU].lp;
   if (lost >= 1500 && next.winner === null) { say('hurt', { dmg: lost }); return; }
   const b = next.battle;
@@ -388,14 +411,37 @@ function narrate(prev, next) {
 }
 
 /* ---------- 相手のフェイズの告知 ---------- */
+/* 告知は順番待ちにして、1つ出し切ってから次を出す（ターンの帯 → ドロー → スタンバイ → メイン1 …）。出している間は、画面の更新とCPUの手番も待つ */
+const PHASE_ORDER = ['draw', 'standby', 'main1', 'battle', 'main2', 'end'];
+let cueQ = [];
 function phaseCue(prev, next) {
   if (!cpuMode() || next.winner !== null || next.turnPlayer !== CPU) return;
   if (prev.phase === next.phase && prev.turn === next.turn) return;
-  const el = document.createElement('div');
-  el.className = 'phase-cue';
-  el.innerHTML = `<small>相手のターン</small><b>${esc(PHASE_LABEL[next.phase] || next.phase)}</b>`;
-  $('.droot').appendChild(el);
-  setTimeout(() => el.remove(), 1500);
+  // 1回の処理でドロー・スタンバイを通り過ぎた時も、通ったフェイズを1つずつ告知する
+  const to = PHASE_ORDER.indexOf(next.phase), from = prev.turn !== next.turn ? 0 : PHASE_ORDER.indexOf(prev.phase) + 1;
+  for (let i = Math.max(0, from); i < to; i++) if (i <= 1) cueQ.push(PHASE_ORDER[i]);
+  cueQ.push(next.phase);
+}
+function playPendingCues() {
+  if (!cueQ.length || fxN > 0) return false;
+  const q = cueQ; cueQ = [];
+  fxN++;
+  (async () => {
+    for (const ph of q) {
+      const el = document.createElement('div');
+      el.className = 'phase-cue';
+      // 何も起きないフェイズ（ドロー・スタンバイ・エンド）は短め、メイン・バトルは長め
+      const ms = ['draw', 'standby', 'end'].includes(ph) ? 800 : 1300;
+      el.style.animationDuration = ms + 'ms';
+      el.innerHTML = `<small>相手のターン</small><b>${esc(PHASE_LABEL[ph] || ph)}</b>`;
+      $('.droot').appendChild(el);
+      await new Promise(r => setTimeout(r, ms + 80));
+      el.remove();
+    }
+    fxN = Math.max(0, fxN - 1);
+    render();
+  })();
+  return true;
 }
 
 /* ---------- 対象の矢印：チェーン中のカードが対象にしたカードへ、点線の矢印を出す ---------- */
@@ -507,6 +553,7 @@ function newDuel() {
   const d0 = DECKS[$('#deck0').value] ?? first, d1 = DECKS[$('#deck1').value] ?? first;
   const f = $('#first').value;
   S = createGame({ pool: CARD_POOL, decks: [d0, d1], firstPlayer: f === 'r' ? undefined : Number(f) });
+  S.askZone = cpuMode() ? [0] : [0, 1];
   history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp]; trace = []; thinking = null;
   closeMenu();
   render();
@@ -531,7 +578,7 @@ function run(action) {
   }
 }
 // CPU の行動は記録しないので、元に戻すと自分が前に判断した場面まで戻る
-function undo() { if (!history.length) return; clearTimeout(cpuTimer); closeFan(); heldAnims = []; tombIntent = null; S = history.pop(); pick = []; render(); }
+function undo() { if (!history.length) return; clearTimeout(cpuTimer); clearTimeout(offerT); cueQ = []; closeFan(); heldAnims = []; tombIntent = null; S = history.pop(); pick = []; render(); }
 
 let toastT;
 function toast(msg, bad) {
@@ -743,9 +790,12 @@ function sortHand(s, uids) {
   });
 }
 const sortsHand = p => !isCpu(p);
+/** これから手札に加わる演出をするカード（演出が終わるまで手札に出さない） */
+const comingToHand = p => new Set(pendingSummons.filter(j => j && j.handAdd && j.p === p).flatMap(j => j.added));
 function renderHand(p) {
   const hide = cpuMode() ? p === CPU : $('#hideOpp').checked && p !== actorOf(S);
-  const h = sortsHand(p) ? sortHand(S, S.players[p].hand) : S.players[p].hand;
+  const coming = comingToHand(p);
+  const h = (sortsHand(p) ? sortHand(S, S.players[p].hand) : S.players[p].hand).filter(u => !coming.has(u));
   return h.length ? h.map(u => cardHtml(u, { hidden: hide })).join('') : '<span class="empty">手札なし</span>';
 }
 function renderSide() {
@@ -851,7 +901,7 @@ function renderDock() {
   const actor = $('#actor'), hint = $('#actorHint'), btns = $('#phaseBtns'), go = $('#goBtn');
   const legal = humanActing() && !S.pending ? legalActions(S) : [];
   const has = a => legal.some(x => JSON.stringify(x) === JSON.stringify(a));
-  const b = (label, a) => `<button class="btn" data-act='${esc(JSON.stringify(a))}'>${label}</button>`;
+  const b = (label, a, cls = '') => `<button class="btn${cls ? ' ' + cls : ''}" data-act='${esc(JSON.stringify(a))}'>${label}</button>`;
   const setGo = (label, sub, act, opts = {}) => {
     go.innerHTML = `${esc(label)}${sub ? `<small>${esc(sub)}</small>` : ''}`;
     go.disabled = !!opts.disabled;
@@ -900,7 +950,9 @@ function renderDock() {
     btns.innerHTML = acts.slice(0, 3).map(x => {
       const eff = (SCRIPTS[S.cards[x.uid].code]?.effects || []).find(e => e.id === x.effect);
       const label = `「${defOf(S, x.uid).name}」${multi(x.uid) && eff ? `の${eff.label}` : ''}を発動`;
-      return b(esc(label), { type: 'activate', card: x.uid, effect: x.effect });
+      // 発動するボタンは、カードの種類の色で目立たせる（罠：赤紫、魔法：緑、モンスター効果：橙）
+      const k = defOf(S, x.uid).kind;
+      return b(esc(label), { type: 'activate', card: x.uid, effect: x.effect }, `act-card ${k === 'trap' ? 'k-trap' : k === 'spell' ? 'k-spell' : 'k-mon'}`);
     }).join('');
     setGo(g.label, g.sub, g.a);
     return;
@@ -939,6 +991,18 @@ function shouldAutoPass() {
   const ev = S.lastEvents.find(e => e.type === 'summoned' || e.type === 'attackDeclared');
   if (ev) return ev.player === me;
   return true;
+}
+let offerT;
+function scheduleOffer() {
+  clearTimeout(offerT);
+  const due = () => S && S.winner === null && cpuMode() && !S.pending && S.turnPlayer === 0 && S.window.kind === 'open' && S.window.respondDue
+    && S.lastEvents.some(e => e.type === 'summoned' && e.player === 0) && fxN === 0 && !fxSoon();
+  if (!due()) return;
+  offerT = setTimeout(() => {
+    if (!due()) return;
+    try { commit(applyAction(S, { type: 'offer' })); } catch (e) { console.warn(e); return; }
+    render();
+  }, 500);
 }
 let autoT;
 function scheduleAutoPass() {
@@ -1046,10 +1110,13 @@ function renderChoice() {
   if (r.kind === 'yesno') return head + `<div class="acts row2"><button class="btn act go" data-ans="true">はい</button><button class="btn act" data-ans="false">いいえ</button></div>`;
   if (r.kind === 'option') return head + `<div class="acts">${r.options.map((o, i) => `<button class="btn act${i === 0 ? ' go' : ''}" data-ans="${i}">${esc(o)}</button>`).join('')}</div>`;
   const where = u => ({ hand: '手札', deck: 'デッキ', gy: '墓地', mzone: 'フィールド', emz: 'フィールド', szone: 'フィールド', extra: 'EX', banished: '除外' }[S.cards[u].zone]);
-  const label = u => { const c = S.cards[u]; return (c.faceUp || c.zone !== 'mzone' || c.controller === r.player) ? defOf(S, u).name : '裏側のモンスター'; };
+  // 相手の裏側のカード（伏せた魔法・罠、裏守備のモンスター）と相手の手札は、中身を見せない。どれか分かるように、画面の左から何番目かを書く
+  const hidden = u => { const c = S.cards[u]; return c.controller !== r.player && ((!c.faceUp && ['mzone', 'emz', 'szone', 'fzone'].includes(c.zone)) || c.zone === 'hand' || c.zone === 'deck'); };
+  const pos = u => { const c = S.cards[u]; if (c.zone !== 'mzone' && c.zone !== 'szone') return ''; const i = c.controller === 1 ? 5 - c.index : c.index + 1; return `（左から${i}番目）`; };
+  const label = u => { const c = S.cards[u]; if (!hidden(u)) return defOf(S, u).name; return c.zone === 'hand' ? '相手の手札' : c.zone === 'mzone' || c.zone === 'emz' ? `相手の裏側のモンスター${pos(u)}` : `相手の伏せカード${pos(u)}`; };
   const range = r.min === r.max ? `${r.min}枚` : `${r.min}〜${r.max}枚`;
   const ok = pick.length >= r.min && pick.length <= r.max;
-  return head + `<p class="tl">${range}選んでください（${pick.length}枚選択中）。盤面のカードを押しても選べます。</p><div class="optlist cards" role="listbox" aria-multiselectable="${r.max > 1}">${r.options.map(u => { const c = S.cards[u], show = c.faceUp || c.zone !== 'mzone' || c.controller === r.player; const d = defOf(S, u); return `<button class="opt cardopt${pick.includes(u) ? ' on' : ''}" data-opt="${u}" role="option" aria-selected="${pick.includes(u)}" aria-label="${esc(label(u))}"><span class="${show ? faceCls(d) : 'card back'}">${show ? faceHtml(u, d, false) : ''}</span><span class="on-mark" aria-hidden="true">✓</span><small>${esc(label(u))}</small><small class="wh">${NAME(c.controller)}・${where(u)}</small></button>`; }).join('')}</div>
+  return head + `<p class="tl">${range}選んでください（${pick.length}枚選択中）。盤面のカードを押しても選べます。</p><div class="optlist cards" role="listbox" aria-multiselectable="${r.max > 1}">${r.options.map(u => { const c = S.cards[u], show = !hidden(u); const d = defOf(S, u); return `<button class="opt cardopt${pick.includes(u) ? ' on' : ''}" data-opt="${u}" role="option" aria-selected="${pick.includes(u)}" aria-label="${esc(label(u))}"><span class="${show ? faceCls(d) : 'card back'}">${show ? faceHtml(u, d, false) : ''}</span><span class="on-mark" aria-hidden="true">✓</span><small>${esc(label(u))}</small><small class="wh">${NAME(c.controller)}・${where(u)}</small></button>`; }).join('')}</div>
     <button class="btn primary confirm" id="confirmPick" ${ok ? '' : 'disabled'}>決定</button>`;
 }
 
@@ -1342,7 +1409,20 @@ async function handAddFx(j) {
   if (j.p === 0 && narrow()) $('.droot').classList.add('hand-lifted');
   const stage = layer.querySelector('.dfx-stage');
   const W = stage.clientWidth || innerWidth, H = stage.clientHeight || innerHeight;
-  const cw = narrow() ? 78 : 100, ch = cw * 86 / 59;
+  // 自分の手札（スマホ）：最後は、開いた手札と同じ大きさ・同じ並びのまま降ろして、そのまま手札になる（縮めない）。
+  // そのために、先に手札の場所を開いておく（演出の間は手札のカードは隠れている）
+  let handGeo = null;
+  if (j.p === 0 && narrow() && hand) {
+    const tr = $('#tray');
+    if (!trayOpen && tr) {
+      const els0 = [tr, hand];
+      els0.forEach(e => { e.style.transition = 'none'; });
+      setTray(true); void tr.offsetWidth;
+      requestAnimationFrame(() => requestAnimationFrame(() => els0.forEach(e => { e.style.transition = ''; })));
+    }
+    handGeo = { hr: rectOf(hand), hw: parseFloat(getComputedStyle(hand).getPropertyValue('--cw')) || 104 };
+  }
+  const cw = handGeo ? handGeo.hw : narrow() ? 78 : 100, ch = cw * 86 / 59;
   const cx = W / 2, cy = H * .5;
   // カード（表と裏を持ち、裏返しは rotateY）
   const order0 = [...j.kept, ...j.added];
@@ -1391,6 +1471,18 @@ async function handAddFx(j) {
   await Promise.all(sorted.map((u, i) => anim(els.get(u), tf(stack(order0.indexOf(u)), 180), tf(fanPos(i, n), 360), 300, 0, 'cubic-bezier(.22,.8,.25,1)')));
   await wait(320);
   // ⑤ 手札の場所へ
+  if (handGeo) {
+    // 開いた手札と同じ形（重なり・傾き・高さ）の扇のまま、まっすぐ下へ降ろす。降りた所がそのまま手札の位置
+    const hr = handGeo.hr, spread = Math.min(30, n * 4.5), spill = ch * 1.6 * Math.sin(spread / 2 * Math.PI / 180);
+    const st = n > 1 ? Math.max(8, Math.min(cw * .66, (hr.width - cw - spill * 2 - 8) / (n - 1))) : 0;
+    const handPos = i => { const t = n === 1 ? 0 : i / (n - 1) - .5; return { x: hr.left - sr.left + hr.width / 2 + t * st * (n - 1), y: hr.bottom - sr.top - ch / 2 + t * t * 40 * cw / 84, r: t * spread }; };
+    // まず中央で手札と同じ形に整え、それから降ろす
+    await Promise.all(sorted.map((u, i) => { const h = handPos(i); return anim(els.get(u), tf(fanPos(i, n), 360), tf({ ...h, y: cy }, 360), 260, 0, 'cubic-bezier(.3,.7,.3,1)'); }));
+    await Promise.all(sorted.map((u, i) => { const h = handPos(i); return anim(els.get(u), tf({ ...h, y: cy }, 360), tf(h, 360), 380, 0, 'cubic-bezier(.4,0,.2,1)'); }));
+    // 画面の更新で本物の手札が同じ場所に出てから、演出のカードを消す
+    setTimeout(() => { layer.remove(); $('.droot').classList.remove('hand-lifted'); }, 80);
+    return;
+  }
   const hr = rectOf(hand), to = { x: hr.left + hr.width / 2 - sr.left, y: hr.top + hr.height / 2 - sr.top, r: 0 };
   await Promise.all(sorted.map((u, i) => anim(els.get(u), tf(fanPos(i, n), 360), tf({ x: to.x + (i - n / 2) * 10, y: to.y, r: 0 }, 360, .6), 360, Math.min(i * 16, 160), 'cubic-bezier(.5,0,.75,.4)')));
   layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T(160), fill: 'forwards' });
@@ -1641,6 +1733,27 @@ async function lockOn(uids, prompt = '') {
     el.animate([{ filter: 'none' }, { filter: `brightness(1.6) drop-shadow(0 0 10px ${col})` }, { filter: 'none' }], { duration: dur(320) });
   }));
 }
+/** デッキから墓地へ送るカードを、表にして画面の中央に並べて見せる。見せた位置から墓地へ飛ぶように、出発の位置を書き換える */
+async function revealMill(mill, P) {
+  const n = mill.length, cw = Math.min(110, (innerWidth - 40) / n - 10), ch = cw * 86 / 59;
+  const layer = document.createElement('div');
+  layer.className = 'mill-layer';
+  const who = cpuMode() ? (mill[0].fromP === 0 ? 'あなた' : 'CPU') : NAME(mill[0].fromP);
+  layer.innerHTML = `<div class="mill-head"><b>デッキの上から墓地へ送る${n}枚</b><span>${esc(who)}のデッキ</span></div><div class="mill-row"></div>`;
+  $('.droot').appendChild(layer);
+  const row = layer.querySelector('.mill-row');
+  const els = mill.map(m => { const e = document.createElement('span'); e.className = faceCls(m.d) + ' mill-card'; e.style.width = cw + 'px'; e.style.fontSize = (cw / 8).toFixed(1) + 'px'; e.innerHTML = faceHtml(m.u, m.d, false); row.appendChild(e); return e; });
+  const deck = P.piles[`${mill[0].fromP}:deck`];
+  els.forEach((e, i) => {
+    const r = e.getBoundingClientRect();
+    if (deck) e.animate([{ transform: `translate(${deck.left + deck.width / 2 - r.left - r.width / 2}px,${deck.top + deck.height / 2 - r.top - r.height / 2}px) scale(.4)`, opacity: .3 }, { transform: 'none', opacity: 1 }],
+      { duration: dur(420), delay: dur(i * 140), easing: 'cubic-bezier(.2,.8,.25,1)', fill: 'backwards' });
+  });
+  await wait(420 + (n - 1) * 140 + 1100);
+  els.forEach((e, i) => P.from.set(mill[i].u, e.getBoundingClientRect()));
+  layer.remove();
+  void ch;
+}
 /** 画面を更新した後：たまっている移動・発動・ターン・勝敗の演出を再生する */
 function playPendingMoves() {
   if (!pendingMoves || (fxN > 0)) return false;
@@ -1648,6 +1761,9 @@ function playPendingMoves() {
   fxN++;
   (async () => {
     try {
+      // デッキの上から墓地へ送るカード（光の援軍など）：まず表にして中央に並べて見せてから、墓地へ送る
+      const mill = P.moves.filter(m => m.from === 'deck' && m.to === 'gy');
+      if (mill.length) await revealMill(mill, P);
       await Promise.all(P.moves.map((m, i) => flyOne(m, P, i)));
       await Promise.all(P.acts.map((a, i) => activateOne(a, P, i)));
       if (P.win !== null) await banner(P.win === 'draw' ? '引き分け' : cpuMode() ? (P.win === 0 ? '勝利！' : '敗北…') : `${NAME(P.win)}の勝利！`, P.win === 0 || !cpuMode() ? 'win' : 'lose', 1800);
@@ -1676,8 +1792,27 @@ function tweenLp(el, p, to) {
 }
 
 /* ---------- シート（スマホ） ---------- */
+const ZONE_Q = /を出すモンスターゾーン$/;
+/** 効果で特殊召喚するマスを選んでいる時：選べるマス（uid → 答えの番号） */
+function zonePick() {
+  if (!S || !S.pending || isCpu(S.pending.request.player)) return null;
+  const r = S.pending.request;
+  if (r.kind !== 'option' || !ZONE_Q.test(r.prompt)) return null;
+  const p = r.player, map = new Map();
+  r.options.forEach((o, i) => { const z = Number((o.match(/(\d+)$/) || [])[1]) - 1; if (z >= 0) map.set(`${p}:mz:${z}`, i); });
+  return { r, map };
+}
+function renderZonePick() {
+  ROOT.querySelectorAll('#board .zone-pick').forEach(el => el.classList.remove('zone-pick'));
+  let tip = $('.zone-tip');
+  const zp = fxSoon() || fxN > 0 ? null : zonePick();
+  if (!zp) { if (tip) tip.remove(); return; }
+  for (const k of zp.map.keys()) { const el = ROOT.querySelector(`#board [data-zone="${k}"]`); if (el) el.classList.add('zone-pick'); }
+  if (!tip) { tip = document.createElement('div'); tip.className = 'zone-tip'; $('.droot').appendChild(tip); }
+  tip.textContent = `${zp.r.prompt.replace(ZONE_Q, '')}を出すマスを押してください`;
+}
 function renderSheets(duringFx = false) {
-  const humanChoice = S.pending && !isCpu(S.pending.request.player);
+  const humanChoice = S.pending && !isCpu(S.pending.request.player) && !zonePick();
   const detailOpen = !duringFx && narrow() && ((humanChoice && !peek && !fan) || (sheet === 'detail' && selected !== null));
   const logOpen = !duringFx && narrow() && sheet === 'log' && !detailOpen;
   $('#detailSheet').classList.toggle('open', detailOpen);
@@ -1721,12 +1856,16 @@ function measureBottom() {
 function renderHandHold() {
   const el = $('#handHold'); if (!el) return;
   // 手札を閉じた時：開いた時と同じ大きさのカードを、画面の左下の角から扇形に飛び出させる（下の方は画面の外）
-  const hand = sortHand(S, S.players[0].hand);
+  const coming = comingToHand(0);
+  const hand = sortHand(S, S.players[0].hand).filter(u => !coming.has(u));
   const key = hand.join(',');
   if (el.dataset.key !== key) {
-    const n = hand.length, spread = Math.min(64, 10 + n * 7);
+    // 一番右のカードはまっすぐ立てて全部見せ、残りは左へ扇のように傾ける。枚数が増えるほど、左のカードから自然に画面の外へはみ出す
+    // 枚数が少ない時は、カードを高めに出して見やすくする
+    const n = hand.length, step = n <= 1 ? 0 : Math.max(7, Math.min(12, 48 / (n - 1)));
+    el.style.setProperty('--lift', n <= 2 ? '.3' : n <= 4 ? '.4' : '.5');
     el.innerHTML = hand.map((u, i) => {
-      const a = (n === 1 ? 0 : i / (n - 1)) * spread - 12;
+      const a = -(n - 1 - i) * step;
       return `<span class="${faceCls(defOf(S, u))} hh-card" style="--a:${a.toFixed(1)}deg;--i:${i}">${faceHtml(u, defOf(S, u), false)}</span>`;
     }).join('');
     el.dataset.key = key;
@@ -1802,7 +1941,7 @@ function render() {
   if ((fxN > 0)) { renderSheets(true); return; } // 演出が終わってから画面を更新する（演出の間はシートを閉じておき、選ぶ画面も演出の後に開く）
   if (fan && !(S.pending && !isCpu(S.pending.request.player) && isDeckPick(S.pending.request))) closeFan();
   canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
-  renderBoard(); renderSide(); renderTop(); renderChain(); renderTargets(); tombAuto(); renderDetail(); renderLog(); renderDock(); renderSheets(fxSoon()); autoTray(); renderHandHold(); // シャカパチは手札をゆっくりなぞった時だけ（罠が来た時などの自動の演出はしない）
+  renderBoard(); renderSide(); renderTop(); renderChain(); renderTargets(); tombAuto(); renderZonePick(); renderDetail(); renderLog(); renderDock(); renderSheets(fxSoon()); autoTray(); renderHandHold(); // シャカパチは手札をゆっくりなぞった時だけ（罠が来た時などの自動の演出はしない）
   // これから召喚の演出をするカードは、演出が始まるまで盤面に出さない（先に置かれてから巻き戻って見えないように）
   for (const j of pendingSummons) if (j && j.uid != null && !j.search && !j.handOpen && !j.handAdd) { const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`); if (el) el.style.visibility = 'hidden'; }
   $('#result').hidden = S.winner === null;
@@ -1810,7 +1949,9 @@ function render() {
   // カードの移動・召喚の演出があれば、それが終わるまでCPUの手番と自動パスを待つ
   if (playPendingMoves()) { saveSoon(); return; }
   if (playPendingSummons()) { saveSoon(); return; }
+  if (playPendingCues()) { saveSoon(); return; }
   scheduleCpu();
+  scheduleOffer();
   scheduleAutoPass();
   continueEnd();
   saveSoon();
@@ -1844,12 +1985,48 @@ function showPile(p, kind) {
     const groups = [];
     for (const u of sortHand(S, list)) { const g = groups.find(x => S.cards[x.u].code === S.cards[u].code); if (g) g.n++; else groups.push({ u, n: 1 }); }
     const body = `<p class="menu-note">並び順は山札の順番ではありません（種類・レベル順）。カードを押すと効果を見られます。</p><div class="pilelist">${groups.map(g => `<span class="deck-g">${cardHtml(g.u)}${g.n > 1 ? `<b class="deck-n">×${g.n}</b>` : ''}</span>`).join('')}</div>`;
+    $('#pileBox').classList.remove('pile-fan');
     $('#pileBox').innerHTML = `<div class="box-head"><h3>${NAME(p)}のデッキ（${list.length}枚）</h3><button class="btn small ghost" id="pileClose">閉じる</button></div>${body}`;
     $('#pileDlg').hidden = false;
     return;
   }
-  const body = kind === 'deck' || hiddenExtra ? `<p class="menu-note">中身は見られません（${list.length}枚）。</p>` :
-    list.length ? `<div class="pilelist">${[...list].reverse().map(u => cardHtml(u)).join('')}</div>` : '<p class="menu-note">カードはありません。</p>';
+  // 墓地・除外・EX：カードを扇の形に並べ、横にスクロールして見る。真ん中のカードを大きく見せ、下にその効果を出す。最初は一番新しいカード
+  if (!(kind === 'deck' || hiddenExtra) && list.length) {
+    const order = [...list].reverse();
+    $('#pileBox').innerHTML = `<div class="box-head"><h3>${NAME(p)}の${label}（${list.length}枚）</h3><button class="btn small ghost" id="pileClose">閉じる</button></div>`
+      + `<p class="menu-note pile-tip">${kind === 'extra' ? '' : '左が一番新しいカード。'}横にスクロールして見られます</p>`
+      + `<div class="pile-car" tabindex="0" aria-label="${label}のカード">${order.map(u => { const d = defOf(S, u); return `<span class="pile-it" data-u="${u}"><span class="${faceCls(d)} pile-face">${faceHtml(u, d, false)}</span></span>`; }).join('')}</div>`
+      + `<div class="pile-info" aria-live="polite"></div>`;
+    $('#pileDlg').hidden = false;
+    $('#pileBox').classList.add('pile-fan');
+    const car = $('#pileBox .pile-car'), items = [...car.querySelectorAll('.pile-it')], info = $('#pileBox .pile-info');
+    let cur = null;
+    const update = () => {
+      const r = car.getBoundingClientRect(), mid = r.left + r.width / 2;
+      let best = null, bd = Infinity;
+      for (const it of items) {
+        const ir = it.getBoundingClientRect(), d = (ir.left + ir.width / 2 - mid) / ir.width; // 真ん中からカード何枚分ずれているか
+        const a = Math.max(-1.6, Math.min(1.6, d));
+        it.style.setProperty('--k', String(1 - Math.min(.42, Math.abs(a) * .3)));
+        it.style.setProperty('--r', (a * 10).toFixed(1) + 'deg');
+        it.style.setProperty('--y', (a * a * 14).toFixed(1) + 'px');
+        it.style.zIndex = String(100 - Math.round(Math.abs(d) * 10));
+        if (Math.abs(d) < bd) { bd = Math.abs(d); best = it; }
+      }
+      if (best && best !== cur) {
+        cur = best; items.forEach(x => x.classList.toggle('on', x === best));
+        const u = Number(best.dataset.u), d = defOf(S, u);
+        const type = d.kind === 'monster' ? `★${d.level ?? '-'}・${d.attribute || ''}・${d.race || ''}　ATK ${d.atk ?? '?'} / DEF ${d.def ?? '?'}` : `${d.subtype || ''}${d.kind === 'spell' ? '魔法' : '罠'}`;
+        info.innerHTML = `<b>${esc(d.name)}</b><small>${esc(type)}</small><p>${esc(d.text || '')}</p>`;
+      }
+    };
+    car.addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
+    car.scrollLeft = 0;
+    requestAnimationFrame(update);
+    return;
+  }
+  $('#pileBox').classList.remove('pile-fan');
+  const body = kind === 'deck' || hiddenExtra ? `<p class="menu-note">中身は見られません（${list.length}枚）。</p>` : '<p class="menu-note">カードはありません。</p>';
   $('#pileBox').innerHTML = `<div class="box-head"><h3>${NAME(p)}の${label}（${list.length}枚）</h3><button class="btn small ghost" id="pileClose">閉じる</button></div>${body}`;
   $('#pileDlg').hidden = false;
 }
@@ -2132,8 +2309,13 @@ function placeGesture(dx, dy, target) {
   if (dy > 40 && dy > Math.abs(dx)) { cancel(); return; }                       // 下に払う：やめて手札に戻す
   if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) { place.m = (place.m + 1) % place.modes.length; drawPlace(); return; } // 横に払う：切り替え
   if (Math.hypot(dx, dy) > 30) return;                                          // 上に払う：何もしない
-  const { u, acts, t, modes, m } = place;
-  endPlace();
+  const { u, acts, t, modes, m, layer } = place;
+  // 置いたカードはすーっと消えて、そのまま召喚の演出（カードが着地する）につながる
+  const g = layer.querySelector('.place-ghost'), chip = layer.querySelector('.place-chip');
+  if (chip) chip.remove();
+  place = null; t.el.classList.remove('aim-hover');
+  if (g) g.animate([{ opacity: 1, filter: 'brightness(1)' }, { opacity: 0, filter: 'brightness(1.8)' }], { duration: 220, easing: 'ease-out', fill: 'forwards' });
+  setTimeout(() => layer.remove(), 240);
   placeConfirm(u, acts, t, modes[m]);
 }
 /** 決定：選んだマスに召喚・セット・発動。リリースの組み合わせなど、まだ選ぶことがある時はカードの説明の欄から選ぶ */
@@ -2358,6 +2540,8 @@ root.addEventListener('click', e => {
   if (handPressFired) { handPressFired = false; e.preventDefault(); return; }
   if (aim || place) return;
   const t = e.target;
+  { const zp = zonePick(), zEl = t.closest && t.closest('#board [data-zone]');
+    if (zp && zEl && zp.map.has(zEl.dataset.zone)) { run({ type: 'answer', value: zp.map.get(zEl.dataset.zone) }); return; } }
   if (t.closest('[data-fanok]')) { if (fan) fanFinish(fan.sel); return; }
   if (t.closest('[data-fanskip]')) { fanFinish([]); return; }
   if (t.closest('[data-fanundo]')) { closeFan(); undo(); return; }
@@ -2490,7 +2674,7 @@ export function boot(root, opts = {}) {
     $('#hideOppRow').hidden = cpuMode();
     showDeckFmt();
     if (data && data.S && (data.v === 4 || data.v === SAVE_V)) {
-      try { S = data.S; history = data.history || []; trace = Array.isArray(data.trace) ? data.trace : []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); return; }
+      try { S = data.S; if (!S.askZone) S.askZone = cpuMode() ? [0] : [0, 1]; history = data.history || []; trace = Array.isArray(data.trace) ? data.trace : []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); return; }
       catch (e) { console.warn('保存していたデュエルを開けませんでした', e); }
     }
     newDuel();

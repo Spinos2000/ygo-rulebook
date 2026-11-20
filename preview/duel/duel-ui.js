@@ -734,6 +734,29 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .hb-flip > .hb-back { transform: rotateY(180deg) }
 .hb-card:hover .hb-flip.up, .hb-card.peek .hb-flip.up { transform: translateY(-8px) }
 .hb-card.peek .hb-face { box-shadow: 0 0 0 3px #ffe08a, 0 0 24px 6px rgba(255,224,138,.6) }
+.btn.act-card { color: #fff; font-weight: 800; border: 2px solid var(--edge); box-shadow: 0 0 0 2px rgba(255,255,255,.12), 0 4px 12px rgba(0,0,0,.35); animation: actGlow 1.6s ease-in-out infinite }
+.btn.act-card.k-trap { background: linear-gradient(160deg, #c2307f, #7d0d52) }
+.btn.act-card.k-spell { background: linear-gradient(160deg, #18a585, #06654f) }
+.btn.act-card.k-mon { background: linear-gradient(160deg, #d8692a, #8f3d0c) }
+@keyframes actGlow { 0%, 100% { filter: brightness(1) } 50% { filter: brightness(1.18) } }
+#board .zone.zone-pick { outline: 3px dashed var(--accent); outline-offset: -3px; box-shadow: 0 0 16px 4px color-mix(in srgb, var(--accent) 60%, transparent); animation: zonePick 1s ease-in-out infinite; cursor: pointer }
+@keyframes zonePick { 0%, 100% { filter: brightness(1) } 50% { filter: brightness(1.35) } }
+.zone-tip { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 96px); transform: translateX(-50%); z-index: 36; background: rgba(10,14,20,.88); color: #fff; font-weight: 800; font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--accent); white-space: nowrap; max-width: calc(100vw - 24px); overflow: hidden; text-overflow: ellipsis; pointer-events: none }
+.mill-layer { position: fixed; inset: 0; z-index: 30; background: rgba(6,14,10,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; pointer-events: none }
+.mill-head { display: grid; justify-items: center; gap: 2px; color: #fff; text-align: center }
+.mill-head b { font-family: var(--display); font-size: clamp(1rem, 4.6vw, 1.4rem) }
+.mill-head span { font-size: 12px; opacity: .8 }
+.mill-row { display: flex; gap: 10px; justify-content: center }
+.mill-row .mill-card { position: relative; flex: none; box-shadow: 0 10px 22px rgba(0,0,0,.5) }
+#pileBox.pile-fan { width: min(96vw, 640px); max-width: none; overflow: hidden }
+.pile-car { --pw: clamp(130px, 44vw, 210px); display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; padding: 26px calc(50% - var(--pw) / 2) 30px; margin: 0 -14px; touch-action: pan-x; overscroll-behavior: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch }
+.pile-car::-webkit-scrollbar { display: none }
+.pile-it { flex: none; width: var(--pw); margin: 0 calc(var(--pw) * -.18); scroll-snap-align: center; position: relative; transform: translateY(var(--y, 0px)) rotate(var(--r, 0deg)) scale(var(--k, 1)); transform-origin: 50% 120%; transition: transform .08s linear }
+.pile-it .pile-face { position: relative; display: block; width: 100%; font-size: calc(var(--pw) / 8); box-shadow: 0 10px 24px rgba(0,0,0,.5) }
+.pile-it.on .pile-face { box-shadow: 0 0 0 3px #ffe08a, 0 12px 28px rgba(0,0,0,.55) }
+.pile-info { display: grid; gap: 2px; padding: 8px 4px 0; min-height: 96px; max-height: 32vh; overflow-y: auto }
+.pile-info b { font-family: var(--display); font-size: 16px } .pile-info small { color: var(--sub); font-size: 12px } .pile-info p { margin: 4px 0 0; font-size: 13px; line-height: 1.6 }
+.pile-tip { margin: 0 }
 .place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: nowrap; max-width: calc(100vw - 24px) }
 .place-chip b { font-family: var(--display); font-size: 15px }
 .place-chip small { font-size: 10.5px; color: var(--sub) }
@@ -799,8 +822,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* 手札を閉じた時：開いた時と同じ大きさのカードが左下の角から扇形に飛び出す（下の方は画面の外） */
 @media (max-width: 860px) {
   .hand-hold { left: 0; bottom: 0; width: 50vw; height: calc(var(--hh-cw, 104px) * 86 / 59 * .62); overflow: visible; filter: none }
-  .hand-hold .hh-card { position: absolute; left: calc(4px + var(--i) * 6px); bottom: calc(var(--hh-cw, 104px) * 86 / 59 * -.5); width: var(--hh-cw, 104px); font-size: calc(var(--hh-cw, 104px) / 10.4);
-    transform-origin: 30% 150%; transform: rotate(var(--a)); pointer-events: none; box-shadow: 0 6px 14px rgba(0,0,0,.4) }
+  .hand-hold .hh-card { position: absolute; left: calc(26vw - var(--hh-cw, 104px) / 2); bottom: calc(var(--hh-cw, 104px) * 86 / 59 * var(--lift, .5) * -1); width: var(--hh-cw, 104px); font-size: calc(var(--hh-cw, 104px) / 10.4);
+    transform-origin: 50% 170%; transform: rotate(var(--a)); pointer-events: none; box-shadow: 0 6px 14px rgba(0,0,0,.4); transition: transform .35s cubic-bezier(.2,.8,.3,1), bottom .35s }
 }
 @media (max-width: 380px) { .hand-hold { --hh-cw: 94px } }
 /* 手札を閉じた時のボタン：フェイズの説明・ログ・ひとつ戻す・✋・エンド（2回押し）・次のフェイズへ（小さめ） */
@@ -824,7 +847,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* ドローの演出：カードは表と裏を持ち、位置・回転・裏返しを transform だけで動かす */
 .draw-fx { justify-content: flex-start }
 .dfx-stage { position: fixed; inset: 0; perspective: 900px; pointer-events: none }
-.dfx-card { position: absolute; left: 0; top: 0; transform-style: preserve-3d; will-change: transform }
+.dfx-card { position: absolute; left: 0; top: 0; transform-style: preserve-3d; will-change: transform; transform-origin: 50% 160% } /* 手札（.hand .card）と同じ回転の中心 */
 .dfx-card > .dfx-face, .dfx-card > .dfx-back { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: 0 8px 18px rgba(0,0,0,.45) }
 .dfx-card > .dfx-back { transform: rotateY(180deg) }
 .dfx-card.new > .dfx-face { box-shadow: 0 0 0 2px #ffe08a, 0 0 22px 6px rgba(255,224,138,.6) }
@@ -893,7 +916,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261120-1232</p>
+    <p class="menu-note ver">版：20261120-1319</p>
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>

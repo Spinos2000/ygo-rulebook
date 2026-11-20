@@ -830,6 +830,13 @@ export function canSpecialSummon(s           , uid        , p          , how    
 }
 
 /** 特殊召喚する。position を省略すると表側攻撃表示・表側守備表示をプレイヤーが選ぶ */
+/** 効果などで特殊召喚するマス。画面で遊ぶ人（s.askZone）には聞く（空いているマスが1つなら聞かない）。それ以外は左から詰める */
+export function pickMZone(x     , uid        , p          )         {
+  const s = x.s, free = freeMZones(s, p);
+  if (free.length <= 1 || !s.askZone?.includes(p)) return free[0];
+  const i = choose(x, { kind: 'option', prompt: `${nameOf(s, uid)}を出すモンスターゾーン`, options: free.map(z => `モンスターゾーン${z + 1}`), player: p });
+  return free[i] ?? free[0];
+}
 export function specialSummon(x     , uids          , opt                                                                                   = {})           {
   const s = x.s, p = opt.player ?? x.player, how = opt.how ?? 'special';
   const done           = [];
@@ -847,7 +854,7 @@ export function specialSummon(x     , uids          , opt                       
       const z = extraSummonZone(s, p) ;
       moveCard(s, uid, z.zone, { index: z.index, faceUp, position, controller: p });
     } else {
-      moveCard(s, uid, 'mzone', { index: freeMZones(s, p)[0], faceUp, position, controller: p });
+      moveCard(s, uid, 'mzone', { index: pickMZone(x, uid, p), faceUp, position, controller: p });
     }
     const n = s.cards[uid];
     if (how === 'ritual' || how === 'fusion') n.proper = true;
@@ -1103,7 +1110,7 @@ function doProcSummon(s           , p          , uid        )       {
   newStep(s);
   const pos = choose(x, { kind: 'option', prompt: `${nameOf(s, uid)}の表示形式`, options: ['表側攻撃表示', '表側守備表示'] }) === 0 ? 'atk' : 'def';
   if (ez) moveCard(s, uid, ez.zone, { index: ez.index, faceUp: true, position: pos, controller: p });
-  else moveCard(s, uid, 'mzone', { index: freeMZones(s, p)[0], faceUp: true, position: pos, controller: p });
+  else moveCard(s, uid, 'mzone', { index: pickMZone(x, uid, p), faceUp: true, position: pos, controller: p });
   s.cards[uid].summoning = true;
   s.cards[uid].counters.byProc = 1; // 「この方法で特殊召喚した場合」（D-HERO ドグマガイ）
   // 「この方法による特殊召喚は1ターンに1度」：成功した時に記録する（無効にされた場合はもう一度できる）
@@ -2081,6 +2088,16 @@ export function applyAction(prev           , action        )            {
     return s;
   }
   if (action.type === 'answer') throw new RuleError('選択を求められていません');
+  // 召喚成功の直後など、相手が応答できる時：ターンプレイヤーが次の行動をする前に、相手に応答の機会を渡す（奈落の落とし穴などがすぐ発動できるように）
+  if (action.type === 'offer') {
+    const w = s.window;
+    if (!(w.kind === 'open' && w.respondDue) || s.winner !== null) throw new RuleError('今は相手に応答の機会を渡す場面ではありません');
+    w.respondDue = false;
+    s.window = { kind: 'priority', player: opp(s.turnPlayer), passes: 1, mode: 'normal', cont: { type: 'none' } };
+    if (activatableList(s, opp(s.turnPlayer)).length > 0) { flow(s); return s; }
+    s.window = { kind: 'open', respondDue: false };
+    return s;
+  }
   if (!legalActions(s).some(a => sameAction(a, action))) throw new RuleError(explainIllegal(s, action));
 
   if (action.type === 'pass') { passPriority(s); flow(s); return s; }

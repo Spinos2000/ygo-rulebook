@@ -6,7 +6,7 @@ import {
   canSpecialSummon, specialSummon, sendToGy, addToHand, destroy, release, payLp, equipCard, equippedBySelf, linkCards,
   negateActivation, negateSummon, targetValid, addLingering, newStep, log, pl, currentAtk, FIELD_ZONES, sameCard,
   placeCounters, scriptOf, removeCounters, counterHolders, counterRoom, addStatMod, drawCards, gainLp, effectDamage, negateAttack,
-  banish, isOnField, isImmune, emit, millTop, randomOf, freeMZones, moveCard, currentDef, targetable, swapControl, advanceSummonNow, pushAnim, releasable, paysCost, normalSummonNow, createTokens, takeControl, setFaceDown, changePositionByEffect, isToken, summonedThisTurn, shuffleDeck, specialSummonedThisTurn, tributesFor, freeSZones, advanceTributeSets, extraSummonedThisTurn,
+  banish, isOnField, isImmune, emit, millTop, randomOf, freeMZones, moveCard, currentDef, targetable, swapControl, advanceSummonNow, pushAnim, pickMZone, releasable, paysCost, normalSummonNow, createTokens, takeControl, setFaceDown, changePositionByEffect, isToken, summonedThisTurn, shuffleDeck, specialSummonedThisTurn, tributesFor, freeSZones, advanceTributeSets, extraSummonedThisTurn,
 } from '../engine/game.js';
                                                               
 import {
@@ -2686,7 +2686,7 @@ export const SCRIPTS                             = {
       resolve: x => {
         const s = x.s;
         if (!sameCard(s, x.self, x.link .serial) || !isOnField(s.cards[x.self]) || !freeMZones(s, x.player).length) return;
-        moveCard(s, x.self, 'mzone', { index: freeMZones(s, x.player)[0], faceUp: true, position: 'def', controller: x.player });
+        moveCard(s, x.self, 'mzone', { index: pickMZone(x, x.self, x.player), faceUp: true, position: 'def', controller: x.player });
         const c = s.cards[x.self]; c.noAttack = true; c.summonedHow = 'special'; c.summonedTurn = s.turn;
         log(s, `${pl(x.player)}：${nameOf(s, x.self)}をモンスターとして守備表示で特殊召喚`);
         emit(s, { type: 'summoned', uid: x.self, player: x.player, how: 'special' });
