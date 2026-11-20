@@ -2075,6 +2075,7 @@ export const SCRIPTS                             = {
   '5889': {
     canDirectAttack: (s, self) => {
       const o = opp(s.cards[self].controller), mons = monstersOf(s, o);
+      // 魔法・罠カードの有無は関係ない（モンスターが守備表示だけなら直接攻撃できる）
       return mons.length > 0 && mons.every(u => s.cards[u].position === 'def');
     },
   },
