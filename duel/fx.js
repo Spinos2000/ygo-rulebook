@@ -815,7 +815,9 @@ function summonDraw(S) {
     ctx.restore();
   });
   const img = S.img;
-  if (k === 'normal' || k === 'advance') { if (!(k === 'advance' && t < 300)) { const p = Math.min(1, t / L), s = 1 + 1.1 * (1 - easeIn(p)); sImg(S, img, x, y - 160 * U * (1 - easeIn(p)), s, Math.min(1, t / 150)); } }
+  // 着地した後は本物の盤面のカードが見えるので、演出のカードは描かない（2枚重なって見えないように）
+  if (S.hit) { /* 描かない */ }
+  else if (k === 'normal' || k === 'advance') { if (!(k === 'advance' && t < 300)) { const p = Math.min(1, t / L), s = 1 + 1.1 * (1 - easeIn(p)); sImg(S, img, x, y - 160 * U * (1 - easeIn(p)), s, Math.min(1, t / 150)); } }
   else if (k === 'set') { const p = Math.min(1, t / L); sImg(S, img, x - (1 - ease(p)) * 120 * U, y, 1, p); }
   else if (k === 'special') { if (t > 200) { const p = Math.min(1, (t - 200) / (L - 200)); ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, y + S.h / 2); ctx.clip(); sImg(S, img, x, y + S.h * (1 - ease(p)), 1, 1); ctx.restore(); } }
   else if (k === 'flip') { const p = Math.min(1, t / L), sx = Math.cos(p * Math.PI); sImg(S, sx > 0 ? backImg() : img, x, y - 10 * Math.sin(p * Math.PI), 1 + .15 * Math.sin(p * Math.PI), 1, Math.abs(sx)); }
@@ -837,9 +839,9 @@ function summonDraw(S) {
       for (let g = 3; g >= 1; g--) { const q = Math.max(0, p - g * .07); if (p < 1) sImg(S, img, x, lerp(top, y, easeIn(q)), 1.8 - .8 * ease(q), .18 * (4 - g) / 4); }
       sImg(S, img, x, lerp(top, y, easeIn(p)), 1.8 - .8 * ease(p), Math.min(1, p * 4));
     }
-    if (S.cracks && t >= L) { ctx.strokeStyle = `rgba(255,255,255,${Math.max(0, .8 - (t - L) / 900)})`; ctx.lineWidth = 2; S.cracks.forEach(pts => { ctx.beginPath(); pts.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]))); ctx.stroke(); }); }
   }
   else if (k === 'god') { if (t > 1700) { const p = Math.min(1, (t - 1700) / (L - 1700)); sImg(S, img, x, y - 220 * (1 - easeIn(p)), 1.6 - .6 * ease(p), Math.min(1, p * 3)); } }
+  if (k === 'ace' && S.cracks && t >= L) { ctx.strokeStyle = `rgba(255,255,255,${Math.max(0, .8 - (t - L) / 900)})`; ctx.lineWidth = 2; S.cracks.forEach(pts => { ctx.beginPath(); pts.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]))); ctx.stroke(); }); }
   if (t >= L && t < L + 500 && k !== 'set') { ctx.globalCompositeOperation = 'lighter'; glow(x, y, 130 * U, c, .5 * (1 - (t - L) / 500)); ctx.globalCompositeOperation = 'source-over'; }
   ctx.restore();
   if (S.flash > .01) { ctx.fillStyle = `rgba(255,255,255,${S.flash * .4})`; ctx.fillRect(0, 0, W, H); }

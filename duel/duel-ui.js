@@ -708,6 +708,76 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #hand0, #hand0 .card, .tray { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none }
 #hand0 .card { touch-action: none }
 .menu-note.ver { font-size: 11px; opacity: .7; margin-top: 4px }
+/* カードを選んでいる間は「下にスワイプでしまう」を隠す（選んだカードの名前に重なるため） */
+@media (max-width: 860px) { .tray:has(#hand0 .card.sel) .tray-handle, .tray:has(#hand0.aiming) .tray-handle { opacity: 0 } }
+/* ===== 左手：手札を閉じた時は左下に手札を持った左手、ドローの演出中は空っぽの左手 ===== */
+.hand-hold { display: none }
+#oppInfo { display: none }
+@media (max-width: 860px) {
+  .hand-hold { display: block; position: fixed; left: max(2px, env(safe-area-inset-left, 0px)); bottom: -14px; width: 104px; z-index: 9; padding: 0; border: 0; background: none; cursor: pointer;
+    transition: transform .42s cubic-bezier(.22, .9, .25, 1), opacity .3s; filter: drop-shadow(0 4px 8px rgba(0,0,0,.45)) }
+  .hand-hold svg { display: block; width: 100%; height: auto }
+  .droot:not(.tray-closed) .hand-hold, .droot.hand-lifted .hand-hold { transform: translateY(70%); opacity: 0; pointer-events: none }
+  /* 閉じた時の小さく重なった手札は出さない（左手が持つ） */
+  .droot.tray-closed #hand0 .card { opacity: 0; pointer-events: none }
+  .droot.tray-closed #hand0 { height: 0 }
+  /* ドローの演出中は下の手札を隠す */
+  .droot.hand-lifted #hand0 .card { opacity: 0 }
+  .fx-hand { position: fixed; left: 50%; bottom: -60px; z-index: 29; pointer-events: none; filter: drop-shadow(0 6px 12px rgba(0,0,0,.4)) }
+  .fx-hand svg { display: block; width: 100%; height: auto }
+  /* 手札を閉じた時のドック：左下は左手、右側に説明・ボタンをまとめる */
+  .droot .dock { padding-left: 112px; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "st go" "ex go" "ph ph"; row-gap: 5px }
+  .droot .dock-status { grid-area: st; display: grid; gap: 1px }
+  .droot .dock-extra { grid-area: ex; justify-content: flex-start; flex-wrap: wrap }
+  .droot .dock-acts { display: contents }
+  .droot #phaseBtns { grid-area: ph; justify-content: flex-start }
+  .droot #phaseBtns .btn { flex: 0 1 auto; min-height: 34px; padding: 2px 10px; font-size: 12px }
+  .droot #phaseBtns:empty { display: none }
+  .droot #goBtn { grid-area: go; width: auto; min-width: 118px; max-width: 46vw; align-self: stretch }
+  .droot #oppInfo { display: block; font-size: 10.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+}
+/* 手札を閉じた時：左半分に扇形の手札（手は描かない）、右半分に説明とボタン。下の枠はなし */
+@media (max-width: 860px) {
+  .hand-hold { width: 48vw; left: 1vw; bottom: calc(6px + env(safe-area-inset-bottom, 0px)); filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)) }
+  .droot .dock { border: none; border-radius: 0; box-shadow: none; background: var(--bg); padding-left: 50vw;
+    grid-template-columns: minmax(0, 1fr); grid-template-areas: "st" "ex" "ph" "go"; row-gap: 6px }
+  .droot #goBtn { width: 100%; max-width: none; min-height: 52px; min-width: 0 }
+  .droot .dock-extra .btn, .droot #phaseBtns .btn { min-height: 32px; padding: 2px 10px; font-size: 12px }
+  .droot #actorHint { -webkit-line-clamp: 1 }
+}
+/* 手札を閉じた時：開いた時と同じ大きさのカードが左下の角から扇形に飛び出す（下の方は画面の外） */
+@media (max-width: 860px) {
+  .hand-hold { left: 0; bottom: 0; width: 50vw; height: calc(var(--hh-cw, 104px) * 86 / 59 * .62); overflow: visible; filter: none }
+  .hand-hold .hh-card { position: absolute; left: calc(4px + var(--i) * 6px); bottom: calc(var(--hh-cw, 104px) * 86 / 59 * -.5); width: var(--hh-cw, 104px); font-size: calc(var(--hh-cw, 104px) / 10.4);
+    transform-origin: 30% 150%; transform: rotate(var(--a)); pointer-events: none; box-shadow: 0 6px 14px rgba(0,0,0,.4) }
+}
+@media (max-width: 380px) { .hand-hold { --hh-cw: 94px } }
+/* 手札を閉じた時のボタン：フェイズの説明・ログ・ひとつ戻す・✋・エンド（2回押し）・次のフェイズへ（小さめ） */
+.mini-only { display: none }
+@media (max-width: 860px) {
+  .droot .mini-only:not([hidden]) { display: inline-flex }
+  .droot #actorHint, .droot #oppInfo { display: none }
+  .droot .dock.free #phaseBtns { display: none }
+  .droot .dock { grid-template-areas: "st" "ex" "ph" "go"; row-gap: 6px; padding-top: 8px }
+  .droot .dock-extra { gap: 5px }
+  .droot .dock-extra .btn { min-height: 30px; padding: 1px 9px; font-size: 12px; box-shadow: 1px 1px 0 var(--edge) }
+  .droot #stopBtn { font-size: 0; padding: 1px 8px }
+  .droot #stopBtn::before { content: "✋"; font-size: 15px }
+  .droot #goBtn { min-height: 40px; font-size: 14px; padding: 2px 8px }
+  .droot #goBtn small { display: none }
+  .end-btn { background: color-mix(in srgb, var(--opp) 20%, var(--panel)) }
+  .end-btn.armed { background: var(--opp); color: #fff }
+}
+/* スマホ：対戦画面の上下に払う操作を、ページのスクロールにしない（手札の開け閉めに使う） */
+@media (max-width: 860px) { .table, #board, .dock, .hand-hold { touch-action: none; overscroll-behavior: contain } }
+/* ドローの演出：カードは表と裏を持ち、位置・回転・裏返しを transform だけで動かす */
+.draw-fx { justify-content: flex-start }
+.dfx-stage { position: fixed; inset: 0; perspective: 900px; pointer-events: none }
+.dfx-card { position: absolute; left: 0; top: 0; transform-style: preserve-3d; will-change: transform }
+.dfx-card > .dfx-face, .dfx-card > .dfx-back { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: 0 8px 18px rgba(0,0,0,.45) }
+.dfx-card > .dfx-back { transform: rotateY(180deg) }
+.dfx-card.new > .dfx-face { box-shadow: 0 0 0 2px #ffe08a, 0 0 22px 6px rgba(255,224,138,.6) }
+.draw-fx .fan-head { position: fixed; left: 50%; top: 23%; transform: translateX(-50%); z-index: 3; margin: 0; width: max-content; max-width: calc(100vw - 24px); text-shadow: 0 2px 6px rgba(0,0,0,.6) }
 `;
 
 export const MARKUP = `
@@ -733,8 +803,8 @@ export const MARKUP = `
     <div class="tray" id="tray"><button class="tray-handle" id="trayHandle" type="button" aria-expanded="true" aria-controls="hand0"><span class="grip" aria-hidden="true"></span><span class="tray-lbl" id="trayLbl">手札をしまう</span></button><div class="hand me" id="hand0"></div></div>
     <div class="pstrip me" id="side0"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="meta"></span></div>
     <div class="dock" id="dock">
-      <div class="dock-status"><span id="actor"></span><span id="actorHint"></span></div>
-      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できるタイミングで、必ず止めて聞く">✋ 次で止める</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">ログ</button></div>
+      <div class="dock-status"><span id="actor"></span><span id="actorHint"></span><span id="oppInfo"></span></div>
+      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できるタイミングで、必ず止めて聞く">✋ 次で止める</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">ログ</button><button class="btn small mini-only" id="undoMini" type="button">↶ ひとつ戻す</button><button class="btn small mini-only end-btn" id="endBtn" type="button" hidden>エンド</button></div>
       <div class="dock-acts"><div id="phaseBtns"></div><button class="btn primary go" id="goBtn"></button></div>
     </div>
   </main>
@@ -749,6 +819,7 @@ export const MARKUP = `
     </section>
   </aside>
 </div>
+<button type="button" id="handHold" class="hand-hold"></button>
 <div id="scrim" hidden></div>
 
 <div class="overlay" id="menu" hidden role="dialog" aria-modal="true" aria-labelledby="menuTitle">
@@ -771,7 +842,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261119-2139</p>
+    <p class="menu-note ver">版：20261120-0936</p>
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>

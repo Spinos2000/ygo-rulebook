@@ -309,6 +309,28 @@ function scheduleCpu() {
   });
 }
 let ready = null; // 考え終わった答え { state, th }
+let endArmT = null, autoEnd = false;
+function endTap() {
+  const b = $('#endBtn'); if (!b) return;
+  if (!b.classList.contains('armed')) {
+    b.classList.add('armed'); b.textContent = 'もう一度でエンド';
+    clearTimeout(endArmT); endArmT = setTimeout(() => { b.classList.remove('armed'); b.textContent = 'エンド'; }, 1200);
+    return;
+  }
+  clearTimeout(endArmT); b.classList.remove('armed'); b.textContent = 'エンド';
+  const legal = legalActions(S);
+  const fin = legal.find(x => x.type === 'endTurn'), toEnd = legal.find(x => x.type === 'nextPhase' && x.to === 'end');
+  if (fin) { run(fin); return; }
+  if (toEnd) { autoEnd = true; run(toEnd); }
+}
+/** エンドを押した後：エンドフェイズで自由に行動できるようになったら、そのままターンを終える（途中で選ぶことがあれば、それが済んでから） */
+function continueEnd() {
+  if (!autoEnd || !S) return;
+  if (S.winner !== null || isCpu(S.turnPlayer) || S.turnPlayer !== actorOf(S) && !S.pending && S.window.kind === 'open') { autoEnd = false; return; }
+  if (!humanActing() || S.pending || S.window.kind !== 'open' || S.phase !== 'end') return;
+  const fin = legalActions(S).find(x => x.type === 'endTurn');
+  if (fin) { autoEnd = false; setTimeout(() => { if (S && legalActions(S).some(x => x.type === 'endTurn')) run(fin); }, 120); }
+}
 function playCpu(state, th) {
   if (S !== state) return;
   ready = null;
@@ -433,6 +455,62 @@ function toast(msg, bad) {
 }
 
 /* ---------- カード表示 ---------- */
+/* ---------- 左手のイラスト（手首から先。手のひらをこちらに向けた左手なので、親指は右側） ----------
+ * 座標は 1単位 ≒ 1.21mm（カードの幅 59mm ＝ 49単位、手のひらの幅 約85mm ＝ 70単位）。viewBox は 0 0 130 200 */
+const HAND_UNIT_CARD_W = 49;
+const SKIN = { base: '#eab894', shade: '#d49a73', line: '#6e452f', light: '#f6d2b5' };
+/** 指1本（付け根の中心 bx,by から長さ len、太さ w、傾き deg） */
+function fingerPath(bx, by, len, w, deg) {
+  return `<g transform="rotate(${deg} ${bx} ${by})"><rect x="${bx - w / 2}" y="${by - len}" width="${w}" height="${len + 6}" rx="${w / 2}" fill="${SKIN.base}" stroke="${SKIN.line}" stroke-width="1.6"/>`
+    + `<path d="M${bx - w / 2 + 2},${by - len * .42} q${w / 2 - 2},3 ${w - 4},0 M${bx - w / 2 + 2.5},${by - len * .7} q${w / 2 - 2.5},2.5 ${w - 5},0" fill="none" stroke="${SKIN.shade}" stroke-width="1.1" stroke-linecap="round"/></g>`;
+}
+/** 手のひら・手首・4本の指（カードの後ろになる部分） */
+function handBack(holding = false) {
+  // 持っている時は、指をカードの裏に曲げているので短く見える
+  const k = holding ? .55 : 1;
+  const fingers = [
+    fingerPath(40, 98, 44 * k, 13, -12),  // 小指
+    fingerPath(54, 90, 58 * k, 14.5, -5), // 薬指
+    fingerPath(69, 88, 64 * k, 15, 1),    // 中指
+    fingerPath(84, 92, 56 * k, 14.5, 7),  // 人差し指
+  ].join('');
+  return fingers
+    + `<path d="M44,200 L46,166 C34,160 30,148 31,130 C32,112 34,98 44,92 C56,85 84,84 96,92 C104,98 106,112 104,128 C102,148 98,160 88,166 L90,200 Z" fill="${SKIN.base}" stroke="${SKIN.line}" stroke-width="1.8" stroke-linejoin="round"/>`
+    + `<path d="M40,124 C52,118 66,120 78,128 M46,140 C58,132 74,134 90,140 M70,104 C66,118 64,132 66,150" fill="none" stroke="${SKIN.shade}" stroke-width="1.4" stroke-linecap="round"/>`
+    + `<path d="M50,160 C60,166 78,166 88,160" fill="none" stroke="${SKIN.shade}" stroke-width="1.2"/>`;
+}
+/** 親指（カードを押さえる。カードの手前） */
+function handThumb(holding) {
+  // 持っている時：手のひらの右下から、カードの上を左上へ斜めに押さえる。空の時：右へ開く
+  return holding
+    ? `<path d="M100,138 C106,124 102,112 92,106 C84,101 72,100 66,104 C61,107 62,114 68,115 C76,116 84,118 88,126 C91,132 92,138 92,142 Z" fill="${SKIN.base}" stroke="${SKIN.line}" stroke-width="1.8" stroke-linejoin="round"/>`
+      + `<path d="M69,105 C72,103 76,103 78,106 C77,109 72,110 69,109 Z" fill="${SKIN.light}" stroke="${SKIN.shade}" stroke-width="1"/>`
+    : `<path d="M96,140 C104,132 112,120 118,106 C121,99 128,100 128,108 C127,122 118,140 106,152 Z" fill="${SKIN.base}" stroke="${SKIN.line}" stroke-width="1.8" stroke-linejoin="round"/>`
+      + `<path d="M108,128 q5,-3 9,-1" fill="none" stroke="${SKIN.shade}" stroke-width="1.2" stroke-linecap="round"/>`;
+}
+const MINI_FRAME = { normal: '#c9a24a', effect: '#c76a2a', ritual: '#3f7fd6', fusion: '#8a46c8', spell: '#109f80', trap: '#b8247a' };
+/** 扇形に持ったカード（裏ではなく表の色。自分の手札） */
+function heldFan(cards) {
+  const n = Math.min(cards.length, 10), W = HAND_UNIT_CARD_W, H = W * 86 / 59;
+  if (!n) return '';
+  const spread = Math.min(56, 10 + n * 6), px = 70, py = 150; // 扇の要（手のひらの下の方）
+  return cards.slice(0, n).map((f, i) => {
+    const t = n === 1 ? 0 : i / (n - 1) - .5, a = t * spread;
+    return `<g transform="rotate(${a.toFixed(1)} ${px} ${py})"><rect x="${px - W / 2}" y="${py - H - 34}" width="${W}" height="${H}" rx="2.5" fill="${MINI_FRAME[f] || '#888'}" stroke="#1b1508" stroke-width="1.4"/>`
+      + `<rect x="${px - W / 2 + 4}" y="${py - H - 34 + 11}" width="${W - 8}" height="${W - 10}" fill="#2a3040" opacity=".85"/>`
+      + `<rect x="${px - W / 2 + 4}" y="${py - H - 34 + 3.5}" width="${W - 8}" height="5" fill="rgba(0,0,0,.35)"/></g>`;
+  }).join('');
+}
+/** 手札を持った左手（手札を閉じた時） */
+function holdingHandSvg(frames) {
+  // 手のイラストはいったんやめて、扇形の手札だけを見せる
+  return `<svg viewBox="-12 2 164 128" aria-hidden="true">${heldFan(frames)}</svg>`;
+}
+/** 空っぽの左手（手札を持ち上げた時） */
+function emptyHandSvg() {
+  return `<svg viewBox="0 0 130 200" aria-hidden="true">${handBack()}${handThumb(false)}</svg>`;
+}
+
 function frameOf(d) { return d.kind === 'spell' ? 'spell' : d.kind === 'trap' ? 'trap' : d.frame; }
 let canAct = new Set();
 function cardHtml(uid, { hidden = false, field = false, style = '' } = {}) {
@@ -697,6 +775,9 @@ function renderDock() {
   };
   actor.classList.remove('thinking');
   dock.classList.toggle('mine', humanActing());
+  dock.classList.remove('free');
+  const eb = $('#endBtn'); if (eb) { eb.hidden = true; eb.classList.remove('armed'); eb.textContent = 'エンド'; }
+  const oi = $('#oppInfo'); if (oi) { const O = S.players[1]; oi.textContent = `${NAME(1)}：手札${O.hand.length}・墓地${O.gy.length}・除外${O.banished.length}`; }
   hint.textContent = '';
   btns.innerHTML = '';
   $('#stopBtn').hidden = chainMode() === 'always' || S.winner !== null;
@@ -740,6 +821,8 @@ function renderDock() {
   }
   // 自分のターンで自由に行動できる：右下は「先に進む」、左はそれ以外の移り先
   const me = S.turnPlayer;
+  dock.classList.add('free');
+  if (eb) eb.hidden = !legal.some(x => x.type === 'endTurn' || (x.type === 'nextPhase' && x.to === 'end'));
   actor.textContent = `${cpuMode() ? 'あなた' : NAME(me)}の${PHASE_LABEL[S.phase]}`;
   hint.textContent = S.turn === 1 && S.phase === 'main1' ? '先攻1ターン目はバトルフェイズに入れません' : S.phase === 'battle' ? '攻撃するモンスターを押す' : 'カードを押すと、できる操作が出ます';
   const others = [];
@@ -762,6 +845,9 @@ function shouldAutoPass() {
   const me = actorOf(S), w = S.window;
   const top = S.chain[S.chain.length - 1];
   if (top) return top.player === me;
+  // 自分がダメージを受けた・自分のカードが破壊された直後で、発動できるカードがある時も聞く（ダメージ・ゲート、復活の墓穴など）
+  const hit = S.lastEvents.some(e => (e.type === 'damage' && e.player === me) || (e.type === 'destroyed' && S.cards[e.uid] && S.cards[e.uid].owner === me));
+  if (hit && activatableList(S, me).length) return false;
   if (w.mode === 'summoning' && w.cont.type === 'summon') return w.cont.player === me;
   if (S.battle && S.battle.step === 'declared' && w.cont.type === 'battle' && w.cont.step === 'declared') return S.cards[S.battle.attacker].controller === me;
   const ev = S.lastEvents.find(e => e.type === 'summoned' || e.type === 'attackDeclared');
@@ -881,12 +967,14 @@ function renderChoice() {
     <button class="btn primary confirm" id="confirmPick" ${ok ? '' : 'disabled'}>決定</button>`;
 }
 
+/** これから再生する演出があるか（ある時は、選ぶ画面やシートを演出の後に開く） */
+const fxSoon = () => !!pendingMoves || pendingSummons.length > 0;
 function renderDetail() {
   const el = $('#detail');
   if (S.pending && isCpu(S.pending.request.player)) { el.innerHTML = `<h3>CPUが選んでいます</h3><p class="prompt">${esc(S.pending.request.prompt)}</p>`; return; }
   if (S.pending && isDeckPick(S.pending.request)) {
     el.innerHTML = `<h3>あなたの選択</h3><p class="prompt">${esc(S.pending.request.prompt)}</p><p class="tl">広げた${fanSrc(S.pending.request) === 'hand' ? '手札' : '山札'}から選んでください。</p>`;
-    openFan();
+    if (!fxSoon()) openFan(); // これから演出がある時は、演出が終わってから広げる
     return;
   }
   if (S.pending) { el.innerHTML = renderChoice(); return; }
@@ -1100,40 +1188,75 @@ async function handOpenFx(j) {
 async function handAddFx(j) {
   const hand = $(`#hand${j.p}`);
   if (!hand) return;
-  const pause = ms => new Promise(res => setTimeout(res, fanDur(ms)));
+  // ドローの演出：①引いたカードを中央に見せる → ②下から手札が出てきて、一番右に引いたカードが入る
+  // → ③中央で重なるように閉じながら裏返る → ④表に返りながら、並べ替えた順で開く → ⑤手札の場所へ
+  // 動きは全部 transform（位置・回転・裏返し）だけで、始まりと終わりの形をこちらで決めてつなぐ（途中で引っかからないように）
+  const T = ms => fanDur(ms);
+  const wait = ms => new Promise(res => setTimeout(res, T(ms)));
   const layer = document.createElement('div');
-  layer.className = 'fan-layer cpu hand-add';
+  layer.className = 'fan-layer cpu hand-add draw-fx';
   const names = j.added.map(u => `「${j.ds[u].name}」`).join('');
   const verb = j.drew ? 'ドロー' : '手札に加えた';
-  layer.innerHTML = `<div class="fan-head"><b>${esc(verb)}：${esc(names)}</b><span>手札 ${j.kept.length + j.added.length}枚</span></div><div class="fan-area"></div>`;
+  layer.innerHTML = `<div class="fan-head"><b>${esc(verb)}：${esc(names)}</b><span>手札 ${j.kept.length + j.added.length}枚</span></div><div class="dfx-stage"></div>`;
   $('.droot').appendChild(layer);
-  const area = layer.querySelector('.fan-area');
-  const face = u => `<span class="${faceCls(j.ds[u])}${j.added.includes(u) ? ' new' : ''}" data-fan="${u}">${faceHtml(u, j.ds[u], false)}</span>`;
+  if (j.p === 0 && narrow()) $('.droot').classList.add('hand-lifted');
+  const stage = layer.querySelector('.dfx-stage');
+  const W = stage.clientWidth || innerWidth, H = stage.clientHeight || innerHeight;
+  const cw = narrow() ? 78 : 100, ch = cw * 86 / 59;
+  const cx = W / 2, cy = H * .5;
+  // カード（表と裏を持ち、裏返しは rotateY）
   const order0 = [...j.kept, ...j.added];
-  area.innerHTML = order0.map(face).join('');
-  const els = [...area.children];
-  const elOf = u => els.find(el => Number(el.dataset.fan) === u);
-  // 残りの手札は扇（左）、加わったカードは少し離して右に、大きく
-  layoutHandAdd(area, j.kept.map(elOf), j.added.map(elOf));
-  const deck = pileEl(j.p, 'deck');
+  const els = new Map();
+  for (const u of order0) {
+    const el = document.createElement('span');
+    el.className = 'dfx-card' + (j.added.includes(u) ? ' new' : '');
+    el.style.width = cw + 'px'; el.style.height = ch + 'px';
+    el.innerHTML = `<span class="${faceCls(j.ds[u])} dfx-face" style="font-size:${(cw / 8).toFixed(1)}px">${faceHtml(u, j.ds[u], false)}</span><span class="card back dfx-back"></span>`;
+    stage.appendChild(el); els.set(u, el);
+  }
+  // 扇の形：n 枚のうち i 番目の位置（中央が cx）
+  const fanPos = (i, n) => {
+    const t = n === 1 ? 0 : i / (n - 1) - .5;
+    const step = n > 1 ? Math.min(cw * .64, (W - cw - 16) / (n - 1)) : 0;
+    return { x: cx + t * step * (n - 1), y: cy + t * t * 40, r: t * Math.min(26, 4 * n) };
+  };
+  const tf = (p, flip = 0, s = 1) => `translate(${(p.x - cw / 2).toFixed(1)}px, ${(p.y - ch / 2).toFixed(1)}px) rotate(${(p.r || 0).toFixed(1)}deg) rotateY(${flip}deg) scale(${s})`;
+  const anim = (el, from, to, ms, delay = 0, ease = 'cubic-bezier(.22,.8,.25,1)') =>
+    el.animate([{ transform: from }, { transform: to }], { duration: T(ms), delay: T(delay), easing: ease, fill: 'both' }).finished;
+  const n = order0.length;
+  const slot = new Map(order0.map((u, i) => [u, fanPos(i, n)]));
+  const center = { x: cx, y: cy - 10, r: 0 };
+  const deck = pileEl(j.p, 'deck'), dr = deck ? rectOf(deck) : null, sr = rectOf(stage);
+  const fromDeck = dr ? { x: dr.left + dr.width / 2 - sr.left, y: dr.top + dr.height / 2 - sr.top, r: 0 } : { x: cx, y: H + ch, r: 0 };
+  const below = i => ({ x: cx + (i - n / 2) * 18, y: H + ch * .7, r: (i - n / 2) * 4 });
+  // 最初は全部見えない場所に置いておく
+  j.kept.forEach((u, i) => { els.get(u).style.transform = tf(below(i)); });
+  j.added.forEach(u => { els.get(u).style.transform = tf(j.drew ? fromDeck : below(n), 0, .5); });
+  // ① 引いたカードを中央に大きく
+  await Promise.all(j.added.map((u, k) => anim(els.get(u), tf(j.drew ? fromDeck : below(n), 0, .5), tf({ x: cx + (k - (j.added.length - 1) / 2) * cw * .7, y: cy - 30, r: 0 }, 0, 1.25), 420, k * 60)));
+  await wait(380);
+  // ② 下から手札が出てきて扇に。引いたカードは一番右へ
   await Promise.all([
-    flyIn(j.kept.map(elOf), centerOf(rectOf(hand))),
-    flyIn(j.added.map(elOf), centerOf(rectOf(j.drew && deck ? deck : hand))),
+    ...j.kept.map((u, i) => anim(els.get(u), tf(below(i)), tf(slot.get(u)), 460, i * 25)),
+    ...j.added.map((u, k) => anim(els.get(u), tf({ x: cx + (k - (j.added.length - 1) / 2) * cw * .7, y: cy - 30, r: 0 }, 0, 1.25), tf(slot.get(u)), 460, 80)),
   ]);
-  await pause(900);
-  // 並べ替え：今の位置を覚えて並べ直し、そこから動かす（FLIP）
-  const sorted = sortHand(S, order0).filter(u => order0.includes(u)).map(elOf);
-  const before = new Map(els.map(el => [el, rectOf(el)]));
-  layoutFan(area, sorted, true);
-  await Promise.all(sorted.map((el, i) => {
-    const b = before.get(el), r = rectOf(el);
-    return el.animate([{ transform: `translate(${b.left - r.left}px,${b.top - r.top}px)` }, { transform: `rotate(${el.dataset.rot}deg)` }],
-      { duration: fanDur(480), delay: fanDur(i * 18), easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }).finished;
-  }));
-  await pause(450);
-  const to = centerOf(rectOf(hand));
-  await Promise.all(sorted.map((el, i) => flyTo(el, to, { dur: 380, delay: Math.min(i * 14, 200), scale: .55, ease: 'ease-in', fade: true })));
+  await wait(420);
+  // ③ 中央で重なるように閉じながら裏返る
+  const stack = i => ({ x: center.x + (i - (n - 1) / 2) * 1.2, y: center.y - i * .6, r: 0 });
+  await Promise.all(order0.map((u, i) => anim(els.get(u), tf(slot.get(u)), tf(stack(i), 180), 260, 0, 'cubic-bezier(.45,0,.25,1)')));
+  await wait(60);
+  // ④ 表に返りながら、並べ替えた順で開く
+  const sorted = sortHand(S, order0).filter(u => order0.includes(u));
+  sorted.forEach((u, i) => { els.get(u).style.zIndex = String(i + 1); });
+  await Promise.all(sorted.map((u, i) => anim(els.get(u), tf(stack(order0.indexOf(u)), 180), tf(fanPos(i, n), 360), 300, 0, 'cubic-bezier(.22,.8,.25,1)')));
+  await wait(320);
+  // ⑤ 手札の場所へ
+  const hr = rectOf(hand), to = { x: hr.left + hr.width / 2 - sr.left, y: hr.top + hr.height / 2 - sr.top, r: 0 };
+  await Promise.all(sorted.map((u, i) => anim(els.get(u), tf(fanPos(i, n), 360), tf({ x: to.x + (i - n / 2) * 10, y: to.y, r: 0 }, 360, .6), 360, Math.min(i * 16, 160), 'cubic-bezier(.5,0,.75,.4)')));
+  layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T(160), fill: 'forwards' });
+  await wait(160);
   layer.remove();
+  $('.droot').classList.remove('hand-lifted');
 }
 /** 残りの手札（左の扇）と加わったカード（右）を並べる */
 function layoutHandAdd(area, kept, added) {
@@ -1413,10 +1536,10 @@ function tweenLp(el, p, to) {
 }
 
 /* ---------- シート（スマホ） ---------- */
-function renderSheets() {
+function renderSheets(duringFx = false) {
   const humanChoice = S.pending && !isCpu(S.pending.request.player);
-  const detailOpen = narrow() && ((humanChoice && !peek && !fan) || (sheet === 'detail' && selected !== null));
-  const logOpen = narrow() && sheet === 'log' && !detailOpen;
+  const detailOpen = !duringFx && narrow() && ((humanChoice && !peek && !fan) || (sheet === 'detail' && selected !== null));
+  const logOpen = !duringFx && narrow() && sheet === 'log' && !detailOpen;
   $('#detailSheet').classList.toggle('open', detailOpen);
   $('#logSheet').classList.toggle('open', logOpen);
   $('#scrim').hidden = !(detailOpen || logOpen);
@@ -1455,7 +1578,34 @@ function measureBottom() {
   }
 }
 /** 返事が要る時（チェーンの確認・選択・決着）は自動で閉じてボタンを見せ、自分の番に戻ったら開き直す */
+function renderHandHold() {
+  const el = $('#handHold'); if (!el) return;
+  // 手札を閉じた時：開いた時と同じ大きさのカードを、画面の左下の角から扇形に飛び出させる（下の方は画面の外）
+  const hand = sortHand(S, S.players[0].hand);
+  const key = hand.join(',');
+  if (el.dataset.key !== key) {
+    const n = hand.length, spread = Math.min(64, 10 + n * 7);
+    el.innerHTML = hand.map((u, i) => {
+      const a = (n === 1 ? 0 : i / (n - 1)) * spread - 12;
+      return `<span class="${faceCls(defOf(S, u))} hh-card" style="--a:${a.toFixed(1)}deg;--i:${i}">${faceHtml(u, defOf(S, u), false)}</span>`;
+    }).join('');
+    el.dataset.key = key;
+  }
+  el.setAttribute('aria-label', `手札（${hand.length}枚）。押すか上に払うと開きます`);
+}
+/* 自分のターンが始まったら（ドローの後のメインフェイズ1で）手札を開き、相手のターンになったら閉じる（CPU対戦） */
+let trayTurn = null, trayWantOpen = false;
+function turnTray() {
+  if (!narrow() || !S || !cpuMode() || S.winner !== null) return;
+  if (S.turn !== trayTurn) {
+    trayTurn = S.turn;
+    if (isCpu(S.turnPlayer)) { trayWantOpen = false; if (trayOpen) setTray(false); }
+    else trayWantOpen = true;
+  }
+  if (trayWantOpen && !isCpu(S.turnPlayer) && S.phase === 'main1' && humanActing() && !S.pending && S.window.kind === 'open') { trayWantOpen = false; if (!trayOpen) setTray(true); }
+}
 function autoTray() {
+  turnTray();
   if (!narrow() || !S) return;
   const needs = S.winner !== null || (humanActing() && (S.pending || (S.window.kind === 'priority' && activatableList(S, actorOf(S)).length)));
   if (needs && trayOpen) setTray(false, true);
@@ -1509,10 +1659,10 @@ function checkPachi() {
   }, 450);
 }
 function render() {
-  if ((fxN > 0)) { renderSheets(); return; } // 演出が終わってから画面を更新する（開いていたシートは先に閉じる）
+  if ((fxN > 0)) { renderSheets(true); return; } // 演出が終わってから画面を更新する（演出の間はシートを閉じておき、選ぶ画面も演出の後に開く）
   if (fan && !(S.pending && !isCpu(S.pending.request.player) && isDeckPick(S.pending.request))) closeFan();
   canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
-  renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets(); autoTray(); checkPachi();
+  renderBoard(); renderSide(); renderTop(); renderChain(); renderDetail(); renderLog(); renderDock(); renderSheets(fxSoon()); autoTray(); renderHandHold(); // シャカパチは手札をゆっくりなぞった時だけ（罠が来た時などの自動の演出はしない）
   // これから召喚の演出をするカードは、演出が始まるまで盤面に出さない（先に置かれてから巻き戻って見えないように）
   for (const j of pendingSummons) if (j && j.uid != null && !j.search && !j.handOpen && !j.handAdd) { const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`); if (el) el.style.visibility = 'hidden'; }
   $('#result').hidden = S.winner === null;
@@ -1522,6 +1672,7 @@ function render() {
   if (playPendingSummons()) { saveSoon(); return; }
   scheduleCpu();
   scheduleAutoPass();
+  continueEnd();
   saveSoon();
 }
 
@@ -1617,11 +1768,15 @@ function wireTray(root) {
   let ty0 = null, tx0 = 0;
   // 横になぞっている間：指の下に来たカードを1枚ずつ震わせて鳴らす（同じカードは指が離れて戻るまで1回）
   let lastCard = null, strummed = false, sx = null, sy = 0;
-  const strumStart = (x, y) => { lastCard = null; strummed = false; sx = x; sy = y; };
+  let px = 0, pt = 0;
+  const strumStart = (x, y) => { lastCard = null; strummed = false; sx = x; sy = y; px = x; pt = performance.now(); };
   const strumMove = (x, y) => {
     if (sx === null || !trayOpen || !narrow() || aim || place) return;
+    // 速さ（指が1ミリ秒に動く距離）。速く払った時はシャカパチしない（ゆっくりなぞった時だけ）
+    const now = performance.now(), v = Math.abs(x - px) / Math.max(1, now - pt); px = x; pt = now;
     if (!strummed && (Math.abs(x - sx) < 8 || Math.abs(x - sx) < Math.abs(y - sy))) return;
     strummed = true;
+    if (v > 0.7) { lastCard = cardAt(x, y); return; }
     const c = cardAt(x, y);
     if (c && c !== lastCard) { lastCard = c; pachiCard(c); }
   };
@@ -1653,6 +1808,14 @@ function wireTray(root) {
 let aim = null;    // { u, acts, targets, layer, ghost, sx, sy, moved, hover, held }
 let place = null;  // { u, acts, t, modes, m, layer }
 let handPress = null; // { u, x, y, timer, fired }
+let tapT = null, tapU = null;
+/** 手札のカードを押した：1回目で選ぶ（飛び出して光る）。選んだカードを素早く2回押すと効果、1回だけなら少し待ってから選ぶのをやめる */
+function handTap(u) {
+  if (tapT && tapU === u) { clearTimeout(tapT); tapT = null; selected = u; sheet = 'detail'; render(); return; }
+  clearTimeout(tapT); tapU = u;
+  if (selected !== u) { selected = u; sheet = null; render(); tapT = setTimeout(() => { tapT = null; }, 300); return; }
+  tapT = setTimeout(() => { tapT = null; if (selected === u && sheet !== 'detail') { selected = null; render(); } }, 300);
+}
 const HAND_TYPES = ['normalSummon', 'setMonster', 'setSpellTrap', 'activate', 'procSummon'];
 function handActs(u) {
   if (!humanActing() || S.pending) return [];
@@ -1736,7 +1899,7 @@ function aimRelease(x, y) {
   const flick = aim.targets.length && (vy < -0.35 || (y - aim.sy < -70 && vy < -0.15));
   if (aim.spellAct && (flick || y - aim.sy < -60)) { castSpell(x, y); return; }
   const onZone = aim.targets.find(t => { const r = t.el.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; });
-  const t = flick ? aim.hover : onZone || null;
+  const t = flick ? aim.hover : onZone || (aim.moved > 12 ? aim.hover : null);
   if (t) { throwTo(t, x, y); return; }
   if (aim.loose.length) { aim.held = false; aim.ghost.style.display = 'none'; aim.layer.querySelector('.aim-line')?.setAttribute('d', ''); return; }
   endAim();
@@ -1756,7 +1919,7 @@ function castSpell(x, y) {
   aim.layer.querySelector('.aim-tip')?.remove();
   g.animate([{ left: x + 'px', top: y + 'px', transform: 'translate(-50%, -70%) rotate(-5deg)' },
     { left: (r.left + r.width / 2) + 'px', top: (r.top + r.height / 2) + 'px', transform: 'translate(-50%, -50%) rotate(0deg) scale(.7)' }],
-  { duration: 240, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' }).finished.then(go);
+  { duration: 240, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' }); setTimeout(go, 260); // アニメーションの終わりを待たずに時間で進める（画面が裏にある時などに止まらないように）
 }
 /** カードを投げる：指の位置から矢印の先のマスへ飛ばしてから、置く */
 function throwTo(t, x, y) {
@@ -1767,7 +1930,7 @@ function throwTo(t, x, y) {
   const a = ghost.animate([{ left: x + 'px', top: y + 'px', transform: 'translate(-50%, -70%) rotate(-5deg)' },
     { left: c.x + 'px', top: (c.y - 26) + 'px', transform: `translate(-50%, -50%) rotate(0deg) scale(${(sc * 1.15).toFixed(2)})` }],
   { duration: 230, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' });
-  a.finished.then(() => { endAim(); startPlace(u, acts, t); });
+  setTimeout(() => { if (aim && aim.u === u) { endAim(); startPlace(u, acts, t); } }, 250); void a;
 }
 function aimTap(x, y, target) {
   if (!aim) return;
@@ -1804,7 +1967,7 @@ function drawPlace() {
   const w = Math.min(r.width, r.height * 59 / 86) * (def ? .7 : .92);
   const cls = back ? 'card back' : faceCls(d);
   layer.innerHTML = `<span class="${cls} place-ghost${def ? ' def' : ''}" style="left:${(r.left + r.width / 2).toFixed(0)}px;top:${(r.top + r.height / 2).toFixed(0)}px;width:${w.toFixed(0)}px;font-size:${(w / 8).toFixed(1)}px">${back ? '' : faceHtml(u, d, false)}</span>`
-    + `<div class="place-chip" style="left:${(r.left + r.width / 2).toFixed(0)}px;top:${(r.bottom + 8).toFixed(0)}px"><b>${MODE_LABEL[mode]}</b><small>上下左右に払うと${MODE_LABEL[modes[1 - m]] || '切り替え'}／押すと決定</small><button class="place-x" type="button" aria-label="やめる">✕</button></div>`;
+    + `<div class="place-chip" style="left:${(r.left + r.width / 2).toFixed(0)}px;top:${(r.bottom + 8).toFixed(0)}px"><b>${MODE_LABEL[mode]}</b><small>タップで決定／横に払うと${MODE_LABEL[modes[1 - m]] || '切り替え'}／下に払うとやめる</small><button class="place-x" type="button" aria-label="やめる">✕</button></div>`;
 }
 function endPlace() {
   if (!place) return;
@@ -1814,8 +1977,11 @@ function endPlace() {
 }
 function placeGesture(dx, dy, target) {
   if (!place) return;
-  if (target && target.closest('.place-x')) { endPlace(); return; }
-  if (Math.hypot(dx, dy) > 30) { place.m = (place.m + 1) % place.modes.length; drawPlace(); return; }
+  const cancel = () => { endPlace(); selected = null; sheet = null; render(); };
+  if (target && target.closest('.place-x')) { cancel(); return; }
+  if (dy > 40 && dy > Math.abs(dx)) { cancel(); return; }                       // 下に払う：やめて手札に戻す
+  if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) { place.m = (place.m + 1) % place.modes.length; drawPlace(); return; } // 横に払う：切り替え
+  if (Math.hypot(dx, dy) > 30) return;                                          // 上に払う：何もしない
   const { u, acts, t, modes, m } = place;
   endPlace();
   placeConfirm(u, acts, t, modes[m]);
@@ -1838,7 +2004,7 @@ function placeConfirm(u, acts, t, mode) {
   if (mode === 'mset' || mode === 'sset') landOnBoard(u);
 }
 function landOnBoard(u, tries = 0) {
-  const el = ROOT.querySelector();
+  const el = ROOT.querySelector(`#board [data-uid="${u}"]`);
   if (!el || el.style.visibility === 'hidden') { if (tries < 30) setTimeout(() => landOnBoard(u, tries + 1), 60); return; }
   el.animate([{ translate: '0 -46px', scale: '1.28', opacity: 0, filter: 'drop-shadow(0 26px 14px rgba(0,0,0,.45))' },
     { translate: '0 3px', scale: '.98', opacity: 1, offset: .72 }, { translate: '0 0', scale: '1', opacity: 1, filter: 'none' }],
@@ -1870,18 +2036,23 @@ root.addEventListener('pointerdown', e => {
   if (S.pending && S.pending.request.kind === 'cards' && S.pending.request.options.includes(u)) return;
   clearTimeout(handPress?.timer);
   handPress = { u, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, fired: false };
-  handPress.timer = setTimeout(() => {
+  // 選んだカードの長押し：カードが指についてくる（効果はダブルタップで見る）
+  if (selected === u) handPress.timer = setTimeout(() => {
     const hp = handPress; if (!hp) return;
     hp.fired = true;
-    if (selected === u && handActs(u).length) startAim(u, hp.lx, hp.ly);
-    else { if (navigator.vibrate) try { navigator.vibrate(10); } catch { /* 振動できない端末 */ } selected = u; sheet = 'detail'; render(); }
-  }, selected === u ? 230 : 380); // 選んだカード（矢印）は短く、効果を見る長押しは少し長め（なぞる・払う操作と区別する）
+    if (handActs(u).length) startAim(u, hp.lx, hp.ly);
+  }, 230);
 });
 root.addEventListener('pointermove', e => {
   if (aim && aim.held) { aimMove(e.clientX, e.clientY); return; }
   if (handPress) {
     handPress.lx = e.clientX; handPress.ly = e.clientY;
-    if (!handPress.fired && Math.hypot(e.clientX - handPress.x, e.clientY - handPress.y) > 10) { clearTimeout(handPress.timer); handPress = null; }
+    const dx = e.clientX - handPress.x, dy = e.clientY - handPress.y;
+    // 選んで光っているカードは、長押しを待たずに指を動かしただけでついてくる（下に払う＝手札をしまう、は除く）
+    if (!handPress.fired && selected === handPress.u && Math.hypot(dx, dy) > 8 && !(dy > 0 && dy > Math.abs(dx)) && handActs(handPress.u).length) {
+      clearTimeout(handPress.timer); handPress.fired = true; startAim(handPress.u, handPress.x, handPress.y); aimMove(e.clientX, e.clientY); return;
+    }
+    if (!handPress.fired && Math.hypot(dx, dy) > 10) { clearTimeout(handPress.timer); handPress = null; }
   }
 });
 root.addEventListener('pointerup', e => {
@@ -1890,6 +2061,28 @@ root.addEventListener('pointerup', e => {
   if (aim && aimDown) { aimDown = null; aimTap(e.clientX, e.clientY, e.target); handPressFired = true; return; }
   if (handPress) { clearTimeout(handPress.timer); handPressFired = handPress.fired; handPress = null; }
 });
+/* 手札を閉じていて、何も選んでいない普通の状態なら、画面のどこを上に払っても手札が開く */
+/* 手札の開け閉め：何も選んでいない普通の状態なら、画面のどこを上に払っても開き、下に払っても閉じる
+ * （スマホでは上下に払うとページのスクロールとして先に取られ、pointer の「離した」が届かないことがあるので、touch でも受ける） */
+let trayGesture = null;
+const calmState = () => narrow() && S && S.winner === null && !(S.pending && !isCpu(S.pending.request.player)) && !fan && !sheet && selected === null && !aim && !place && !handPress
+  && $('#menu').hidden && $('#pileDlg').hidden && $('#reviewDlg').hidden;
+function trayGestureStart(x, y, target) {
+  // ボタン・選ぶ画面の中から始めた操作は対象外
+  trayGesture = calmState() && !(target && target.closest && target.closest('button, .btn, .fan-layer, .sheet, .overlay')) ? { x, y, t: performance.now() } : null;
+}
+function trayGestureEnd(x, y) {
+  const g = trayGesture; trayGesture = null;
+  if (!g || !calmState()) return;
+  const dx = x - g.x, dy = y - g.y;
+  if (Math.abs(dy) < 40 || Math.abs(dy) < Math.abs(dx) * 1.2) return;
+  if (dy < 0 && !trayOpen) { setTray(true); handPressFired = true; }
+  else if (dy > 0 && trayOpen) { setTray(false); handPressFired = true; }
+}
+root.addEventListener('pointerdown', e => trayGestureStart(e.clientX, e.clientY, e.target));
+root.addEventListener('pointerup', e => trayGestureEnd(e.clientX, e.clientY));
+root.addEventListener('touchstart', e => { const p = e.touches[0]; if (p && e.touches.length === 1) trayGestureStart(p.clientX, p.clientY, e.target); }, { passive: true });
+root.addEventListener('touchend', e => { const p = e.changedTouches[0]; if (p) trayGestureEnd(p.clientX, p.clientY); }, { passive: true });
 root.addEventListener('pointercancel', () => { if (handPress) { clearTimeout(handPress.timer); handPress = null; } if (aim && aim.held) endAim(); });
 ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => root.addEventListener(ev, () => { if (pressT) pressEnd(); }));
 root.addEventListener('contextmenu', e => {
@@ -1917,6 +2110,9 @@ root.addEventListener('click', e => {
   if (t.closest('#again') || t.closest('[data-again="1"]')) { newDuel(); return; }
   if (t.closest('[data-reopen="1"]')) { peek = false; render(); return; }
   if (t.closest('#stopBtn')) { stopNext = !stopNext; renderDock(); return; }
+  if (t.closest('#handHold')) { setTray(true); return; }
+  if (t.closest('#endBtn')) { endTap(); return; }
+  if (t.closest('#undoMini')) { undo(); return; }
   if (t.closest('#reviewBtn')) { showReview(); return; }
   if (t.closest('#reviewClose') || t.id === 'reviewDlg') { $('#reviewDlg').hidden = true; return; }
   if (t.closest('#closeDuel')) { clearTimeout(cpuTimer); OPTS.onClose?.(); return; }
@@ -1953,7 +2149,7 @@ root.addEventListener('click', e => {
     // 選択中なら、盤面のカードを押しても選べる
     if (S.pending && S.pending.request.kind === 'cards' && S.pending.request.options.includes(u) && !isCpu(S.pending.request.player)) { togglePick(u); return; }
     // スマホの自分の手札：1回押すと飛び出して光る（選ぶ）、もう一度押すと戻る。効果は長押しで見る
-    if (narrow() && cardEl.closest('#hand0')) { if (selected === u) { selected = null; sheet = null; } else { selected = u; sheet = null; } render(); return; }
+    if (narrow() && cardEl.closest('#hand0')) { handTap(u); return; }
     selected = u; sheet = 'detail';
     if (cardEl.closest('#pileDlg')) $('#pileDlg').hidden = true;
     render();
