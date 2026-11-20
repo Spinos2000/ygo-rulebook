@@ -208,7 +208,8 @@ function setup(info, god) {
   const A = { x: ra.left + ra.width / 2, y: ra.top + ra.height / 2, w: ra.width, h: ra.height, x0: 0, y0: 0, s: 1, glow: 0, img: cardImg(info.a.d, info.a.atk, info.a.def), a: 1 };
   A.x0 = A.x; A.y0 = A.y;
   const direct = !info.t.d;
-  const D = { x: rt.left + rt.width / 2, y: rt.top + rt.height / 2, w: direct ? ra.width : rt.width, h: direct ? ra.height : rt.height, a: 1, rot: 0, burn: 0, dis: 0, img: direct ? null : cardImg(info.t.d, info.t.atk, info.t.def) };
+  const side = !direct && info.t.pos === 'def';
+  const D = { x: rt.left + rt.width / 2, y: rt.top + rt.height / 2, w: direct ? ra.width : side ? rt.height : rt.width, h: direct ? ra.height : side ? rt.width : rt.height, a: 1, rot: side ? Math.PI / 2 : 0, rot0: side ? Math.PI / 2 : 0, burn: 0, dis: 0, img: direct ? null : cardImg(info.t.d, info.t.atk, info.t.def) };
   const r = RACE[info.a.d.race] || ['slash', '#ffe08a', 'shatter'];
   const S = { info, god, A, D, U, direct, act: r[0], c: god ? GOD[god].c : r[1], c2: god ? GOD[god].c2 : '#ffffff', kill: god ? 'shatter' : r[2],
     parts: [], rings: [], fx: [], shards: [], ghosts: [], bolts: [], stars: [], ev: [],
@@ -305,7 +306,7 @@ function frame(S, now) {
     if (o.disT != null) { const d = (t - o.disT) / 1000; o.dis = Math.min(1, d); o.a = Math.max(0, 1 - d * 1.1); if (d < .9) for (let k = 0; k < 5; k++) P(S, { x: o.x + (Math.random() - .5) * o.w, y: o.y + (Math.random() - .5) * o.h, vx: (Math.random() - .5) * 1.4, vy: -.6 - Math.random() * 1.6, life: 50, sz: 2, c: Math.random() < .5 ? S.c : '#ffffff', drag: .985, grav: -.015 }); }
     if (o.split) o.split.t = Math.min(1.3, o.split.t + dt / 700);
   }
-  if (D.wobble != null) D.rot = Math.sin((t - D.wobble) / 30) * .08 * Math.max(0, 1 - (t - D.wobble) / 500);
+  if (D.wobble != null) D.rot = (D.rot0 || 0) + Math.sin((t - D.wobble) / 30) * .08 * Math.max(0, 1 - (t - D.wobble) / 500);
   S.shards.forEach(s => { s.x += s.vx; s.y += s.vy; s.vy += .22; s.vx *= .99; s.rot += s.vr; s.a -= .012; }); S.shards = S.shards.filter(s => s.a > 0);
   S.rings.forEach(g => { if (g.move) { g.y += g.v; g.r += 2.2; } else { g.r += g.v; g.v *= .985; } g.a *= g.move ? .985 : .955; }); S.rings = S.rings.filter(g => g.a > .03);
   S.ghosts.forEach(g => { g.a *= .8; }); S.ghosts = S.ghosts.filter(g => g.a > .03);

@@ -874,6 +874,7 @@ export function setFaceDown(s           , uids          )           {
   for (const u of uids) {
     const c = s.cards[u];
     if (!isMonsterZone(c) || (!c.faceUp && c.position === 'def') || isImmune(s, u)) continue;
+    if (c.faceUp) c.pub = true; // 表側の間にカード名は見られている（裏側にしても相手は中身を知っている）
     c.faceUp = false; c.position = 'def'; c.mods = []; c.counters = {};
     done.push(u);
   }
@@ -908,7 +909,8 @@ export function normalSummonNow(x     , uid        , set         )          {
   const s = x.s, p = x.player, me = s.players[p];
   const z = freeMZones(s, p);
   if (me.normalSummonUsed || !z.length || s.cards[uid].zone !== 'hand') return false;
-  moveCard(s, uid, 'mzone', { index: z[0], faceUp: !set, position: set ? 'def' : 'atk', controller: p });
+  const want = x.link?.data.zone                      ;
+  moveCard(s, uid, 'mzone', { index: want !== undefined && z.includes(want) ? want : z[0], faceUp: !set, position: set ? 'def' : 'atk', controller: p });
   me.normalSummonUsed = true;
   const c = s.cards[uid];
   if (set) { log(s, `${pl(p)}：モンスターをセット`); emit(s, { type: 'set', uid, player: p }); pushAnim(s, { kind: 'summon', uid, how: 'set', mats: [] }); return true; }
@@ -1390,6 +1392,7 @@ function activateEffect(s           , p          , uid        , effectId        
     player: p, uid, serial: s.cards[uid].serial, effect: effectId, ss: eff.ss, cardActivation: eff.type === 'card' && !dg, cardKind: d.kind,
     targets: [], targetSerials: [], data: {}, negated: false, effectNegated: false,
   };
+  if (zone !== undefined && !(eff.type === 'card' && !dg)) link.data.zone = zone;
   if (eff.opt || eff.hardOpt) s.opt[`${p}:${optKey(s, uid, eff)}`] = s.turn;
   log(s, `${pl(p)}：${nameOf(s, uid)}${eff.type === 'card' && !dg ? 'を発動' : `の効果を発動`}（チェーン${s.chain.length + 1}）`);
   // このターンに効果を発動した記録（混沌帝龍：「このカードの効果を発動するターン、自分は他の効果を発動できない」）

@@ -261,7 +261,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .confirm { width: 100% }
 .loghead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px }
 .loghead h3 { margin: 0; font-size: 13px; letter-spacing: .06em }
-#log { list-style: none; margin: 0; padding: 0; max-height: 340px; overflow: auto; font-size: 12px }
+#log { list-style: none; margin: 0; padding: 0; max-height: 340px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; font-size: 12px }
 #log li { padding: 3px 0; border-bottom: 1px solid var(--line) }
 #log li.turn { color: var(--accent); font-weight: 700; padding-top: 8px }
 
@@ -683,6 +683,57 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .place-layer { position: fixed; inset: 0; z-index: 35; background: rgba(4,10,8,.3); touch-action: none }
 .place-ghost { position: fixed; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 0 3px var(--accent), 0 0 20px 6px color-mix(in srgb, var(--accent) 65%, transparent); transition: transform .2s }
 .place-ghost.def { transform: translate(-50%, -50%) rotate(90deg) }
+.atk-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 5px 12px; display: grid; gap: 1px; text-align: center; white-space: nowrap; max-width: calc(100vw - 24px); pointer-events: none; box-shadow: 0 6px 16px rgba(0,0,0,.4) }
+.atk-chip b { font-family: var(--display); font-size: 15px }
+.atk-chip small { font-size: 11px; color: var(--sub) }
+.atk-chip.win { border-color: #3fae6a } .atk-chip.win b { color: #3fae6a }
+.atk-chip.lose { border-color: #d65a5a } .atk-chip.lose b { color: #d65a5a }
+.atk-chip.unk b { color: var(--accent) }
+.atk-chip .atk-how { color: var(--ink); font-weight: 700 }
+#board .atk-src { filter: drop-shadow(0 0 10px var(--accent)) }
+.atk-hover { outline: 3px solid #d65a5a; outline-offset: 2px; box-shadow: 0 0 18px 4px rgba(214,90,90,.6) }
+#speech.long .speech-text { font-size: clamp(1.05rem, 4.6vw, 1.7rem) }
+#speech.long { animation-duration: 3.7s }
+.phase-cue { position: fixed; left: 50%; top: 30%; transform: translate(-50%, -50%); z-index: 44; pointer-events: none; display: grid; justify-items: center; gap: 2px; padding: 8px 26px; border-radius: 14px; background: rgba(10,14,20,.78); border: 2px solid #e0787c; color: #fff; animation: phaseCue 1.5s ease forwards }
+.phase-cue small { font-size: 11px; letter-spacing: .1em; color: #e0787c; font-weight: 700 }
+.phase-cue b { font-family: var(--display); font-size: clamp(1.2rem, 5.5vw, 1.8rem); white-space: nowrap }
+@keyframes phaseCue { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.9) } 15% { opacity: 1; transform: translate(-50%, -50%) scale(1) } 80% { opacity: 1 } 100% { opacity: 0; transform: translate(-50%, -60%) } }
+.tg-layer { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 33; pointer-events: none; overflow: visible }
+.tg-line { fill: none; stroke-width: 3; stroke-dasharray: 7 6; stroke-linecap: round; animation: aimDash .6s linear infinite; filter: drop-shadow(0 0 4px rgba(0,0,0,.6)) }
+.tg-line.opp, .tg-ring.opp { stroke: #ff6b6b } .tg-head.opp { fill: #ff6b6b }
+.tg-line.me, .tg-ring.me { stroke: var(--accent) } .tg-head.me { fill: var(--accent) }
+.tg-ring { fill: none; stroke-width: 3; stroke-dasharray: 6 4; animation: aimDash .6s linear infinite }
+.fan-layer.topreveal { background: #0b0f14; justify-content: center; overflow: hidden }
+.hb-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none }
+.hb-bg i { position: absolute; top: -20%; bottom: -20%; width: 70%; display: block }
+.hb-flame::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(98deg, transparent 0 34px, rgba(255,110,90,.35) 34px 52px, transparent 52px 80px); filter: blur(5px); animation: hbTongue 2.2s linear infinite }
+@keyframes hbTongue { from { transform: translateY(8%) } to { transform: translateY(-8%) } }
+.fan-layer.topreveal > .fan-head { margin-top: auto }
+.fan-layer.topreveal > .fan-btns { margin-bottom: auto }
+.hb-flame { left: -10%; background:
+  radial-gradient(14% 34% at 22% 72%, rgba(255,150,110,.85), transparent 70%),
+  radial-gradient(11% 30% at 44% 58%, rgba(255,85,75,.8), transparent 70%),
+  radial-gradient(16% 38% at 30% 32%, rgba(235,55,75,.75), transparent 70%),
+  radial-gradient(10% 26% at 56% 24%, rgba(255,125,95,.65), transparent 70%),
+  radial-gradient(12% 30% at 12% 45%, rgba(255,70,70,.7), transparent 70%),
+  linear-gradient(90deg, #4a0810, #8e1626 50%, transparent);
+  filter: blur(9px); animation: hbFlame 1.4s ease-in-out infinite alternate;
+  -webkit-mask-image: linear-gradient(90deg, #000 55%, transparent); mask-image: linear-gradient(90deg, #000 55%, transparent) }
+.hb-swirl { right: -10%; background: repeating-radial-gradient(circle at 60% 50%, rgba(170,225,205,.55) 0 6px, rgba(60,140,120,.35) 6px 14px, rgba(120,200,180,.15) 14px 22px);
+  animation: hbSwirl 9s linear infinite;
+  -webkit-mask-image: linear-gradient(270deg, #000 50%, transparent); mask-image: linear-gradient(270deg, #000 50%, transparent) }
+@keyframes hbFlame { 0% { transform: translateY(0) skewY(-4deg) scale(1) } 100% { transform: translateY(-6%) skewY(4deg) scale(1.08) } }
+@keyframes hbSwirl { 0% { transform: scale(1) rotate(0deg) } 50% { transform: scale(1.15) rotate(180deg) } 100% { transform: scale(1) rotate(360deg) } }
+.topreveal .fan-head, .topreveal .hb-row, .topreveal .fan-btns, .topreveal .fan-info { position: relative; z-index: 1 }
+.hb-row { display: flex; gap: clamp(10px, 3vw, 22px); justify-content: center; align-items: center; margin: 22px 0 }
+.hb-card { position: relative; width: clamp(92px, 27vw, 150px); aspect-ratio: 59 / 86; perspective: 900px; cursor: pointer; display: block }
+.hb-flip { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateY(180deg); transition: transform .45s cubic-bezier(.3,.7,.3,1) }
+.hb-flip.up { transform: rotateY(0deg) }
+.hb-flip > .hb-face, .hb-flip > .hb-back { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: 0 10px 24px rgba(0,0,0,.55) }
+.hb-flip > .hb-face { font-size: clamp(11px, 3.3vw, 18px) }
+.hb-flip > .hb-back { transform: rotateY(180deg) }
+.hb-card:hover .hb-flip.up, .hb-card.peek .hb-flip.up { transform: translateY(-8px) }
+.hb-card.peek .hb-face { box-shadow: 0 0 0 3px #ffe08a, 0 0 24px 6px rgba(255,224,138,.6) }
 .place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: nowrap; max-width: calc(100vw - 24px) }
 .place-chip b { font-family: var(--display); font-size: 15px }
 .place-chip small { font-size: 10.5px; color: var(--sub) }
@@ -842,7 +893,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261120-0936</p>
+    <p class="menu-note ver">版：20261120-1232</p>
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>
