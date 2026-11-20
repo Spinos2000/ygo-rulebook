@@ -25,6 +25,8 @@ import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js
                        
                                                          
                   
+                                         
+                       
                                                             
                  
                    
@@ -185,7 +187,7 @@ export function idealThink(s           , opt               = {}, deckNames      
   const first = scoreCandidates(w0, { ...cpuOpt, fullOpponent: opt.fullOpponent ?? true });
   const critical = isCritical(s, me, first.list.length);
   // 処理の量の上限：普段 1500回・勝負所 5000回（PCで約2秒・約6秒。遅い端末では時間が延びるが、考える量は同じ）
-  const budget = opt.budget ?? (critical ? 5000 : 1500);
+  const budget = opt.budget ?? (critical ? 5000 : 1500) * (opt.budgetScale ?? 1);
   // 1つの世界にかかった量から、上限の半分に収まる世界の数にする（残りの半分は深い先読みに使う）
   const per = Math.max(1, WORK.n - w0start);
   const N = Math.max(1, Math.min(critical ? o.criticalSamples : o.samples, Math.floor(budget / 2 / per)));

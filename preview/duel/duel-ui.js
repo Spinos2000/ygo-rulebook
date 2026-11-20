@@ -741,7 +741,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 @keyframes actGlow { 0%, 100% { filter: brightness(1) } 50% { filter: brightness(1.18) } }
 #board .zone.zone-pick { outline: 3px dashed var(--accent); outline-offset: -3px; box-shadow: 0 0 16px 4px color-mix(in srgb, var(--accent) 60%, transparent); animation: zonePick 1s ease-in-out infinite; cursor: pointer }
 @keyframes zonePick { 0%, 100% { filter: brightness(1) } 50% { filter: brightness(1.35) } }
-.zone-tip { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 96px); transform: translateX(-50%); z-index: 36; background: rgba(10,14,20,.88); color: #fff; font-weight: 800; font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--accent); white-space: nowrap; max-width: calc(100vw - 24px); overflow: hidden; text-overflow: ellipsis; pointer-events: none }
+.zone-tip { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 96px); transform: translateX(-50%); z-index: 36; background: rgba(10,14,20,.88); color: #fff; font-weight: 800; font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--accent); white-space: normal; max-width: calc(100vw - 24px); width: max-content; text-align: center; display: grid; gap: 1px; pointer-events: none }
+.zone-tip b { font-size: 14px } .zone-tip small { font-size: 11px; font-weight: 600; opacity: .85; overflow-wrap: anywhere }
 .mill-layer { position: fixed; inset: 0; z-index: 30; background: rgba(6,14,10,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; pointer-events: none }
 .mill-head { display: grid; justify-items: center; gap: 2px; color: #fff; text-align: center }
 .mill-head b { font-family: var(--display); font-size: clamp(1rem, 4.6vw, 1.4rem) }
@@ -794,6 +795,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .su-more { width: 100%; margin-top: 10px; padding: 10px; border-radius: 12px; border: 1.5px solid var(--line); background: transparent; color: var(--sub); font: inherit; font-size: 13px; cursor: pointer }
 /* 準備画面の⚙️から開いた時は、対戦の設定（チェーンの確認・演出・CPUの速さ）だけ */
 #menu.from-setup label[for="deck0"], #menu.from-setup label[for="deck1"], #menu.from-setup label[for="mode"], #menu.from-setup label[for="first"], #menu.from-setup #hideOppRow, #menu.from-setup .menu-row, #menu.from-setup .menu-note:not(.ver) { display: none }
+@media (max-width: 860px) {
+  .droot #chain:not([hidden]) { position: fixed; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 150px); z-index: 31; max-height: 30vh; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,.45); padding: 8px 10px; pointer-events: none }
+  .droot #chain h3 { font-size: 12px } .droot #chain li { font-size: 12px }
+}
 .place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: normal; width: max-content; max-width: min(calc(100vw - 24px), 360px) }
 .place-chip small { line-height: 1.45 }
 .place-chip b { font-family: var(--display); font-size: 15px }
@@ -958,7 +963,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261120-1557</p>
+    <p class="menu-note ver">版：20261120-1614</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

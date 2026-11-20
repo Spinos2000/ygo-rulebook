@@ -1,6 +1,7 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { idealThink, acesOf } from './ai/ideal.js';
+import { acesOf } from './ai/ideal.js';
+import { levelThink } from './ai/levels.js';
 import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js';
 import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js';
 import { playBattle, playSummon, rarityOf } from './fx.js';
@@ -298,14 +299,14 @@ const deckNames = () => deckCodes().map(c => DECKS[c]?.name ?? '');
 function think(state) {
   if (state.askZone) state = { ...state, askZone: undefined };
   const local = () => new Promise(res => setTimeout(() => {
-    try { res({ ok: true, thought: idealThink(state, { deckCodes: deckCodes() }, deckNames()) }); } catch (e) { res({ ok: false, error: e.message }); }
+    try { res({ ok: true, thought: levelThink(state, cpuLevel, { deckCodes: deckCodes() }, deckNames()) }); } catch (e) { res({ ok: false, error: e.message }); }
   }, 30));
   const w = getWorker();
   if (!w) return local();
   return new Promise(res => {
     const id = ++reqId;
     waiting.set(id, r => (r.retry ? local().then(res) : res(r)));
-    try { w.postMessage({ id, state, deckNames: deckNames(), deckCodes: deckCodes() }); } catch { waiting.delete(id); local().then(res); }
+    try { w.postMessage({ id, state, deckNames: deckNames(), deckCodes: deckCodes(), level: cpuLevel }); } catch { waiting.delete(id); local().then(res); }
   });
 }
 let thinking = null; // 考えている最中の状態（同じ状態で2回考えない）
@@ -542,7 +543,9 @@ function showReview() {
 
 /* ---------- デュエルの準備（CPU対戦）：電卓と同じように、1ページに1つずつ選んで「▶ デュエル開始」へ ----------
  * あなたのデッキ（持ち主 → テーマ）→ CPUのデッキ（持ち主 → テーマ。🎲おまかせも可）→ 先攻・後攻 → 確認してスタート */
-const SU_PAGES = ['p0own', 'p0deck', 'p1own', 'p1deck', 'first', 'go'];
+const SU_PAGES = ['p0own', 'p0deck', 'p1own', 'p1deck', 'first', 'level', 'go'];
+const LEVEL_LABEL = { easy: 'やさしい', normal: 'ふつう', hard: '本気' };
+let cpuLevel = 'normal'; // いまの対戦のCPUの強さ
 let SU = null;
 let placeholder = false; // 準備画面の後ろにある、まだ始めていない仮の対戦（保存しない）
 let suReturn = false; // 準備画面から設定（メニュー）を開いた：閉じたら準備画面に戻る
@@ -556,7 +559,7 @@ let suKeep = null; // ⚙️（メニュー）を開いている間、準備画�
 function openSetup(page = 'p0own') {
   let last = null; try { last = JSON.parse(localStorage.getItem('gx-duel-setup') || 'null'); } catch { /* 保存できない環境 */ }
   const d0 = DECKS[last?.p0] || DECKS[$('#deck0').value] || Object.values(DECKS)[0], d1 = DECKS[last?.p1] || DECKS[$('#deck1').value] || d0;
-  SU = suKeep ? { ...suKeep, page } : { page, hist: [], p0own: ownerOf(d0), p0: d0.code, p1own: ownerOf(d1), p1: d1.code, rand: !!last?.rand, first: last?.first ?? $('#first').value };
+  SU = suKeep ? { ...suKeep, page } : { page, hist: [], p0own: ownerOf(d0), p0: d0.code, p1own: ownerOf(d1), p1: d1.code, rand: !!last?.rand, first: last?.first ?? $('#first').value, level: ['easy', 'normal'].includes(last?.level) ? last.level : 'normal' };
   suKeep = null;
   if (skipOwner() && SU.page === 'p0own') { SU.p0own = owners()[0]; SU.page = 'p0deck'; }
   if (page === 'go') SU.hist = SU_PAGES.slice(0, -1).filter(x => !(skipOwner() && x.endsWith('own')));
@@ -594,13 +597,18 @@ function renderSetup() {
       + opt('first:0', '🙋', 'あなたが先攻', '最初のターンはドローなし', SU.first === '0')
       + opt('first:1', '🤖', 'CPUが先攻', 'あなたは後攻からスタート', SU.first === '1')
       + opt('first:r', '🎲', 'ランダム', 'デュエル開始の時に決める', SU.first === 'r') + '</div>';
+  } else if (p === 'level') {
+    el.innerHTML = `<p class="su-q">CPUの強さは？</p><div class="su-opts">`
+      + opt('level:easy', '🐣', 'やさしい', 'ときどき最善でない手を選ぶ。操作に慣れたい時に', SU.level === 'easy')
+      + opt('level:normal', '🤖', 'ふつう', '見えないカードを推測して勝率で選ぶ（今までのCPU）', SU.level === 'normal') + '</div>';
   } else {
     const d0 = DECKS[SU.p0], d1 = DECKS[SU.p1];
     const firstTxt = { 0: 'あなたが先攻', 1: 'CPUが先攻', r: 'ランダム（開始の時に決める）' }[SU.first];
     el.innerHTML = `<p class="su-q">この内容でデュエルを始めます</p><div class="su-sum">`
       + `<div><span>あなた</span><b>${esc(themeOf(d0))}</b><small>${esc(ownerOf(d0))}・${esc(fmtTag(d0))}</small></div>`
       + `<div><span>CPU</span><b>${SU.rand ? '🎲 おまかせ' : esc(themeOf(d1))}</b><small>${SU.rand ? 'あなたと違うデッキからランダム（開始の時に発表）' : `${esc(ownerOf(d1))}・${esc(fmtTag(d1))}`}</small></div>`
-      + `<div><span>先攻</span><b>${esc(firstTxt)}</b></div></div>`
+      + `<div><span>先攻</span><b>${esc(firstTxt)}</b></div>`
+      + `<div><span>強さ</span><b>${esc(LEVEL_LABEL[SU.level] || 'ふつう')}</b></div></div>`
       + `<button type="button" class="su-start" data-su="start">▶ デュエル開始</button>`
       + `<button type="button" class="su-more" data-su="more">⚙️ チェーンの確認・演出・CPUの速さ</button>`;
   }
@@ -612,7 +620,8 @@ function setupClick(t) {
   if (k === 'rand') { SU.rand = true; suGo('first'); return true; }
   if (k === 'own') { if (me) SU.p0own = v; else { SU.p1own = v; SU.rand = false; } suGo(me ? 'p0deck' : 'p1deck'); return true; }
   if (k === 'deck') { if (me) SU.p0 = v; else { SU.p1 = v; SU.rand = false; } suGo(me ? 'p1own' : 'first'); return true; }
-  if (k === 'first') { SU.first = v; suGo('go'); return true; }
+  if (k === 'first') { SU.first = v; suGo('level'); return true; }
+  if (k === 'level') { SU.level = v; suGo('go'); return true; }
   if (k === 'more') { suKeep = SU; $('#setup').hidden = true; suReturn = true; openMenu(); $('#menu').classList.add('from-setup'); return true; }
   if (k === 'start') {
     const all = Object.keys(DECKS);
@@ -621,7 +630,8 @@ function setupClick(t) {
     const pool = all.filter(c => c !== SU.p0), pick = SU.rand ? (pool.length ? pool : all)[Math.floor(Math.random() * (pool.length || all.length))] : SU.p1;
     $('#deck1').value = pick;
     $('#first').value = SU.first;
-    try { localStorage.setItem('gx-duel-setup', JSON.stringify({ p0: SU.p0, p1: SU.p1, rand: SU.rand, first: SU.first })); } catch { /* 保存できない環境 */ }
+    cpuLevel = SU.level || 'normal';
+    try { localStorage.setItem('gx-duel-setup', JSON.stringify({ p0: SU.p0, p1: SU.p1, rand: SU.rand, first: SU.first, level: cpuLevel })); } catch { /* 保存できない環境 */ }
     placeholder = false;
     showDeckFmt();
     const go = () => { $('#setup').hidden = true; SU = null; newDuel(); };
@@ -663,7 +673,7 @@ function showDeckFmt() {
       + `<small>🔢 数えるカード：${ctr.length ? esc(ctr.join('、')) : 'なし'}</small>`;
   }
 }
-function newDuel() {
+function newDuel(quiet = false) {
   // 選ばれているデッキが無い場合（読み込み直後など）は最初のデッキを使う
   const first = Object.values(DECKS)[0];
   const d0 = DECKS[$('#deck0').value] ?? first, d1 = DECKS[$('#deck1').value] ?? first;
@@ -674,7 +684,7 @@ function newDuel() {
   closeMenu();
   render();
   newPersona(); moodTurn = -1;
-  if (cpuMode() && !setupOpen() && $('#menu').hidden) startCue();
+  if (cpuMode() && !quiet && !setupOpen() && $('#menu').hidden) startCue();
 }
 
 /* ---------- 行動の実行 ---------- */
@@ -780,6 +790,7 @@ const tpAt = t => (t % 2 === 1 ? S.firstPlayer : 1 - S.firstPlayer);
 function ownTurnsUntil(p, target) { let n = 0; for (let t = S.turn + 1; t <= target; t++) if (tpAt(t) === p) n++; return n; }
 function counterHtml(uid) {
   const c = S.cards[uid], d = defOf(S, uid), k = c.counters || {}, out = [];
+  if (!c.faceUp && ['mzone', 'szone', 'fzone', 'emz'].includes(c.zone)) return ''; // 裏側の間は出さない（自分の伏せカードも、相手と同じ見た目に）
   // 魔力カウンター：最大数ぶんの玉を並べ、溜まった数だけ光らせる
   if (k.magic !== undefined || MAGIC_MAX[d.name]) {
     const n = k.magic ?? 0, max = Math.max(n, MAGIC_MAX[d.name] ?? n);
@@ -1432,6 +1443,10 @@ function openTopReveal(r, key) {
     fanFinish([Number(el.dataset.fan)]);
   });
 }
+/** 選ぶ画面の「もう一度押すと〜」の言葉：選ぶ目的（案内文）に合わせる */
+function pickVerb(prompt) {
+  return /捨て/.test(prompt) ? '捨てます' : /除外/.test(prompt) ? '除外します' : /墓地へ送|墓地に送/.test(prompt) ? '墓地へ送ります' : /特殊召喚/.test(prompt) ? '特殊召喚します' : /デッキ.*(戻|置)/.test(prompt) ? 'デッキに戻します' : /手札に加/.test(prompt) ? '手札に加えます' : '選びます';
+}
 /** 山札を広げている時に、押したカードの効果を見せる（もう一度押すと選ぶ） */
 function fanPeek(el, u) {
   if (!fan) return;
@@ -1441,7 +1456,7 @@ function fanPeek(el, u) {
   if (!box) { box = document.createElement('div'); box.className = 'fan-info'; box.setAttribute('aria-live', 'polite'); fan.layer.insertBefore(box, fan.layer.querySelector('.fan-pick') || fan.layer.querySelector('.fan-btns')); }
   const d = defOf(S, u), ok = fan.req.options.includes(u);
   const type = d.kind === 'monster' ? `★${d.level ?? '-'}・${d.attribute || ''}・${d.race || ''}　ATK ${d.atk ?? '?'} / DEF ${d.def ?? '?'}` : `${d.subtype || ''}${d.kind === 'spell' ? '魔法' : '罠'}`;
-  box.innerHTML = `<b>${esc(d.name)}</b><small>${esc(type)}</small><p>${esc(d.text || '')}</p><span class="fan-hint">${ok ? (fan.req.max > 1 ? 'もう一度押すと選びます' : 'もう一度押すと手札に加えます') : 'このカードは選べません'}</span>`;
+  box.innerHTML = `<b>${esc(d.name)}</b><small>${esc(type)}</small><p>${esc(d.text || '')}</p><span class="fan-hint">${ok ? (fan.req.max > 1 ? 'もう一度押すと選びます' : `もう一度押すと${pickVerb(fan.req.prompt)}`) : 'このカードは選べません'}</span>`;
 }
 function fanPick(u) {
   if (!fan || !fan.req.options.includes(u)) return;
@@ -1937,20 +1952,22 @@ function actZones(a) {
   if ((a.type === 'setSpellTrap' || a.type === 'activate') && d.kind !== 'monster' && d.subtype !== 'フィールド') return P.szone.map((v, i) => (v === null ? `0:st:${i}` : null)).filter(Boolean);
   return null;
 }
+/** マス選びの案内を、盤面のすぐ上（LPの箱にかぶらない所）に出す */
+function placeTip(tip) { const b = $('#board'); if (!b) return; const r = b.getBoundingClientRect(); tip.style.top = Math.max(8, r.top + 6) + 'px'; }
 function renderZonePick() {
   ROOT.querySelectorAll('#board .zone-pick').forEach(el => el.classList.remove('zone-pick'));
   let tip = $('.zone-tip');
   if (actPick && !fxSoon() && fxN === 0) {
     for (const k of actPick.zones) { const el = ROOT.querySelector(`#board [data-zone="${k}"]`); if (el) el.classList.add('zone-pick'); }
     if (!tip) { tip = document.createElement('div'); tip.className = 'zone-tip'; $('.droot').appendChild(tip); }
-    tip.textContent = `「${defOf(S, actPick.a.card).name}」を置くマスを押してください（ほかを押すとやめる）`;
+    tip.innerHTML = `<b>置くマスを押してください</b><small>${esc(defOf(S, actPick.a.card).name)}・ほかを押すとやめる</small>`; placeTip(tip);
     return;
   }
   const zp = fxSoon() || fxN > 0 ? null : zonePick();
   if (!zp) { if (tip) tip.remove(); return; }
   for (const k of zp.map.keys()) { const el = ROOT.querySelector(`#board [data-zone="${k}"]`); if (el) el.classList.add('zone-pick'); }
   if (!tip) { tip = document.createElement('div'); tip.className = 'zone-tip'; $('.droot').appendChild(tip); }
-  tip.textContent = `${zp.r.prompt.replace(ZONE_Q, '')}を出すマスを押してください`;
+  tip.innerHTML = `<b>出すマスを押してください</b><small>${esc(zp.r.prompt.replace(ZONE_Q, '').replace(/^「|」$/g, ''))}</small>`; placeTip(tip);
 }
 function renderSheets(duringFx = false) {
   const humanChoice = S.pending && !isCpu(S.pending.request.player) && !zonePick();
@@ -2109,7 +2126,7 @@ function saveSoon() {
     try {
       if (placeholder) return;
       if (!S || S.winner !== null) localStorage.removeItem(OPTS.storageKey);
-      else localStorage.setItem(OPTS.storageKey, JSON.stringify({ v: SAVE_V, S, trace, mode: $('#mode').value, d0: $('#deck0').value, d1: $('#deck1').value }));
+      else localStorage.setItem(OPTS.storageKey, JSON.stringify({ v: SAVE_V, S, trace, mode: $('#mode').value, d0: $('#deck0').value, d1: $('#deck1').value, lv: cpuLevel }));
     } catch { /* 保存できない環境では覚えない */ }
   }, 400);
 }
@@ -2176,7 +2193,12 @@ function showPile(p, kind) {
 }
 
 /* ---------- メニュー ---------- */
-function openMenu() { $('#menu').hidden = false; $('#menuBtn').setAttribute('aria-expanded', 'true'); disarm(); clearTimeout(cpuTimer); }
+function menuNames() {
+  const cpu = cpuMode(), L = (id, t) => { const el = ROOT.querySelector(`label[for="${id}"]`); if (el && el.firstChild && el.firstChild.nodeType === 3) el.firstChild.textContent = t; };
+  L('deck0', cpu ? 'あなたのデッキ' : 'あなたのデッキ（P1）'); L('deck1', cpu ? 'CPUのデッキ' : '相手のデッキ（P2）');
+  const f = $('#first'); if (f) { f.options[0].textContent = cpu ? 'あなた' : 'P1（あなた）'; f.options[1].textContent = cpu ? 'CPU' : 'P2'; }
+}
+function openMenu() { menuNames(); $('#menu').hidden = false; $('#menuBtn').setAttribute('aria-expanded', 'true'); disarm(); clearTimeout(cpuTimer); }
 function closeMenu() { $('#menu').hidden = true; $('#menu').classList.remove('from-setup'); $('#menuBtn').setAttribute('aria-expanded', 'false'); disarm(); setTimeout(() => { if (S && !pausedUi()) scheduleCpu(); }, 0); }
 let armT;
 function disarm() { const b = $('#surrender'); b.classList.remove('armed'); b.textContent = 'サレンダーする'; clearTimeout(armT); }
@@ -2838,14 +2860,16 @@ export function boot(root, opts = {}) {
     if (data && data.mode) $('#mode').value = data.mode;
     if (data && data.d0 && DECKS[data.d0]) $('#deck0').value = data.d0;
     if (data && data.d1 && DECKS[data.d1]) $('#deck1').value = data.d1;
+    if (data && ['easy', 'normal', 'hard'].includes(data.lv)) cpuLevel = data.lv;
     $('#hideOppRow').hidden = cpuMode();
     showDeckFmt();
     if (data && data.S && (data.v === 4 || data.v === SAVE_V)) {
       try { S = data.S; if (!S.askZone) S.askZone = cpuMode() ? [0] : [0, 1]; history = data.history || []; trace = Array.isArray(data.trace) ? data.trace : []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); return; }
       catch (e) { console.warn('保存していたデュエルを開けませんでした', e); }
     }
-    newDuel();
-    // ルールページでは、最初に準備画面（デッキ選び → 先攻・後攻 → デュエル開始）を開く
+    // ルールページでは、最初に準備画面（デッキ選び → 先攻・後攻 → デュエル開始）を開く。後ろの仮の対戦では、開始の帯もセリフも出さない
+    const first = opts.menuFirst && cpuMode();
+    newDuel(first);
     if (opts.menuFirst) { if (cpuMode()) { placeholder = true; openSetup(); } else openMenu(); }
   };
   // 動作確認用：開発者ツールから状態を読み書きできるようにする
