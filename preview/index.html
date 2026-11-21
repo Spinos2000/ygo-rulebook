@@ -3980,7 +3980,11 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   var lob={sub:null,un:null,t:null,list:[]};
   async function enterLobby(){if(lob.sub||!myKey||!YGO.user)return;var r=await getRoom();if(!r)return;var s;try{s=await r.join('ygo2-lobby');}catch(e){return;}
     if(role!=='host'||opp||S2.page!=='link'&&S2.page!=='inv'){try{s.leave();}catch(e){}return;}
-    lob.sub=s;lob.un=s.onPeers(function(ch){lob.list=ch.peers.filter(function(p){return !p.isMe&&p.presence&&p.presence.app==='ygo'&&/^\d{4}$/.test(p.presence.key||'');}).map(function(p){return {uid:p.uid,name:str(p.presence.name,20)||'だれか',key:p.presence.key,at:p.updatedAt};});renderLobby();},function(){});
+    /* at＝相手の欄が書きかわったのを、この端末が受け取った時刻（自分の時計）。相手の時計は2台でずれていることがあるので比べない。
+       初めて見た欄だけは、相手の時刻が今から45秒以内（前後とも）なら今いるとみなし、そうでなければ次の書き直し（15秒ごと）を待つ */
+    var seenAt={};
+    lob.sub=s;lob.un=s.onPeers(function(ch){var now=Date.now();ch.peers.forEach(function(p){var k=seenAt[p.uid];if(!k)seenAt[p.uid]={u:p.updatedAt,t:Math.abs(now-(p.updatedAt||0))<45000?now:0};else if(k.u!==p.updatedAt){k.u=p.updatedAt;k.t=now;}});
+      lob.list=ch.peers.filter(function(p){return !p.isMe&&p.presence&&p.presence.app==='ygo'&&/^\d{4}$/.test(p.presence.key||'');}).map(function(p){return {uid:p.uid,name:str(p.presence.name,20)||'だれか',key:p.presence.key,at:seenAt[p.uid].t};});renderLobby();},function(){});
     var beat=function(){if(lob.sub)lob.sub.presence({app:'ygo',name:myName(),key:myKey}).catch(function(){});renderLobby();};beat();lob.t=setInterval(beat,15000);}
   function leaveLobby(){clearInterval(lob.t);if(lob.un){try{lob.un();}catch(e){}}if(lob.sub){try{lob.sub.leave();}catch(e){}}lob={sub:null,un:null,t:null,list:[]};renderLobby();}
   function renderLobby(){var box=$('lobby-list');if(!box)return;box.innerHTML='';var now=Date.now();
@@ -4025,9 +4029,13 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   $('solo-go').addEventListener('click',async function(){leaveLobby();cancelInvite();await leave();S2.rec=false;S2.fmt='bo1';S2.page='theme';S2.hist=[];renderSetup();});
 
   /* 届いた招待（どの画面にいても通知） */
-  var inbox={sub:null,seen:{}};
+  /* 招待の新しさは「この端末が受け取った時刻（自分の時計）」から3分で数える（2台の時計がずれていても、届いた招待を古いと見なさない）。
+     ページを開いた時にもうあった招待だけは、送った時刻が今から3分以内（前後とも）のものを出す */
+  var inbox={sub:null,seen:{},got:{},first:true};
   YGO.ready.then(async function(u){if(!u)return;var r=await getRoom();if(!r)return;try{inbox.sub=await r.join('ygo2-inv-'+u.uid);}catch(e){return;}
-    inbox.sub.onPeers(function(ch){var now=Date.now();var L=ch.peers.filter(function(p){var x=p.presence;return !p.isMe&&x&&x.app==='ygo'&&x.id&&/^\d{4}$/.test(x.key||'')&&now-(Number(x.at)||p.updatedAt)<180000&&!inbox.seen[x.id];});
+    inbox.sub.onPeers(function(ch){var now=Date.now(),init=inbox.first;inbox.first=false;
+      ch.peers.forEach(function(p){var x=p.presence;if(!x||!x.id||inbox.got[x.id])return;inbox.got[x.id]=(!init||Math.abs(now-(Number(x.at)||p.updatedAt))<180000)?now:-1;});
+      var L=ch.peers.filter(function(p){var x=p.presence;return !p.isMe&&x&&x.app==='ygo'&&x.id&&/^\d{4}$/.test(x.key||'')&&inbox.got[x.id]>0&&now-inbox.got[x.id]<180000&&!inbox.seen[x.id];});
       L.sort(function(a,b){return b.updatedAt-a.updatedAt;});showInvite(L[0]?{id:L[0].presence.id,key:L[0].presence.key,name:str(L[0].presence.name,20)||'だれか',kind:L[0].presence.kind||''}:null);},function(){});
     /* 招待リンクから開いたとき */
     var q=new URLSearchParams(location.search).get('duel');

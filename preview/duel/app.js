@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1423-9eb0780fdd';
-import { fullThink } from './ai/levels.js?v=20261121-1423-9eb0780fdd';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1423-9eb0780fdd';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1423-9eb0780fdd';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1423-9eb0780fdd';
-import { playSignature, sigKey } from './sig.js?v=20261121-1423-9eb0780fdd';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1423-9eb0780fdd';
-import { firstEntrance } from './aces.js?v=20261121-1423-9eb0780fdd';
-import { RULINGS } from './data/rulings.js?v=20261121-1423-9eb0780fdd';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1423-9eb0780fdd';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1423-9eb0780fdd';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1423-9eb0780fdd';
-import { joinSiteRoom } from './net/site-room.js?v=20261121-1423-9eb0780fdd';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1442-586fc41f63';
+import { fullThink } from './ai/levels.js?v=20261121-1442-586fc41f63';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1442-586fc41f63';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1442-586fc41f63';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1442-586fc41f63';
+import { playSignature, sigKey } from './sig.js?v=20261121-1442-586fc41f63';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1442-586fc41f63';
+import { firstEntrance } from './aces.js?v=20261121-1442-586fc41f63';
+import { RULINGS } from './data/rulings.js?v=20261121-1442-586fc41f63';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1442-586fc41f63';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1442-586fc41f63';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1442-586fc41f63';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-1442-586fc41f63';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261121-1423-9eb0780fdd';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-1423-9eb0780fdd';
-import { DECKS } from './data/decks.js?v=20261121-1423-9eb0780fdd';
-import { SCRIPTS } from './cards/index.js?v=20261121-1423-9eb0780fdd';
+} from './engine/game.js?v=20261121-1442-586fc41f63';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1442-586fc41f63';
+import { DECKS } from './data/decks.js?v=20261121-1442-586fc41f63';
+import { SCRIPTS } from './cards/index.js?v=20261121-1442-586fc41f63';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -357,7 +357,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261121-1423-9eb0780fdd', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-1442-586fc41f63', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1287,7 +1287,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261121-1423-9eb0780fdd';
+const DUEL_BUILD = '20261121-1442-586fc41f63';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -1314,8 +1314,15 @@ async function lobbyOpen() {
   try { me.room = OPTS.room ? await OPTS.room.join(NET_LOBBY) : tabRoom(NET_LOBBY, netUid()); } catch (e) { console.warn('待合室に入れませんでした', e); return; }
   if (lobby !== me) { try { me.room.leave(); } catch { /* */ } return; }
   me.off = me.room.onPeers(({ peers }) => {
-    const now = Date.now();
-    me.peers = peers.filter(p => !p.isMe && p.presence && p.presence.wait && p.presence.v === netVer() && now - (p.updatedAt || 0) < 180000).map(p => ({ uid: p.uid, name: p.presence.name || 'ゲスト', key: p.presence.key, mode: p.presence.mode }));
+    // 生きているか：書きかわったのを受け取った時刻（自分の時計）で見る。相手の時計は2台でずれていることがあるので、
+    // 初めて見た時だけ「相手の時刻が今から3分以内（前後とも）」なら今いるとみなし、そうでなければ次に書きかわる（1分ごと）のを待つ
+    const now = Date.now(); me.seen = me.seen || {};
+    for (const p of peers) {
+      const s = me.seen[p.uid];
+      if (!s) me.seen[p.uid] = { at: p.updatedAt, t: Math.abs(now - (p.updatedAt || 0)) < 180000 ? now : 0 };
+      else if (s.at !== p.updatedAt) { s.at = p.updatedAt; s.t = now; }
+    }
+    me.peers = peers.filter(p => !p.isMe && p.presence && p.presence.wait && p.presence.v === netVer() && now - me.seen[p.uid].t < 150000).map(p => ({ uid: p.uid, name: p.presence.name || 'ゲスト', key: p.presence.key, mode: p.presence.mode }));
     if (netUi && netUi.step === 'key') renderNet();
   });
 }
@@ -1373,7 +1380,7 @@ async function netConnect(host) {
   try { u.room = await netJoin(key); } catch (e) { u.err = '部屋に入れませんでした：' + (e && e.message || e); u.step = 'key'; renderNet(); return; }
   if (netUi !== u) { try { u.room.leave(); } catch { /* もう閉じている */ } return; }
   u.lastSeen = Date.now();
-  u.peerOff = u.room.onPeers(({ peers }) => { const o = peers.find(p => !p.isMe); if (o) { u.lastSeen = Math.max(u.lastSeen || 0, o.updatedAt || Date.now()); if (o.presence && o.presence.name) { u.peerName = o.presence.name; if (net) net.oppName = o.presence.name; } if (o.presence && o.presence.deck) u.peerDeck = o.presence.deck; } if (netUi === u && !netMode()) renderNet(); });
+  u.peerOff = u.room.onPeers(({ peers }) => { const o = peers.find(p => !p.isMe); if (o) { /* 相手の欄が書きかわったのを受け取った時刻（自分の時計）で数える。相手の機械の時計（updatedAt）は2台でずれていることがあるので、比べない */ if (o.updatedAt !== u.peerAt) { u.peerAt = o.updatedAt; u.lastSeen = Date.now(); } if (o.presence && o.presence.name) { u.peerName = o.presence.name; if (net) net.oppName = o.presence.name; } if (o.presence && o.presence.deck) u.peerDeck = o.presence.deck; } if (netUi === u && !netMode()) renderNet(); });
   u.link = new DuelLink({ room: u.room, uid: netUid(), host, version: netVer(), name: netMyName(), deck: u.deck, mode: u.mode, ready: host, on: e => netEvent(u, e) });
   u.status = host ? '' : 'つながりました'; renderNet();
 }
@@ -1446,7 +1453,9 @@ function netQuit() {
 /** 相手の知らせが来ない時：上の帯に「つながりが切れたかも（あと m:ss で終わり）」 */
 setInterval(() => {
   if (!net || !net.ui || !S || S.winner !== null) return;
-  const gone = Date.now() - (net.ui.lastSeen || Date.now());
+  // 通信の部品と同じ数え方（相手の欄が変わったのを、この端末が受け取った時刻）。無ければ画面の側で覚えた時刻
+  const seen = Math.max((net.link && net.link.lastSeenAt) || 0, net.ui.lastSeen || 0);
+  const gone = Date.now() - (seen || Date.now());
   if (gone > NET_AWAY_SHOW) { const left = Math.max(0, 180000 - gone), m = Math.floor(left / 60000), sec = String(Math.floor(left / 1000) % 60).padStart(2, '0'); netNote(`<b>📡 つながりが切れました。もどるのを待っています（あと ${m}:${sec}）</b>`); }
   else if ($('#netNote') && /つながりが切れ/.test($('#netNote').textContent)) netNote('');
 }, 1000);
