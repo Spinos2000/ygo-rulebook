@@ -2,9 +2,9 @@
 // - やさしい：前のCPUの採点で候補を並べ、ときどき2番目・3番目の手を選ぶ（見えないカードは見ない）
 // - ふつう：理想のCPU（そのまま）
 // - 本気：理想のCPUに、考える量を約2倍・読む世界を多くして考えさせる。ロマンは無視して勝つことだけで手を選ぶ（見えないカードは推測のまま。ズルはしない）
-import { cpuDecide, scoreCandidates } from './cpu.js?v=20261121-1338-75bbb0de81';
-import { idealThink,                                 } from './ideal.js?v=20261121-1338-75bbb0de81';
-import { actorOf, opp, monstersOf, legalActions, currentStats, battleDamageZero, scriptOf, defOf, couldAttackNextBattle, fieldCards } from '../engine/game.js?v=20261121-1338-75bbb0de81';
+import { cpuDecide, scoreCandidates } from './cpu.js?v=20261121-1400-91ea7cd635';
+import { idealThink,                                 } from './ideal.js?v=20261121-1400-91ea7cd635';
+import { actorOf, opp, monstersOf, legalActions, currentStats, battleDamageZero, scriptOf, defOf, couldAttackNextBattle, fieldCards } from '../engine/game.js?v=20261121-1400-91ea7cd635';
                                                             
 
                                                   
