@@ -2,7 +2,7 @@
 // 考え方：候補の行動を1つずつ試し、その先を自分の次の判断の場面まで進め、盤面を点数にして一番高いものを選ぶ。
 // 点数には公開情報だけを使う（相手の手札・裏側のカード・デッキの中身は見ない）。
 // 先読みの中の相手は、表側でフィールドにあるカード（公開情報）の効果だけを使うと考える。
-import { applyAction, legalActions, validateAnswer, actorOf, defOf, monstersOf, spellTrapsOf, currentStats, canAttack, opp, isOnField, couldAttackNextBattle, scriptOf, isFaceUpMonster, monsterNegated } from '../engine/game.js?v=20261121-2130-759d7a1558';
+import { applyAction, legalActions, validateAnswer, actorOf, defOf, monstersOf, spellTrapsOf, currentStats, canAttack, opp, isOnField, couldAttackNextBattle, scriptOf, isFaceUpMonster, monsterNegated } from '../engine/game.js?v=20261121-2155-ea481c675f';
                                                                                      
 
 /** 盤面の点数の重み（scripts/cpu-tune.mjs で CPU 同士を対戦させて調整した値） */

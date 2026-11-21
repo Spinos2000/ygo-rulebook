@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-2130-759d7a1558';
-import { fullThink } from './ai/levels.js?v=20261121-2130-759d7a1558';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-2130-759d7a1558';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-2130-759d7a1558';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-2130-759d7a1558';
-import { playSignature, sigKey } from './sig.js?v=20261121-2130-759d7a1558';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-2130-759d7a1558';
-import { firstEntrance } from './aces.js?v=20261121-2130-759d7a1558';
-import { RULINGS } from './data/rulings.js?v=20261121-2130-759d7a1558';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-2130-759d7a1558';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-2130-759d7a1558';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-2130-759d7a1558';
-import { joinSiteRoom } from './net/site-room.js?v=20261121-2130-759d7a1558';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-2155-ea481c675f';
+import { fullThink } from './ai/levels.js?v=20261121-2155-ea481c675f';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-2155-ea481c675f';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-2155-ea481c675f';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-2155-ea481c675f';
+import { playSignature, sigKey } from './sig.js?v=20261121-2155-ea481c675f';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-2155-ea481c675f';
+import { firstEntrance } from './aces.js?v=20261121-2155-ea481c675f';
+import { RULINGS } from './data/rulings.js?v=20261121-2155-ea481c675f';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-2155-ea481c675f';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-2155-ea481c675f';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-2155-ea481c675f';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-2155-ea481c675f';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261121-2130-759d7a1558';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-2130-759d7a1558';
-import { DECKS } from './data/decks.js?v=20261121-2130-759d7a1558';
-import { SCRIPTS } from './cards/index.js?v=20261121-2130-759d7a1558';
+} from './engine/game.js?v=20261121-2155-ea481c675f';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-2155-ea481c675f';
+import { DECKS } from './data/decks.js?v=20261121-2155-ea481c675f';
+import { SCRIPTS } from './cards/index.js?v=20261121-2155-ea481c675f';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -397,7 +397,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261121-2130-759d7a1558', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-2155-ea481c675f', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -881,7 +881,7 @@ function newDuel(quiet = false) {
   const d0 = DECKS[$('#deck0').value] ?? first, d1 = DECKS[$('#deck1').value] ?? first;
   const f = $('#first').value;
   S = createGame({ pool: CARD_POOL, decks: [d0, d1], firstPlayer: f === 'r' ? undefined : Number(f) });
-  S.askZone = netMode() ? [ME()] : cpuMode() ? [0] : [0, 1];
+  S.askZone = netMode() ? [0, 1] : cpuMode() ? [0] : [0, 1]; // オンライン：2台とも同じ [0, 1]（席ごとにちがうと、マスの答えの数がずれて「ずれ」になる。MIMIの確かめ）
   history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp]; glowDone.clear(); costShown.clear(); heldAnims = []; trace = []; thinking = null; aceSeen = new Set();
   closeMenu();
   render();
@@ -1380,7 +1380,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261121-2130-759d7a1558';
+const DUEL_BUILD = '20261121-2155-ea481c675f';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -1534,7 +1534,8 @@ function netEvent(u, e) {
     if (u.inv) { try { u.inv.cancel(); } catch { /* */ } u.inv = null; } clearTimeout(u.invT);
     mySeat = e.seat; net = { link: u.link, oppName: u.peerName || '相手', mode: e.mode, ui: u };
     $('#mode').value = 'hot'; $('.droot').classList.add('net-on');
-    S = e.state; S.askZone = [ME()];
+    S = e.state; // 通信の部品が作った盤面には書きこまない（マスを聞く相手 askZone は、部品が2台とも [0, 1] で作る。2台で必ず同じに）
+    if (JSON.stringify(S.askZone) !== JSON.stringify([0, 1])) console.warn('オンラインの盤面の askZone が [0, 1] ではありません', S.askZone);
     history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp]; glowDone.clear(); costShown.clear(); heldAnims = []; trace = []; thinking = null; aceSeen = new Set(); undoUsed = false; resultSent = false;
     netNote(''); render();
     // 読み直して同じ部屋に入り直した時（resumed）：開始の帯は出さず、「つなぎ直しました」を少し出す（MEMEの知らせの形）
@@ -3536,7 +3537,7 @@ export function boot(root, opts = {}) {
     $('#hideOppRow').hidden = cpuMode();
     showDeckFmt();
     if (data && data.S && (data.v === 4 || data.v === SAVE_V)) {
-      try { S = data.S; if (!S.askZone) S.askZone = netMode() ? [ME()] : cpuMode() ? [0] : [0, 1]; history = data.history || []; trace = Array.isArray(data.trace) ? data.trace : []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); joinVs(); return; } // 途中のCPU対戦があっても、招待は受ける（CPU対戦は保存されたまま）
+      try { S = data.S; if (!S.askZone) S.askZone = netMode() ? [0, 1] : cpuMode() ? [0] : [0, 1]; history = data.history || []; trace = Array.isArray(data.trace) ? data.trace : []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); joinVs(); return; } // 途中のCPU対戦があっても、招待は受ける（CPU対戦は保存されたまま）
       catch (e) { console.warn('保存していたデュエルを開けませんでした', e); }
     }
     // ルールページでは、最初に準備画面（デッキ選び → 先攻・後攻 → デュエル開始）を開く。後ろの仮の対戦では、開始の帯もセリフも出さない

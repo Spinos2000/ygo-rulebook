@@ -4,10 +4,10 @@
 // - 部屋の部品（Room）は、サイトの room().join(name) と同じ形（presence・onPeers・leave）。
 //   本番ではサイトの Firestore の部屋を、試す時は下の「手元の部屋」を渡す
 // - 2台とも全部の情報を持つ作り（MASTERの決定）。相手の手札・伏せカードを画面で見せないのは画面の仕事
-import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261121-2130-759d7a1558';
-import { answerCandidates } from '../ai/cpu.js?v=20261121-2130-759d7a1558';
-import { CARD_POOL } from '../data/cardpool.js?v=20261121-2130-759d7a1558';
-import { DECKS } from '../data/decks.js?v=20261121-2130-759d7a1558';
+import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261121-2155-ea481c675f';
+import { answerCandidates } from '../ai/cpu.js?v=20261121-2155-ea481c675f';
+import { CARD_POOL } from '../data/cardpool.js?v=20261121-2155-ea481c675f';
+import { DECKS } from '../data/decks.js?v=20261121-2155-ea481c675f';
                                                                       
 
 /* ===================== 部屋（サイトの room() と同じ形） ===================== */
@@ -67,7 +67,7 @@ export function tabRoom(name        , uid        )       {
 
 /** お試し版・本番を作る時（scripts/build.mjs）に、できあがった .js ぜんぶの指紋をここに書きこむ（手元では 'dev'）。
  *  画面（app.js）にも同じ指紋が書かれるので、卓を開いた時に「app.js の指紋」とこれが同じか比べる（ちがえばページを読み直す） */
-export const BUILD_FP = '20261121-2130-759d7a1558';
+export const BUILD_FP = '20261121-2155-ea481c675f';
 
 /* ===================== エンジンの指紋 ===================== */
 /**
@@ -313,6 +313,9 @@ export class DuelLink {
       const st = this.o.host ? this.doc.start : them.start;
       if (!st || (!this.o.host && st.guest !== this.o.uid)) return;
       let s = createGame({ pool: CARD_POOL, decks: [DECKS[st.decks[0]], DECKS[st.decks[1]]], seed: st.seed, firstPlayer: st.first });
+      // 効果で特殊召喚するマスは、2台とも「その人に聞く」にそろえる（盤面の流れが変わる設定は、2台で必ず同じにする。
+      // 💜MIMIの見つけた穴：画面が自分の席だけ聞く設定にしていて、2台で聞く相手がちがい、ずれていた）
+      s.askZone = [0, 1];
       // つながり直しの時は、自分と相手の操作を、動く番の順に入れ直して続きから
       const mine = this.doc.ops, theirs = them.round === st.round ? (them.ops ?? []) : [];
       let mi = 0, ti = 0;
@@ -334,6 +337,7 @@ export class DuelLink {
       const a = ops[this.applied];
       // 降参だけは、番に関係なくいつでも届く（MIMIの指摘）
       if (actorOf(this.state) === this.seat && !(a.type === 'surrender' && a.player !== this.seat)) { this.o.on({ type: 'desync', detail: `自分の番なのに相手の操作が届いた（${this.applied}番目）` }); return; }
+      this.state.askZone = [0, 1]; // 画面が盤面を書きかえていても、2台で必ず同じにしてから入れる
       try { this.state = applyAction(this.state, a); } catch (e) { this.o.on({ type: 'desync', detail: `相手の操作を入れられない：${(e         ).message}` }); return; }
       this.applied++;
       this.o.on({ type: 'remote', action: a, state: this.state });
@@ -394,6 +398,7 @@ export class DuelLink {
     // 降参はいつでも押せる（自分の分だけ）。それ以外は自分の番の時だけ
     const giveUp = a.type === 'surrender' && a.player === this.seat;
     if (!giveUp && actorOf(this.state) !== this.seat) return false;
+    this.state.askZone = [0, 1]; // 画面が盤面を書きかえていても、2台で必ず同じにしてから入れる
     this.state = applyAction(this.state, a);
     this.doc.ops.push(a);
     this.schedule();
