@@ -74,6 +74,8 @@ export function tabRoom(name        , uid        )       {
                
                                                
                                                                                                                
+                                                     
+                 
                                     
                   
                    
@@ -189,7 +191,7 @@ export class DuelLink {
       if (!st || (!this.o.host && st.guest !== this.o.uid)) return;
       let s = createGame({ pool: CARD_POOL, decks: [DECKS[st.decks[0]], DECKS[st.decks[1]]], seed: st.seed, firstPlayer: st.first });
       // つながり直しの時は、自分と相手の操作を、動く番の順に入れ直して続きから
-      const mine = this.doc.ops, theirs = them.ops ?? [];
+      const mine = this.doc.ops, theirs = them.round === st.round ? (them.ops ?? []) : [];
       let mi = 0, ti = 0;
       for (let k = 0; k < mine.length + theirs.length && s.winner === null; k++) {
         const meNow = actorOf(s) === this.seat;
@@ -200,10 +202,11 @@ export class DuelLink {
         else { if (ti >= theirs.length) break; s = applyAction(s, theirs[ti++]); }
       }
       this.state = s; this.applied = ti; this.round = st.round;
+      if (this.doc.round !== st.round) { this.doc.round = st.round; void this.o.room.presence(this.doc); }
       this.o.on({ type: 'start', state: this.state, seat: this.seat, round: st.round, mode: st.mode });
     }
     // 相手の操作を、まだ入れていない分だけ順に入れる
-    const ops = them.ops ?? [];
+    const ops = them.round === this.round ? (them.ops ?? []) : [];
     while (this.applied < ops.length && this.state && this.state.winner === null) {
       const a = ops[this.applied];
       // 降参だけは、番に関係なくいつでも届く（MIMIの指摘）

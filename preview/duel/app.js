@@ -10,6 +10,7 @@ import { playerName, whoText, resultText, oppWord } from './names.js';
 import { firstEntrance } from './aces.js';
 import { RULINGS } from './data/rulings.js';
 import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
@@ -379,7 +380,7 @@ let thinking = null; // 考えている最中の状態（同じ状態で2回考�
 function setThinking(on) { const el = $('#cpuThink'); if (!el) return; if (on) { el.textContent = '考え中…'; el.classList.remove('deep'); el.style.setProperty('--p', '0'); } else el.style.setProperty('--p', '1'); el.hidden = !on; }
 /** CPUが考えている途中の知らせ：進み具合（0〜1）を線で、勝負所の時は「じっくり考え中…」。どのカードを使うかの手がかりは出さない */
 function thinkProgress(frac, critical) { const el = $('#cpuThink'); if (!el) return; el.style.setProperty('--p', String(Math.max(0, Math.min(1, Number(frac) || 0)))); const t = critical ? 'じっくり考え中…' : '考え中…'; if (el.textContent !== t) el.textContent = t; el.classList.toggle('deep', !!critical); }
-const pausedUi = () => setupOpen() || ($('#menu') && !$('#menu').hidden);
+const pausedUi = () => setupOpen() || ($('#menu') && !$('#menu').hidden) || ($('#guideDlg') && !$('#guideDlg').hidden);
 function scheduleCpu() {
   clearTimeout(cpuTimer);
   if (pausedUi()) return;
@@ -731,7 +732,7 @@ function setupClick(t) {
     try { localStorage.setItem('gx-duel-setup', JSON.stringify({ p0: SU.p0, p1: SU.p1, rand: SU.rand, first: SU.first, level: cpuLevel })); } catch { /* 保存できない環境 */ }
     placeholder = false;
     showDeckFmt();
-    const go = () => { $('#setup').hidden = true; SU = null; newDuel(); };
+    const go = () => { $('#setup').hidden = true; SU = null; newDuel(); maybeGuide(); };
     if (!SU.rand) { go(); return true; }
     // 🎲 おまかせ：CPUのデッキを発表してから始める
     const d = DECKS[pick];
@@ -1271,6 +1272,13 @@ function showRulings(code) {
   if (list.length === 1) { const d = $('#rulingBox details'); if (d) d.open = true; } // 1件だけなら、はじめから開いておく
   $('#rulingDlg').hidden = false;
 }
+/* ---------- 操作ガイド：はじめて開いた時に1回だけ。☰メニューからいつでも ---------- */
+let guideAt = 0;
+const guideEnv = () => ({ touch: matchMedia('(hover: none)').matches, land: landscape() });
+function openGuide(i = 0) { guideAt = Math.max(0, Math.min(guidePages().length - 1, i)); $('#guideBox').innerHTML = guideHtml(guideAt, guideEnv()); $('#guideDlg').hidden = false; }
+function closeGuide() { $('#guideDlg').hidden = true; try { localStorage.setItem(GUIDE_KEY, '1'); } catch { /* 覚えられない環境 */ } setTimeout(() => { if (S && !pausedUi()) scheduleCpu(); }, 0); }
+/** この端末でまだ見ていなければ、ガイドを出す（DEMO・2人対戦の準備中などでは出さない） */
+function maybeGuide() { if (OPTS.demo) return; let seen = false; try { seen = !!localStorage.getItem(GUIDE_KEY); } catch { seen = true; } if (!seen) openGuide(0); }
 function describe(uid) {
   const c = S.cards[uid], d = defOf(S, uid);
   if (isCpu(c.controller) && (c.zone === 'hand' || ((c.zone === 'mzone' || c.zone === 'szone') && !c.faceUp))) {
@@ -2893,6 +2901,8 @@ root.addEventListener('click', e => {
   }
   if (t.closest('#pileClose') || t.id === 'pileDlg') { $('#pileDlg').hidden = true; return; }
   if (t.closest('#rulClose') || t.id === 'rulingDlg') { $('#rulingDlg').hidden = true; return; }
+  { const g = t.closest('[data-gd]'); if (g) { const k = g.dataset.gd; if (k === 'next') openGuide(guideAt + 1); else if (k === 'prev') openGuide(guideAt - 1); else closeGuide(); return; } }
+  if (t.closest('#guideOpen')) { closeMenu(); openGuide(0); return; }
   { const rb = t.closest('[data-rul]'); if (rb) { showRulings(rb.dataset.rul); return; } }
   // パソコン（広い画面）では、置き場を押すと一覧。スマホでは一番上のカードの説明（一覧は長押し）
   const pileHit = t.closest('#board [data-pile]');
@@ -2922,7 +2932,8 @@ document.addEventListener('keydown', e => {
   if (e.key === ' ' && !/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test((e.composedPath()[0] || {}).tagName || '')) { const g = $('#goBtn'); if (g && !g.disabled) { e.preventDefault(); g.click(); } return; }
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
   if (e.key === 'Escape') {
-    if (!$('#rulingDlg').hidden) $('#rulingDlg').hidden = true;
+    if (!$('#guideDlg').hidden) closeGuide();
+    else if (!$('#rulingDlg').hidden) $('#rulingDlg').hidden = true;
     else if (!$('#pileDlg').hidden) $('#pileDlg').hidden = true;
     else if (!$('#menu').hidden) closeMenu();
     else closeSheets();
@@ -2977,6 +2988,8 @@ export function boot(root, opts = {}) {
   // スマホでは、下に固定したドック・手札トレイの高さだけ盤面の下を空ける
   if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(() => measureBottom()); ['#dock', '#tray'].forEach(q => { const e = root.querySelector(q); if (e) ro.observe(e); }); }
   wireTray(root);
+  // 操作ガイド：左右に払ってめくる
+  { const gb = root.querySelector('#guideBox'); let gx = null; if (gb) { gb.addEventListener('pointerdown', e => { gx = e.clientX; }); gb.addEventListener('pointerup', e => { if (gx === null) return; const dx = e.clientX - gx; gx = null; if (Math.abs(dx) > 40) openGuide(guideAt + (dx < 0 ? 1 : -1)); }); } }
   wireSheets(root);
   window.addEventListener('resize', () => measureBottom());
   measureBottom();
@@ -2999,6 +3012,7 @@ export function boot(root, opts = {}) {
     const first = opts.menuFirst && cpuMode();
     newDuel(first);
     if (opts.menuFirst) { if (cpuMode()) { placeholder = true; openSetup(); } else openMenu(); }
+    else maybeGuide(); // 準備画面を出さない時（対戦卓だけのページ）は、すぐにガイド
   };
   // 動作確認用：開発者ツールから状態を読み書きできるようにする
   window.__duel = { get state() { return S; }, speak(t) { speak(t); }, act(a) { run(a); }, review(tr) { if (tr) trace = tr; showReview(); }, get cpu() { return { thinking: thinking === S, ready: !!ready, waiting: waiting.size, worker: !!worker, workerBroken, timer: cpuTimer, trace: trace.length }; }, load(s) { clearTimeout(cpuTimer); S = s; history = []; selected = null; pick = []; lastLp = [s.players[0].lp, s.players[1].lp]; render(); } };

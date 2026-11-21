@@ -348,6 +348,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 @media (max-width: 860px) and (orientation: landscape) { .droot.fx-stage .tray { transform: translateY(115%) !important; transition: transform .25s ease } }
 /* 辞書（公式Q&A）の窓：スマホでも長い答えを折り返して読める。外側を押す・閉じる・Escで閉じる */
 .rul-box { max-width: 560px }
+/* 長い答えを読み進めても「閉じる」が見えるように、見出しは窓の上に固定する */
+.rul-box .box-head { position: sticky; top: -16px; z-index: 1; background: var(--panel); margin: -16px -16px 0; padding: 12px 16px 8px; border-bottom: 1px solid var(--line) }
 .rul-box h3 small { font-size: 12px; color: var(--sub); font-weight: 500; margin-left: 4px }
 .rul-list { display: grid; gap: 8px; margin-top: 6px }
 .rul-it { border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); padding: 0 }
@@ -361,6 +363,16 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .rul-btn { margin: 2px 0 6px }
 /* 記録の中のカード名（公式Q&Aがあるもの）：押せることが分かる下線 */
 .rul-name { font: inherit; color: inherit; background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px }
+/* 操作ガイド：真ん中の小さいカード。左右に払ってめくる */
+.gd-box { max-width: 380px; text-align: center; touch-action: pan-y }
+.gd-icon { font-size: 44px; line-height: 1; margin: 6px 0 4px }
+.gd-title { font-family: var(--display); font-size: 20px; margin: 4px 0 8px }
+.gd-line { margin: 0 0 6px; font-size: 14px; line-height: 1.65; text-align: left }
+.gd-dots { display: flex; justify-content: center; gap: 6px; margin: 10px 0 }
+.gd-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line) }
+.gd-dots i.on { background: var(--accent); outline: 1px solid var(--edge) }
+.gd-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap }
+.gd-btns .btn { min-height: 44px }
 .droot.fx-busy::after { content: ""; position: fixed; inset: 0; z-index: 90; touch-action: none; cursor: default }
 /* 準備画面の間は、後ろの盤面と手札（前の対戦のカード）をぼかして、読めないようにする */
 .droot:has(#setup:not([hidden])) :is(#board, #hand0, #hand1, .tray) { filter: blur(6px); transition: filter .2s }
@@ -1000,12 +1012,13 @@ export const MARKUP = `
     <p class="menu-note" id="menuLevel" hidden></p>
     <div class="menu-row">
       <button class="btn primary" id="newDuel">新しいデュエル</button>
+      <button class="btn ghost" id="guideOpen">📖 操作ガイド</button>
     </div>
     <div class="menu-row">
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-1223</p>
+    <p class="menu-note ver">版：20261121-1227</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
@@ -1015,6 +1028,7 @@ export const MARKUP = `
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>
+<div class="overlay" id="guideDlg" hidden role="dialog" aria-modal="true" aria-label="操作ガイド"><div class="box gd-box" id="guideBox"></div></div>
 <div class="overlay" id="rulingDlg" hidden role="dialog" aria-modal="true" aria-label="公式Q&amp;A"><div class="box rul-box" id="rulingBox"></div></div>
 <div id="toast" role="status" hidden></div>
 <div id="speech" hidden aria-live="polite"><div class="speech-who"></div><div class="speech-text"></div></div>
