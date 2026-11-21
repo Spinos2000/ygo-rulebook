@@ -339,6 +339,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .droot:has(.overlay:not([hidden])) #speech { display: none }
 /* PCだけの説明（キーボードの操作など）は、指で操作する端末では出さない */
 @media (hover: none) { .pc-only { display: none } }
+/* 演出の間は、透明な幕で画面全体をおおって、どこを押しても何も起きないようにする */
+.droot.fx-busy::after { content: ""; position: fixed; inset: 0; z-index: 90; touch-action: none; cursor: default }
 /* 準備画面の間は、後ろの盤面と手札（前の対戦のカード）をぼかして、読めないようにする */
 .droot:has(#setup:not([hidden])) :is(#board, #hand0, #hand1, .tray) { filter: blur(6px); transition: filter .2s }
 #speech .speech-who { display: inline-block; font-size: .8rem; font-weight: 700; letter-spacing: .08em; color: var(--accent-ink); background: var(--accent); border: 2px solid var(--edge); border-radius: 999px; padding: 2px 12px; margin-bottom: 8px }
@@ -981,7 +983,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-1025</p>
+    <p class="menu-note ver">版：20261121-1054</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

@@ -37,6 +37,8 @@ import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js
                        
                                                            
                       
+                                                                                              
+                                              
                                                
                 
                       
@@ -192,6 +194,12 @@ function zeroAtkOut(before           , after                       , me         
  * 攻撃力800のディアボリックガイを攻撃表示で出し、次のターンに殴られた）。攻撃力0を攻撃表示で出す手と同じく「ほかに手が無い時だけ」にする
  */
 function weakTribute(s           , a        )          {
+  // ユベルのように「エンドフェイズにほかのモンスター1体をリリースするか、このカードを破壊」のモンスターを、ほかのモンスターが残らない形で出す手
+  // （リリースした分を失って、エンドフェイズに自分も壊れる。MIMIの報告：ライラとメタモルポットをリリースしてユベルを出し、場が空になって負け）
+  if ((a.type === 'normalSummon' || a.type === 'setMonster') && (scriptOf(s, a.card).effects ?? []).some(e => (e.label ?? '').includes('リリースするか、このカードを破壊'))) {
+    const me = s.cards[a.card].controller ?? s.cards[a.card].owner;
+    if (!monstersOf(s, me).some(u => !a.tributes.includes(u))) return true;
+  }
   if (a.type !== 'normalSummon' || !a.tributes.length) return false;
   const best = Math.max(...a.tributes.map(u => (s.cards[u] && isOnField(s.cards[u]) ? currentStats(s, u).atk : 0)));
   return (defOf(s, a.card).atk ?? 0) < best;
@@ -338,7 +346,8 @@ export function idealThink(s           , opt               = {}, deckNames      
   }
   let romance                     = null;
   if (free) {
-    const rom = list.filter(a => a.rate >= bestRate - o.romanceWidth && (a.romance + a.burst) * 2 > a.n);
+    const width = opt.romanceChase && rnd() < opt.romanceChase.p ? Math.max(o.romanceWidth, opt.romanceChase.width) : o.romanceWidth;
+    const rom = list.filter(a => a.rate >= bestRate - width && (a.romance + a.burst) * 2 > a.n);
     if (rom.length) {
       const r = rom.reduce((x, y) => (y.rate > x.rate ? y : x));
       pick = r;

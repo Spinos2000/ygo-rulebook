@@ -195,7 +195,8 @@ export function playBattle(root, info) {
     const step = now => {
       if (S.done) return;
       frame(S, now); maskToBoard();
-      if (S.t > S.end) { S.done = true; ctx.clearRect(0, 0, W, H); cv.style.display = 'none'; resolve(); return; }
+      const left = S.end - S.t; cv.style.opacity = left < 400 ? String(Math.max(0, left / 400)) : '';
+      if (S.t > S.end) { S.done = true; ctx.clearRect(0, 0, W, H); cv.style.display = 'none'; cv.style.opacity = ''; resolve(); return; }
       requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -511,6 +512,8 @@ export const ACE_CLS = {
 /* 色（神以外）：闇は黒が基調の深淵っぽい感じ、光は白が基調の神々しい感じ。地・水・炎・風は属性の色のまま */
 const ACE_TONE = { 闇: { c: '#9a74ff', tone: 'abyss' }, 光: { c: '#ffe7a0', tone: 'holy' } };
 const PARTNER = { bond: 150, rise: .55 };
+/** 文字の帯・札を、消え始める前にそのまま見せる長さ（ミリ秒） */
+const PLATE_HOLD = 1600;
 /** 相棒の絆の糸：仲間の位置 a から相棒のマス (x, y) への、少し上にふくらんだ曲線の上の点（k＝0〜1） */
 function bondPt(a, x, y, k, U) { const mx = (a.x + x) / 2, my = Math.min(a.y, y) - 60 * U, u = 1 - k; return { x: u * u * a.x + 2 * u * k * mx + k * k * x, y: u * u * a.y + 2 * u * k * my + k * k * y }; }
 /* 融合：素材が渦の中心へ集まる → 渦に巻き込まれて回りながら混ざる → 光って融合モンスターが現れる → 自分のマスへ降りる */
@@ -670,6 +673,7 @@ export function playSummon(root, info) {
       const cfg = ACE_CLS[A.cls];
       if (how === 'ace' || how === 'partner' || how === 'god') {
         S.fx = cfg.fx; if (cfg.L) S.L = cfg.L; S.end = S.L + cfg.tail;
+        S.plateAt = S.L - 450; // カードが降りきる少し前に帯を出す
         S.tone = how === 'partner' || godKind(info.d) ? '' : ACE_TONE[info.d.attribute]?.tone || '';
         S.T = { circle: S.L * .15, pillar: S.L * .4, drop: S.L * .6 };
       }
@@ -681,7 +685,11 @@ export function playSummon(root, info) {
     if (how === 'fusion') S.C = { x: (S.x + W / 2) / 2, y: (S.y + H / 2) / 2 };
     if (S.soul) S.soul0 = { x: S.soul.x, y: S.soul.y };
     // 終わり方：いきなり明るくせず、最後に画面全体（暗さ・光の粒・帯）をだんだん消していく。切り札は少し長めに
-    S.fade = A ? 700 : 300; if (A && !S.fx) S.end += 400;
+    S.fade = A ? 800 : 300; if (A && !S.fx) S.end += 400;
+    // 帯・札（文字）は、出てから1.5秒以上そのまま見せて、そのあと0.8秒でゆっくり消す（MASTER：読み終われるだけ長く）
+    if (S.plate) { if (S.plateAt == null) S.plateAt = S.L - 150; S.end = Math.max(S.end, S.plateAt + 220 + PLATE_HOLD + S.fade); }
+    if (S.chip) S.end = Math.max(S.end, S.L + 150 + PLATE_HOLD + S.fade);
+    S.safe = info.safe || null;
     if (how === 'partner' && !(S.bonds && S.bonds.length)) S.bonds = [{ x: S.x - 110 * U, y: H - 30 }, { x: S.x + 110 * U, y: H - 30 }]; // 場に仲間がいない時は、手元から
     sumMatStart(S, root, info.mat);
     cv.style.display = 'block'; cv.style.opacity = '';
@@ -807,6 +815,15 @@ function fusionTick(S) {
   S.dark = Math.min(.6, t / 500);
 }
 function sImg(S, img, x, y, s, a, sx) { ctx.save(); ctx.translate(x, y); ctx.scale(s * (sx == null ? 1 : sx), s); ctx.globalAlpha = Math.max(0, Math.min(1, a)); ctx.drawImage(img, -S.w / 2, -S.h / 2, S.w, S.h); ctx.restore(); }
+/** 名前の帯の高さ：盤面のうち、手札・ボタン・チェーンの欄に隠れていない所（safe）の、出てきたカードと反対側の半分の真ん中 */
+function plateY(S) {
+  let top = clipR ? clipR.top : 0, bot = clipR ? clipR.bottom : H;
+  if (S.safe) { top = Math.max(top, S.safe.top); bot = Math.min(bot, S.safe.bottom); }
+  top = Math.max(top, 30); bot = Math.min(bot, H - 30);
+  if (bot - top < 80) return (top + bot) / 2;
+  const mid = (top + bot) / 2;
+  return S.y > mid ? (top + mid) / 2 : (mid + bot) / 2;
+}
 /** 二重の魔法陣（回る輪と星形）。start から広がる */
 function aceCircle(S, start) {
   const t = S.t, x = S.x, y = S.y, U = S.U, c = S.c, L = S.L;
@@ -936,21 +953,26 @@ function summonDraw(S) {
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
   }
   // 切り札の名前の帯：着地の少し前から、斜めに滑りこむ
-  if (S.plate && t > L - 150) {
-    const k2 = Math.min(1, (t - L + 150) / 220), fo = Math.max(0, Math.min(1, (S.end - 250 - t) / 300));
+  if (S.plate && t > S.plateAt) {
+    const k2 = Math.min(1, (t - S.plateAt) / 220), fo = 1; // 消え方は、画面全体がだんだん消えるのに任せる（帯だけ先に消えて読めなくならないように）
     // 盤面の外は切り取られるので、帯と文字は盤面の真ん中にそろえる（PCでは盤面が画面より狭い）
-    const bl = clipR ? clipR.left : 0, bw = clipR ? clipR.width : W, cx = bl + bw / 2, yb = clipR ? clipR.top + clipR.height * .62 : H * .62;
+    const bl = clipR ? clipR.left : 0, bw = clipR ? clipR.width : W, cx = bl + bw / 2, yb = plateY(S);
     ctx.globalAlpha = k2 * fo; ctx.save(); ctx.translate((1 - k2) * -60, 0); ctx.transform(1, 0, -.2, 1, 0, 0);
     ctx.fillStyle = 'rgba(10,10,14,.88)'; ctx.fillRect(-40, yb - 26, W + 120, 52); ctx.fillStyle = S.c; ctx.fillRect(-40, yb - 26, W + 120, 3); ctx.fillRect(-40, yb + 23, W + 120, 3);
     ctx.restore(); ctx.textAlign = 'center'; ctx.fillStyle = S.c; ctx.font = '700 11px sans-serif';
     const head = `${S.plate.side ? `${S.plate.side}の` : ''}${S.plate.label}`, info = S.d.level != null ? `　★${S.d.level} ${S.d.attribute || ''}属性 ${S.d.race || ''}` : '';
-    ctx.fillText(fitText(ctx, `― ${head} ―${info}`, bw - 16), cx, yb - 8);
-    ctx.fillStyle = '#fff'; ctx.font = `700 ${Math.min(22, Math.max(14, bw / 22))}px sans-serif`; ctx.fillText(fitText(ctx, `${S.d.name}　${S.pos === 'def' ? `DEF ${S.def}` : `ATK ${S.atk}`}`, bw - 16), cx, yb + 15); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+    const hl = `― ${head} ―${info}`; let hz = 11; while (hz > 9 && ctx.measureText(hl).width > bw - 16) { hz -= 1; ctx.font = `700 ${hz}px sans-serif`; }
+    ctx.fillText(fitText(ctx, hl, bw - 16), cx, yb - 8);
+    // カード名と攻撃力：幅に収まらない時は、まず文字を小さくして（11pxまで）、それでも入らない時だけ「…」で切る
+    const line = `${S.d.name}　${S.pos === 'def' ? `DEF ${S.def}` : `ATK ${S.atk}`}`;
+    let fz = Math.min(22, Math.max(14, bw / 22)); ctx.font = `700 ${fz}px sans-serif`;
+    while (fz > 11 && ctx.measureText(line).width > bw - 16) { fz -= 1; ctx.font = `700 ${fz}px sans-serif`; }
+    ctx.fillStyle = '#fff'; ctx.fillText(fitText(ctx, line, bw - 16), cx, yb + 15); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
   // 短い演出：着地した後、カードの上に小さい札「★エース」
   if (S.chip && t >= L) {
-    const p = (t - L) / 750, a = p < .15 ? p / .15 : Math.max(0, 1 - (p - .6) / .4), fs = Math.max(11, Math.min(14, S.w * .17));
-    ctx.font = `700 ${fs}px sans-serif`; const tw = ctx.measureText(S.chip.label).width + 14, bx = x - tw / 2, by = y - S.h / 2 - fs - 12 - 6 * ease(Math.min(1, p * 3));
+    const a = Math.min(1, (t - L) / 150), fs = Math.max(12, Math.min(15, S.w * .18));
+    ctx.font = `700 ${fs}px sans-serif`; const tw = ctx.measureText(S.chip.label).width + 14, bx = x - tw / 2, by = y - S.h / 2 - fs - 12 - 6 * ease(Math.min(1, (t - L) / 250));
     ctx.globalAlpha = a; rr(ctx, bx, by, tw, fs + 8, (fs + 8) / 2); ctx.fillStyle = 'rgba(10,10,14,.85)'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = S.chip.c; ctx.stroke();
     ctx.fillStyle = S.chip.c; ctx.textAlign = 'center'; ctx.fillText(S.chip.label, x, by + fs + 1); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }

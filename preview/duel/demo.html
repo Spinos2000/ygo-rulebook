@@ -112,13 +112,21 @@ function setAllies(on) {
   } else return;
   D.load(S);
 }
+/* 帯を置いてよい範囲（本物の卓と同じ決め方：上の帯の下から、手札・ボタンの上まで） */
+function safeArea() {
+  const vh = innerHeight; let top = 0, bottom = vh;
+  const tb = root.querySelector('.top'); if (tb) top = Math.max(top, tb.getBoundingClientRect().bottom);
+  for (const q of ['#dock', '#tray', '#chain']) { const e = root.querySelector(q); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.height && r.top > vh * .35 && r.top < vh) bottom = Math.min(bottom, r.top); }
+  return { top, bottom };
+}
 /* 盤面のマス（自分の真ん中・CPUの真ん中）と、仲間の位置 */
 const zoneRect = key => root.querySelector(`#board [data-zone="${key}"]`)?.getBoundingClientRect();
 let busy = false;
 list.addEventListener('click', async e => {
   const b = e.target.closest('button.fx'); if (!b || busy) return;
   const [, , cls, kind] = LIST[b.dataset.g][2][b.dataset.i], d = card(LIST[b.dataset.g][2][b.dataset.i][1]);
-  unlock(); setOpen(false); busy = true;
+  unlock(); setOpen(false); busy = true; openBtn.hidden = true;
+  const droot = root.querySelector('.droot'); droot.classList.add('fx-busy'); // 本物の卓と同じく、演出の間はどこも押せない
   setAllies(kind === 'allies');
   await new Promise(r => setTimeout(r, 250)); // 欄が閉じて、盤面が描き直されてから
   const cpu = kind === 'cpu', rect = zoneRect(cpu ? '1:mz:2' : '0:mz:2');
@@ -127,11 +135,11 @@ list.addEventListener('click', async e => {
   const ace = cls ? { cls, big: kind !== 'short', fallback: false, side: cpu ? 'CPU' : 'あなた' } : null;
   const slow = document.getElementById('demoSlow').checked;
   try {
-    await playSummon(root, { rect, d, atk: d.atk, def: d.def, pos: 'atk', how, faceDown: how === 'set', mats: [], allies, ace,
+    await playSummon(root, { rect, d, atk: d.atk, def: d.def, pos: 'atk', how, faceDown: how === 'set', mats: [], allies, ace, safe: safeArea(),
       onLand: () => { if (ace && ace.big) play([cls === 'god' ? 'aceGod' : cls === 'partner' ? 'aceBond' : 'aceLand']); else play([how === 'set' ? 'set' : how === 'special' ? 'special' : 'summon']); },
       mat: root.querySelector('.mat-skin'), speed: slow ? .5 : 1 });
   } catch (err) { console.error(err); }
-  busy = false; setOpen(true);
+  droot.classList.remove('fx-busy'); busy = false; setOpen(true);
 });
 setOpen(true);
 </script>

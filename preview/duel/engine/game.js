@@ -666,6 +666,12 @@ export function cleanupOrphans(s           )       {
   }
 }
 
+/** フィールド魔法を発動する（表にする）時：この環境はフィールド魔法がお互い合わせて1枚だけ（ルールブック「フィールド魔法」。GX当時のまま）。
+ *  自分・相手どちらのフィールドゾーンにある表側のフィールド魔法も破壊扱いで墓地へ送る（破壊された時の効果は出る） */
+export function replaceFieldSpells(s           , uid        )       {
+  const olds = [s.players[0].fzone, s.players[1].fzone].filter((u)              => u !== null && u !== uid && s.cards[u].faceUp);
+  if (olds.length) destroy(s, olds, 'rule');
+}
 /** 墓地へ送り、送ったカードの名前を記録に出す（墓地は公開の場所なので、手札・デッキ・裏側から送るカードも名前を出してよい）。
  *  効果を受けないカードは送られないので、記録にも出さない */
 export function sendToGyLogged(s           , uids          , reason        , by                  )       {
@@ -1412,10 +1418,12 @@ function activateEffect(s           , p          , uid        , effectId        
     if (c.zone === 'hand') {
       if (d.subtype === 'フィールド') {
         const old = s.players[p].fzone;
-        if (old !== null) sendToGy(s, [old], 'rule');
+        // 自分のフィールドゾーンの伏せたフィールド魔法は、置き場所を空けるためにルールで墓地へ（表側ならこのあと破壊）
+        if (old !== null && !s.cards[old].faceUp) sendToGy(s, [old], 'rule');
+        replaceFieldSpells(s, uid);
         moveCard(s, uid, 'fzone', { faceUp: true, controller: p });
       } else { const free = freeSZones(s, p); moveCard(s, uid, 'szone', { index: zone !== undefined && free.includes(zone) ? zone : free[0], faceUp: true, controller: p }); }
-    } else c.faceUp = true;
+    } else { if (c.zone === 'fzone' && !c.faceUp) replaceFieldSpells(s, uid); c.faceUp = true; }
   }
   const link            = {
     player: p, uid, serial: s.cards[uid].serial, effect: effectId, ss: eff.ss, cardActivation: eff.type === 'card' && !dg, cardKind: d.kind,
@@ -1649,8 +1657,8 @@ function handLimit(s           )       {
   const over = s.players[p].hand.length - HAND_LIMIT;
   if (over > 0) {
     const x = ctxOf(s, -1, p, null);
-    const pick = choose(x, { kind: 'cards', prompt: `手札が${s.players[p].hand.length}枚です。${over}枚選んで墓地へ送ってください`, options: [...s.players[p].hand], min: over, max: over });
-    log(s, `${pl(p)}：手札の枚数制限により${pick.map(u => nameOf(s, u)).join('、')}を墓地へ送る`);
+    const pick = choose(x, { kind: 'cards', prompt: `手札が${s.players[p].hand.length}枚です。${over}枚選んで捨ててください`, options: [...s.players[p].hand], min: over, max: over });
+    log(s, `${pl(p)}：手札の枚数制限により${pick.map(u => nameOf(s, u)).join('、')}を捨てる`);
     sendToGy(s, pick, 'discard', null); // ルールによる（効果で捨てたことにはならない）
   }
   s.events = []; s.triggers = []; s.lastEvents = [];

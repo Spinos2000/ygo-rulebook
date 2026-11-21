@@ -4,7 +4,7 @@
 // - 本気：理想のCPUに、考える量を約2倍・読む世界を多くして考えさせる。ロマンは無視して勝つことだけで手を選ぶ（見えないカードは推測のまま。ズルはしない）
 import { cpuDecide, scoreCandidates } from './cpu.js';
 import { idealThink,                                 } from './ideal.js';
-import { actorOf, opp, monstersOf, legalActions, currentStats, battleDamageZero, scriptOf, defOf } from '../engine/game.js';
+import { actorOf, opp, monstersOf, legalActions, currentStats, battleDamageZero, scriptOf, defOf, couldAttackNextBattle } from '../engine/game.js';
                                                             
 
                                                   
@@ -67,7 +67,7 @@ export function lethalNow(s           )                {
   }
   if (s.phase === 'main1' && monstersOf(s, o).length === 0) {
     const go = acts.find(a => a.type === 'nextPhase' && a.to === 'battle');
-    const sum = monstersOf(s, me).filter(u => s.cards[u].faceUp && s.cards[u].position === 'atk').reduce((x, u) => x + power(u), 0);
+    const sum = monstersOf(s, me).filter(u => couldAttackNextBattle(s, u)).reduce((x, u) => x + power(u), 0);
     if (go && sum >= lp) return go;
   }
   return null;

@@ -116,6 +116,15 @@ function commit(next) {
 
 /* ---------- 攻撃の演出：演出の間は画面の更新とCPUの手番を止め、終わったら続ける ---------- */
 let fxN = 0;   // 再生中の演出の数（0 になった時だけ画面を更新する。演出が重なっても途中で描き直さない）
+/** 演出の間は、画面のどこを押しても何も起きないようにする（MASTER：途中で飛ばす操作もなし） */
+function fxBlock() { const r = ROOT && ROOT.querySelector('.droot'); if (r) r.classList.toggle('fx-busy', fxN > 0); }
+/** 演出の文字の帯を置いてよい範囲：上の帯の下から、手札・ボタン・チェーンの欄の上まで */
+function safeArea() {
+  const vh = innerHeight; let top = 0, bottom = vh;
+  const tb = $('.top'); if (tb) top = Math.max(top, tb.getBoundingClientRect().bottom);
+  for (const q of ['#dock', '#tray', '#chain']) { const e = $(q); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.height && r.top > vh * .35 && r.top < vh) bottom = Math.min(bottom, r.top); }
+  return { top, bottom };
+}
 const fxMode = () => ($('#fxMode') && $('#fxMode').value) || 'full';
 let pendingSummons = [];   // 画面を更新した後に再生する召喚の演出
 let heldAnims = [];
@@ -165,7 +174,7 @@ function queueBattleFx(prev, next) {
     gone.forEach(u => sigSkip.add(u));
   }
   if (!jobs.length) return;
-  fxN++;
+  fxN++; fxBlock();
   (async () => {
     for (const j of jobs) {
       const hide = j.hide.map(el => { el.style.visibility = 'hidden'; return el; });
@@ -174,7 +183,7 @@ function queueBattleFx(prev, next) {
       if (brd) brd.classList.remove('skin-on');
       hide.forEach(el => { el.style.visibility = ''; });
     }
-    fxN = Math.max(0, fxN - 1);
+    fxN = Math.max(0, fxN - 1); fxBlock();
     render();
   })();
 }
@@ -203,7 +212,7 @@ function summonInfo(prev, next, x) {
 function playPendingSummons() {
   if (!pendingSummons.length || (fxN > 0)) return false;
   const jobs = pendingSummons; pendingSummons = [];
-  fxN++;
+  fxN++; fxBlock();
   (async () => {
     for (const j of jobs) {
       if (j.search) { try { await cpuSearchFx(j); } catch (e) { console.error(e); } continue; }
@@ -217,11 +226,11 @@ function playPendingSummons() {
         const bigAce = j.ace && j.ace.big && !j.ace.fallback;
         // 相棒：場の仲間（同じ側の表側のモンスター）の位置を渡す（絆の光がそこから集まる）
         const allies = bigAce && j.ace.cls === 'partner' && S.cards[j.uid] ? [...ROOT.querySelectorAll('#board [data-uid]')].filter(e => { const u = Number(e.dataset.uid), c = S.cards[u]; return u !== j.uid && c && c.zone === 'mzone' && c.faceUp && c.controller === S.cards[j.uid].controller; }).map(e => e.getBoundingClientRect()) : [];
-        await playSummon(ROOT, { rect: el.getBoundingClientRect(), track: () => el.isConnected ? el.getBoundingClientRect() : null, allies, onLand: () => { el.style.visibility = ''; if (bigAce) play([j.ace.cls === 'god' ? 'aceGod' : j.ace.cls === 'partner' ? 'aceBond' : 'aceLand']); }, d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), pos: S.cards[j.uid] && S.cards[j.uid].position, how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, from: j.from, fromRect: j.fromRect, ace: j.ace, mat: matCanvas(), speed: fxMode() === 'short' ? 2 : 1 });
+        await playSummon(ROOT, { rect: el.getBoundingClientRect(), track: () => el.isConnected ? el.getBoundingClientRect() : null, allies, onLand: () => { el.style.visibility = ''; if (bigAce) play([j.ace.cls === 'god' ? 'aceGod' : j.ace.cls === 'partner' ? 'aceBond' : 'aceLand']); }, d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), pos: S.cards[j.uid] && S.cards[j.uid].position, how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, from: j.from, fromRect: j.fromRect, ace: j.ace, safe: safeArea(), mat: matCanvas(), speed: fxMode() === 'short' ? 2 : 1 });
       } catch (e) { console.error(e); }
       el.style.visibility = '';
     }
-    fxN = Math.max(0, fxN - 1);
+    fxN = Math.max(0, fxN - 1); fxBlock();
     render();
   })();
   return true;
@@ -474,7 +483,7 @@ function phaseCue(prev, next) {
 function playPendingCues() {
   if (!cueQ.length || fxN > 0) return false;
   const q = cueQ; cueQ = [];
-  fxN++;
+  fxN++; fxBlock();
   (async () => {
     for (const ph of q) {
       const el = document.createElement('div');
@@ -489,7 +498,7 @@ function playPendingCues() {
       el.remove();
     }
     shownPhase = null;
-    fxN = Math.max(0, fxN - 1);
+    fxN = Math.max(0, fxN - 1); fxBlock();
     render();
   })();
   return true;
@@ -712,14 +721,14 @@ function setupClick(t) {
 function startCue() {
   const g = S;
   clearTimeout(cpuTimer); // 開始の演出の前に予約されていたCPUの手番は取り消す（演出の後に考え直す）
-  fxN++;
+  fxN++; fxBlock();
   (async () => {
     try {
       await wait(250);
       await banner(S.turnPlayer === 0 ? 'あなたの先攻' : 'CPUの先攻', S.turnPlayer === 0 ? 'me' : 'opp', 1100);
       if (S === g) { const t = lineFor(persona, S.turnPlayer === CPU ? 'first' : 'second'); speak(t); await new Promise(r => setTimeout(r, t.length > 22 ? 3000 : 2400)); }
     } catch (e) { console.error(e); }
-    fxN = Math.max(0, fxN - 1);
+    fxN = Math.max(0, fxN - 1); fxBlock();
     render();
   })();
 }
@@ -1958,7 +1967,7 @@ async function revealMill(mill, P) {
 function playPendingMoves() {
   if (!pendingMoves || (fxN > 0)) return false;
   const P = pendingMoves; pendingMoves = null;
-  fxN++;
+  fxN++; fxBlock();
   (async () => {
     try {
       // デッキの上から墓地へ送るカード（光の援軍など）：まず表にして中央に並べて見せてから、墓地へ送る
@@ -1975,7 +1984,7 @@ function playPendingMoves() {
       }
     } catch (e) { console.error(e); }
     const l = $('.fly-layer'); if (l) l.innerHTML = '';
-    fxN = Math.max(0, fxN - 1);
+    fxN = Math.max(0, fxN - 1); fxBlock();
     render();
   })();
   return true;
