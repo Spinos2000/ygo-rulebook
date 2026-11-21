@@ -769,6 +769,9 @@ strong,b{letter-spacing:.05em}
 .ach-sum{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .ach-sum b{font-family:var(--digit);font-size:28px}
 .ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.ach-old-h{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;border-top:1px dashed var(--line);padding-top:10px;margin-top:4px}
+.ach-old-h small{color:var(--muted);font-size:12px}
+.ach.old{opacity:.75}
 .ach{display:flex;flex-direction:column;gap:4px;background:var(--surface);border:2px solid var(--line);border-radius:6px;padding:10px 12px;position:relative}
 .ach .ic{font-size:26px;line-height:1}
 .ach b{font-size:14px;line-height:1.4}
@@ -2209,6 +2212,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     <div class="fold-body">
     <ul class="can">
       <li><b>🃏 準備</b><span>電卓と同じように1ページずつ選びます：あなたのデッキ → CPUのデッキ（🎲おまかせも可）→ 先攻・後攻 → ▶デュエル開始</span></li>
+      <li><b>🤖 CPU</b><span>CPUはいつも全力で戦います（強さを選ぶことはありません）</span></li>
       <li><b>⚙️ 自動処理</b><span>チェーン・優先権・タイミングを逃す・ダメージステップまで、OCGの公式ルールと公式Q&amp;Aどおりに処理します</span></li>
       <li><b>👆 操作</b><span>手札のカードは押して選び、置きたいマスへ指で引っ張って置きます（横に払うと召喚・セットや発動・セットの切り替え、下に払うとやめる）。攻撃は自分のモンスターを相手に向けて引っ張ります。選んだカードを2回押すと効果を見られます</span></li>
       <li><b>🗣️ CPU</b><span>毎回ランダムな5つの性格で、先攻・後攻のあいさつや、カードを発動した時の説明などを話します</span></li>
@@ -3769,11 +3773,13 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     var c=cnt(L),st=el('div','stats');[['戦',c.n],['勝',c.w],['敗',c.l],['勝率',c.n?Math.round(c.w/c.n*100)+'%':'-']].forEach(function(x){var b=el('div','stat');b.appendChild(el('b','',String(x[1])));b.appendChild(el('span','',x[0]));st.appendChild(b);});box.appendChild(st);
     if(L.some(function(r){return r.preview;}))box.appendChild(el('p','note','🧪 お試し版での対戦は、この画面にだけ表示しています（アカウントには保存しません）。'));
     if(!L.length){box.appendChild(el('div','al-empty','まだCPU戦の記録はありません。🤖 CPUと対戦すると、ここに残ります（「ひとつ戻す」を使った対戦は「↶戻すあり」の印が付き、実績には数えません）。'));return;}
-    var LV={easy:'🐣 やさしい',normal:'🤖 ふつう',hard:'🔥 本気'};
+    /* CPUの強さ：今はいつも「全力」（hard として記録）。やさしい・ふつうは、強さを選べたころの記録を読むために残す */
+    var LV={easy:'🐣 やさしい',normal:'🤖 ふつう',hard:'💪 全力'};
     function table(title,key){var g={},order=[];L.forEach(function(r){var k=key(r)||'—';if(!g[k]){g[k]=[];order.push(k);}g[k].push(r);});
       var blk=el('div','block cpu-blk');blk.appendChild(el('h3','',title));var t=el('table','cpu-t'),hd=el('tr');['','戦','勝','敗','勝率'].forEach(function(h){hd.appendChild(el('th','',h));});t.appendChild(hd);
       order.forEach(function(k){var x=cnt(g[k]),tr=el('tr');[k,x.n,x.w,x.l,x.n?Math.round(x.w/x.n*100)+'%':'-'].forEach(function(v,i){tr.appendChild(el(i?'td':'th','',String(v)));});t.appendChild(tr);});blk.appendChild(t);box.appendChild(blk);}
-    table('強さ別',function(r){return LV[r.level]||r.level;});table('自分のデッキ別',function(r){return r.myDeck;});table('CPUのデッキ別',function(r){return r.cpuDeck;});
+    // 強さ別の表は、強さを選べたころの記録（やさしい・ふつう）がある時だけ出す
+    if(L.some(function(r){return r.level&&r.level!=='hard';}))table('強さ別',function(r){return LV[r.level]||r.level;});table('自分のデッキ別',function(r){return r.myDeck;});table('CPUのデッキ別',function(r){return r.cpuDeck;});
     var blk=el('div','block cpu-blk');blk.appendChild(el('h3','','📜 最近のCPU戦'));var ul=el('ul','rl-list');
     L.slice(0,30).forEach(function(r){var li=el('li','rl-item cpu-item');var d=new Date(r.at||0);
       li.appendChild(el('b','',(r.result==='win'?'🏆 勝ち':r.result==='lose'?(r.surrender?'🏳️ 降参':'💀 負け'):'🤝 引き分け')+'　'+(r.myDeck||'')+' vs '+(r.cpuDeck||'')));
@@ -5356,14 +5362,19 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     ['cpu_second','🔄','🤖 後攻からの勝利','後攻でCPUに3回勝つ（↶戻すなし）',3,function(s){return s.cSecond;},2]
   ];
   var TN={1:'オシリス・レッド級',2:'ラー・イエロー級',3:'オベリスク・ブルー級'};
-  $('ach-total').textContent=String(A.length);
+  /* 🕰️ むかしの実績：CPUの強さを選べたころの実績（MASTERの決定で強さは「全力」1本に）。取った人にだけ一覧のいちばん下に出し、数には数えない */
+  var OLD={cpu_easy:1,cpu_normal:1};
+  $('ach-total').textContent=String(A.filter(function(a){return !OLD[a[0]];}).length);
   var shown=false;
   function toast(t){var d=el('div','toast',t);document.body.appendChild(d);setTimeout(function(){d.remove();},3800);}
   function render(){var app=Y.app;if(!app)return;var pf=app.pf(),log=pf.log||[],s=stats(log),got=pf.ach||{},now=Date.now(),nw={},grid=$('ach-grid');grid.innerHTML='';var n=0;
-    A.forEach(function(a){var v=Math.min(a[4],a[5](s)),done=v>=a[4]||!!got[a[0]];if(done){n++;if(!got[a[0]])nw[a[0]]=now;}
+    var olds=[];
+    A.forEach(function(a){var v=Math.min(a[4],a[5](s)),done=v>=a[4]||!!got[a[0]];if(OLD[a[0]]){if(done){olds.push(a);if(!got[a[0]])nw[a[0]]=now;}return;}if(done){n++;if(!got[a[0]])nw[a[0]]=now;}
       var c=el('div','ach t'+a[6]+(done?' got':''));c.title=TN[a[6]];c.appendChild(el('span','tier'));c.appendChild(el('span','ic',a[1]));c.appendChild(el('b','',a[2]));c.appendChild(el('small','',a[3]));
       if(done)c.appendChild(el('small','','✅ '+(got[a[0]]?fmtD(got[a[0]])+' に解除':'解除！')));else{var bar=el('div','bar'),i=el('i');i.style.width=Math.round(v/a[4]*100)+'%';bar.appendChild(i);c.appendChild(bar);c.appendChild(el('small','',v+' / '+a[4]));}
       grid.appendChild(c);});
+    if(olds.length){var oh=el('div','ach-old-h');oh.appendChild(el('b','','🕰️ むかしの実績'));oh.appendChild(el('small','','CPUの強さを選べたころの実績です'));grid.appendChild(oh);
+      olds.forEach(function(a){var c=el('div','ach got old t'+a[6]);c.appendChild(el('span','ic',a[1]));c.appendChild(el('b','',a[2]));c.appendChild(el('small','',a[3]));c.appendChild(el('small','','✅ '+(got[a[0]]?fmtD(got[a[0]])+' に解除':'解除！')));grid.appendChild(c);});}
     $('ach-n').textContent=String(n);
     var ks=Object.keys(nw);if(ks.length&&app.cloud()){pf.ach=Object.assign({},got,nw);app.saveAch(nw);
       if(shown)ks.forEach(function(k,i){var a=A.filter(function(x){return x[0]===k;})[0];setTimeout(function(){toast('🏆 実績解除！「'+a[2]+'」');},i*1200);});}

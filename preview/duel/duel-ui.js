@@ -331,6 +331,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #toast[data-bad="1"] { background: var(--bad); color: #fff }
 /* CPU が考えている間の小さな表示 */
 .pstrip .think { font-size: .78rem; color: var(--sub); font-weight: 600; letter-spacing: .04em; animation: thinkPulse 1.2s ease-in-out infinite }
+/* 考え中の進み具合：文字の下の細い線（--p＝0〜1）。勝負所でじっくり考えている時は、文字を少し濃く */
+.pstrip .think { position: relative; padding-bottom: 3px }
+.pstrip .think::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: calc(var(--p, 0) * 100%); background: var(--accent); border-radius: 2px; transition: width .3s linear }
+.pstrip .think.deep { color: var(--ink) }
 @keyframes thinkPulse { 50% { opacity: .35 } }
 /* ロマンの台詞：画面の中央に大きく */
 #speech { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 45; pointer-events: none; text-align: center; width: min(92vw, 620px);
@@ -787,6 +791,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .su-dots i.on { background: var(--accent); width: 12px; border-radius: 3px }
 .su-q { font-family: var(--display); font-size: 19px; margin: 14px 0 12px; display: grid; gap: 2px }
 .su-q small { font-family: var(--body); font-size: 12px; color: var(--sub) }
+.su-note { margin: 10px 0 0; font-size: 13px; color: var(--sub); text-align: center }
 .su-help { margin-top: 12px; font-size: 12px; color: var(--sub); border-top: 1px dashed var(--line); padding-top: 8px }
 .su-help summary { cursor: pointer; font-weight: 700; color: var(--ink) }
 .su-help p { margin: 6px 0 }
@@ -985,7 +990,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-1133</p>
+    <p class="menu-note ver">版：20261121-1159</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

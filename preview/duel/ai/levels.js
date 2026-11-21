@@ -73,7 +73,12 @@ export function lethalNow(s           )                {
   return null;
 }
 
-/** 強さに合わせて考える */
+/** 「全力」で考える（CPUはいつもこれ。MASTERの決定 2026-11-21：難易度の設定はなし。中身は前の「本気」＝ロマン0・とどめと守り最優先・考える量1.4倍） */
+export function fullThink(s           , opt               = {}, deckNames                   = ['', ''])          {
+  return levelThink(s, 'hard', opt, deckNames);
+}
+
+/** 強さに合わせて考える（やさしい・ふつうは作りだけ残している。強さを測る道具やテストで使う） */
 export function levelThink(s           , level          , opt               = {}, deckNames                   = ['', ''])          {
   const win = lethalNow(s);
   if (win) return { action: win, winRate: 1, bestRate: 1, romance: null, samples: 0, critical: true };

@@ -1,7 +1,7 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
 import { aceInfo, aceCodes } from './ai/aces.js';
-import { levelThink } from './ai/levels.js';
+import { fullThink } from './ai/levels.js';
 import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js';
 import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js';
 import { playBattle, playSummon, rarityOf } from './fx.js';
@@ -342,7 +342,11 @@ function getWorker() {
   if (worker || workerBroken) return worker;
   try {
     worker = new Worker(new URL('./ai/worker.js', import.meta.url), { type: 'module' });
-    worker.onmessage = e => { const w = waiting.get(e.data.id); if (w) { waiting.delete(e.data.id); w(e.data); } };
+    worker.onmessage = e => {
+      // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
+      if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
+      const w = waiting.get(e.data.id); if (w) { waiting.delete(e.data.id); w(e.data); }
+    };
     worker.onerror = e => {
       console.warn('CPUの考える場所を作れませんでした。この画面の中で考えます', e);
       workerBroken = true; worker = null;
@@ -358,18 +362,21 @@ const deckNames = () => deckCodes().map(c => DECKS[c]?.name ?? '');
 function think(state) {
   if (state.askZone) state = { ...state, askZone: undefined };
   const local = () => new Promise(res => setTimeout(() => {
-    try { res({ ok: true, thought: levelThink(state, cpuLevel, { deckCodes: deckCodes() }, deckNames()) }); } catch (e) { res({ ok: false, error: e.message }); }
+    try { res({ ok: true, thought: fullThink(state, { deckCodes: deckCodes() }, deckNames()) }); /* CPUはいつも全力（考える場所が使えない時の予備も同じ） */ } catch (e) { res({ ok: false, error: e.message }); }
   }, 30));
   const w = getWorker();
   if (!w) return local();
   return new Promise(res => {
     const id = ++reqId;
     waiting.set(id, r => (r.retry ? local().then(res) : res(r)));
-    try { w.postMessage({ id, state, deckNames: deckNames(), deckCodes: deckCodes(), level: cpuLevel }); } catch { waiting.delete(id); local().then(res); }
+    try { w.postMessage({ id, state, deckNames: deckNames(), deckCodes: deckCodes(), level: cpuLevel, progress: true }); } catch { waiting.delete(id); local().then(res); }
   });
 }
 let thinking = null; // 考えている最中の状態（同じ状態で2回考えない）
-function setThinking(on) { const el = $('#cpuThink'); if (el) el.hidden = !on; }
+/** 相手の帯の「考え中…」：出す時は進み具合の線を0から。消す時は、線を最後まで伸ばしてから */
+function setThinking(on) { const el = $('#cpuThink'); if (!el) return; if (on) { el.textContent = '考え中…'; el.classList.remove('deep'); el.style.setProperty('--p', '0'); } else el.style.setProperty('--p', '1'); el.hidden = !on; }
+/** CPUが考えている途中の知らせ：進み具合（0〜1）を線で、勝負所の時は「じっくり考え中…」。どのカードを使うかの手がかりは出さない */
+function thinkProgress(frac, critical) { const el = $('#cpuThink'); if (!el) return; el.style.setProperty('--p', String(Math.max(0, Math.min(1, Number(frac) || 0)))); const t = critical ? 'じっくり考え中…' : '考え中…'; if (el.textContent !== t) el.textContent = t; el.classList.toggle('deep', !!critical); }
 const pausedUi = () => setupOpen() || ($('#menu') && !$('#menu').hidden);
 function scheduleCpu() {
   clearTimeout(cpuTimer);
@@ -600,11 +607,14 @@ function showReview() {
 
 /* ---------- デュエルの準備（CPU対戦）：電卓と同じように、1ページに1つずつ選んで「▶ デュエル開始」へ ----------
  * あなたのデッキ（持ち主 → テーマ）→ CPUのデッキ（持ち主 → テーマ。🎲おまかせも可）→ 先攻・後攻 → 確認してスタート */
-const SU_PAGES = ['p0own', 'p0deck', 'p1own', 'p1deck', 'first', 'level', 'go'];
-const LEVEL_LABEL = { easy: 'やさしい', normal: 'ふつう', hard: '本気' };
+/* 準備画面のページ。CPUの強さを選ぶページ（'level'）は、MASTERの決定で「CPUはいつも全力」になったので外した（作りは残してある） */
+const SU_PAGES = ['p0own', 'p0deck', 'p1own', 'p1deck', 'first', 'go'];
+const LEVEL_LABEL = { easy: 'やさしい', normal: 'ふつう', hard: '全力' };
 /** 準備画面に「本気」を出すか（MASTERの決定：本気が合格するまでは隠す。作りは残す） */
 const SHOW_HARD = false;
-let cpuLevel = 'normal'; // いまの対戦のCPUの強さ
+/** CPUはいつも全力（MASTERの決定：麻雀と同じで、みんな全力だから面白い）。やさしい・ふつうの作りは残すが、選べない */
+const CPU_LEVEL = 'hard';
+let cpuLevel = CPU_LEVEL; // いまの対戦のCPUの強さ（いつも全力）
 let SU = null;
 let placeholder = false; // 準備画面の後ろにある、まだ始めていない仮の対戦（保存しない）
 let suReturn = false; // 準備画面から設定（メニュー）を開いた：閉じたら準備画面に戻る
@@ -678,7 +688,7 @@ function renderSetup() {
       + `<div><span>あなた</span><b>${esc(themeOf(d0))}</b><small>${esc(ownerOf(d0))}・${esc(fmtTag(d0))}</small>${(() => { const a = deckAces(d0); return a.length ? `<small>👑 切り札：${esc(a.map(n => `「${n}」`).join('／'))}</small>` : ''; })()}</div>`
       + `<div><span>CPU</span><b>${SU.rand ? '🎲 おまかせ' : esc(themeOf(d1))}</b><small>${SU.rand ? 'あなたと違うデッキからランダム（開始の時に発表）' : `${esc(ownerOf(d1))}・${esc(fmtTag(d1))}`}</small></div>`
       + `<div><span>先攻</span><b>${esc(firstTxt)}</b></div>`
-      + `<div><span>強さ</span><b>${esc(LEVEL_LABEL[SU.level] || 'ふつう')}</b></div></div>`
+      + `</div><p class="su-note">🤖 CPUは、いつも全力で戦います</p>`
       + `<button type="button" class="su-start" data-su="start">▶ デュエル開始</button>`
       + `<button type="button" class="su-more" data-su="more">⚙️ 発動の聞き方・演出・CPUの速さ</button>`;
   }
@@ -697,7 +707,7 @@ function setupClick(t) {
   if (k === 'rand') { SU.rand = true; suGo('first'); return true; }
   if (k === 'own') { if (me) SU.p0own = v; else { SU.p1own = v; SU.rand = false; } suGo(me ? 'p0deck' : 'p1deck'); return true; }
   if (k === 'deck') { if (me) SU.p0 = v; else { SU.p1 = v; SU.rand = false; } suGo(me ? 'p1own' : 'first'); return true; }
-  if (k === 'first') { SU.first = v; suGo('level'); return true; }
+  if (k === 'first') { SU.first = v; suGo('go'); return true; }
   if (k === 'level') { SU.level = v; suGo('go'); return true; }
   if (k === 'ryu') { $('#setup').hidden = true; try { OPTS.onClose(); } catch { /* 閉じられない時はそのまま */ } setTimeout(() => { location.hash = '#ryu'; }, 0); return true; }
   if (k === 'more') { suKeep = SU; $('#setup').hidden = true; suReturn = true; openMenu(); $('#menu').classList.add('from-setup'); return true; }
@@ -708,7 +718,7 @@ function setupClick(t) {
     const pool = all.filter(c => c !== SU.p0), pick = SU.rand ? (pool.length ? pool : all)[Math.floor(Math.random() * (pool.length || all.length))] : SU.p1;
     $('#deck1').value = pick;
     $('#first').value = SU.first;
-    cpuLevel = SU.level || 'normal';
+    cpuLevel = CPU_LEVEL;
     try { localStorage.setItem('gx-duel-setup', JSON.stringify({ p0: SU.p0, p1: SU.p1, rand: SU.rand, first: SU.first, level: cpuLevel })); } catch { /* 保存できない環境 */ }
     placeholder = false;
     showDeckFmt();
@@ -2282,7 +2292,7 @@ function menuNames() {
   L('deck0', cpu ? 'あなたのデッキ' : 'プレイヤー1のデッキ'); L('deck1', cpu ? 'CPUのデッキ' : 'プレイヤー2のデッキ');
   const f = $('#first'); if (f) { f.options[0].textContent = cpu ? 'あなた' : 'プレイヤー1'; f.options[1].textContent = cpu ? 'CPU' : 'プレイヤー2'; }
 }
-function openMenu() { menuNames(); { const el = $('#menuLevel'); if (el) { el.hidden = !cpuMode(); el.textContent = `この対戦のCPUの強さ：${LEVEL_LABEL[cpuLevel] || 'ふつう'}（強さは準備画面で選びます）`; } } $('#menu').hidden = false; $('#menuBtn').setAttribute('aria-expanded', 'true'); disarm(); clearTimeout(cpuTimer); }
+function openMenu() { menuNames(); { const el = $('#menuLevel'); if (el) el.hidden = true; } /* 強さの行は出さない（CPUはいつも全力） */ $('#menu').hidden = false; $('#menuBtn').setAttribute('aria-expanded', 'true'); disarm(); clearTimeout(cpuTimer); }
 function closeMenu() { $('#menu').hidden = true; $('#menu').classList.remove('from-setup'); $('#menuBtn').setAttribute('aria-expanded', 'false'); disarm(); setTimeout(() => { if (S && !pausedUi()) scheduleCpu(); }, 0); }
 let armT;
 function disarm() { const b = $('#surrender'); b.classList.remove('armed'); b.textContent = '🏳 降参する'; clearTimeout(armT); }
@@ -2948,7 +2958,7 @@ export function boot(root, opts = {}) {
     if (data && data.mode) $('#mode').value = data.mode;
     if (data && data.d0 && DECKS[data.d0]) $('#deck0').value = data.d0;
     if (data && data.d1 && DECKS[data.d1]) $('#deck1').value = data.d1;
-    if (data && ['easy', 'normal', 'hard'].includes(data.lv)) cpuLevel = data.lv;
+    cpuLevel = CPU_LEVEL; // 前に保存した対戦の続きも、全力で
     if (data && data.undo) undoUsed = true;
     $('#hideOppRow').hidden = cpuMode();
     showDeckFmt();

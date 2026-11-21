@@ -39,6 +39,8 @@ import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js
                       
                                                                                               
                                               
+                                                                              
+                                                         
                                                
                 
                       
@@ -230,6 +232,16 @@ export function idealThink(s           , opt               = {}, deckNames      
   // 1つの世界にかかった量から、上限の半分に収まる世界の数にする（残りの半分は深い先読みに使う）
   const per = Math.max(1, WORK.n - w0start);
   const N = Math.max(1, Math.min(critical ? o.criticalSamples : o.samples, Math.floor(budget / 2 / per)));
+  // 進み具合の知らせ：使った処理の量÷上限（リーサル探しの分も入れて1.5倍）を、0.3秒ごとに送る
+  let lastTell = 0;
+  const tell = (force = false) => {
+    if (!opt.onProgress) return;
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (!force && now - lastTell < 300) return;
+    lastTell = now;
+    opt.onProgress(Math.max(0, Math.min(0.99, (WORK.n - w0start) / (budget * 1.5))), critical);
+  };
+  tell(true);
 
   const acc = new Map             ();
   const add = (sc        , base         , margin        , world           ) => {
@@ -252,6 +264,7 @@ export function idealThink(s           , opt               = {}, deckNames      
   };
   run(first, w0);
   for (let i = 1; i < N; i++) {
+    tell();
     const w = (opt.noDeterminize ? s : determinize(s, me, rnd));
     run(scoreCandidates(w, { ...cpuOpt, fullOpponent: opt.fullOpponent ?? true }), w);
   }
@@ -279,6 +292,7 @@ export function idealThink(s           , opt               = {}, deckNames      
     const sum = new Map                                                              ();
     const shallowBest = sorted[0];
     for (let i = 0; i < DW && WORK.n - w0start < budget; i++) {
+      tell();
       const w = opt.noDeterminize ? s : determinize(s, me, rnd);
       for (const c of deep) {
         if (WORK.n - w0start >= budget && i > 0) break;
@@ -313,6 +327,7 @@ export function idealThink(s           , opt               = {}, deckNames      
     const LW = critical ? 3 : 2;
     const found = new Map                ();
     for (let i = 0; i < LW; i++) {
+      tell();
       const w = opt.noDeterminize ? s : determinize(s, me, rnd);
       const left = Math.max(150, Math.floor((budget * 1.5 - (WORK.n - w0start)) / (LW - i)));
       const a = findLethal(w, me, Math.min(opt.lethalNodes ?? 600, left));
