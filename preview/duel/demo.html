@@ -55,12 +55,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   <div id="demoList"></div>
 </section>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261121-1604-78a696bb79';
-import { playSummon } from './fx.js?v=20261121-1604-78a696bb79';
-import { play, unlock } from './sound.js?v=20261121-1604-78a696bb79';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-1604-78a696bb79';
-import { createGame, legalActions } from './engine/game.js?v=20261121-1604-78a696bb79';
-import { answerCandidates } from './ai/cpu.js?v=20261121-1604-78a696bb79';
+import { mountDuel } from './embed.js?v=20261121-1618-480d81464d';
+import { playSummon } from './fx.js?v=20261121-1618-480d81464d';
+import { play, unlock } from './sound.js?v=20261121-1618-480d81464d';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1618-480d81464d';
+import { createGame, legalActions } from './engine/game.js?v=20261121-1618-480d81464d';
+import { answerCandidates } from './ai/cpu.js?v=20261121-1618-480d81464d';
 
 const host = document.getElementById('duel-host');
 mountDuel(host, { demo: true });
@@ -148,9 +148,11 @@ list.addEventListener('click', async e => {
 /* ---------- 順番の確かめ（No.7）：場面を作って、本物の対戦と同じ流れで発動まで進める ----------
  * 発動の演出 → チェーンの効果 → 結果の移動（墓地へ）の順に見えるかを、直す前と直した後で同じボタンで比べる。
  * 「自分が発動」＝下の人（P1）、「相手が発動」＝上の人（P2。CPU側と同じ見え方） */
-const C = { mirror: '4887', torrent: '5114', thunder: '5544', hole: '4342', vortex: '5217', a: '5503', b: '5504', c: '6471', d: '7193' };
+const C = { mirror: '4887', torrent: '5114', thunder: '5544', hole: '4342', vortex: '5217', pit: '5400', witch: '4580', a: '5503', b: '5504', c: '6471', d: '7193' };
 const SCENES = [
   ['ミラーフォース', '攻撃された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.mirror] }, mons: { [1 - p]: [C.a, C.b, C.c] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', a => a.type === 'attack', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.mirror] })],
+  ['ミラーフォース（ウィッチ）', 'ウィッチの効果で選び待ち（No.7）', p => ({ tp: 1 - p, set: { [p]: [C.mirror] }, mons: { [1 - p]: [C.witch, C.b, C.c] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', (a, S) => a.type === 'attack' && S.cards[a.attacker].code !== C.witch, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.mirror] })],
+  ['奈落の落とし穴', '専用演出なしの罠', p => ({ tp: 1 - p, set: { [p]: [C.pit] }, mons: { [1 - p]: [C.a] }, hand: { [1 - p]: [C.b] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.pit] })],
   ['激流葬', '召喚された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.torrent] }, mons: { [1 - p]: [C.a, C.b] }, hand: { [1 - p]: [C.c] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.torrent] })],
   ['サンダー・ブレイク', '手札を1枚捨てて発動', p => ({ tp: p, set: { [p]: [C.thunder] }, hand: { [p]: [C.a] }, mons: { [1 - p]: [C.b, C.c] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.thunder] })],
   ['ブラック・ホール', '場のモンスターを全部破壊', p => ({ tp: p, hand: { [p]: [C.hole] }, mons: { [p]: [C.a], [1 - p]: [C.b, C.c, C.d] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.hole] })],
@@ -185,6 +187,7 @@ async function driveScene(sc) {
     let a = k < sc.steps.length ? L.find(x => sc.steps[k](x, S)) : null;
     if (a) k++;
     else if (S.pending) { const c = answerCandidates(S, S.pending.request, 4); a = c.length ? { type: 'answer', value: c[0] } : null; }
+    else if (S.window && S.window.respondDue && !S.chain.length) a = { type: 'offer' }; // 召喚の後：相手に応答の機会を渡す（本物の卓は約0.5秒後に自動で渡す）
     else a = L.find(x => x.type === 'offer') || L.find(x => x.type === 'pass');
     if (!a) return;
     try { D.act(a); } catch (err) { console.warn('場面の手順を進められませんでした', a, err); return; }

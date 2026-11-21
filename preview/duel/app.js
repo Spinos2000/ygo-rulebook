@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1604-78a696bb79';
-import { fullThink } from './ai/levels.js?v=20261121-1604-78a696bb79';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1604-78a696bb79';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1604-78a696bb79';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1604-78a696bb79';
-import { playSignature, sigKey } from './sig.js?v=20261121-1604-78a696bb79';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1604-78a696bb79';
-import { firstEntrance } from './aces.js?v=20261121-1604-78a696bb79';
-import { RULINGS } from './data/rulings.js?v=20261121-1604-78a696bb79';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1604-78a696bb79';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1604-78a696bb79';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1604-78a696bb79';
-import { joinSiteRoom } from './net/site-room.js?v=20261121-1604-78a696bb79';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1618-480d81464d';
+import { fullThink } from './ai/levels.js?v=20261121-1618-480d81464d';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1618-480d81464d';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1618-480d81464d';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1618-480d81464d';
+import { playSignature, sigKey } from './sig.js?v=20261121-1618-480d81464d';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1618-480d81464d';
+import { firstEntrance } from './aces.js?v=20261121-1618-480d81464d';
+import { RULINGS } from './data/rulings.js?v=20261121-1618-480d81464d';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1618-480d81464d';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1618-480d81464d';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1618-480d81464d';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-1618-480d81464d';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261121-1604-78a696bb79';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-1604-78a696bb79';
-import { DECKS } from './data/decks.js?v=20261121-1604-78a696bb79';
-import { SCRIPTS } from './cards/index.js?v=20261121-1604-78a696bb79';
+} from './engine/game.js?v=20261121-1618-480d81464d';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1618-480d81464d';
+import { DECKS } from './data/decks.js?v=20261121-1618-480d81464d';
+import { SCRIPTS } from './cards/index.js?v=20261121-1618-480d81464d';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -200,6 +200,8 @@ function queueBattleFx(prev, next) {
   (async () => {
     for (const j of jobs) {
       fxStage(true);
+      // 専用演出の前に、発動したカードを元の場所で光らせる（No.7：発動の光 → 専用演出 → 墓地へ。CODEの決まり）
+      if (j.sig && j.info.self && j.info.self.rect) { const c = j.info.self; try { await preGlow({ uid: c.uid, d: c.d, kind: c.d.kind, rect: c.rect }, null, 0); } catch (e) { console.error(e); } }
       const hide = j.hide.map(el => { el.style.visibility = 'hidden'; return el; });
       const brd = j.sig ? ROOT.querySelector('#board') : null; if (brd) brd.classList.add('skin-on');
       try { await (j.sig ? playSignature(ROOT, j.info) : playBattle(ROOT, j.info)); } catch (e) { console.error(e); }
@@ -361,7 +363,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261121-1604-78a696bb79', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-1618-480d81464d', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1321,7 +1323,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261121-1604-78a696bb79';
+const DUEL_BUILD = '20261121-1618-480d81464d';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -2135,9 +2137,22 @@ function queueMoves(prev, next) {
   const acts = (next.chain || []).filter(l => !had.has(linkKey(l))).map(l => ({ uid: l.uid, p: l.player, kind: l.cardKind, zone: next.cards[l.uid].zone, d: defOf(next, l.uid) }));
   const turn = next.turn !== prev.turn && next.winner === null ? next.turnPlayer : null;
   const win = prev.winner === null && next.winner !== null ? next.winner : null;
-  if (!moves.length && !acts.length && turn === null && win === null) return;
+  // 発動して、この1手の中で処理まで終わったカード（相手が応答しなかった時など）：チェーンに残らないので acts に入らない。
+  // 「発動したカードは必ず光ってから結果」（No.7・CODEの決まり）：元の場所で光らせてから（pre）、墓地へ飛ばす。
+  // 専用演出のあるカードは、専用演出が発動の演出。破壊されて墓地で発動したモンスターの効果は、墓地へ行った後に墓地で光る（acts へ）
+  const hadUid = new Set((prev.chain || []).map(l => l.uid)), glowed = new Set(acts.map(a => a.uid)), pre = [];
+  for (const x of fresh) {
+    if (x.kind !== 'resolve' || hadUid.has(x.uid) || glowed.has(x.uid) || !prev.cards[x.uid] || !next.cards[x.uid]) continue;
+    const d = defOf(prev, x.uid); if (sigKey(d.name)) continue;
+    glowed.add(x.uid);
+    const pc = prev.cards[x.uid], nc = next.cards[x.uid], item = { uid: x.uid, p: x.player, kind: d.kind === 'monster' ? 'monster' : d.kind, zone: nc.zone, d };
+    if (!x.act && ['gy', 'banished'].includes(nc.zone) && pc.zone !== nc.zone) acts.push(item);
+    else pre.push({ ...item, fromP: pc.controller, fromZone: pc.zone });
+  }
+  if (!moves.length && !acts.length && !pre.length && turn === null && win === null) return;
   const snap = snapRects();
-  if (!pendingMoves) pendingMoves = { from: snap.m, piles: snap.piles, moves: [], acts: [], turn: null, win: null };
+  pre.forEach(a => { a.rect = (pendingMoves && pendingMoves.from.get(a.uid)) || snap.m.get(a.uid) || snap.piles[`${a.fromP}:${a.fromZone}`] || null; });
+  if (!pendingMoves) pendingMoves = { from: snap.m, piles: snap.piles, moves: [], acts: [], pre: [], turn: null, win: null };
   else snap.m.forEach((r, u) => { if (!pendingMoves.from.has(u)) pendingMoves.from.set(u, r); });
   // 同じカードが続けて動いた時は、最初の場所から最後の場所へ
   for (const m of moves) {
@@ -2146,6 +2161,7 @@ function queueMoves(prev, next) {
     else pendingMoves.moves.push(m);
   }
   pendingMoves.acts.push(...acts);
+  pendingMoves.pre.push(...pre);
   if (turn !== null) pendingMoves.turn = turn;
   if (win !== null) pendingMoves.win = win;
 }
@@ -2201,6 +2217,20 @@ async function flyOne(m, P, i) {
   { duration: dur(toPile ? 460 : 400), easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }).finished;
   g.remove();
   if (destEl) destEl.style.visibility = '';
+}
+/** 発動の光（その場で処理まで終わったカード）：画面はもう次の盤面なので、元の場所にカードの写しを出して光らせる */
+async function preGlow(a, P, i) {
+  if (!a.rect) return activateOne(a, P, i);
+  await wait(i * 120);
+  const r = a.rect, w = r.width, col = a.kind === 'spell' ? '#5dbfa1' : a.kind === 'trap' ? '#d98bb2' : '#ffd27a';
+  const g = ghost({ face: true, u: a.uid, d: a.d }, { left: r.left, top: r.top + (r.height - w * 86 / 59) / 2, width: w });
+  const ring = document.createElement('span');
+  ring.className = 'fx-ring';
+  Object.assign(ring.style, { left: (r.left + r.width / 2) + 'px', top: (r.top + r.height / 2) + 'px', borderColor: col });
+  flyLayer().appendChild(ring);
+  g.animate([{ filter: 'none', transform: 'none' }, { filter: `brightness(1.35) drop-shadow(0 0 12px ${col})`, transform: 'scale(1.06)', offset: .4 }, { filter: 'none', transform: 'none' }], { duration: dur(650), easing: 'ease-out' });
+  await ring.animate([{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 1 }, { transform: 'translate(-50%,-50%) scale(2.4)', opacity: 0 }], { duration: dur(650), easing: 'ease-out' }).finished;
+  ring.remove(); g.remove();
 }
 /** 発動：カードが光る。墓地で発動した時は、墓地からカードが浮かび上がる */
 async function activateOne(a, P, i) {
@@ -2285,6 +2315,13 @@ function playPendingMoves() {
   (async () => {
     try {
       // デッキの上から墓地へ送るカード（光の援軍など）：まず表にして中央に並べて見せてから、墓地へ送る
+      // 発動して、その場で処理まで終わったカード：元の場所で先に光らせる（そのあと墓地へ飛ぶ）
+      if (P.pre && P.pre.length) {
+        // 光っている間は、これから動くカードを元の場所に写しで残す（画面はもう次の盤面なので、先に消えて見えないように）
+        const hold = P.moves.filter(m => P.from.get(m.u) && !P.pre.some(a => a.uid === m.u)).map(m => { const r = P.from.get(m.u); return ghost(m, { left: r.left, top: r.top + (r.height - r.width * 86 / 59) / 2, width: r.width }); });
+        await Promise.all(P.pre.map((a, i) => preGlow(a, P, i)));
+        hold.forEach(g => g.remove());
+      }
       const mill = P.moves.filter(m => m.from === 'deck' && m.to === 'gy');
       if (mill.length) await revealMill(mill, P);
       await Promise.all(P.moves.map((m, i) => flyOne(m, P, i)));
