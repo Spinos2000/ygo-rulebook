@@ -933,13 +933,13 @@ export const MARKUP = `
 
 <div class="app">
   <main class="table" aria-label="デュエル">
-    <div class="pstrip opp" id="side1"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="think" id="cpuThink" hidden aria-live="polite">考え中…</span><span class="meta"></span></div>
+    <div class="pstrip opp" id="side1"><span class="who"></span><span class="lp" title="LP（ライフポイント）：0になると負け"></span><span class="tag" hidden></span><span class="think" id="cpuThink" hidden aria-live="polite">考え中…</span><span class="meta"></span></div>
     <div class="hand opp" id="hand1"></div>
     <div id="board"></div>
     <div id="result" hidden></div>
     <section class="panel" id="chain" hidden aria-live="polite"></section>
     <div class="tray" id="tray"><button class="tray-handle" id="trayHandle" type="button" aria-expanded="true" aria-controls="hand0"><span class="grip" aria-hidden="true"></span><span class="tray-lbl" id="trayLbl">手札をしまう</span></button><div class="hand me" id="hand0"></div></div>
-    <div class="pstrip me" id="side0"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="meta"></span></div>
+    <div class="pstrip me" id="side0"><span class="who"></span><span class="lp" title="LP（ライフポイント）：0になると負け"></span><span class="tag" hidden></span><span class="meta"></span></div>
     <div class="dock" id="dock">
       <div class="dock-status"><span id="actor"></span><span id="actorHint"></span><span id="oppInfo"></span></div>
       <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できる時、自動で進めずに必ず聞きます">✋ 次は聞いて</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">記録</button><button class="btn small mini-only" id="undoMini" type="button">↶ ひとつ戻す</button><button class="btn small mini-only end-btn" id="endBtn" type="button" hidden>エンド</button></div>
@@ -980,8 +980,8 @@ export const MARKUP = `
     <div class="menu-row">
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
-    <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-0948</p>
+    <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
+    <p class="menu-note ver">版：20261121-1000</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

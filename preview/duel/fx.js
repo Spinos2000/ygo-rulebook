@@ -500,18 +500,12 @@ const ACE = { circle: 350, pillar: 900, drop: 1350 };
    大きい演出＝そのカードが初めて場に出た時。2回目からと、表の無いデッキの予備の判定は、短い演出（光の輪と札）だけ */
 export const ACE_CLS = {
   god: { label: '神', how: 'god' },
-  roman: { label: 'ロマンエース', how: 'ace', rainbow: true },
+  roman: { label: 'ロマンエース', how: 'ace' }, // 色はカードの属性の色（虹色はパチンコっぽいのでやめた：MASTER）
   ace: { label: 'エース', how: 'ace' },
   partner: { label: '相棒', how: 'partner', c: '#ffb35c' },
   top: { label: 'トップエース', how: 'ace', c: '#ffd75a' },
 };
 const PARTNER = { gather: 200, rise: 700 };
-/** 色相（度）から #rrggbb（虹色の演出用。15度ごとにまとめて、光の粒の絵を作りすぎない） */
-function hueHex(h) {
-  h = Math.round((((h % 360) + 360) % 360) / 15) * 15;
-  const f = n => { const k = (n + h / 30) % 12, v = .62 - .38 * Math.max(-1, Math.min(k - 3, 9 - k, 1)); return Math.round(v * 255).toString(16).padStart(2, '0'); };
-  return '#' + f(0) + f(8) + f(4);
-}
 /* 融合：素材が渦の中心へ集まる → 渦に巻き込まれて回りながら混ざる → 光って融合モンスターが現れる → 自分のマスへ降りる */
 const FU = { gather: 450, mix: 1750, born: 1950 };
 const FU_COLS = ['#c9a7ff', '#7f77dd', '#ff8ad8', '#6bd0ff', '#ffffff', '#b45cff'];
@@ -656,20 +650,23 @@ export function playSummon(root, info) {
       speed: (info.speed || 1) * (window.__fxSlow || 1), L: SUMMON_LAND[how] || 600, hit: false, bolt: null, done: false,
       mats: (info.mats || []).map(m => ({ x: m.rect.left + m.rect.width / 2, y: m.rect.top + m.rect.height / 2, w: m.rect.width, h: m.rect.height, img: cardImg(m.d, m.atk, m.def), a: 1, s: 1 })) };
     S.end = S.L + (how === 'god' ? 900 : how === 'ace' ? 1100 : how === 'partner' ? 1100 : how === 'set' ? 250 : 650);
-    if (A && big) { S.plate = { label: A.label, side: A.side || '' }; S.rainbow = !!A.rainbow; if (how === 'ritual' || how === 'fusion') S.end = Math.max(S.end, S.L + 1100); }
-    if (A && !big) { S.chip = { label: `★${A.label}`, c: A.c || (A.rainbow ? '#ff8ad8' : ACE_COLOR[info.d.attribute] || '#ffd27a') }; S.end = Math.max(S.end, S.L + 750); }
+    if (A && big) { S.plate = { label: A.label, side: A.side || '' }; if (how === 'ritual' || how === 'fusion') S.end = Math.max(S.end, S.L + 1100); }
+    if (A && !big) { S.chip = { label: `★${A.label}`, c: A.c || ACE_COLOR[info.d.attribute] || '#ffd27a' }; S.end = Math.max(S.end, S.L + 750); }
     S.onLand = info.onLand || null; S.landed = false;
     // 融合の渦の中心：召喚するマスと画面の中央の間
     if (how === 'fusion') S.C = { x: (S.x + W / 2) / 2, y: (S.y + H / 2) / 2 };
     if (S.soul) S.soul0 = { x: S.soul.x, y: S.soul.y };
+    // 終わり方：いきなり明るくせず、最後に画面全体（暗さ・光の粒・帯）をだんだん消していく。切り札は少し長めに
+    S.fade = A ? 700 : 300; if (A) S.end += 400;
     sumMatStart(S, root, info.mat);
-    cv.style.display = 'block';
+    cv.style.display = 'block'; cv.style.opacity = '';
     const step = now => {
       if (S.done) return;
       const dt = Math.min(32, now - (S.last || now)) * S.speed; S.last = now; S.t += dt;
       if (info.track && !S.hit) { const q = info.track(); if (q && q.width) { S.x = q.left + q.width / 2; S.y = q.top + q.height / 2; S.w = q.width; S.h = q.height; } }
       summonTick(S); summonDraw(S); maskToBoard(); sumMatDraw(S);
-      if (S.t > S.end) { S.done = true; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; sumMatEnd(S); resolve(); return; }
+      const left = S.end - S.t; cv.style.opacity = left < S.fade ? String(Math.max(0, left / S.fade)) : '';
+      if (S.t > S.end) { S.done = true; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; cv.style.opacity = ''; sumMatEnd(S); resolve(); return; }
       requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -685,7 +682,6 @@ function summonTick(S) {
     if (t < 600) for (let i = 0; i < 4; i++) SP(S, { x: m.x + (Math.random() - .5) * m.w, y: m.y + (Math.random() - .5) * m.h, vx: (x - m.x) * .02 + (Math.random() - .5), vy: (y - m.y) * .02 - 1, life: 40, sz: 2.4, c: Math.random() < .5 ? c : '#ffffff', drag: .97 });
   });
   if (k === 'fusion') fusionTick(S);
-  if (S.rainbow) S.c = hueHex(t / 4);
   if (k === 'ace') aceTick(S);
   if (k === 'partner') partnerTick(S);
   if (k === 'ritual') S.mats.forEach(m => {
@@ -702,7 +698,7 @@ function summonTick(S) {
     S.quake = t < L ? Math.min(1, t / 1200) * 3 : 0;
   }
   if (k === 'ritual' || k === 'fusion') S.dark = Math.min(.55, t / 600);
-  if (t > L + 200) S.dark *= .9;
+  if (t > L + 200) S.dark *= .97;
   if (!S.hit && t >= L) {
     S.hit = true;
     if (S.onLand) { try { S.onLand(); } catch { /* 置けなくても演出は続ける */ } S.onLand = null; }
@@ -719,7 +715,7 @@ function summonTick(S) {
 }
 function aceTick(S) {
   const t = S.t, x = S.x, y = S.y, U = S.U, c = S.c, L = S.L, sky = { x, y: Math.max(30, y - 230 * U) };
-  S.dark = t < L + 500 ? Math.min(.78, t / 500) : S.dark * .9;
+  S.dark = t < L + 500 ? Math.min(.78, t / 500) : S.dark * .97;
   S.bars = t < L + 600 ? Math.min(1, t / 400) : Math.max(0, 1 - (t - L - 600) / 400);
   // リリースした素材：光の粒になって天へ昇る
   S.mats.forEach(m => {
@@ -744,7 +740,7 @@ function aceTick(S) {
 /* 相棒：ゆれない・あたたかい色。光の粒がゆっくり集まって、カードが光の中から浮かび上がり、そっと降りる */
 function partnerTick(S) {
   const t = S.t, x = S.x, y = S.y, U = S.U, c = S.c, L = S.L;
-  S.dark = t < L + 500 ? Math.min(.45, t / 600) : S.dark * .9;
+  S.dark = t < L + 500 ? Math.min(.45, t / 600) : S.dark * .97;
   S.bars = t < L + 600 ? Math.min(1, t / 400) : Math.max(0, 1 - (t - L - 600) / 400);
   S.mats.forEach(m => { m.a = Math.max(0, 1 - t / 600); });
   if (t > PARTNER.gather && t < L) for (let q = 0; q < 4; q++) {

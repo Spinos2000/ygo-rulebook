@@ -4,7 +4,7 @@
 // - 本気：理想のCPUに、考える量を約2倍・読む世界を多くして考えさせる。ロマンは無視して勝つことだけで手を選ぶ（見えないカードは推測のまま。ズルはしない）
 import { cpuDecide, scoreCandidates } from './cpu.js';
 import { idealThink,                                 } from './ideal.js';
-import { actorOf, opp, monstersOf, legalActions, currentStats, battleDamageZero } from '../engine/game.js';
+import { actorOf, opp, monstersOf, legalActions, currentStats, battleDamageZero, scriptOf } from '../engine/game.js';
                                                             
 
                                                   
@@ -31,6 +31,8 @@ export function easyThink(s           , random               = Math.random)     
  * 見るのは表側・公開されたカードの数字だけ（相手の伏せカードの中身は見ない）
  * - バトルフェイズ：1回の攻撃で相手のLPが0になる攻撃／相手のモンスターがいなくて、直接攻撃の合計で足りる時は一番強いモンスターから直接攻撃
  * - メインフェイズ1：相手のモンスターがいなくて、自分の攻撃表示のモンスターの攻撃力の合計で足りる時はバトルフェイズへ
+ * - 「このカードの攻撃で発生する戦闘ダメージは0」のモンスター（ボマー・ドラゴン）は数えない。足りない時は、手札から召喚して足りるかを
+ *   ideal.ts のリーサルの総当たりが探す（MIMIの報告：ボマー・ドラゴンを数えて召喚せずにバトルへ入り、勝ちを逃した）
  */
 export function lethalNow(s           )                {
   if (s.winner !== null || s.pending || s.window.kind !== 'open' || s.chain.length > 0) return null;
@@ -39,11 +41,13 @@ export function lethalNow(s           )                {
   const o = opp(me), lp = s.players[o].lp;
   // 相手が戦闘ダメージを受けない状態（チキンレースなど）の時は、攻撃だけではとどめにならない
   if (battleDamageZero(s, o)) return null;
+  // 攻撃で相手に与えるダメージ（攻撃のダメージが0のモンスターは0）
+  const power = (u        ) => (scriptOf(s, u).attackNoDamage ? 0 : currentStats(s, u).atk);
   const acts = legalActions(s);
   if (s.phase === 'battle') {
     const atks = acts.filter((a)                                           => a.type === 'attack');
     const dmg = (a                                     ) => {
-      const atk = currentStats(s, a.attacker).atk;
+      const atk = power(a.attacker);
       if (a.target === null) return atk;
       const t = s.cards[a.target];
       return t && t.faceUp && t.position === 'atk' ? atk - currentStats(s, a.target).atk : 0;
@@ -52,14 +56,14 @@ export function lethalNow(s           )                {
     if (one) return one;
     const direct = atks.filter(a => a.target === null);
     if (monstersOf(s, o).length === 0 && direct.length) {
-      const sum = [...new Set(direct.map(a => a.attacker))].reduce((x, u) => x + currentStats(s, u).atk, 0);
+      const sum = [...new Set(direct.map(a => a.attacker))].reduce((x, u) => x + power(u), 0);
       if (sum >= lp) return direct.reduce((x, y) => (dmg(y) > dmg(x) ? y : x));
     }
     return null;
   }
   if (s.phase === 'main1' && monstersOf(s, o).length === 0) {
     const go = acts.find(a => a.type === 'nextPhase' && a.to === 'battle');
-    const sum = monstersOf(s, me).filter(u => s.cards[u].faceUp && s.cards[u].position === 'atk').reduce((x, u) => x + currentStats(s, u).atk, 0);
+    const sum = monstersOf(s, me).filter(u => s.cards[u].faceUp && s.cards[u].position === 'atk').reduce((x, u) => x + power(u), 0);
     if (go && sum >= lp) return go;
   }
   return null;
