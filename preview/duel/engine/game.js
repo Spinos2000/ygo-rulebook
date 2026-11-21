@@ -5,8 +5,8 @@
                                                                                                                           
                                                                
                     
-import { RuleError, cloneCard, cloneState } from './types.js';
-import { SCRIPTS } from '../cards/index.js';
+import { RuleError, cloneCard, cloneState } from './types.js?v=20261121-1338-75bbb0de81';
+import { SCRIPTS } from '../cards/index.js?v=20261121-1338-75bbb0de81';
 
 export const START_LP = 8000;
 export const START_HAND = 5;

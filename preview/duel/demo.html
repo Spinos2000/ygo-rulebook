@@ -55,10 +55,10 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   <div id="demoList"></div>
 </section>
 <script type="module">
-import { mountDuel } from './embed.js';
-import { playSummon } from './fx.js';
-import { play, unlock } from './sound.js';
-import { CARD_POOL } from './data/cardpool.js';
+import { mountDuel } from './embed.js?v=20261121-1338-75bbb0de81';
+import { playSummon } from './fx.js?v=20261121-1338-75bbb0de81';
+import { play, unlock } from './sound.js?v=20261121-1338-75bbb0de81';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1338-75bbb0de81';
 
 const host = document.getElementById('duel-host');
 mountDuel(host, { demo: true });

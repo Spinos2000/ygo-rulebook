@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js';
-import { fullThink } from './ai/levels.js';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js';
-import { playBattle, playSummon, rarityOf } from './fx.js';
-import { playSignature, sigKey } from './sig.js';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js';
-import { firstEntrance } from './aces.js';
-import { RULINGS } from './data/rulings.js';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js';
-import { DuelLink, tabRoom } from './net/duel-link.js';
-import { joinSiteRoom } from './net/site-room.js';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1338-75bbb0de81';
+import { fullThink } from './ai/levels.js?v=20261121-1338-75bbb0de81';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1338-75bbb0de81';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1338-75bbb0de81';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1338-75bbb0de81';
+import { playSignature, sigKey } from './sig.js?v=20261121-1338-75bbb0de81';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1338-75bbb0de81';
+import { firstEntrance } from './aces.js?v=20261121-1338-75bbb0de81';
+import { RULINGS } from './data/rulings.js?v=20261121-1338-75bbb0de81';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1338-75bbb0de81';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1338-75bbb0de81';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1338-75bbb0de81';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-1338-75bbb0de81';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js';
-import { CARD_POOL } from './data/cardpool.js';
-import { DECKS } from './data/decks.js';
-import { SCRIPTS } from './cards/index.js';
+} from './engine/game.js?v=20261121-1338-75bbb0de81';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1338-75bbb0de81';
+import { DECKS } from './data/decks.js?v=20261121-1338-75bbb0de81';
+import { SCRIPTS } from './cards/index.js?v=20261121-1338-75bbb0de81';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -357,7 +357,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-1338-75bbb0de81', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1286,7 +1286,18 @@ function renderChain() {
 const ONLINE = (() => { try { return new URLSearchParams(location.search).has('online-test'); } catch { return false; } })();
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
-const netVer = () => (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev';
+/** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
+const DUEL_BUILD = '20261121-1338-75bbb0de81';
+const BUILT = !DUEL_BUILD.startsWith('__');
+/** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
+const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
+/** 自分のページの中の食いちがい：app.js・通信の部品・画面の版の文字のどれかが古いまま（ブラウザが古いファイルを覚えている） */
+const selfStale = () => {
+  if (!BUILT) return false;
+  const v = (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim();
+  return BUILD_FP !== DUEL_BUILD || (!!v && !DUEL_BUILD.startsWith(v + '-'));
+};
+const STALE_MSG = 'このページの中に、古いファイルが残っています。ページを読み直してください（新しい版が出た直後は、古い画面を覚えていることがあります）。';
 function netUid() {
   if (OPTS.uid) return OPTS.uid;
   try { let u = sessionStorage.getItem('gx-net-uid'); if (!u) { u = 't' + Math.random().toString(36).slice(2, 10); sessionStorage.setItem('gx-net-uid', u); } return u; } catch { return 't' + Math.random().toString(36).slice(2, 10); }
@@ -1339,6 +1350,9 @@ function renderNet() {
     body = `<p class="net-q">だれを招待しますか？</p><p class="net-none">招待した人が<strong>親</strong>になります。相手がこのサイトを開いていると、画面に通知が出ます。</p>`
       + (ms.length ? `<div class="net-lobby">${ms.map(m => `<button type="button" class="net-lb" data-net="inv:${esc(m.uid)}"><b>${esc(m.name)}</b><span></span><i>招待する ▶</i></button>`).join('')}</div>` : '<p class="net-none">まだほかのメンバーがいません。</p>')
       + `<button type="button" class="btn ghost net-wide" data-net="invback">← もどる</button>`;
+  } else if (u.step === 'wait' && u.stopped) {
+    // 始まる前に止まった（版ちがいなど）：もう押せないボタンは出さず、何をすればよいかだけ
+    body = `<p class="net-err">${esc(u.err)}</p>` + (u.stopped === 'reload' ? '<button type="button" class="btn primary net-wide" data-net="reload">ページを読み直す</button>' : '');
   } else if (u.step === 'wait') {
     body = `<p class="net-st">⏳ ${u.host ? `相手を待っています（キー ${u.myKey}）` : esc(u.status || 'つないでいます…')}</p>`
       + (u.host && OPTS.inviteApi ? `<button type="button" class="btn net-wide" data-net="invopen">👥 招待する</button>` : '')
@@ -1346,14 +1360,15 @@ function renderNet() {
       + (!u.host && u.link && !u.ready ? `<p class="net-q">${esc(u.peerName || '親')}さんの部屋につながりました。準備ができたら押してください。</p><button type="button" class="btn primary net-wide" data-net="ready">準備OK</button>` : '')
       + (!u.host && u.ready ? `<p class="net-q">⏳ ${esc(u.peerName || '親')}さんが始めるのを待っています…</p>` : '');
   }
-  if (u.err) body += `<p class="net-err">${esc(u.err)}</p>`;
+  if (u.err && !(u.step === 'wait' && u.stopped)) body += `<p class="net-err">${esc(u.err)}</p>`;
   $('#netBox').innerHTML = `<div class="box-head"><h3>👥 人と対戦の準備</h3><button type="button" class="btn small ghost" data-net="close">やめる</button></div>${body}`;
 }
 async function netConnect(host) {
   const u = netUi; if (!u) return;
   const key = host ? u.myKey : u.key;
   if (!/^\d{4}$/.test(key)) { u.err = 'キー番号は4桁の数字です'; renderNet(); return; }
-  u.err = ''; u.host = host; u.step = 'wait'; u.status = 'つないでいます…'; renderNet();
+  if (selfStale()) { u.err = STALE_MSG; u.stopped = 'reload'; u.step = 'wait'; renderNet(); return; } // 片方だけ古い時は、つながずに読み直してもらう
+  u.err = ''; u.stopped = ''; u.host = host; u.step = 'wait'; u.status = 'つないでいます…'; renderNet();
   lobbyWait(host); // 親は待合室に「待っています」を書く（子は何も書かない）
   try { u.room = await netJoin(key); } catch (e) { u.err = '部屋に入れませんでした：' + (e && e.message || e); u.step = 'key'; renderNet(); return; }
   if (netUi !== u) { try { u.room.leave(); } catch { /* もう閉じている */ } return; }
@@ -1370,8 +1385,8 @@ async function netInvite(uid) {
   if (u.inv) { try { u.inv.cancel(); } catch { /* */ } u.inv = null; }
   u.step = 'wait'; u.invSt = '📨 送っています…'; renderNet();
   try {
-    u.inv = await OPTS.inviteApi.send(uid, u.myKey, () => { if (netUi === u && !netMode()) { u.invSt = `😢 ${name} さんは、いまは対戦できないようです。`; renderNet(); } });
-    u.invSt = `📨 ${name} さんを招待しました。相手の画面に通知が出ます（サイトを開いていないと届きません。そのときは「🔗 招待リンクを送る」が便利です）。`; renderNet();
+    u.inv = await OPTS.inviteApi.send(uid, u.myKey, () => { if (netUi === u && !netMode()) { u.invSt = `😢 ${name}さんは、いまは対戦できないようです。`; renderNet(); } });
+    u.invSt = `📨 ${name}さんを招待しました。相手の画面に通知が出ます（サイトを開いていないと届きません。そのときは「🔗 招待リンクを送る」が便利です）。`; renderNet();
     clearTimeout(u.invT); u.invT = setTimeout(() => { if (netUi === u && !netMode()) { u.invSt = '⌛ 返事がありませんでした。もう一度招待するか、招待リンクを送ってください。'; renderNet(); } }, 180000);
   } catch (e) { u.invSt = '招待を送れませんでした。'; renderNet(); }
 }
@@ -1395,9 +1410,9 @@ function netEvent(u, e) {
     banner(S.turnPlayer === ME() ? 'あなたの先攻' : `${NAME(OPP())}の先攻`, S.turnPlayer === ME() ? 'me' : 'opp', 1100);
   } else if (e.type === 'remote') { if (net) { u.lastSeen = Date.now(); commit(e.state); render(); } }
   else if (e.type === 'end') { if (net) netEndNote(e.winner); }
-  else if (e.type === 'rematchAsked') { if (net && S && S.winner !== null) netNote(`<b>${esc(net.oppName)} さんが、もう一度を申し込んでいます</b><button type="button" class="btn small primary" data-net="ask">受ける</button><button type="button" class="btn small ghost" data-net="quit">やめる</button>`); }
+  else if (e.type === 'rematchAsked') { if (net && S && S.winner !== null) netNote(`<b>${esc(net.oppName)}さんが、もう一度を申し込んでいます</b><button type="button" class="btn small primary" data-net="ask">受ける</button><button type="button" class="btn small ghost" data-net="quit">やめる</button>`); }
   else if (e.type === 'away') netStop('相手がいなくなったので、この対戦は終わりです。戦績には残りません。');
-  else if (e.type === 'version') netStop('相手と画面の版がちがうので、対戦できません。2人とも画面を読み直してください。', true);
+  else if (e.type === 'version') netStop('相手と版がちがいます。2人ともページを読み直してください（新しい版が出た直後は、古い画面を覚えていることがあります）。', true);
   else if (e.type === 'desync') { console.warn('オンライン対戦のずれ', e.detail); netStop('2人の画面がずれてしまいました。この対戦は終わりです（戦績には残りません）。'); }
 }
 /** 上の知らせの帯（つながりが切れたかも／終わりの知らせ） */
@@ -1416,7 +1431,11 @@ function netEndNote(winner) {
 function netStop(msg, reload) {
   netNote(`<b>${esc(msg)}</b>${reload ? '<button type="button" class="btn small primary" data-net="reload">読み直す</button>' : ''}<button type="button" class="btn small ghost" data-net="quit">準備にもどる</button>`);
   if (net && net.link) { try { net.link.close(); } catch { /* もう閉じている */ } }
-  if (netUi && !net) { netUi.err = msg; renderNet(); }
+  if (netUi && !net) {
+    netUi.err = msg; netUi.stopped = reload ? 'reload' : 'stop';
+    if (netUi.link) { try { netUi.link.close(); } catch { /* もう閉じている */ } }
+    renderNet();
+  }
 }
 function netQuit() {
   const u = net ? net.ui : netUi;

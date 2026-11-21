@@ -6187,6 +6187,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
 (function(){
   /* お試し版（/preview/）で開いた時は、途中の対戦を本番とは別の場所に保存する（試しても本番の続きが消えないように） */
   var KEY=location.pathname.indexOf('/preview/')>=0?'ygo-cpu-duel-preview-v1':'ygo-cpu-duel-v1', btn=document.getElementById('cpu-open'), host=document.getElementById('cpu-host'), st=document.getElementById('cpu-st'), busy=false;
+  var DUEL_LOAD=Date.now().toString(36);
   function label(){var saved=false;try{saved=!!localStorage.getItem(KEY);}catch(e){}btn.textContent=saved?'🤖 CPU対戦を再開する':'🤖 CPUと対戦する';}
   function close(){if(host.hidden)return;host.hidden=true;document.documentElement.style.overflow='';setTimeout(label,500);}
   label();
@@ -6198,7 +6199,8 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   btn.addEventListener('click',async function(){
     if(busy)return;busy=true;btn.textContent='読み込み中…';st.textContent='';st.className='status';
     try{
-      var m=await import('./duel/embed.js');
+      /* ページを開くたびに新しい卓を取りに行く（embed.js から先は、作る時に付けた「?v=版の印」でそろう。古いファイルが残ってずれるのを防ぐ） */
+      var m=await import('./duel/embed.js?v='+DUEL_LOAD);
       host.hidden=false;document.documentElement.style.overflow='hidden';
       var Yg=window.YGO||{},pv=location.pathname.indexOf('/preview/')>=0,rm=null;
       try{if(Yg.user&&Yg.db&&window.claude&&window.claude.use)rm=await window.claude.use('room');}catch(e){rm=null;}

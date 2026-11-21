@@ -4,9 +4,10 @@
 // - 部屋の部品（Room）は、サイトの room().join(name) と同じ形（presence・onPeers・leave）。
 //   本番ではサイトの Firestore の部屋を、試す時は下の「手元の部屋」を渡す
 // - 2台とも全部の情報を持つ作り（MASTERの決定）。相手の手札・伏せカードを画面で見せないのは画面の仕事
-import { createGame, applyAction, actorOf } from '../engine/game.js';
-import { CARD_POOL } from '../data/cardpool.js';
-import { DECKS } from '../data/decks.js';
+import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261121-1338-75bbb0de81';
+import { answerCandidates } from '../ai/cpu.js?v=20261121-1338-75bbb0de81';
+import { CARD_POOL } from '../data/cardpool.js?v=20261121-1338-75bbb0de81';
+import { DECKS } from '../data/decks.js?v=20261121-1338-75bbb0de81';
                                                                       
 
 /* ===================== 部屋（サイトの room() と同じ形） ===================== */
@@ -64,12 +65,44 @@ export function tabRoom(name        , uid        )       {
   };
 }
 
+/** お試し版・本番を作る時（scripts/build.mjs）に、できあがった .js ぜんぶの指紋をここに書きこむ（手元では 'dev'）。
+ *  画面（app.js）にも同じ指紋が書かれるので、卓を開いた時に「app.js の指紋」とこれが同じか比べる（ちがえばページを読み直す） */
+export const BUILD_FP = '20261121-1338-75bbb0de81';
+
+/* ===================== エンジンの指紋 ===================== */
+/**
+ * エンジンとカードの処理の「指紋」：決まった種・決まった手順で少し対戦させた盤面から作る短い文字。
+ * 画面の版の文字が同じでも、ブラウザが古いプログラム（エンジン）を覚えていると2台がずれるので、これも比べる（MIMIの気づき）
+ */
+let fpCache                = null;
+export function engineFingerprint()         {
+  if (fpCache) return fpCache;
+  const codes = Object.keys(DECKS).sort();
+  let s = createGame({ pool: CARD_POOL, decks: [DECKS[codes[0]], DECKS[codes[1 % codes.length]]], seed: 12345, firstPlayer: 0 });
+  for (let i = 0; i < 400 && s.winner === null; i++) {
+    let a                    ;
+    if (s.pending) { const c = answerCandidates(s, s.pending.request, 4); a = c.length ? { type: 'answer', value: c[i % c.length] }           : undefined; }
+    else { const L = legalActions(s); a = L[(i * 7) % Math.max(1, L.length)]; }
+    if (!a) break;
+    try { s = applyAction(s, a); } catch { break; }
+  }
+  const text = JSON.stringify({ p: s.players, c: s.cards, l: s.log.slice(-50), t: s.turn });
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  fpCache = (h >>> 0).toString(36) + '-' + text.length.toString(36);
+  return fpCache;
+}
+
 /* ===================== 対戦の通信 ===================== */
 /** 自分の欄に書く中身 */
                           
                   
                              
             
+                                                          
+              
+                                    
+             
                
                
                                                
@@ -144,7 +177,7 @@ export class DuelLink {
 
   constructor(o             ) {
     this.o = o;
-    this.doc = { app: 'ygo-duel', v: o.version, name: o.name, deck: o.deck, ops: [], ready: o.host ? true : (o.ready ?? true) };
+    this.doc = { app: 'ygo-duel', v: o.version, fp: engineFingerprint(), b: BUILD_FP, name: o.name, deck: o.deck, ops: [], ready: o.host ? true : (o.ready ?? true) };
     this.seat = o.host ? 0 : 1;
     // 自分の欄は、最初に部屋の中身を読んでから書く（つながり直しの時に、前の操作を消さないため）
     this.unsub = o.room.onPeers(ch => this.onPeers(ch.peers));
@@ -182,7 +215,7 @@ export class DuelLink {
     this.them = them;
     this.lastSeen = Math.max(this.lastSeen, other.updatedAt || Date.now());
     if (them.end?.reason === 'away') { this.o.on({ type: 'away' }); this.stop(); return; }
-    if (them.v !== this.o.version) { this.o.on({ type: 'version', mine: this.o.version, theirs: them.v }); return; }
+    if (them.v !== this.o.version || (them.fp && them.fp !== this.doc.fp) || (them.b && them.b !== this.doc.b)) { this.o.on({ type: 'version', mine: this.o.version, theirs: them.v }); return; }
     // もう一度：親が新しい約束（回数が1つ大きい）を書いたら、子は前の対戦を片づけて作り直す
     if (!this.o.host && them.start && them.start.round > this.round && this.state) {
       this.state = null; this.applied = 0; this.doc.ops = []; delete this.doc.end;
