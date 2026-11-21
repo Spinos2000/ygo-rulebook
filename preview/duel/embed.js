@@ -1,6 +1,6 @@
 // 対戦画面を、ほかのページの中の要素（host）に入れる。Shadow DOM を使うので、置き場所のページのスタイルや id とぶつからない
-import { CSS, MARKUP } from './duel-ui.js?v=20261121-1623-5bf4556a77';
-import { boot, resume } from './app.js?v=20261121-1623-5bf4556a77';
+import { CSS, MARKUP } from './duel-ui.js?v=20261121-1628-6bfb622ba3';
+import { boot, resume } from './app.js?v=20261121-1628-6bfb622ba3';
 
 let mounted = null;
 /** host の中に対戦画面を作る（2回目以降は、止めていたCPUの手番を再開するだけ） */
