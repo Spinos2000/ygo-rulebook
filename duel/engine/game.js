@@ -5,8 +5,8 @@
                                                                                                                           
                                                                
                     
-import { RuleError, cloneCard, cloneState } from './types.js';
-import { SCRIPTS } from '../cards/index.js';
+import { RuleError, cloneCard, cloneState } from './types.js?v=20261121-1400-91ea7cd635';
+import { SCRIPTS } from '../cards/index.js?v=20261121-1400-91ea7cd635';
 
 export const START_LP = 8000;
 export const START_HAND = 5;
@@ -49,6 +49,8 @@ export const ZONES = 5;
                            
                                
                                                                             
+                                                      
+                      
                                
                                                                      
                             
@@ -374,7 +376,10 @@ export function moveCard(s           , uid        , to          , opt          =
   c.summoning = false; c.noAttack = false; c.mods = []; c.summonedHow = null; c.summonedTurn = null; c.attackedList = undefined; c.tributedWith = undefined;
   if (to === 'hand' || to === 'deck' || to === 'extra') c.proper = false;
   // 相手にカード名が知られているか（CPU の推測用）。デッキに戻ると分からなくなり、手札に加えた（ドロー以外）・手札以外からフィールドに出たカードは知られる
+  // ただし裏側のままフィールドから手札に戻ったカード（伏せた魔法・罠、裏側守備のモンスター）は相手に見せていないので、前から知られていた時だけ知られたまま
+  const hiddenBack = to === 'hand' && fromField && !c.faceUp;
   if (to === 'deck' || to === 'extra') c.pub = false;
+  else if (hiddenBack) c.pub = !!c.pub;
   else if (to === 'hand' || (toField && fromZone !== 'hand')) c.pub = true;
   if (toField) {
     c.faceUp = opt.faceUp ?? true;
@@ -442,13 +447,11 @@ export function freeSZones(s           , p          )           {
   s.players[p].szone.forEach((u, i) => { if (u === null) res.push(i); });
   return res;
 }
-/** EXデッキから出すモンスターを置ける場所（メインモンスターゾーン、または自分がまだ使っていないEXモンスターゾーン） */
+/** EXデッキから出すモンスターを置ける場所。この環境はEXモンスターゾーンを使わない（GXの時代に合わせ、普通の5マスだけ。MASTERの決定 2026-11-21）。
+ *  s.emz の入れ物は、画面・CPUが読んでいるので空のまま残している */
 export function extraSummonZone(s           , p          , released           = [])                                                  {
   const m = freeMZones(s, p, released);
-  if (m.length) return { zone: 'mzone', index: m[0] };
-  const hasEmz = s.emz.some(u => u !== null && s.cards[u].controller === p && !released.includes(u));
-  if (!hasEmz) { const i = s.emz.findIndex(u => u === null || released.includes(u)); if (i >= 0) return { zone: 'emz', index: i }; }
-  return null;
+  return m.length ? { zone: 'mzone', index: m[0] } : null;
 }
 export function tributesNeeded(level        )         { return level >= 7 ? 2 : level >= 5 ? 1 : 0; }
 /** リリースなしで通常召喚できる状態か（死皇帝の陵墓） */
@@ -481,6 +484,7 @@ export function currentStats(s           , uid        )                         
   const neg = monsterNegated(s, uid);
   const set = neg ? null : sc.statSet?.(s, uid);
   if (set) { atk = set.atk; def = set.def; }
+  if (set && sc.statFixed) return { atk: Math.max(0, atk), def: Math.max(0, def) };
   const add = neg ? null : sc.statAdd?.(s, uid);
   if (add) { atk += add.atk; def += add.def; }
   for (const u of activeCards(s)) { if (u === uid) continue; const a = scriptOf(s, u).aura?.(s, u, uid); if (a) { atk += a.atk; def += a.def; } }
@@ -576,6 +580,10 @@ export const currentAtk = (s           , uid        ) => currentStats(s, uid).at
 export const currentDef = (s           , uid        ) => currentStats(s, uid).def;
 
 function activeCards(s           )           { return [...fieldCards(s, 0), ...fieldCards(s, 1)].filter(u => isActive(s, u)); }
+/** p が受ける戦闘ダメージが今0になる状態か（チキンレース・幽獄の時計塔など。CPUのとどめの判定用） */
+export function battleDamageZero(s           , p          )          {
+  return damageZero(s, p) || activeCards(s).some(u => scriptOf(s, u).noBattleDamageFor?.(s, u, p));
+}
 
 export function canAttack(s           , uid        )          {
   const c = s.cards[uid];
@@ -631,7 +639,11 @@ export function emit(s           , ev            )       {
  * カードを動かす処理（効果・ルールから使う）
  * ===================================================================== */
 function leaveCleanup(s           , befores            , reason        )       {
-  for (const b of befores) scriptOf(s, b.uid).onLeaveField?.(s, b, reason);
+  for (const b of befores) {
+    // サイコ・ショッカーなどで罠の効果が無効になっている間は、罠が場を離れた時の効果（リビングデッドの呼び声の「離れたら破壊」など）も行わない（公式Q&A [6393]）
+    if (POOL[b.code]?.kind === 'trap' && b.zone === 'szone' && b.faceUp && trapsNegated(s)) continue;
+    scriptOf(s, b.uid).onLeaveField?.(s, b, reason);
+  }
   cleanupOrphans(s);
 }
 /** 装備対象を失った装備カード、「そのモンスター」を失ったカードを破壊する */
@@ -654,6 +666,19 @@ export function cleanupOrphans(s           )       {
   }
 }
 
+/** フィールド魔法を発動する（表にする）時：この環境はフィールド魔法がお互い合わせて1枚だけ（ルールブック「フィールド魔法」。GX当時のまま）。
+ *  自分・相手どちらのフィールドゾーンにある表側のフィールド魔法も破壊扱いで墓地へ送る（破壊された時の効果は出る） */
+export function replaceFieldSpells(s           , uid        )       {
+  const olds = [s.players[0].fzone, s.players[1].fzone].filter((u)              => u !== null && u !== uid && s.cards[u].faceUp);
+  if (olds.length) destroy(s, olds, 'rule');
+}
+/** 墓地へ送り、送ったカードの名前を記録に出す（墓地は公開の場所なので、手札・デッキ・裏側から送るカードも名前を出してよい）。
+ *  効果を受けないカードは送られないので、記録にも出さない */
+export function sendToGyLogged(s           , uids          , reason        , by                  )       {
+  const moving = uids.filter(x => !(reason === 'effect' && isImmune(s, x)));
+  if (moving.length) log(s, `${moving.map(u => nameOf(s, u)).join('、')}を墓地へ送る`);
+  sendToGy(s, uids, reason, by);
+}
 /** 墓地へ送る。手札を捨てる場合（reason 'discard'）は、誰の効果で捨てたか（by）を記録する。
  *  by を省略すると、処理中の効果のプレイヤー、または発動の手続き中（コスト）のプレイヤー。どちらでもなければルールによるもの（null） */
 export function sendToGy(s           , uids          , reason        , by                  )       {
@@ -1243,6 +1268,9 @@ function buildTriggerChain(s           , trig               )       {
       list = list.filter(x => { const e = (scriptOf(s, x.uid).effects || []).find(f => f.id === x.effect) ; return optAvailable(s, x.uid, e, x.player); });
     }
   }
+  // 誘発効果の発動にも、光と闇の竜は必ずチェーンする（一番上の発動に）
+  const top = s.chain[s.chain.length - 1];
+  if (top && trig.some(t => t.uid === top.uid)) forcedResponses(s, top);
 }
 
 export function ctxOf(s           , self        , player          , link                  )      { return { s, self, player, link }; }
@@ -1390,10 +1418,12 @@ function activateEffect(s           , p          , uid        , effectId        
     if (c.zone === 'hand') {
       if (d.subtype === 'フィールド') {
         const old = s.players[p].fzone;
-        if (old !== null) sendToGy(s, [old], 'rule');
+        // 自分のフィールドゾーンの伏せたフィールド魔法は、置き場所を空けるためにルールで墓地へ（表側ならこのあと破壊）
+        if (old !== null && !s.cards[old].faceUp) sendToGy(s, [old], 'rule');
+        replaceFieldSpells(s, uid);
         moveCard(s, uid, 'fzone', { faceUp: true, controller: p });
       } else { const free = freeSZones(s, p); moveCard(s, uid, 'szone', { index: zone !== undefined && free.includes(zone) ? zone : free[0], faceUp: true, controller: p }); }
-    } else c.faceUp = true;
+    } else { if (c.zone === 'fzone' && !c.faceUp) replaceFieldSpells(s, uid); c.faceUp = true; }
   }
   const link            = {
     player: p, uid, serial: s.cards[uid].serial, effect: effectId, ss: eff.ss, cardActivation: eff.type === 'card' && !dg, cardKind: d.kind,
@@ -1433,9 +1463,10 @@ function forcedResponses(s           , link           )       {
     // 同一チェーン上で複数回発動することはない
     const u = allMonsters(s).find(m => m !== top.uid && isFaceUpMonster(s, m) && !monsterNegated(s, m) && scriptOf(s, m).forcedNegate && !s.chain.some(l => l.uid === m && l.effect === scriptOf(s, m).forcedNegate));
     if (u === undefined) return;
-    activateEffect(s, s.cards[u].controller, u, scriptOf(s, u).forcedNegate );
+    const l = activateEffect(s, s.cards[u].controller, u, scriptOf(s, u).forcedNegate );
+    // きっかけになった発動（最初の link）を覚える。2体目以降は、きっかけに直接チェーンしていないので効果は適用されない（公式Q&A [6350]）
+    l.data.trigger = s.chain.indexOf(link);
   }
-  void link;
 }
 /** 対象が処理時もそのまま存在するか */
 export function targetValid(s           , link           , i = 0)          {
@@ -1626,8 +1657,8 @@ function handLimit(s           )       {
   const over = s.players[p].hand.length - HAND_LIMIT;
   if (over > 0) {
     const x = ctxOf(s, -1, p, null);
-    const pick = choose(x, { kind: 'cards', prompt: `手札が${s.players[p].hand.length}枚です。${over}枚選んで墓地へ送ってください`, options: [...s.players[p].hand], min: over, max: over });
-    log(s, `${pl(p)}：手札の枚数制限により${pick.map(u => nameOf(s, u)).join('、')}を墓地へ送る`);
+    const pick = choose(x, { kind: 'cards', prompt: `手札が${s.players[p].hand.length}枚です。${over}枚選んで捨ててください`, options: [...s.players[p].hand], min: over, max: over });
+    log(s, `${pl(p)}：手札の枚数制限により${pick.map(u => nameOf(s, u)).join('、')}を捨てる`);
     sendToGy(s, pick, 'discard', null); // ルールによる（効果で捨てたことにはならない）
   }
   s.events = []; s.triggers = []; s.lastEvents = [];

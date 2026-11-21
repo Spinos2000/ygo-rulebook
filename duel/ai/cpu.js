@@ -2,7 +2,7 @@
 // 考え方：候補の行動を1つずつ試し、その先を自分の次の判断の場面まで進め、盤面を点数にして一番高いものを選ぶ。
 // 点数には公開情報だけを使う（相手の手札・裏側のカード・デッキの中身は見ない）。
 // 先読みの中の相手は、表側でフィールドにあるカード（公開情報）の効果だけを使うと考える。
-import { applyAction, legalActions, validateAnswer, actorOf, defOf, monstersOf, spellTrapsOf, currentStats, canAttack, opp, isOnField, couldAttackNextBattle, scriptOf, isFaceUpMonster, monsterNegated } from '../engine/game.js';
+import { applyAction, legalActions, validateAnswer, actorOf, defOf, monstersOf, spellTrapsOf, currentStats, canAttack, opp, isOnField, couldAttackNextBattle, scriptOf, isFaceUpMonster, monsterNegated } from '../engine/game.js?v=20261121-1400-91ea7cd635';
                                                                                      
 
 /** 盤面の点数の重み（scripts/cpu-tune.mjs で CPU 同士を対戦させて調整した値） */
@@ -18,6 +18,8 @@ export const DEFAULT_WEIGHTS = {
   mySetTrap: 480,       // 自分のセットした罠
   mySetSpell: 280,      // 自分のセットした通常魔法など（手札の方が価値がある）
   faceUpST: 200,        // 表側の装備カード・永続カード
+  contST: 400,          // 表側の永続魔法・永続罠（場にあって効果を出し続けるので、手札の魔法より少し高い。MIMIの横広げ）
+  fieldSpell: 420,      // 表側のフィールド魔法（場にあって効果を出し続けるカードなので、手札の魔法より少し高い。MIMIの報告：サーチしたダーク・シティを発動しないまま負けた）
   handMon: 330,         // 手札のモンスター（＋攻撃力×0.02）
   handSpell: 360,       // 手札の魔法・罠
   oppHand: 350,         // 相手の手札1枚
@@ -59,6 +61,8 @@ function cardValueOnField(s           , uid        , viewer          , w        
     if (c.equippedTo !== null) return 150; // サクリファイスに裏側で装備されたモンスター
     return d.kind === 'trap' ? w.mySetTrap : w.mySetSpell;
   }
+  if (c.zone === 'fzone') return w.fieldSpell;
+  if (d.subtype === '永続' && c.equippedTo === null) return w.contST;
   return w.faceUpST;
 }
 

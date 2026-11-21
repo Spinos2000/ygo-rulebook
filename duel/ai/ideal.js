@@ -2,12 +2,13 @@
 // 1. 見えないカード（相手の手札・伏せカード・デッキ、自分のデッキの順番）を、デッキリストからまだ見えていないカードで埋めた「ありえる世界」を何通りも作る
 // 2. それぞれの世界で、相手も手札・伏せカードを使って最善を尽くす前提で各候補を先読みし、盤面の点数を勝率に直して平均する
 // 3. 勝率が一番高い手を選ぶ。ただし、切り札を出す手・一気に大ダメージを与える手が最善手から10%以内なら、そちら（ロマン）を選ぶ
-import { actorOf, defOf, scriptOf, monstersOf, fieldCards, opp, isOnField, poolDef } from '../engine/game.js';
-import { cloneState } from '../engine/types.js';
+import { actorOf, defOf, scriptOf, monstersOf, fieldCards, opp, isOnField, poolDef } from '../engine/game.js?v=20261121-1400-91ea7cd635';
+import { cloneState } from '../engine/types.js?v=20261121-1400-91ea7cd635';
                                                                       
-import { scoreCandidates, cpuDecide, evaluate,                                            } from './cpu.js';
-import { DECK_WEIGHTS } from './deck-weights.js';
-import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js';
+import { scoreCandidates, cpuDecide, evaluate, answerCandidates,                                            } from './cpu.js?v=20261121-1400-91ea7cd635';
+import { DECK_WEIGHTS } from './deck-weights.js?v=20261121-1400-91ea7cd635';
+import { DECKS } from '../data/decks.js?v=20261121-1400-91ea7cd635';
+import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js?v=20261121-1400-91ea7cd635';
 
                                
                            
@@ -27,11 +28,19 @@ import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js
                   
                                          
                        
+                                                                       
+                               
                                                             
                  
                    
                                                                     
                        
+                                                           
+                      
+                                                                                              
+                                              
+                                                                              
+                                                         
                                                
                 
                       
@@ -168,7 +177,37 @@ function romanceOf(before           , after                       , me          
   return null;
 }
 
-                                                                                                                   
+/** その手で、攻撃力0のモンスターが自分のフィールドに表側攻撃表示で新しく出るか（早すぎた埋葬で千眼の邪教神 など。相手の攻撃でそのままダメージを受ける） */
+function zeroAtkOut(before           , after                       , me          )          {
+  if (!after) return false;
+  // 発動した直後（対象を選ぶ途中・チェーンの処理前）なら、速い判断で処理が終わるまで進めてから見る
+  for (let i = 0; i < 20 && after.winner === null && (after.pending || after.chain.length > 0 || after.window.kind !== 'open'); i++) {
+    try { after = applyAction(after, cpuDecide(after, { depth: 0, planSteps: 0 })); } catch { break; }
+  }
+  const was = new Set(monstersOf(before, me).filter(u => before.cards[u].faceUp && before.cards[u].position === 'atk').map(u => `${u}:${before.cards[u].serial}`));
+  return monstersOf(after, me).some(u => {
+    const c = after .cards[u];
+    return c.faceUp && c.position === 'atk' && !was.has(`${u}:${c.serial}`) && currentStats(after , u).atk === 0;
+  });
+}
+
+/**
+ * リリースしたモンスターより攻撃力の低いモンスターを、攻撃表示でアドバンス召喚する手か（MIMIの報告：攻撃力1000のドゥームガイをリリースして
+ * 攻撃力800のディアボリックガイを攻撃表示で出し、次のターンに殴られた）。攻撃力0を攻撃表示で出す手と同じく「ほかに手が無い時だけ」にする
+ */
+function weakTribute(s           , a        )          {
+  // ユベルのように「エンドフェイズにほかのモンスター1体をリリースするか、このカードを破壊」のモンスターを、ほかのモンスターが残らない形で出す手
+  // （リリースした分を失って、エンドフェイズに自分も壊れる。MIMIの報告：ライラとメタモルポットをリリースしてユベルを出し、場が空になって負け）
+  if ((a.type === 'normalSummon' || a.type === 'setMonster') && (scriptOf(s, a.card).effects ?? []).some(e => (e.label ?? '').includes('リリースするか、このカードを破壊'))) {
+    const me = s.cards[a.card].controller ?? s.cards[a.card].owner;
+    if (!monstersOf(s, me).some(u => !a.tributes.includes(u))) return true;
+  }
+  if (a.type !== 'normalSummon' || !a.tributes.length) return false;
+  const best = Math.max(...a.tributes.map(u => (s.cards[u] && isOnField(s.cards[u]) ? currentStats(s, u).atk : 0)));
+  return (defOf(s, a.card).atk ?? 0) < best;
+}
+
+                                                                                                                                                
 
 /** 理想のCPUの考え（行動と勝率の見積もり） */
 export function idealThink(s           , opt               = {}, deckNames                   = ['', ''])          {
@@ -176,7 +215,9 @@ export function idealThink(s           , opt               = {}, deckNames      
   const rnd = opt.random ?? Math.random;
   const me = actorOf(s);
   const free = !s.pending && s.window.kind === 'open' && s.chain.length === 0 && s.turnPlayer === me;
-  const aces = acesOf(s, me, deckNames[me]);
+  // 切り札：MASTERのチェック表（デッキの aces）があればそれを使い、無いデッキだけ自動判定（src/ai/aces.ts と同じ決め方）
+  const table = (opt.deckCodes ? DECKS[opt.deckCodes[me]] : Object.values(DECKS).find(d => d.name === deckNames[me]))?.aces;
+  const aces = table ? new Set(Object.entries(table).filter(([, k]) => k.length > 0).map(([code]) => code)) : acesOf(s, me, deckNames[me]);
   const dw = (p          )                               => (opt.deckCodes ? DECK_WEIGHTS[opt.deckCodes[p]] : undefined);
   const cpuOpt             = { ...opt.cpu, weights: { ...dw(me), ...opt.cpu?.weights } };
   const wts                                                               = [dw(0), dw(1)];
@@ -187,10 +228,22 @@ export function idealThink(s           , opt               = {}, deckNames      
   const first = scoreCandidates(w0, { ...cpuOpt, fullOpponent: opt.fullOpponent ?? true });
   const critical = isCritical(s, me, first.list.length);
   // 処理の量の上限：普段 1500回・勝負所 5000回（PCで約2秒・約6秒。遅い端末では時間が延びるが、考える量は同じ）
-  const budget = opt.budget ?? (critical ? 5000 : 1500) * (opt.budgetScale ?? 1);
+  const budget = opt.budget ?? (critical ? 5000 * (opt.criticalBudgetScale ?? opt.budgetScale ?? 1) : 1500 * (opt.budgetScale ?? 1));
   // 1つの世界にかかった量から、上限の半分に収まる世界の数にする（残りの半分は深い先読みに使う）
   const per = Math.max(1, WORK.n - w0start);
   const N = Math.max(1, Math.min(critical ? o.criticalSamples : o.samples, Math.floor(budget / 2 / per)));
+  // 進み具合の知らせ：考える段どり（ありえる世界 → 深い先読み → リーサル探し）のどこまで終わったかを0〜1で、0.3秒ごとに送る
+  // （前は「使った量÷上限」だったが、上限より早く終わるふだんの手では線が伸びなかった。MIMIの報告）。数は減らない
+  let lastTell = 0, lastFrac = 0;
+  const tell = (frac        , force = false) => {
+    if (!opt.onProgress) return;
+    lastFrac = Math.max(lastFrac, Math.min(0.99, frac));
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (!force && now - lastTell < 300) return;
+    lastTell = now;
+    opt.onProgress(lastFrac, critical);
+  };
+  tell(0.02, true);
 
   const acc = new Map             ();
   const add = (sc        , base         , margin        , world           ) => {
@@ -198,6 +251,9 @@ export function idealThink(s           , opt               = {}, deckNames      
     const k = keyOf(sc.action);
     const a = acc.get(k) ?? acc.set(k, { action: sc.action, p: 0, n: 0, romance: 0, burst: 0, base }).get(k) ;
     a.p += prob(sc.score + (base ? margin : 0), o.scale); a.n++;
+    // 盤面の点数そのもの（勝率に直すと、負けそうな時はどれも0%になって差が消えるため、その時の比べ直しに使う）
+    a.raw = (a.raw ?? 0) + Math.max(-1e5, Math.min(1e5, sc.score + (base ? margin : 0)));
+    if (zeroAtkOut(world, sc.after, me) || weakTribute(world, sc.action)) a.zero = (a.zero ?? 0) + 1;
     if (free) {
       const r = romanceOf(world, sc.after, me, aces);
       if (r?.kind === 'ace') { a.romance++; a.ace ??= r.ace; }
@@ -210,6 +266,7 @@ export function idealThink(s           , opt               = {}, deckNames      
   };
   run(first, w0);
   for (let i = 1; i < N; i++) {
+    tell(0.05 + 0.4 * i / N);
     const w = (opt.noDeterminize ? s : determinize(s, me, rnd));
     run(scoreCandidates(w, { ...cpuOpt, fullOpponent: opt.fullOpponent ?? true }), w);
   }
@@ -237,12 +294,15 @@ export function idealThink(s           , opt               = {}, deckNames      
     const sum = new Map                                                              ();
     const shallowBest = sorted[0];
     for (let i = 0; i < DW && WORK.n - w0start < budget; i++) {
+      tell(0.45 + 0.45 * i / DW);
+      let j = 0;
       const w = opt.noDeterminize ? s : determinize(s, me, rnd);
       for (const c of deep) {
+        tell(0.45 + 0.45 * (i + j++ / deep.size) / DW);
         if (WORK.n - w0start >= budget && i > 0) break;
         let n           ;
         try { n = applyAction(w, c.action); } catch { continue; }
-        const fin = playout(n, s.turn, wts, opt.strongRest ? me : null);
+        const fin = playout(n, s.turn, wts, opt.strongRest ? me : null, opt.strongOpp ? opp(me) : null);
         const r = sum.get(c) ?? sum.set(c, { p: 0, n: 0, per: [] }).get(c) ;
         const pr = prob(evaluate(fin, me, cpuOpt.weights) + (c.base ? first.margin : 0), o.scale);
         r.p += pr; r.n++; r.per[i] = pr;
@@ -265,10 +325,13 @@ export function idealThink(s           , opt               = {}, deckNames      
     }
   }
   // リーサル：このターンに勝てる手順を総当たりで探す。見つかった最初の手は、その世界の割合だけ勝てるとみなす
-  if (free && (s.phase === 'main1' || s.phase === 'battle') && lethalPossible(s, me)) {
+  // 自分のターンの選択の途中（チキンレースのどの効果を選ぶか など）も、勝ち筋を探す
+  const myChoice = !!s.pending && s.turnPlayer === me && s.chain.length === 0;
+  if ((free || myChoice) && (s.phase === 'main1' || s.phase === 'battle') && lethalPossible(s, me)) {
     const LW = critical ? 3 : 2;
     const found = new Map                ();
     for (let i = 0; i < LW; i++) {
+      tell(0.9 + 0.09 * i / LW);
       const w = opt.noDeterminize ? s : determinize(s, me, rnd);
       const left = Math.max(150, Math.floor((budget * 1.5 - (WORK.n - w0start)) / (LW - i)));
       const a = findLethal(w, me, Math.min(opt.lethalNodes ?? 600, left));
@@ -276,18 +339,49 @@ export function idealThink(s           , opt               = {}, deckNames      
     }
     for (const c of list) { const n = found.get(keyOf(c.action)); if (n) c.rate = Math.max(c.rate, n / LW); }
     for (const [k, n] of found) if (!list.some(c => keyOf(c.action) === k)) list.push({ action: JSON.parse(k), p: 0, n: 1, romance: 0, burst: 0, base: false, rate: n / LW });
+    // どの世界でもこのターンに勝てる手順が見つかった時は、ロマンや引き分けの乱数に関係なく、その手を選ぶ（MASTERの決定#60：勝てるのに見送らない）
+    const sure = [...found].find(([, n]) => n === LW);
+    if (sure) {
+      const c = list.find(x => keyOf(x.action) === sure[0]) ;
+      return { action: c.action, winRate: 1, bestRate: 1, romance: null, samples: N, critical, alts: [...list].sort((x, y) => y.rate - x.rate).slice(0, 5).map(a => ({ action: a.action, rate: a.rate })) };
+    }
   }
   const bestRate = Math.max(...list.map(a => a.rate));
   // 勝率がほぼ同じ手（差 tie 未満）からランダムに選ぶ
   const near = list.filter(a => a.rate >= bestRate - (opt.tie ?? 1e-9));
   let pick = near[Math.floor(rnd() * near.length)];
+  // 負けそうな時（最善でも勝率5%未満）は、勝率がほぼ同じ（1%以内）手の中から、盤面の点数が一番良い手を選ぶ。
+  // どの手も0%に見えて適当に選ぶ（攻撃できるのに攻撃しない など）のを防ぎ、最後まで最善を尽くす
+  if (bestRate < 0.05) {
+    const close = list.filter(a => a.rate >= bestRate - 0.01 && a.raw !== undefined && a.n > 0);
+    if (close.length > 1) pick = close.reduce((x, y) => (y.raw  / y.n > x.raw  / x.n ? y : x));
+  }
+  // 勝ちがほぼ決まっている時（95%以上）に、見込みがほぼ同じ（2%以内）なら、決着を早める手（攻撃 → バトルフェイズへ）を選ぶ。
+  // ターンを終える手ばかり選んで引き延ばさないため（MIMIの報告③）
+  if (free && bestRate >= 0.95) {
+    const fast = (a        ) => (a.type === 'attack' ? 2 : a.type === 'nextPhase' && a.to === 'battle' ? 1 : 0);
+    const cand = list.filter(a => a.rate >= bestRate - 0.02 && fast(a.action) > 0).sort((x, y) => fast(y.action) - fast(x.action) || y.rate - x.rate);
+    if (cand.length) pick = cand[0];
+  }
   let romance                     = null;
   if (free) {
-    const rom = list.filter(a => a.rate >= bestRate - o.romanceWidth && (a.romance + a.burst) * 2 > a.n);
+    const width = opt.romanceChase && rnd() < opt.romanceChase.p ? Math.max(o.romanceWidth, opt.romanceChase.width) : o.romanceWidth;
+    const rom = list.filter(a => a.rate >= bestRate - width && (a.romance + a.burst) * 2 > a.n);
     if (rom.length) {
       const r = rom.reduce((x, y) => (y.rate > x.rate ? y : x));
       pick = r;
       romance = r.romance >= r.burst ? 'ace' : 'burst';
+    }
+  }
+  // 攻撃力0のモンスターを攻撃表示で出す手は、ほかに手が無い時だけ（MASTERの決定）。
+  // ただし、その手が見込みで10%以上はっきり良い時（そのターンに素材にする などの狙いがある時）は残す
+  // 相手の伏せカードで止められる世界もあるので、3割以上の世界で出るなら「出す手」とみなす
+  const zeroish = (a                     ) => (a.zero ?? 0) * 10 >= a.n * 3 && (a.zero ?? 0) > 0;
+  if (zeroish(pick)) {
+    const others = list.filter(a => !zeroish(a));
+    if (others.length) {
+      const alt = others.reduce((x, y) => (y.rate > x.rate ? y : x));
+      if (alt.rate >= pick.rate - 0.1) { pick = alt; romance = null; }
     }
   }
   const alts = [...list].sort((x, y) => y.rate - x.rate).slice(0, 5).map(a => ({ action: a.action, rate: a.rate }));
@@ -301,13 +395,29 @@ function lethalPossible(s           , me          )          {
   const inHand = s.players[me].hand.reduce((a, u) => Math.max(a, defOf(s, u).kind === 'monster' ? (defOf(s, u).atk ?? 0) : 0), 0);
   return s.players[o].lp <= (onField + inHand) * 1.5 + 1000;
 }
+/**
+ * リーサルの総当たりで試す順番：攻撃 → 効果の発動 → バトルフェイズへ → そのほか。
+ * 同じカード名の手札を同じ形で出す手は1つにまとめる（千眼の邪教神が5枚ある時に5通り試さない）
+ */
+function order(s           , acts          )           {
+  const seen = new Set        ();
+  const uniq = acts.filter(a => {
+    const k = JSON.stringify(a, (key, v) => (key === 'card' && typeof v === 'number' && s.cards[v] && s.players.some(p => p.hand.includes(v)) ? 'h:' + s.cards[v].code : v));
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+  const rank = (a        ) => (a.type === 'attack' ? 0 : a.type === 'activate' ? 1 : a.type === 'nextPhase' ? 2 : a.type === 'answer' ? 0 : 3);
+  return uniq.map((a, i) => ({ a, i })).sort((x, y) => rank(x.a) - rank(y.a) || x.i - y.i).map(x => x.a);
+}
 /** このターンに勝てる手順の最初の手（見つからなければ null）。自分の行動を順に試し、選択や相手の応答は速い判断で進める */
-function findLethal(s0           , me          , nodeLimit        )                {
+export function findLethal(s0           , me          , nodeLimit        )                {
   const turn = s0.turn, start = WORK.n;
   const settle = (s           )            => {
     for (let i = 0; i < 60 && s.winner === null && s.turn === turn; i++) {
       const free = !s.pending && s.window.kind === 'open' && s.chain.length === 0 && s.turnPlayer === me && actorOf(s) === me;
       if (free) return s;
+      // 自分の選択（チキンレースのどの効果を選ぶか など）も総当たりの枝にする（速い判断に任せると勝ち筋を見落とす）
+      if (s.pending && actorOf(s) === me) return s;
       try { s = applyAction(s, cpuDecide(s, { depth: 0, planSteps: 0 })); } catch { return s; }
     }
     return s;
@@ -315,10 +425,10 @@ function findLethal(s0           , me          , nodeLimit        )             
   const dfs = (s           , depth        )          => {
     if (s.winner === me) return true;
     if (s.winner !== null || s.turn !== turn || depth <= 0 || WORK.n - start > nodeLimit) return false;
-    let acts = legalActions(s).filter(a => a.type !== 'endTurn' && !(a.type === 'nextPhase' && a.to !== 'battle') && a.type !== 'setSpellTrap' && a.type !== 'setMonster');
-    // 攻撃を先に試す（決着に近い）
-    acts = [...acts.filter(a => a.type === 'attack'), ...acts.filter(a => a.type !== 'attack')];
-    for (const a of acts) {
+    // 自分の選択の途中なら、答えの候補を全部試す（多すぎる時は先頭の8つ）
+    let acts           = s.pending ? answerCandidates(s, s.pending.request, 8).map(value => ({ type: 'answer', value })          )
+      : legalActions(s).filter(a => a.type !== 'endTurn' && !(a.type === 'nextPhase' && a.to !== 'battle') && a.type !== 'setSpellTrap' && a.type !== 'setMonster');
+    for (const a of order(s, acts)) {
       let n           ;
       try { n = settle(applyAction(s, a)); } catch { continue; }
       if (dfs(n, depth - 1)) return true;
@@ -328,9 +438,8 @@ function findLethal(s0           , me          , nodeLimit        )             
   };
   const s = settle(s0);
   if (s !== s0 && s.winner === me) return null;
-  let acts = legalActions(s).filter(a => a.type !== 'endTurn' && !(a.type === 'nextPhase' && a.to !== 'battle'));
-  acts = [...acts.filter(a => a.type === 'attack'), ...acts.filter(a => a.type !== 'attack')];
-  for (const a of acts) {
+  const acts           = s.pending ? answerCandidates(s, s.pending.request, 8).map(value => ({ type: 'answer', value })          ) : legalActions(s).filter(a => a.type !== 'endTurn' && !(a.type === 'nextPhase' && a.to !== 'battle'));
+  for (const a of order(s, acts)) {
     let n           ;
     try { n = settle(applyAction(s, a)); } catch { continue; }
     if (dfs(n, 6)) return a;
@@ -340,11 +449,11 @@ function findLethal(s0           , me          , nodeLimit        )             
 }
 
 /** 相手の次のターンが終わる（自分の次のターンが始まる）まで、お互いに速い判断で指し進める */
-function playout(s           , startTurn        , wts                                                               = [undefined, undefined], me                  = null)            {
+function playout(s           , startTurn        , wts                                                               = [undefined, undefined], me                  = null, foe                  = null)            {
   for (let i = 0; i < 400 && s.winner === null && s.turn < startTurn + 2; i++) {
     // 自分のターンの残りは、今のCPUと同じ丁寧な判断で指す（その手の後に実際に指す手に近づける）。それ以外は速い判断
     const a = actorOf(s);
-    const careful = me !== null && a === me && s.turn === startTurn;
+    const careful = (me !== null && a === me && s.turn === startTurn) || (foe !== null && a === foe);
     try { s = applyAction(s, cpuDecide(s, careful ? { weights: wts[a] } : { depth: 0, planSteps: 0, weights: wts[a] })); } catch { break; }
     s.log = []; s.anim = [];
   }

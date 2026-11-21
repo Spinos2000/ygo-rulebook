@@ -1,18 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { acesOf } from './ai/ideal.js';
-import { levelThink } from './ai/levels.js';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js';
-import { playBattle, playSummon, rarityOf } from './fx.js';
-import { playSignature, sigKey } from './sig.js';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1400-91ea7cd635';
+import { fullThink } from './ai/levels.js?v=20261121-1400-91ea7cd635';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1400-91ea7cd635';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1400-91ea7cd635';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1400-91ea7cd635';
+import { playSignature, sigKey } from './sig.js?v=20261121-1400-91ea7cd635';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1400-91ea7cd635';
+import { firstEntrance } from './aces.js?v=20261121-1400-91ea7cd635';
+import { RULINGS } from './data/rulings.js?v=20261121-1400-91ea7cd635';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1400-91ea7cd635';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1400-91ea7cd635';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1400-91ea7cd635';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-1400-91ea7cd635';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js';
-import { CARD_POOL } from './data/cardpool.js';
-import { DECKS } from './data/decks.js';
-import { SCRIPTS } from './cards/index.js';
+} from './engine/game.js?v=20261121-1400-91ea7cd635';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1400-91ea7cd635';
+import { DECKS } from './data/decks.js?v=20261121-1400-91ea7cd635';
+import { SCRIPTS } from './cards/index.js?v=20261121-1400-91ea7cd635';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -29,11 +36,24 @@ let peek = false;      // 選択の途中でシートを閉じて盤面を見て
 let lastLp = [8000, 8000];
 let trace = [];        // CPU の勝率の見積もりの記録（対戦後の振り返り用）：{ turn, rate, romance }
 const CPU = 1;
+/* ---------- 自分の席（画面を見ている人の席）：CPU戦・2人対戦は0。オンライン対戦の子は1になる ----------
+ * 画面の下（手札の欄 #hand0・帯 #side0・盤面の下の段）はいつも「自分の席」、上は「相手の席」 */
+let mySeat = 0;
+let net = null; // オンライン対戦の時だけ：{ link, oppName }（スイッチ ONLINE が入っている時だけ作る）
+const ME = () => mySeat;
+const OPP = () => 1 - mySeat;
+const netMode = () => !!net;
+/** 画面の上の段・相手の欄に出すプレイヤーか（CPU、またはオンラインの相手）：中身を見せない・操作させない */
+const isRemote = p => (netMode() ? p !== mySeat : cpuMode() && p === CPU);
+const handEl = p => $(p === mySeat ? '#hand0' : '#hand1');
+const sideEl = p => $(p === mySeat ? '#side0' : '#side1');
 const cpuMode = () => $('#mode').value === 'cpu';
 const isCpu = p => cpuMode() && p === CPU;
 const narrow = () => matchMedia('(max-width: 860px)').matches;
 /** プレイヤーの呼び名：CPU対戦では「あなた」「CPU」 */
-const NAME = p => (cpuMode() ? (p === 0 ? 'あなた' : 'CPU') : `P${p + 1}`);
+const NAME = p => (netMode() ? (p === ME() ? 'あなた' : (net.oppName || '相手')) : playerName(p, cpuMode()));
+/** エンジンが作った文の「P1」「P2」を画面の呼び名に置きかえる（記録・勝ち負けの理由・結果・知らせ） */
+const WHO = t => (netMode() ? whoNames(t, [NAME(0), NAME(1)], ME()) : whoText(t, cpuMode()));
 let cpuTimer = null;
 
 /* ---------- 効果音：ログに増えた行から、何が起きたかを読み取って鳴らす ---------- */
@@ -50,7 +70,7 @@ function soundsFor(prev, next) {
   const add = n => { if (!out.includes(n)) out.push(n); };
   for (const t of lines) {
     const nm = (t.match(/「([^」]+)」/) || [])[1];
-    if (/の勝利/.test(t)) add(cpuMode() ? (next.winner === 0 ? 'win' : 'lose') : 'win');
+    if (/の勝利/.test(t)) add(cpuMode() || netMode() ? (next.winner === ME() ? 'win' : 'lose') : 'win');
     else if (/を無効にした/.test(t)) add('negate');
     else if (/の効果を発動（チェーン/.test(t)) add(kindOfName(nm) === 'effect' ? 'effect' : kindOfName(nm));
     else if (/を発動（チェーン/.test(t)) add(kindOfName(nm));
@@ -67,9 +87,43 @@ function soundsFor(prev, next) {
   return out;
 }
 /** 状態を進めて、起きたことに合わせて効果音を鳴らし、攻撃があれば演出を再生する */
+/* ---------- CPU対戦の結果：サイトの戦績・実績へ渡す ----------
+ * opts.onResult(rec) を、1回の対戦につき1回呼ぶ。「ひとつ戻す」を使った対戦は undo:true（実績には数えない） */
+let undoUsed = false, resultSent = false;
+/** 切り札の判定（MEMEの src/ai/aces.ts。CPUのロマン・セリフと同じ判定）。見る人は「あなた」（0）：CPUの手札・裏側のカードには何も返さない。
+ *  返り値 { cls: 演出に使う1つ, kinds: 付いている分類ぜんぶ, fallback: 表の無いデッキの予備の判定 } か null */
+const aceDecks = () => ({ codes: deckCodes(), names: deckNames() });
+function aceOf(st, uid) {
+  try { return st && st.cards[uid] ? aceInfo(st, uid, 0, aceDecks()) : null; } catch { return null; }
+}
+let aceSeen = new Set(); // この対戦で大きい登場を見せたカード（uid）
+/** 自分のデッキの切り札の名前 */
+function acesNamesOf(st) {
+  try { const codes = aceCodes(st, 0, aceDecks()); const names = new Set(); for (const c of Object.values(st.cards)) if (c.owner === 0 && codes.has(c.code)) names.add(defOf(st, c.uid).name); return [...names].slice(0, 4); } catch { return []; }
+}
+function reportResult(prev, next) {
+  if (!cpuMode() || placeholder || resultSent || !OPTS.onResult) return;
+  resultSent = true;
+  const d0 = DECKS[$('#deck0').value] || {}, d1 = DECKS[$('#deck1').value] || {};
+  // 切り札でとどめ：最後に相手のLPを0にしたのが、自分のデッキの切り札の攻撃だったか
+  let aceFinish = false;
+  if (next.winner === 0) {
+    const fresh = (next.anim || []).filter(x => x.seq > (prev.animSeq ?? 0) && x.kind === 'battle' && next.cards[x.attacker]?.controller === 0 && (x.damage || []).some(d => d.player === 1));
+    const last = fresh[fresh.length - 1];
+    if (last) { try { aceFinish = !!aceOf(next, last.attacker); } catch { /* 切り札が分からない */ } }
+  }
+  const rec = {
+    at: Date.now(), result: next.winner === 0 ? 'win' : next.winner === 1 ? 'lose' : 'draw', level: cpuLevel,
+    myDeck: d0.theme || d0.name || '', myCode: d0.code || '', cpuDeck: d1.theme || d1.name || '', cpuCode: d1.code || '', cpuOwner: d1.owner || '',
+    first: next.log.some(l => /先攻はP1/.test(l.text)), turn: next.turn, myLp: next.players[0].lp, cpuLp: next.players[1].lp,
+    undo: undoUsed, aceFinish, persona, surrender: /サレンダー/.test(next.winReason || ''), aces: acesNamesOf(next),
+  };
+  try { OPTS.onResult(rec); } catch (e) { console.warn('戦績に渡せませんでした', e); }
+}
 function commit(next) {
   const prev = S;
   S = next;
+  if (prev && prev.winner === null && next.winner !== null) reportResult(prev, next);
   if (prev) play(soundsFor(prev, next));
   if (prev) queueBattleFx(prev, next);
   if (prev) queueMoves(prev, next);
@@ -78,6 +132,17 @@ function commit(next) {
 
 /* ---------- 攻撃の演出：演出の間は画面の更新とCPUの手番を止め、終わったら続ける ---------- */
 let fxN = 0;   // 再生中の演出の数（0 になった時だけ画面を更新する。演出が重なっても途中で描き直さない）
+/** 演出の間は、画面のどこを押しても何も起きないようにする（MASTER：途中で飛ばす操作もなし） */
+function fxBlock() { const r = ROOT && ROOT.querySelector('.droot'); if (r) r.classList.toggle('fx-busy', fxN > 0); }
+/** 召喚・攻撃・カードの演出の間（引く・手札に加える演出は除く）：スマホを横にした時は、盤面にかぶる手札を下へしまう */
+function fxStage(on) { const r = ROOT && ROOT.querySelector('.droot'); if (r) r.classList.toggle('fx-stage', on); }
+/** 演出の文字の帯を置いてよい範囲：上の帯の下から、手札・ボタン・チェーンの欄の上まで */
+function safeArea() {
+  const vh = innerHeight; let top = 0, bottom = vh;
+  const tb = $('.top'); if (tb) top = Math.max(top, tb.getBoundingClientRect().bottom);
+  for (const q of ['#dock', '#tray', '#chain']) { const e = $(q); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.height && r.top > vh * .35 && r.top < vh) bottom = Math.min(bottom, r.top); }
+  return { top, bottom };
+}
 const fxMode = () => ($('#fxMode') && $('#fxMode').value) || 'full';
 let pendingSummons = [];   // 画面を更新した後に再生する召喚の演出
 let heldAnims = [];
@@ -116,27 +181,29 @@ function queueBattleFx(prev, next) {
   const jobs = [...battles, ...sigs].sort((p, q) => p.seq - q.seq);
   // 召喚：素材のカードの位置は今のうちに覚えておき、召喚されたカードの位置は画面を更新してから調べる
   pendingSummons.push(...fresh.filter(x => x.kind === 'summon').map(x => summonInfo(prev, next, x)).filter(Boolean));
-  pendingSummons.push(...fresh.filter(x => x.kind === 'search' && isCpu(x.player)).map(x => ({ search: true, uid: x.uid, p: x.player, d: defOf(next, x.uid) })));
+  pendingSummons.push(...fresh.filter(x => x.kind === 'search' && isRemote(x.player)).map(x => ({ search: true, uid: x.uid, p: x.player, d: defOf(next, x.uid) })));
   for (const p of [0, 1]) {
     const gone = fresh.filter(x => x.kind === 'discard' && x.player === p && !fanDoneUids.has(x.uid)).map(x => x.uid);
     if (!gone.length) continue;
     // 同じ処理の中でドローしてすぐ捨てたカードも、手札の中に入れて見せる
     const hand0 = [...new Set([...prev.players[p].hand, ...gone])];
     const hand = sortsHand(p) ? sortHand(next, hand0) : hand0;
-    pendingSummons.push({ handOpen: true, p, gone, hand, faces: !isCpu(p), ds: Object.fromEntries(hand.map(u => [u, defOf(next, u)])) });
+    pendingSummons.push({ handOpen: true, p, gone, hand, faces: !isRemote(p), ds: Object.fromEntries(hand.map(u => [u, defOf(next, u)])) });
     gone.forEach(u => sigSkip.add(u));
   }
   if (!jobs.length) return;
-  fxN++;
+  fxN++; fxBlock();
   (async () => {
     for (const j of jobs) {
+      fxStage(true);
       const hide = j.hide.map(el => { el.style.visibility = 'hidden'; return el; });
       const brd = j.sig ? ROOT.querySelector('#board') : null; if (brd) brd.classList.add('skin-on');
       try { await (j.sig ? playSignature(ROOT, j.info) : playBattle(ROOT, j.info)); } catch (e) { console.error(e); }
       if (brd) brd.classList.remove('skin-on');
       hide.forEach(el => { el.style.visibility = ''; });
     }
-    fxN = Math.max(0, fxN - 1);
+    fxStage(false);
+    fxN = Math.max(0, fxN - 1); fxBlock();
     render();
   })();
 }
@@ -156,13 +223,16 @@ function summonInfo(prev, next, x) {
   }).filter(Boolean);
   // 墓地・除外から特殊召喚した時は、その置き場の位置も渡す（そこから魂が昇る）
   const pc = prev.cards[x.uid], fromEl = pc && (x.from === 'gy' || x.from === 'banished') ? pileEl(pc.owner, x.from) : null;
-  return { uid: x.uid, how: x.how, faceDown: faceDown && x.how !== 'flip', d: defOf(next, x.uid), mats, from: x.from, fromRect: fromEl ? fromEl.getBoundingClientRect() : null };
+  // 切り札：表側で出た時だけ（裏側のカードは中身が分かってしまうので、何も出さない）
+  const a = !faceDown || x.how === 'flip' ? aceOf(next, x.uid) : null;
+  const ace = a ? { cls: a.cls, fallback: a.fallback, big: firstEntrance(aceSeen, x.uid, a.fallback), side: NAME(c.controller) } : null;
+  return { uid: x.uid, how: x.how, faceDown: faceDown && x.how !== 'flip', d: defOf(next, x.uid), mats, from: x.from, fromRect: fromEl ? fromEl.getBoundingClientRect() : null, ace };
 }
 /** 画面を更新した後：召喚されたカードの場所で、召喚の演出を順に再生する */
 function playPendingSummons() {
   if (!pendingSummons.length || (fxN > 0)) return false;
   const jobs = pendingSummons; pendingSummons = [];
-  fxN++;
+  fxN++; fxBlock();
   (async () => {
     for (const j of jobs) {
       if (j.search) { try { await cpuSearchFx(j); } catch (e) { console.error(e); } continue; }
@@ -170,14 +240,19 @@ function playPendingSummons() {
       if (j.handAdd) { try { await handAddFx(j); } catch (e) { console.error(e); } continue; }
       const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`);
       if (!el) continue;
+      fxStage(true);
       el.style.visibility = 'hidden';
       const flipFace = j.how === 'flip';
       try {
-        await playSummon(ROOT, { rect: el.getBoundingClientRect(), track: () => el.isConnected ? el.getBoundingClientRect() : null, onLand: () => { el.style.visibility = ''; }, d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), pos: S.cards[j.uid] && S.cards[j.uid].position, how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, from: j.from, fromRect: j.fromRect, mat: matCanvas(), speed: fxMode() === 'short' ? 2 : 1 });
+        const bigAce = j.ace && j.ace.big && !j.ace.fallback;
+        // 相棒：場の仲間（同じ側の表側のモンスター）の位置を渡す（絆の光がそこから集まる）
+        const allies = bigAce && j.ace.cls === 'partner' && S.cards[j.uid] ? [...ROOT.querySelectorAll('#board [data-uid]')].filter(e => { const u = Number(e.dataset.uid), c = S.cards[u]; return u !== j.uid && c && c.zone === 'mzone' && c.faceUp && c.controller === S.cards[j.uid].controller; }).map(e => e.getBoundingClientRect()) : [];
+        await playSummon(ROOT, { rect: el.getBoundingClientRect(), track: () => el.isConnected ? el.getBoundingClientRect() : null, allies, onLand: () => { el.style.visibility = ''; if (bigAce) play([j.ace.cls === 'god' ? 'aceGod' : j.ace.cls === 'partner' ? 'aceBond' : 'aceLand']); }, d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), pos: S.cards[j.uid] && S.cards[j.uid].position, how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, from: j.from, fromRect: j.fromRect, ace: j.ace, safe: safeArea(), mat: matCanvas(), speed: fxMode() === 'short' ? 2 : 1 });
       } catch (e) { console.error(e); }
       el.style.visibility = '';
     }
-    fxN = Math.max(0, fxN - 1);
+    fxStage(false);
+    fxN = Math.max(0, fxN - 1); fxBlock();
     render();
   })();
   return true;
@@ -205,7 +280,7 @@ function sigInfo(prev, next, x, fresh) {
       faceUp: !el.classList.contains('back'), defPos: c.position === 'def' && (c.zone === 'mzone' || c.zone === 'emz') };
   };
   const center = el => { if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
-  const p = x.player, me = p === 0, boardEl = q('#board');
+  const p = x.player, me = p === ME(), boardEl = q('#board');
   if (!boardEl) return null;
   const br = boardEl.getBoundingClientRect(), mid = q('#board [data-pile="0:banished"]');
   const rowY = key => { const r = q(`#board [data-zone="${key}"]`); return r ? center(r).y : br.top + br.height / 2; };
@@ -237,7 +312,7 @@ function sigInfo(prev, next, x, fresh) {
     hide: [self, ...dest, att].filter(Boolean).map(c => c.el),
     info: { key, name: d.name, kind: d.kind, subtype: d.subtype, me, speed: fxMode() === 'short' ? 2 : 1, board, mat: matCanvas(),
       self, dest, att, target, opp, mons, traps, drawn: drawn.length, land,
-      deck: center(pileEl(p, 'deck')), gy: center(pileEl(tgtOwner, 'gy')), hand: center(q(`#hand${p}`)) },
+      deck: center(pileEl(p, 'deck')), gy: center(pileEl(tgtOwner, 'gy')), hand: center(q(p === mySeat ? '#hand0' : '#hand1')) },
   };
 }
 function battleInfo(prev, next, x) {
@@ -251,8 +326,8 @@ function battleInfo(prev, next, x) {
   if (x.target === null) {
     // スマホではLPの帯が上にまとまっているので、盤面のすぐ外（自分なら下、相手なら上）をねらう
     const b = $('#board').getBoundingClientRect();
-    const hh = b.height * .16, top = defP === 0 ? b.bottom - hh - b.height * .04 : b.top + b.height * .04;
-    t = { rect: narrow() ? { left: b.left + b.width * .3, width: b.width * .4, top, height: hh, right: b.left + b.width * .7, bottom: top + hh } : $(`#side${defP}`).getBoundingClientRect() };
+    const hh = b.height * .16, top = defP === ME() ? b.bottom - hh - b.height * .04 : b.top + b.height * .04;
+    t = { rect: narrow() ? { left: b.left + b.width * .3, width: b.width * .4, top, height: hh, right: b.left + b.width * .7, bottom: top + hh } : sideEl(defP).getBoundingClientRect() };
   } else {
     tEl = elOf(x.target);
     if (!tEl) return null;
@@ -282,8 +357,12 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js', import.meta.url), { type: 'module' });
-    worker.onmessage = e => { const w = waiting.get(e.data.id); if (w) { waiting.delete(e.data.id); w(e.data); } };
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-1400-91ea7cd635', import.meta.url), { type: 'module' });
+    worker.onmessage = e => {
+      // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
+      if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
+      const w = waiting.get(e.data.id); if (w) { waiting.delete(e.data.id); w(e.data); }
+    };
     worker.onerror = e => {
       console.warn('CPUの考える場所を作れませんでした。この画面の中で考えます', e);
       workerBroken = true; worker = null;
@@ -299,19 +378,22 @@ const deckNames = () => deckCodes().map(c => DECKS[c]?.name ?? '');
 function think(state) {
   if (state.askZone) state = { ...state, askZone: undefined };
   const local = () => new Promise(res => setTimeout(() => {
-    try { res({ ok: true, thought: levelThink(state, cpuLevel, { deckCodes: deckCodes() }, deckNames()) }); } catch (e) { res({ ok: false, error: e.message }); }
+    try { res({ ok: true, thought: fullThink(state, { deckCodes: deckCodes() }, deckNames()) }); /* CPUはいつも全力（考える場所が使えない時の予備も同じ） */ } catch (e) { res({ ok: false, error: e.message }); }
   }, 30));
   const w = getWorker();
   if (!w) return local();
   return new Promise(res => {
     const id = ++reqId;
     waiting.set(id, r => (r.retry ? local().then(res) : res(r)));
-    try { w.postMessage({ id, state, deckNames: deckNames(), deckCodes: deckCodes(), level: cpuLevel }); } catch { waiting.delete(id); local().then(res); }
+    try { w.postMessage({ id, state, deckNames: deckNames(), deckCodes: deckCodes(), level: cpuLevel, progress: true }); } catch { waiting.delete(id); local().then(res); }
   });
 }
 let thinking = null; // 考えている最中の状態（同じ状態で2回考えない）
-function setThinking(on) { const el = $('#cpuThink'); if (el) el.hidden = !on; }
-const pausedUi = () => setupOpen() || ($('#menu') && !$('#menu').hidden);
+/** 相手の帯の「考え中…」：出す時は進み具合の線を0から。消す時は、線を最後まで伸ばしてから */
+function setThinking(on) { const el = $('#cpuThink'); if (!el) return; if (on) { el.textContent = '考え中…'; el.classList.remove('deep'); el.style.setProperty('--p', '0'); } else el.style.setProperty('--p', '1'); el.hidden = !on; }
+/** CPUが考えている途中の知らせ：進み具合（0〜1）を線で、勝負所の時は「じっくり考え中…」。どのカードを使うかの手がかりは出さない */
+function thinkProgress(frac, critical) { const el = $('#cpuThink'); if (!el) return; el.style.setProperty('--p', String(Math.max(0, Math.min(1, Number(frac) || 0)))); const t = critical ? 'じっくり考え中…' : '考え中…'; if (el.textContent !== t) el.textContent = t; el.classList.toggle('deep', !!critical); }
+const pausedUi = () => setupOpen() || ($('#menu') && !$('#menu').hidden) || ($('#guideDlg') && !$('#guideDlg').hidden);
 function scheduleCpu() {
   clearTimeout(cpuTimer);
   if (pausedUi()) return;
@@ -321,13 +403,13 @@ function scheduleCpu() {
   if (ready && ready.state === S) { const th = ready.th; cpuTimer = setTimeout(() => playCpu(S, th), cpuDelay() * 0.5); return; }
   const state = S, t0 = performance.now(), delay = cpuDelay() + cpuHold; cpuHold = 0;
   thinking = state;
-  const showT = setTimeout(() => { if (thinking === state) setThinking(true); }, 450);
+  // 「考え中…」は、考えている間だけでなく、指すまでの待ち時間も出し続ける（0.45秒より長くかかる時。下の欄の「CPUが考え中」とそろえる）
+  clearTimeout(thinkShowT); thinkShowT = setTimeout(() => { if (S === state && isCpu(actorOf(S))) setThinking(true); }, 450);
   think(state).then(r => {
-    clearTimeout(showT);
     if (thinking === state) thinking = null;
-    setThinking(false);
+    thinkProgress(1, false); // 考え終わった：線は最後まで（表示は、指す時に消す）
     if (S !== state || !S || S.winner !== null) return; // 考えている間に状態が変わった（元に戻す・新しいデュエルなど）
-    if (!r.ok) { console.error(r.error); toast(`CPUのエラー：${r.error}`, true); return; }
+    if (!r.ok) { console.error(r.error); toast(`CPUのエラー：${WHO(r.error)}`, true); return; }
     const th = r.thought;
     ready = { state, th };
     if (pausedUi() || fxN > 0) return; // 準備画面・メニュー・演出の間は指さない（終わったら、この答えで指す）
@@ -352,17 +434,19 @@ function endTap() {
 /** エンドを押した後：エンドフェイズで自由に行動できるようになったら、そのままターンを終える（途中で選ぶことがあれば、それが済んでから） */
 function continueEnd() {
   if (!autoEnd || !S) return;
-  if (S.winner !== null || isCpu(S.turnPlayer) || S.turnPlayer !== actorOf(S) && !S.pending && S.window.kind === 'open') { autoEnd = false; return; }
+  if (S.winner !== null || isRemote(S.turnPlayer) || S.turnPlayer !== actorOf(S) && !S.pending && S.window.kind === 'open') { autoEnd = false; return; }
   if (!humanActing() || S.pending || S.window.kind !== 'open' || S.phase !== 'end') return;
   const fin = legalActions(S).find(x => x.type === 'endTurn');
   if (fin) { autoEnd = false; setTimeout(() => { if (S && legalActions(S).some(x => x.type === 'endTurn')) run(fin); }, 120); }
 }
+let thinkShowT = null; // 「考え中…」を出すまでの待ち
 function playCpu(state, th) {
+  clearTimeout(thinkShowT); setThinking(false);
   if (S !== state) return;
   if (fxN > 0 || pausedUi()) return; // 演出・準備画面・メニューの間は指さない（終わった時に、考えた答えで指し直す）
   ready = null;
   let next;
-  try { next = applyAction(S, th.action); } catch (e) { console.error(e); toast(`CPUのエラー：${e.message}`, true); return; }
+  try { next = applyAction(S, th.action); } catch (e) { console.error(e); toast(`CPUのエラー：${WHO(e.message)}`, true); return; }
   if (!state.pending && state.window.kind === 'open' && state.turnPlayer === CPU) trace.push({ turn: state.turn, rate: th.winRate, romance: th.romance });
   if (th.romance) speakRomance(state, next, th);
   commit(next);
@@ -430,7 +514,7 @@ function phaseCue(prev, next) {
 function playPendingCues() {
   if (!cueQ.length || fxN > 0) return false;
   const q = cueQ; cueQ = [];
-  fxN++;
+  fxN++; fxBlock();
   (async () => {
     for (const ph of q) {
       const el = document.createElement('div');
@@ -445,7 +529,7 @@ function playPendingCues() {
       el.remove();
     }
     shownPhase = null;
-    fxN = Math.max(0, fxN - 1);
+    fxN = Math.max(0, fxN - 1); fxBlock();
     render();
   })();
   return true;
@@ -493,8 +577,7 @@ function speak(text, side = 'opp') {
 const cardNameOf = (s, u) => (u !== undefined && u !== null && s.cards[u] ? defOf(s, u).name : '');
 /** p の表側の切り札（台詞の「迎え撃つ」用） */
 function faceUpAce(s, p) {
-  const aces = acesOf(s, p, deckNames()[p]);
-  return monstersOf(s, p).find(u => s.cards[u].faceUp && aces.has(s.cards[u].code));
+  return monstersOf(s, p).find(u => s.cards[u].faceUp && aceOf(s, u));
 }
 function speakRomance(prev, next, th) {
   const oppAce = faceUpAce(prev, 0);
@@ -505,9 +588,8 @@ function speakRomance(prev, next, th) {
 /** あなたが切り札を出した時、CPU が一言反応する */
 function reactToAce(prev, next) {
   if (!cpuMode() || next.winner !== null) return;
-  const aces = acesOf(next, 0, deckNames()[0]);
   const was = new Set(monstersOf(prev, 0).filter(u => prev.cards[u].faceUp).map(u => `${u}:${prev.cards[u].serial}`));
-  const u = monstersOf(next, 0).find(x => next.cards[x].faceUp && aces.has(next.cards[x].code) && !was.has(`${x}:${next.cards[x].serial}`));
+  const u = monstersOf(next, 0).find(x => next.cards[x].faceUp && aceOf(next, x) && !was.has(`${x}:${next.cards[x].serial}`));
   if (u !== undefined) speak(lineFor(persona, 'react', { opp: cardNameOf(next, u) }));
 }
 
@@ -543,9 +625,14 @@ function showReview() {
 
 /* ---------- デュエルの準備（CPU対戦）：電卓と同じように、1ページに1つずつ選んで「▶ デュエル開始」へ ----------
  * あなたのデッキ（持ち主 → テーマ）→ CPUのデッキ（持ち主 → テーマ。🎲おまかせも可）→ 先攻・後攻 → 確認してスタート */
-const SU_PAGES = ['p0own', 'p0deck', 'p1own', 'p1deck', 'first', 'level', 'go'];
-const LEVEL_LABEL = { easy: 'やさしい', normal: 'ふつう', hard: '本気' };
-let cpuLevel = 'normal'; // いまの対戦のCPUの強さ
+/* 準備画面のページ。CPUの強さを選ぶページ（'level'）は、MASTERの決定で「CPUはいつも全力」になったので外した（作りは残してある） */
+const SU_PAGES = ['p0own', 'p0deck', 'p1own', 'p1deck', 'first', 'go'];
+const LEVEL_LABEL = { easy: 'やさしい', normal: 'ふつう', hard: '全力' };
+/** 準備画面に「本気」を出すか（MASTERの決定：本気が合格するまでは隠す。作りは残す） */
+const SHOW_HARD = false;
+/** CPUはいつも全力（MASTERの決定：麻雀と同じで、みんな全力だから面白い）。やさしい・ふつうの作りは残すが、選べない */
+const CPU_LEVEL = 'hard';
+let cpuLevel = CPU_LEVEL; // いまの対戦のCPUの強さ（いつも全力）
 let SU = null;
 let placeholder = false; // 準備画面の後ろにある、まだ始めていない仮の対戦（保存しない）
 let suReturn = false; // 準備画面から設定（メニュー）を開いた：閉じたら準備画面に戻る
@@ -559,7 +646,7 @@ let suKeep = null; // ⚙️（メニュー）を開いている間、準備画�
 function openSetup(page = 'p0own') {
   let last = null; try { last = JSON.parse(localStorage.getItem('gx-duel-setup') || 'null'); } catch { /* 保存できない環境 */ }
   const d0 = DECKS[last?.p0] || DECKS[$('#deck0').value] || Object.values(DECKS)[0], d1 = DECKS[last?.p1] || DECKS[$('#deck1').value] || d0;
-  SU = suKeep ? { ...suKeep, page } : { page, hist: [], p0own: ownerOf(d0), p0: d0.code, p1own: ownerOf(d1), p1: d1.code, rand: !!last?.rand, first: last?.first ?? $('#first').value, level: ['easy', 'normal'].includes(last?.level) ? last.level : 'normal' };
+  SU = suKeep ? { ...suKeep, page } : { page, hist: [], p0own: ownerOf(d0), p0: d0.code, p1own: ownerOf(d1), p1: d1.code, rand: !!last?.rand, first: last?.first ?? $('#first').value, level: (SHOW_HARD ? ['easy', 'normal', 'hard'] : ['easy', 'normal']).includes(last?.level) ? last.level : 'normal' };
   suKeep = null;
   if (skipOwner() && SU.page === 'p0own') { SU.p0own = owners()[0]; SU.page = 'p0deck'; }
   if (page === 'go') SU.hist = SU_PAGES.slice(0, -1).filter(x => !(skipOwner() && x.endsWith('own')));
@@ -567,6 +654,20 @@ function openSetup(page = 'p0own') {
   clearTimeout(cpuTimer); thinking = null; // 準備の間はCPUを止める
   $('#setup').hidden = false;
   renderSetup();
+}
+/** デッキの切り札の名前（準備画面で見せる。自動で決めたもの） */
+const aceCache2 = new Map();
+function deckAces(d) {
+  if (!d || !d.code) return [];
+  if (aceCache2.has(d.code)) return aceCache2.get(d.code);
+  let names = [];
+  // 表（MASTERのチェック表）のあるデッキ：分類の強い順（神→ロマン→エース→相棒→トップ）に全部。多い時は5枚まで出して「ほか○枚」
+  if (d.aces) {
+    const ORDER = ['god', 'roman', 'ace', 'partner', 'top'], rank = ks => Math.min(...ks.map(k => { const i = ORDER.indexOf(k); return i < 0 ? 9 : i; }));
+    const all = Object.entries(d.aces).filter(([, ks]) => ks.length).sort((x, y) => rank(x[1]) - rank(y[1])).map(([code]) => CARD_POOL[code]?.name).filter(Boolean);
+    names = all.length > 5 ? [...all.slice(0, 5), `ほか${all.length - 5}枚`] : all;
+  } else try { const st = createGame({ pool: CARD_POOL, decks: [d, d], firstPlayer: 0 }); names = acesNamesOf(st); } catch { /* 分からない */ }
+  aceCache2.set(d.code, names); return names;
 }
 function closeSetup() { $('#setup').hidden = true; SU = null; render(); }
 const skipOwner = () => owners().length <= 1;
@@ -591,7 +692,8 @@ function renderSetup() {
     const me = p === 'p0deck', o = me ? SU.p0own : SU.p1own;
     el.innerHTML = `<p class="su-q">${me ? 'あなたが使うデッキは？' : 'CPUが使うデッキは？'}<small>${esc(o)}のデッキテーマ</small></p>`
       + (!me && skipOwner() ? `<div class="su-opts su-rand">${opt('rand', '🎲', 'おまかせ', 'あなたと違うデッキからランダムに選ぶ', SU.rand)}</div>` : '')
-      + `<div class="su-grid">` + decksOf(o).map(d => deckBtn(`deck:${d.code}`, d, (me ? SU.p0 : SU.p1) === d.code && (me || !SU.rand))).join('') + '</div>';
+      + `<div class="su-grid">` + decksOf(o).map(d => deckBtn(`deck:${d.code}`, d, (me ? SU.p0 : SU.p1) === d.code && (me || !SU.rand))).join('') + '</div>'
+      + ryuHelp();
   } else if (p === 'first') {
     el.innerHTML = `<p class="su-q">先攻・後攻は？</p><div class="su-opts">`
       + opt('first:0', '🙋', 'あなたが先攻', '最初のターンはドローなし', SU.first === '0')
@@ -600,28 +702,39 @@ function renderSetup() {
   } else if (p === 'level') {
     el.innerHTML = `<p class="su-q">CPUの強さは？</p><div class="su-opts">`
       + opt('level:easy', '🐣', 'やさしい', 'ときどき最善でない手を選ぶ。操作に慣れたい時に', SU.level === 'easy')
-      + opt('level:normal', '🤖', 'ふつう', '見えないカードを推測して、勝ちやすい手を選ぶ', SU.level === 'normal') + '</div>';
+      + opt('level:normal', '🤖', 'ふつう', '見えないカードを推測して、勝ちやすい手を選ぶ', SU.level === 'normal')
+      + (SHOW_HARD ? opt('level:hard', '🔥', '本気', 'ロマンより勝ちを優先して、じっくり考える。1手に数秒かかることがある', SU.level === 'hard') : '') + '</div>';
   } else {
     const d0 = DECKS[SU.p0], d1 = DECKS[SU.p1];
     const firstTxt = { 0: 'あなたが先攻', 1: 'CPUが先攻', r: 'ランダム（開始の時に決める）' }[SU.first];
     el.innerHTML = `<p class="su-q">この内容でデュエルを始めます</p><div class="su-sum">`
-      + `<div><span>あなた</span><b>${esc(themeOf(d0))}</b><small>${esc(ownerOf(d0))}・${esc(fmtTag(d0))}</small></div>`
+      + `<div><span>あなた</span><b>${esc(themeOf(d0))}</b><small>${esc(ownerOf(d0))}・${esc(fmtTag(d0))}</small>${(() => { const a = deckAces(d0); return a.length ? `<small>👑 切り札：${esc(a.map(n => (/^ほかd+枚$/.test(n) ? n : `「${n}」`)).join('／'))}</small>` : ''; })()}</div>`
       + `<div><span>CPU</span><b>${SU.rand ? '🎲 おまかせ' : esc(themeOf(d1))}</b><small>${SU.rand ? 'あなたと違うデッキからランダム（開始の時に発表）' : `${esc(ownerOf(d1))}・${esc(fmtTag(d1))}`}</small></div>`
       + `<div><span>先攻</span><b>${esc(firstTxt)}</b></div>`
-      + `<div><span>強さ</span><b>${esc(LEVEL_LABEL[SU.level] || 'ふつう')}</b></div></div>`
+      + `</div><p class="su-note">🤖 CPUは、いつも全力で戦います</p>`
       + `<button type="button" class="su-start" data-su="start">▶ デュエル開始</button>`
-      + `<button type="button" class="su-more" data-su="more">⚙️ チェーンの確認・演出・CPUの速さ</button>`;
-  }
+      + `<button type="button" class="su-more" data-su="more">⚙️ 発動の聞き方・演出・CPUの速さ</button>`;
+  }  // スイッチ ONLINE が入っている時だけ、最初のページに「👥 人と対戦」
+  if (ONLINE && (p === 'p0own' || (p === 'p0deck' && skipOwner()))) el.insertAdjacentHTML('afterbegin', '<button type="button" class="su-opt su-net" data-su="net"><span>👥</span><b>人と対戦（オンライン）</b><small>キー番号でつなぐ・電卓のリンク対戦と同じ</small></button>');
+}
+/** 準備画面の「🏫 在校生・🌏 留学生とは？」：2行の説明と、ルールブックの「🌏 留学生デッキ」への案内（サイトの中の時だけ） */
+function ryuHelp() {
+  return `<details class="su-help"><summary>🏫 在校生・🌏 留学生とは？</summary>`
+    + '<p>🏫 <b>在校生デッキ</b>：この環境のルール（GXまでのテーマ・カード規制）に沿ったデッキ。</p>'
+    + '<p>🌏 <b>留学生デッキ</b>：ルールや規制には沿っていないけれど、環境のトップにならないように調整して、遊びに来たデッキ。</p>'
+    + (OPTS.onClose ? '<button type="button" class="btn small ghost" data-su="ryu">📖 ルールブックで読む</button>' : '') + '</details>';
 }
 function setupClick(t) {
   const b = t.closest('[data-su]'); if (!b || !SU) return false;
   const [k, v] = b.dataset.su.split(/:(.*)/);
   const me = SU.page === 'p0own' || SU.page === 'p0deck';
+  if (k === 'net') { closeSetup(); openNet(); return true; }
   if (k === 'rand') { SU.rand = true; suGo('first'); return true; }
   if (k === 'own') { if (me) SU.p0own = v; else { SU.p1own = v; SU.rand = false; } suGo(me ? 'p0deck' : 'p1deck'); return true; }
   if (k === 'deck') { if (me) SU.p0 = v; else { SU.p1 = v; SU.rand = false; } suGo(me ? 'p1own' : 'first'); return true; }
-  if (k === 'first') { SU.first = v; suGo('level'); return true; }
+  if (k === 'first') { SU.first = v; suGo('go'); return true; }
   if (k === 'level') { SU.level = v; suGo('go'); return true; }
+  if (k === 'ryu') { $('#setup').hidden = true; try { OPTS.onClose(); } catch { /* 閉じられない時はそのまま */ } setTimeout(() => { location.hash = '#ryu'; }, 0); return true; }
   if (k === 'more') { suKeep = SU; $('#setup').hidden = true; suReturn = true; openMenu(); $('#menu').classList.add('from-setup'); return true; }
   if (k === 'start') {
     const all = Object.keys(DECKS);
@@ -630,11 +743,11 @@ function setupClick(t) {
     const pool = all.filter(c => c !== SU.p0), pick = SU.rand ? (pool.length ? pool : all)[Math.floor(Math.random() * (pool.length || all.length))] : SU.p1;
     $('#deck1').value = pick;
     $('#first').value = SU.first;
-    cpuLevel = SU.level || 'normal';
+    cpuLevel = CPU_LEVEL;
     try { localStorage.setItem('gx-duel-setup', JSON.stringify({ p0: SU.p0, p1: SU.p1, rand: SU.rand, first: SU.first, level: cpuLevel })); } catch { /* 保存できない環境 */ }
     placeholder = false;
     showDeckFmt();
-    const go = () => { $('#setup').hidden = true; SU = null; newDuel(); };
+    const go = () => { $('#setup').hidden = true; SU = null; newDuel(); maybeGuide(); };
     if (!SU.rand) { go(); return true; }
     // 🎲 おまかせ：CPUのデッキを発表してから始める
     const d = DECKS[pick];
@@ -649,14 +762,14 @@ function setupClick(t) {
 function startCue() {
   const g = S;
   clearTimeout(cpuTimer); // 開始の演出の前に予約されていたCPUの手番は取り消す（演出の後に考え直す）
-  fxN++;
+  fxN++; fxBlock();
   (async () => {
     try {
       await wait(250);
       await banner(S.turnPlayer === 0 ? 'あなたの先攻' : 'CPUの先攻', S.turnPlayer === 0 ? 'me' : 'opp', 1100);
       if (S === g) { const t = lineFor(persona, S.turnPlayer === CPU ? 'first' : 'second'); speak(t); await new Promise(r => setTimeout(r, t.length > 22 ? 3000 : 2400)); }
     } catch (e) { console.error(e); }
-    fxN = Math.max(0, fxN - 1);
+    fxN = Math.max(0, fxN - 1); fxBlock();
     render();
   })();
 }
@@ -679,19 +792,20 @@ function newDuel(quiet = false) {
   const d0 = DECKS[$('#deck0').value] ?? first, d1 = DECKS[$('#deck1').value] ?? first;
   const f = $('#first').value;
   S = createGame({ pool: CARD_POOL, decks: [d0, d1], firstPlayer: f === 'r' ? undefined : Number(f) });
-  S.askZone = cpuMode() ? [0] : [0, 1];
-  history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp]; trace = []; thinking = null;
+  S.askZone = netMode() ? [ME()] : cpuMode() ? [0] : [0, 1];
+  history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp]; trace = []; thinking = null; aceSeen = new Set();
   closeMenu();
   render();
-  newPersona(); moodTurn = -1;
+  newPersona(); moodTurn = -1; undoUsed = false; resultSent = false;
   if (cpuMode() && !quiet && !setupOpen() && $('#menu').hidden) startCue();
 }
 
 /* ---------- 行動の実行 ---------- */
 function run(action) {
-  if (S.winner === null && isCpu(actorOf(S))) { toast('CPUが考えています'); return; }
+  if (S.winner === null && isRemote(actorOf(S))) { toast(netMode() ? `${NAME(OPP())}の番です` : 'CPUが考え中です'); return; }
   try {
     const next = applyAction(S, action);
+    if (netMode()) { if (!net.link || !net.link.send(action)) { toast(`${NAME(OPP())}の番です`); return; } commit(net.link.state); pick = []; peek = false; render(); return; }
     reactToAce(S, next);
     history.push(S); commit(next); pick = []; peek = false;
     // スマホでは、操作したらシートを閉じて盤面に戻る
@@ -699,12 +813,12 @@ function run(action) {
     if (selected !== null && !(S.cards[selected] && ['hand', 'mzone', 'emz', 'szone', 'fzone'].includes(S.cards[selected].zone))) selected = null;
     render();
   } catch (e) {
-    toast(e && e.name === 'RuleError' ? `できません：${e.message}` : `エラー：${e.message}`, true);
+    toast(e && e.name === 'RuleError' ? `できません：${WHO(e.message)}` : `エラー：${WHO(e.message)}`, true);
     if (!(e && e.name === 'RuleError')) console.error(e);
   }
 }
 // CPU の行動は記録しないので、元に戻すと自分が前に判断した場面まで戻る
-function undo() { if (!history.length) return; clearTimeout(cpuTimer); clearTimeout(offerT); cueQ = []; closeFan(); heldAnims = []; tombIntent = null; S = history.pop(); pick = []; render(); }
+function undo() { if (netMode() || !history.length) return; undoUsed = true; clearTimeout(cpuTimer); clearTimeout(offerT); cueQ = []; closeFan(); heldAnims = []; tombIntent = null; S = history.pop(); pick = []; render(); }
 
 let toastT;
 function toast(msg, bad) {
@@ -778,7 +892,7 @@ function cardHtml(uid, { hidden = false, field = false, style = '' } = {}) {
   const cls = [uid === selected ? 'sel' : '', field && c.position === 'def' ? 'def' : '', canAct.has(uid) ? 'can' : '', pick.includes(uid) ? 'picked' : ''].join(' ');
   const badge = [field ? counterHtml(uid) : '', c.equippedTo !== null ? '<span class="badge eq">装備</span>' : ''].join('');
   if (hidden || (!c.faceUp && !(c.zone === 'hand' || c.zone === 'extra' || c.zone === 'deck' || field))) return `<button class="card back ${cls}" data-uid="${uid}"${st} aria-label="裏側のカード">${badge}</button>`;
-  if (!c.faceUp && field && isCpu(c.controller)) return `<button class="card back ${cls}" data-uid="${uid}"${st} aria-label="裏側のカード">${badge}</button>`;
+  if (!c.faceUp && field && isRemote(c.controller)) return `<button class="card back ${cls}" data-uid="${uid}"${st} aria-label="裏側のカード">${badge}</button>`;
   if (!c.faceUp && field) return `<button class="card back ${cls}" data-uid="${uid}"${st} aria-label="裏側：${esc(d.name)}"><span class="bn">${esc(d.name)}</span>${badge}</button>`;
   return `<button class="${faceCls(d)} ${cls}" data-uid="${uid}"${st} aria-label="${esc(d.name)}">${faceHtml(uid, d, field)}${badge}</button>`;
 }
@@ -873,22 +987,22 @@ function pile(p, kind, place = '') {
   const stack = `box-shadow: ${[...edges, `${(n * .6 + 1).toFixed(1)}px ${(n * .9 + 2).toFixed(1)}px 4px rgba(0,0,0,.45)`].join(', ')}; translate: ${(-n * .3).toFixed(1)}px ${(-n * .45).toFixed(1)}px`;
   // 置き場のボタンの中にボタンは入れられない（ブラウザが外側のボタンを閉じてしまう）ので、一番上のカードは span にする
   const face = open && top !== null ? cardHtml(top, { style: stack }).replace(/^<button/, '<span').replace(/<\/button>$/, '</span>') : list.length ? `<span class="card back mini" style="${stack}"></span>` : '';
-  return `<button class="zone pile${p === 1 ? ' opp' : ''}" data-pile="${p}:${kind}"${place ? ` style="${place}"` : ''} aria-label="${NAME(p)}の${label}（${list.length}枚）" title="長押しで一覧">${face}<span class="pl">${label}</span><span class="cnt">${list.length}</span>${kind === 'banished' ? sarcoHtml(p) : ''}</button>`;
+  return `<button class="zone pile${p !== ME() ? ' opp' : ''}" data-pile="${p}:${kind}"${place ? ` style="${place}"` : ''} aria-label="${NAME(p)}の${kind === 'extra' ? 'EXデッキ' : label}（${list.length}枚）" title="長押しで一覧">${face}<span class="pl">${label}</span><span class="cnt">${list.length}</span>${kind === 'banished' ? sarcoHtml(p) : ''}</button>`;
 }
 function renderBoard() {
-  const p1 = S.players[0], p2 = S.players[1];
+  const me = ME(), op = OPP(), p1 = S.players[me], p2 = S.players[op];
   // 真ん中：上から 相手の魔法・罠／相手のモンスター／自分のモンスター／自分の魔法・罠（相手側は左右が逆）
   const cells = [
-    ...p2.szone.map((u, i) => zone(u, '魔・罠', 'st opp', `1:st:${i}`, gridAt(6 - i, 2))),
-    ...p2.mzone.map((u, i) => zone(u, 'モンスター', 'mz opp', `1:mz:${i}`, gridAt(6 - i, 4))),
-    ...p1.mzone.map((u, i) => zone(u, 'モンスター', 'mz', `0:mz:${i}`, gridAt(i + 2, 6))),
-    ...p1.szone.map((u, i) => zone(u, '魔・罠', 'st', `0:st:${i}`, gridAt(i + 2, 8))),
+    ...p2.szone.map((u, i) => zone(u, '魔・罠', 'st opp', `${op}:st:${i}`, gridAt(6 - i, 2))),
+    ...p2.mzone.map((u, i) => zone(u, 'モンスター', 'mz opp', `${op}:mz:${i}`, gridAt(6 - i, 4))),
+    ...p1.mzone.map((u, i) => zone(u, 'モンスター', 'mz', `${me}:mz:${i}`, gridAt(i + 2, 6))),
+    ...p1.szone.map((u, i) => zone(u, '魔・罠', 'st', `${me}:st:${i}`, gridAt(i + 2, 8))),
     // 左の列：相手の山札・相手の墓地・相手の除外・フィールド・EX
-    pile(1, 'deck', gridAt(1, 1)), pile(1, 'gy', gridAt(1, 3)), pile(1, 'banished', gridAt(1, 5)),
-    zone(p1.fzone, 'フィールド', 'fz', '0:fz:0', gridAt(1, 7)), pile(0, 'extra', gridAt(1, 9)),
+    pile(op, 'deck', gridAt(1, 1)), pile(op, 'gy', gridAt(1, 3)), pile(op, 'banished', gridAt(1, 5)),
+    zone(p1.fzone, 'フィールド', 'fz', `${me}:fz:0`, gridAt(1, 7)), pile(me, 'extra', gridAt(1, 9)),
     // 右の列：相手のEX・相手のフィールド・自分の除外・墓地・山札
-    pile(1, 'extra', gridAt(7, 1)), zone(p2.fzone, 'フィールド', 'fz opp', '1:fz:0', gridAt(7, 3)), pile(0, 'banished', gridAt(7, 5)),
-    pile(0, 'gy', gridAt(7, 7)), pile(0, 'deck', gridAt(7, 9)),
+    pile(op, 'extra', gridAt(7, 1)), zone(p2.fzone, 'フィールド', 'fz opp', `${op}:fz:0`, gridAt(7, 3)), pile(me, 'banished', gridAt(7, 5)),
+    pile(me, 'gy', gridAt(7, 7)), pile(me, 'deck', gridAt(7, 9)),
   ];
   const keep = $('#board .mat-skin');
   $('#board').innerHTML = cells.join('');
@@ -916,18 +1030,18 @@ function sortHand(s, uids) {
     return defOf(s, a).name.localeCompare(defOf(s, b).name, 'ja') || a - b;
   });
 }
-const sortsHand = p => !isCpu(p);
+const sortsHand = p => !isRemote(p);
 /** これから手札に加わる演出をするカード（演出が終わるまで手札に出さない） */
 const comingToHand = p => new Set(pendingSummons.filter(j => j && j.handAdd && j.p === p).flatMap(j => j.added));
 function renderHand(p) {
-  const hide = cpuMode() ? p === CPU : $('#hideOpp').checked && p !== actorOf(S);
+  const hide = cpuMode() || netMode() ? isRemote(p) : $('#hideOpp').checked && p !== actorOf(S);
   const coming = comingToHand(p);
   const h = (sortsHand(p) ? sortHand(S, S.players[p].hand) : S.players[p].hand).filter(u => !coming.has(u));
   return h.length ? h.map(u => cardHtml(u, { hidden: hide })).join('') : '<span class="empty">手札なし</span>';
 }
 function renderSide() {
   [0, 1].forEach(p => {
-    const el = $(`#side${p}`);
+    const el = sideEl(p);
     const P = S.players[p];
     el.classList.toggle('acting', actorOf(S) === p && S.winner === null);
     el.querySelector('.who').textContent = NAME(p);
@@ -941,8 +1055,8 @@ function renderSide() {
     tag.textContent = 'ターン中';
     el.querySelector('.meta').textContent = `手札${P.hand.length}・デッキ${P.deck.length}${S.turnPlayer === p && S.winner === null ? `・召喚${P.normalSummonUsed ? '済' : '未'}` : ''}`;
   });
-  $('#hand0').innerHTML = renderHand(0);
-  $('#hand1').innerHTML = renderHand(1);
+  $('#hand0').innerHTML = renderHand(ME());
+  $('#hand1').innerHTML = renderHand(OPP());
   fanOut($('#hand0')); fanOut($('#hand1'));
 }
 /** 手札を扇形に並べる：少しずつ重ね、両端ほど傾けて下げる。枚数が増えたら重なりを深くして横幅に収める */
@@ -967,8 +1081,12 @@ function fanOut(el) {
 /* ---------- フェイズ（上の帯） ---------- */
 const PHASES = ['draw', 'standby', 'main1', 'battle', 'main2', 'end'];
 const PH_SHORT = { draw: 'DP', standby: 'SP', main1: 'M1', battle: 'BP', main2: 'M2', end: 'EP' };
+/** 今のフェイズだけは、はじめての人にも読めるように日本語で出す（ほかは略字のまま） */
+const PH_JP = { draw: 'ドロー', standby: 'スタンバイ', main1: 'メイン1', battle: 'バトル', main2: 'メイン2', end: 'エンド' };
+/** ダメージステップの細かいタイミングの、はじめての人向けの一言 */
+const STEP_HINT = { dsStart: '攻撃の勝ち負けを決める前', beforeCalc: '攻撃力を比べる直前', afterCalc: '攻撃力を比べた直後', dsEnd: '戦闘の後かたづけの前', end: '戦闘の後かたづけの前' };
 const STEP_LABEL = { declared: '攻撃宣言時', dsStart: 'ダメージステップ開始時', beforeCalc: 'ダメージ計算前', afterCalc: 'ダメージ計算後', dsEnd: 'ダメージステップ終了時', end: 'ダメージステップ終了時' };
-const humanActing = () => S.winner === null && !isCpu(actorOf(S));
+const humanActing = () => S.winner === null && !isRemote(actorOf(S));
 
 let shownPhase = null; // 告知を順番に出している間、上のフェイズ表示もその告知に合わせる
 function renderTop() {
@@ -977,8 +1095,8 @@ function renderTop() {
   // 移れるフェイズは押せるボタンにする
   $('#phases').innerHTML = PHASES.map((ph, i) => {
     const a = legal.find(x => x.type === 'nextPhase' && x.to === ph);
-    const cls = i === cur ? 'cur' : i < cur ? 'past' : '';
-    return `<li class="${cls}">${a ? `<button data-act='${esc(JSON.stringify(a))}' title="${PHASE_LABEL[ph]}へ進む">${PH_SHORT[ph]}</button>` : `<span title="${PHASE_LABEL[ph]}">${PH_SHORT[ph]}</span>`}</li>`;
+    const cls = i === cur ? `cur${PH_JP[ph].length > 4 ? ' long' : ''}` : i < cur ? 'past' : '';
+    return `<li class="${cls}">${a ? `<button data-act='${esc(JSON.stringify(a))}' title="${PHASE_LABEL[ph]}へ進む">${PH_SHORT[ph]}</button>` : `<span title="${PHASE_LABEL[ph]}">${i === cur ? PH_JP[ph] : PH_SHORT[ph]}</span>`}</li>`;
   }).join('');
   $('#turnInfo').innerHTML = S.winner !== null ? '決着' : `<span class="tl">ターン</span><span class="ts">T</span>${S.turn}<span class="tl">・${esc(NAME(S.turnPlayer))}</span>`;
   $('#undo').disabled = history.length === 0;
@@ -986,36 +1104,36 @@ function renderTop() {
 
 /* ---------- 操作ドック ---------- */
 /** 応答の聞き方：「「死者蘇生」にチェーンしますか？」のように、何に対して発動するかを書く */
-const cardName = uid => (S.cards[uid].faceUp || S.cards[uid].zone === 'gy' || !isCpu(S.cards[uid].controller) ? `「${defOf(S, uid).name}」` : '裏側のカード');
+const cardName = uid => (S.cards[uid].faceUp || S.cards[uid].zone === 'gy' || !isRemote(S.cards[uid].controller) ? `「${defOf(S, uid).name}」` : '裏側のカード');
 function respondPrompt() {
   const w = S.window;
   const whose = p => (p === actorOf(S) ? '自分の' : `${NAME(p)}の`);
   if (S.chain.length) {
     const top = S.chain[S.chain.length - 1];
-    return `${whose(top.player)}「${defOf(S, top.uid).name}」にチェーンしますか？`;
+    return top.player === actorOf(S) ? `自分の「${defOf(S, top.uid).name}」に続けて、さらにカードを発動しますか？` : `${NAME(top.player)}が「${defOf(S, top.uid).name}」を発動しました。対抗して、カードを発動しますか？`;
   }
   if (w.mode === 'summoning' && w.cont.type === 'summon') {
     const how = w.cont.how === 'flip' ? '反転召喚' : w.cont.how === 'advance' ? 'アドバンス召喚' : '召喚';
-    return `${whose(w.cont.player)}${cardName(w.cont.uid)}の${how}に対して発動しますか？`;
+    return `${whose(w.cont.player)}${cardName(w.cont.uid)}の${how}に対して、カードを発動しますか？`;
   }
   if (S.battle && (w.cont.type === 'battle' || w.mode === 'damage')) {
     const b = S.battle;
     if (b.step === 'declared') return `${cardName(b.attacker)}の${b.target === null ? 'ダイレクトアタック' : `${cardName(b.target)}への攻撃`}に対して発動しますか？`;
-    return `${STEP_LABEL[b.step] || 'バトル中'}に発動しますか？`;
+    return `${STEP_LABEL[b.step] || 'バトル中'}${STEP_HINT[b.step] ? `（${STEP_HINT[b.step]}）` : ''}に、カードを発動しますか？`;
   }
   if (w.cont.type === 'phase' || w.cont.type === 'endTurn') return `${PHASE_LABEL[S.phase]}を終える前に発動しますか？`;
   // 召喚・特殊召喚に成功した直後など
   const ev = [...S.lastEvents].reverse().find(e => e.type === 'summoned');
   if (ev) {
     const how = { normal: '召喚', advance: 'アドバンス召喚', flip: '反転召喚', special: '特殊召喚', ritual: '儀式召喚', fusion: '融合召喚' }[ev.how];
-    return `${cardName(ev.uid)}の${how}成功に対して発動しますか？`;
+    return `${cardName(ev.uid)}の${how}が成功しました。今、カードを発動しますか？`;
   }
   return '直前の行動に対して発動しますか？';
 }
 /** 右下の「進む」ボタン：今の場面を先に進める行動（応答なら「発動しない」、フェイズなら次のフェイズ） */
 function goAction(legal) {
   const has = x => legal.some(y => JSON.stringify(y) === JSON.stringify(x));
-  if (S.window.kind === 'priority') return { label: '発動しない', sub: 'パスして進む', a: { type: 'pass' } };
+  if (S.window.kind === 'priority') return { label: '発動しない', sub: 'このまま進む', a: { type: 'pass' } };
   const me = S.turnPlayer;
   const attackers = monstersOf(S, me).some(u => S.cards[u].faceUp && S.cards[u].position === 'atk' && !S.cards[u].noAttack);
   const pick = (...list) => list.find(x => has(x.a)) || null;
@@ -1026,6 +1144,10 @@ function goAction(legal) {
 }
 function renderDock() {
   const dock = $('#dock');
+  // CPUの番でない時（あなたの番・決着）は、相手の帯の「考え中…」を消す
+  // オンライン対戦：相手の番は、帯に「○○さんが考え中…／選んでいます…」（CPUの進み具合の線は出さない）
+  if (netMode() && S && S.winner === null && isRemote(actorOf(S))) { const el = $('#cpuThink'); if (el) { el.hidden = false; el.classList.remove('deep'); el.style.setProperty('--p', '0'); el.textContent = `${NAME(OPP())}が${S.pending ? '選んでいます…' : '考え中…'}`; } }
+  else if (!S || S.winner !== null || !isCpu(actorOf(S))) { clearTimeout(thinkShowT); setThinking(false); }
   const actor = $('#actor'), hint = $('#actorHint'), btns = $('#phaseBtns'), go = $('#goBtn');
   const legal = humanActing() && !S.pending ? legalActions(S) : [];
   const has = a => legal.some(x => JSON.stringify(x) === JSON.stringify(a));
@@ -1041,24 +1163,25 @@ function renderDock() {
   dock.classList.toggle('mine', humanActing());
   dock.classList.remove('free');
   const eb = $('#endBtn'); if (eb) { eb.hidden = true; eb.classList.remove('armed'); eb.textContent = 'エンド'; }
-  const oi = $('#oppInfo'); if (oi) { const O = S.players[1]; oi.textContent = `${NAME(1)}：手札${O.hand.length}・墓地${O.gy.length}・除外${O.banished.length}`; }
+  const oi = $('#oppInfo'); if (oi) { const O = S.players[OPP()]; oi.textContent = `${NAME(OPP())}：手札${O.hand.length}・墓地${O.gy.length}・除外${O.banished.length}`; }
   hint.textContent = '';
   btns.innerHTML = '';
   $('#stopBtn').hidden = chainMode() === 'always' || S.winner !== null;
   $('#stopBtn').setAttribute('aria-pressed', String(stopNext));
+  $('#stopBtn').textContent = stopNext ? '✋ 聞く予定' : '✋ 次は聞いて';
 
   const rb = $('#reviewBtn'); if (rb) rb.hidden = !(S.winner !== null && cpuMode() && trace.length > 1);
   if (S.winner !== null) {
-    actor.textContent = S.winner === 'draw' ? '引き分け' : `${NAME(S.winner)}の勝利`;
-    hint.textContent = S.winReason || '';
-    setGo('もう一度', '新しいデュエル', null, { again: true });
+    actor.textContent = resultText(S.winner, cpuMode() || netMode(), ME());
+    hint.textContent = WHO(S.winReason);
+    setGo('新しいデュエル', '準備画面を開く', null, { again: true });
     return;
   }
-  if (isCpu(actorOf(S))) {
-    actor.textContent = S.pending ? 'CPUが選んでいます' : 'CPUが考えています';
+  if (isRemote(actorOf(S))) {
+    actor.textContent = netMode() ? `${NAME(OPP())}が${S.pending ? '選んでいます' : '考え中'}` : 'CPUが考え中';
     actor.classList.add('thinking');
-    hint.textContent = S.window.kind === 'priority' && S.chain.length ? `チェーン${S.chain.length}に応答するか考えています` : `${PHASE_LABEL[S.phase]}`;
-    setGo('CPUの番', '少し待ってください', null, { disabled: true });
+    hint.textContent = S.window.kind === 'priority' && S.chain.length ? `チェーン${S.chain.length}に応答するか考え中` : S.pending ? '何を選ぶか考え中' : `${PHASE_LABEL[S.phase]}`;
+    setGo(netMode() ? `${NAME(OPP())}の番` : 'CPUの番', '考え中…', null, { disabled: true });
     return;
   }
   if (S.pending) {
@@ -1074,7 +1197,7 @@ function renderDock() {
     // 発動できるカードは左に並べる（効果が複数あるカードは効果名も出す）
     const acts = activatableList(S, actorOf(S));
     const multi = uid => acts.filter(x => x.uid === uid).length > 1;
-    hint.textContent = acts.length ? '発動するなら左のボタン、しないなら右下の「発動しない」' : '';
+    hint.textContent = acts.length ? '発動するなら、発動するカードのボタンを押す。しないなら「発動しない」を押す' : '';
     btns.innerHTML = acts.slice(0, 3).map(x => {
       const eff = (SCRIPTS[S.cards[x.uid].code]?.effects || []).find(e => e.id === x.effect);
       const label = `「${defOf(S, x.uid).name}」${multi(x.uid) && eff ? `の${eff.label}` : ''}を発動`;
@@ -1092,8 +1215,8 @@ function renderDock() {
   actor.textContent = `${cpuMode() ? 'あなた' : NAME(me)}の${PHASE_LABEL[S.phase]}`;
   hint.textContent = S.turn === 1 && S.phase === 'main1' ? '先攻1ターン目はバトルフェイズに入れません' : S.phase === 'battle' ? '攻撃するモンスターを押す' : 'カードを押すと、できる操作が出ます';
   const others = [];
-  if (S.phase === 'main1') { others.push({ l: 'バトルフェイズへ', a: { type: 'nextPhase', to: 'battle' } }, { l: 'エンドフェイズへ', a: { type: 'nextPhase', to: 'end' } }); }
-  if (S.phase === 'battle') others.push({ l: 'エンドフェイズへ', a: { type: 'nextPhase', to: 'end' } });
+  if (S.phase === 'main1') { others.push({ l: 'バトルへ', a: { type: 'nextPhase', to: 'battle' } }, { l: 'エンドへ', a: { type: 'nextPhase', to: 'end' } }); }
+  if (S.phase === 'battle') others.push({ l: 'エンドへ', a: { type: 'nextPhase', to: 'end' } });
   btns.innerHTML = others.filter(x => has(x.a) && (!g || JSON.stringify(x.a) !== JSON.stringify(g.a))).map(x => b(x.l, x.a)).join('');
   if (g) setGo(g.label, g.sub, g.a); else setGo('—', '', null, { disabled: true });
 }
@@ -1138,7 +1261,7 @@ function scheduleAutoPass() {
   if (!S || S.winner !== null) return;
   if (!shouldAutoPass()) {
     // 「次で止める」で止まったら、ボタンは元に戻す
-    if (stopNext && humanActing() && !S.pending && S.window.kind === 'priority') { stopNext = false; $('#stopBtn').setAttribute('aria-pressed', 'false'); }
+    if (stopNext && humanActing() && !S.pending && S.window.kind === 'priority') { stopNext = false; $('#stopBtn').setAttribute('aria-pressed', 'false'); $('#stopBtn').textContent = '✋ 次は聞いて'; }
     return;
   }
   autoT = setTimeout(() => {
@@ -1153,19 +1276,226 @@ function renderChain() {
   const el = $('#chain');
   if (!S.chain.length) { el.hidden = true; return; }
   el.hidden = false;
-  el.innerHTML = `<h3>チェーン（上から先に処理）</h3><ol>${S.chain.map((l, i) => `<li class="${l.player === 1 && cpuMode() ? 'opp' : ''}"><b>${i + 1}</b>${NAME(l.player)}：${esc(defOf(S, l.uid).name)}${l.negated ? '（無効）' : ''}${l.targets.length ? `<span class="tg">対象：${l.targets.map(t => esc(S.cards[t].faceUp || S.cards[t].zone === 'gy' ? defOf(S, t).name : '裏側のカード')).join('、')}</span>` : ''}</li>`).reverse().join('')}</ol>`;
+  el.innerHTML = `<h3>発動したカード（チェーン。上から順に効果が出る）</h3><ol>${S.chain.map((l, i) => `<li class="${l.player === 1 && cpuMode() ? 'opp' : ''}"><b>${i + 1}</b>${NAME(l.player)}：${esc(defOf(S, l.uid).name)}${l.negated ? '（無効）' : ''}${l.targets.length ? `<span class="tg">対象：${l.targets.map(t => esc(S.cards[t].faceUp || S.cards[t].zone === 'gy' ? defOf(S, t).name : '裏側のカード')).join('、')}</span>` : ''}</li>`).reverse().join('')}</ol>`;
 }
 
 /* ---------- カード詳細と操作 ---------- */
+/* ---------- オンライン対戦（人どうし）：MOMOの下書き（docs/momo-notebook.md）どおり。電卓のリンク対戦と同じ並び・言葉 ----------
+ * スイッチ ONLINE：仕上がるまでは切ったまま（URL に ?online-test を付けた時だけ「👥 人と対戦」が出る）
+ * 部屋：サイトから OPTS.room（電卓と同じ room()）・OPTS.uid・OPTS.userName をもらえばサイトの部屋、無ければ同じPCのタブどうし（試す用） */
+const ONLINE = (() => { try { return new URLSearchParams(location.search).has('online-test'); } catch { return false; } })();
+const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
+let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
+/** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
+const DUEL_BUILD = '20261121-1400-91ea7cd635';
+const BUILT = !DUEL_BUILD.startsWith('__');
+/** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
+const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
+/** 自分のページの中の食いちがい：app.js・通信の部品・画面の版の文字のどれかが古いまま（ブラウザが古いファイルを覚えている） */
+const selfStale = () => {
+  if (!BUILT) return false;
+  const v = (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim();
+  return BUILD_FP !== DUEL_BUILD || (!!v && !DUEL_BUILD.startsWith(v + '-'));
+};
+const STALE_MSG = 'このページの中に、古いファイルが残っています。ページを読み直してください（新しい版が出た直後は、古い画面を覚えていることがあります）。';
+function netUid() {
+  if (OPTS.uid) return OPTS.uid;
+  try { let u = sessionStorage.getItem('gx-net-uid'); if (!u) { u = 't' + Math.random().toString(36).slice(2, 10); sessionStorage.setItem('gx-net-uid', u); } return u; } catch { return 't' + Math.random().toString(36).slice(2, 10); }
+}
+const netMyName = () => OPTS.userName || 'ゲスト'; // サイトではログインの名前。試す時（同じPCのタブ）は「ゲスト」
+const netJoin = key => (OPTS.room ? joinSiteRoom(OPTS.room, key) : Promise.resolve(tabRoom('ygo-duel-' + key, netUid())));
+/* 待合室：待っている親が「名前・キー番号・公式／練習」を書く所（電卓の「📡 いま待っている人」と同じ考え方）。3分より古い書きこみは出さない */
+const NET_LOBBY = 'ygo-duel-lobby';
+let lobby = null; // { room, off, peers: [{ uid, name, key, mode }], beat }
+async function lobbyOpen() {
+  if (lobby) return;
+  lobby = { room: null, off: null, peers: [], beat: null };
+  const me = lobby;
+  try { me.room = OPTS.room ? await OPTS.room.join(NET_LOBBY) : tabRoom(NET_LOBBY, netUid()); } catch (e) { console.warn('待合室に入れませんでした', e); return; }
+  if (lobby !== me) { try { me.room.leave(); } catch { /* */ } return; }
+  me.off = me.room.onPeers(({ peers }) => {
+    const now = Date.now();
+    me.peers = peers.filter(p => !p.isMe && p.presence && p.presence.wait && p.presence.v === netVer() && now - (p.updatedAt || 0) < 180000).map(p => ({ uid: p.uid, name: p.presence.name || 'ゲスト', key: p.presence.key, mode: p.presence.mode }));
+    if (netUi && netUi.step === 'key') renderNet();
+  });
+}
+/** 親として待っている間は、待合室に「待っています」を書く（1分ごとに書き直す）。on=false で消す */
+function lobbyWait(on) {
+  if (!lobby || !lobby.room) return;
+  clearInterval(lobby.beat); lobby.beat = null;
+  const write = () => lobby && lobby.room && lobby.room.presence(on && netUi ? { wait: true, name: netMyName(), key: netUi.myKey, mode: netUi.mode, v: netVer() } : { wait: false });
+  write(); if (on) lobby.beat = setInterval(write, 60000);
+}
+function lobbyClose() { if (!lobby) return; const l = lobby; lobby = null; clearInterval(l.beat); try { l.off && l.off(); } catch { /* */ } try { l.room && l.room.presence({ wait: false }); l.room && l.room.leave(); } catch { /* */ } }
+function openNet() {
+  const myKey = String(1000 + Math.floor(Math.random() * 9000));
+  netUi = { step: 'key', myKey, key: '', deck: $('#deck0').value || Object.keys(DECKS)[0], mode: 'official', host: false, room: null, link: null, status: '', peerName: '' };
+  renderNet(); $('#netDlg').hidden = false; lobbyOpen();
+}
+function closeNet() { if (netUi && netUi.inv) { try { netUi.inv.cancel(); } catch { /* */ } } if (netUi) clearTimeout(netUi.invT); if (netUi && netUi.link && !netMode()) { try { netUi.link.close(); } catch { /* もう閉じている */ } } lobbyClose(); netUi = null; $('#netDlg').hidden = true; }
+function renderNet() {
+  const u = netUi; if (!u) return;
+  const deckOpts = Object.values(DECKS).map(d => `<option value="${esc(d.code)}"${d.code === u.deck ? ' selected' : ''}>${esc(themeOf(d))}（${esc(ownerOf(d))}）</option>`).join('');
+  let body = '';
+  if (u.step === 'key') {
+    body = `<label class="net-row">あなたのデッキ<select data-net="deck">${deckOpts}</select></label>`
+      + `<div class="net-key"><small>あなたのキー</small><b>${u.myKey}</b><small>相手にこの番号を入れてもらうと、あなたが<strong>親</strong>（試合を設定する人）になります</small></div>`
+      + `<p class="net-q">どんな試合？</p><div class="net-modes"><button type="button" class="btn${u.mode === 'official' ? ' primary' : ''}" data-net="mode:official">🏆 公式試合<small>戦績・実績に残る</small></button><button type="button" class="btn${u.mode === 'practice' ? ' primary' : ''}" data-net="mode:practice">📝 練習<small>記録しない</small></button></div>`
+      + `<button type="button" class="btn primary net-wide" data-net="host">⏳ このキーで相手を待つ（親）</button>`
+      + `<p class="net-q">📡 いま待っている人（タップでつなぐ）</p>` + (lobby && lobby.peers.length ? `<div class="net-lobby">${lobby.peers.map(p => `<button type="button" class="net-lb" data-net="lb:${esc(p.key)}"><b>${esc(p.name)}</b><span>が待っています・${p.mode === 'practice' ? '📝練習' : '🏆公式'}</span><i>対戦する ▶</i></button>`).join('')}</div>` : '<p class="net-none">いま待っている人はいません</p>')
+      + `<p class="net-q">相手のキーを入れる（入れた人は<strong>子</strong>）</p><div class="net-join"><input type="text" inputmode="numeric" maxlength="4" placeholder="0000" aria-label="相手のキー番号" data-net-key value="${esc(u.key)}"><button type="button" class="btn primary" data-net="join">つなぐ</button></div>`;
+  } else if (u.step === 'inv') {
+    // 👥 招待する：だれを招待しますか？（電卓と同じ言葉。招待した人が親）
+    const ms = (OPTS.inviteApi && OPTS.inviteApi.members()) || [];
+    body = `<p class="net-q">だれを招待しますか？</p><p class="net-none">招待した人が<strong>親</strong>になります。相手がこのサイトを開いていると、画面に通知が出ます。</p>`
+      + (ms.length ? `<div class="net-lobby">${ms.map(m => `<button type="button" class="net-lb" data-net="inv:${esc(m.uid)}"><b>${esc(m.name)}</b><span></span><i>招待する ▶</i></button>`).join('')}</div>` : '<p class="net-none">まだほかのメンバーがいません。</p>')
+      + `<button type="button" class="btn ghost net-wide" data-net="invback">← もどる</button>`;
+  } else if (u.step === 'wait' && u.stopped) {
+    // 始まる前に止まった（版ちがいなど）：もう押せないボタンは出さず、何をすればよいかだけ
+    body = `<p class="net-err">${esc(u.err)}</p>` + (u.stopped === 'reload' ? '<button type="button" class="btn primary net-wide" data-net="reload">ページを読み直す</button>' : '');
+  } else if (u.step === 'wait') {
+    body = `<p class="net-st">⏳ ${u.host ? `相手を待っています（キー ${u.myKey}）` : esc(u.status || 'つないでいます…')}</p>`
+      + (u.host && OPTS.inviteApi ? `<button type="button" class="btn net-wide" data-net="invopen">👥 招待する</button>` : '')
+      + (u.host ? `<button type="button" class="btn net-wide" data-net="invlink">🔗 招待リンクを送る</button>${u.invSt ? `<p class="net-q">${esc(u.invSt)}</p>` : ''}` : '')
+      + (!u.host && u.link && !u.ready ? `<p class="net-q">${esc(u.peerName || '親')}さんの部屋につながりました。準備ができたら押してください。</p><button type="button" class="btn primary net-wide" data-net="ready">準備OK</button>` : '')
+      + (!u.host && u.ready ? `<p class="net-q">⏳ ${esc(u.peerName || '親')}さんが始めるのを待っています…</p>` : '');
+  }
+  if (u.err && !(u.step === 'wait' && u.stopped)) body += `<p class="net-err">${esc(u.err)}</p>`;
+  $('#netBox').innerHTML = `<div class="box-head"><h3>👥 人と対戦の準備</h3><button type="button" class="btn small ghost" data-net="close">やめる</button></div>${body}`;
+}
+async function netConnect(host) {
+  const u = netUi; if (!u) return;
+  const key = host ? u.myKey : u.key;
+  if (!/^\d{4}$/.test(key)) { u.err = 'キー番号は4桁の数字です'; renderNet(); return; }
+  if (selfStale()) { u.err = STALE_MSG; u.stopped = 'reload'; u.step = 'wait'; renderNet(); return; } // 片方だけ古い時は、つながずに読み直してもらう
+  u.err = ''; u.stopped = ''; u.host = host; u.step = 'wait'; u.status = 'つないでいます…'; renderNet();
+  lobbyWait(host); // 親は待合室に「待っています」を書く（子は何も書かない）
+  try { u.room = await netJoin(key); } catch (e) { u.err = '部屋に入れませんでした：' + (e && e.message || e); u.step = 'key'; renderNet(); return; }
+  if (netUi !== u) { try { u.room.leave(); } catch { /* もう閉じている */ } return; }
+  u.lastSeen = Date.now();
+  u.peerOff = u.room.onPeers(({ peers }) => { const o = peers.find(p => !p.isMe); if (o) { u.lastSeen = Math.max(u.lastSeen || 0, o.updatedAt || Date.now()); if (o.presence && o.presence.name) { u.peerName = o.presence.name; if (net) net.oppName = o.presence.name; } if (o.presence && o.presence.deck) u.peerDeck = o.presence.deck; } if (netUi === u && !netMode()) renderNet(); });
+  u.link = new DuelLink({ room: u.room, uid: netUid(), host, version: netVer(), name: netMyName(), deck: u.deck, mode: u.mode, ready: host, on: e => netEvent(u, e) });
+  u.status = host ? '' : 'つながりました'; renderNet();
+}
+/** 招待リンク：開いた人が子になって、すぐつながる（電卓の招待リンクと同じ送り方。電卓の ?duel= とぶつからないよう ?vs=キー） */
+/** 👥 招待する：電卓の招待と同じ通知を送る（3分で返事がなければ知らせる）。送るのはサイトの inviteApi */
+async function netInvite(uid) {
+  const u = netUi; if (!u || !OPTS.inviteApi) return;
+  const m = (OPTS.inviteApi.members() || []).find(x => x.uid === uid), name = m ? m.name : 'メンバー';
+  if (u.inv) { try { u.inv.cancel(); } catch { /* */ } u.inv = null; }
+  u.step = 'wait'; u.invSt = '📨 送っています…'; renderNet();
+  try {
+    u.inv = await OPTS.inviteApi.send(uid, u.myKey, () => { if (netUi === u && !netMode()) { u.invSt = `😢 ${name}さんは、いまは対戦できないようです。`; renderNet(); } });
+    u.invSt = `📨 ${name}さんを招待しました。相手の画面に通知が出ます（サイトを開いていないと届きません。そのときは「🔗 招待リンクを送る」が便利です）。`; renderNet();
+    clearTimeout(u.invT); u.invT = setTimeout(() => { if (netUi === u && !netMode()) { u.invSt = '⌛ 返事がありませんでした。もう一度招待するか、招待リンクを送ってください。'; renderNet(); } }, 180000);
+  } catch (e) { u.invSt = '招待を送れませんでした。'; renderNet(); }
+}
+async function netInviteLink() {
+  const u = netUi; if (!u) return;
+  const base = OPTS.inviteUrl ? OPTS.inviteUrl(u.myKey) : location.origin + location.pathname + '?vs=' + u.myKey + (ONLINE ? '&online-test' : '');
+  const txt = `あのころ遊戯王のデュエル卓で対戦しよう！このリンクを開くと、すぐにつながります（キー ${u.myKey}）`;
+  try { if (navigator.share) { await navigator.share({ title: 'デュエル卓の招待', text: txt, url: base }); u.invSt = '📨 招待リンクを送りました。相手が開くと自動でつながります。'; renderNet(); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(txt + '\n' + base); u.invSt = '📋 招待リンクをコピーしました。LINEなどに貼り付けて送ってください。'; } catch { u.invSt = 'このリンクを送ってください：' + base; }
+  renderNet();
+}
+function netEvent(u, e) {
+  if (e.type === 'start') {
+    $('#netDlg').hidden = true; lobbyClose(); // 始まったら、待合室からは消える
+    if (u.inv) { try { u.inv.cancel(); } catch { /* */ } u.inv = null; } clearTimeout(u.invT);
+    mySeat = e.seat; net = { link: u.link, oppName: u.peerName || '相手', mode: e.mode, ui: u };
+    $('#mode').value = 'hot'; $('.droot').classList.add('net-on');
+    S = e.state; S.askZone = [ME()];
+    history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp]; trace = []; thinking = null; aceSeen = new Set(); undoUsed = false; resultSent = false;
+    netNote(''); render();
+    banner(S.turnPlayer === ME() ? 'あなたの先攻' : `${NAME(OPP())}の先攻`, S.turnPlayer === ME() ? 'me' : 'opp', 1100);
+  } else if (e.type === 'remote') { if (net) { u.lastSeen = Date.now(); commit(e.state); render(); } }
+  else if (e.type === 'end') { if (net) netEndNote(e.winner); }
+  else if (e.type === 'rematchAsked') { if (net && S && S.winner !== null) netNote(`<b>${esc(net.oppName)}さんが、もう一度を申し込んでいます</b><button type="button" class="btn small primary" data-net="ask">受ける</button><button type="button" class="btn small ghost" data-net="quit">やめる</button>`); }
+  else if (e.type === 'away') netStop('相手がいなくなったので、この対戦は終わりです。戦績には残りません。');
+  else if (e.type === 'version') netStop('相手と版がちがいます。2人ともページを読み直してください（新しい版が出た直後は、古い画面を覚えていることがあります）。', true);
+  else if (e.type === 'desync') { console.warn('オンライン対戦のずれ', e.detail); netStop('2人の画面がずれてしまいました。この対戦は終わりです（戦績には残りません）。'); }
+}
+/** 上の知らせの帯（つながりが切れたかも／終わりの知らせ） */
+function netNote(html) { const el = $('#netNote'); if (!el) return; el.innerHTML = html; el.hidden = !html; }
+function netEndNote(winner) {
+  const rec = net && net.mode === 'practice' ? '📝 練習なので記録しません' : OPTS.onNetResult ? '🏆 公式試合として戦績に記録しました' : '（この画面では戦績に記録しません）';
+  if (net && net.mode !== 'practice' && OPTS.onNetResult && S) {
+    // サイトの戦績（人どうし📊）に渡す中身：勝ち負け・自分と相手の名前とデッキ・LP・ターン・先攻か
+    const md = DECKS[net.ui && net.ui.deck], od = DECKS[net.ui && net.ui.peerDeck];
+    try { OPTS.onNetResult({ winner, me: ME(), result: winner === 'draw' ? 'draw' : winner === ME() ? 'win' : 'lose', oppName: net.oppName, mode: net.mode, myTheme: md ? themeOf(md) : null, oppTheme: od ? themeOf(od) : null, myLp: S.players[ME()].lp, oppLp: S.players[OPP()].lp, turn: S.turn, first: S.firstPlayer === ME() }); } catch (err) { console.error(err); }
+  }
+  netNote(`<b>${winner === 'draw' ? '引き分け' : winner === ME() ? 'あなたの勝ち！' : 'あなたの負け…'}</b><span>${rec}</span>`
+    + '<button type="button" class="btn small primary" data-net="ask">もう一度（同じ相手と）を申し込む</button>'
+    + '<button type="button" class="btn small ghost" data-net="quit">やめる</button>');
+}
+function netStop(msg, reload) {
+  netNote(`<b>${esc(msg)}</b>${reload ? '<button type="button" class="btn small primary" data-net="reload">読み直す</button>' : ''}<button type="button" class="btn small ghost" data-net="quit">準備にもどる</button>`);
+  if (net && net.link) { try { net.link.close(); } catch { /* もう閉じている */ } }
+  if (netUi && !net) {
+    netUi.err = msg; netUi.stopped = reload ? 'reload' : 'stop';
+    if (netUi.link) { try { netUi.link.close(); } catch { /* もう閉じている */ } }
+    renderNet();
+  }
+}
+function netQuit() {
+  const u = net ? net.ui : netUi;
+  if (u) { try { u.peerOff && u.peerOff(); } catch { /* */ } try { u.link && u.link.close(); } catch { /* */ } }
+  lobbyClose(); net = null; netUi = null; mySeat = 0; $('.droot').classList.remove('net-on'); netNote(''); $('#netDlg').hidden = true;
+  $('#mode').value = 'cpu'; newDuel(true); if (OPTS.menuFirst) { placeholder = true; openSetup(); }
+}
+/** 相手の知らせが来ない時：上の帯に「つながりが切れたかも（あと m:ss で終わり）」 */
+setInterval(() => {
+  if (!net || !net.ui || !S || S.winner !== null) return;
+  const gone = Date.now() - (net.ui.lastSeen || Date.now());
+  if (gone > NET_AWAY_SHOW) { const left = Math.max(0, 180000 - gone), m = Math.floor(left / 60000), sec = String(Math.floor(left / 1000) % 60).padStart(2, '0'); netNote(`<b>📡 つながりが切れました。もどるのを待っています（あと ${m}:${sec}）</b>`); }
+  else if ($('#netNote') && /つながりが切れ/.test($('#netNote').textContent)) netNote('');
+}, 1000);
+function netClick(t) {
+  const b = t.closest('[data-net]'); if (!b) return false;
+  const [k, v] = b.dataset.net.split(':');
+  if (k === 'close') { closeNet(); if (OPTS.menuFirst && !netMode()) openSetup(); return true; }
+  if (k === 'mode') { netUi.mode = v; renderNet(); return true; }
+  if (k === 'host') { netConnect(true); return true; }
+  if (k === 'invlink') { netInviteLink(); return true; }
+  if (k === 'invopen') { netUi.step = 'inv'; renderNet(); return true; }
+  if (k === 'invback') { netUi.step = 'wait'; renderNet(); return true; }
+  if (k === 'inv') { netInvite(v); return true; }
+  if (k === 'lb') { netUi.key = v; netConnect(false); return true; }
+  if (k === 'join') { const i = $('[data-net-key]'); netUi.key = i ? i.value.trim() : ''; netConnect(false); return true; }
+  if (k === 'ready') { netUi.ready = true; netUi.link && netUi.link.setReady(); renderNet(); return true; }
+  // もう一度：親も子も、勝ち負けに関係なく申し込める。2人とも申し込むと始まる（相手の申し込みを［受ける］も同じ）
+  if (k === 'ask') { if (net && net.link && net.link.requestRematch() && S && S.winner !== null) netNote('<b>⏳ もう一度を申し込みました</b><span>相手が受けると始まります</span><button type="button" class="btn small ghost" data-net="quit">やめる</button>'); return true; }
+  if (k === 'quit') { netQuit(); return true; }
+  if (k === 'reload') { location.reload(); return true; }
+  return false;
+}
+
+/* ---------- 辞書：カードの公式Q&A（記録のカード名・盤面のカード・説明の欄から開く小さい窓） ---------- */
+const RUL_NAMES = nameIndex(RULINGS, CARD_POOL);
+/** 説明の欄の「📖 公式Q&A（○件）」ボタン（Q&Aがあるカードだけ） */
+function rulBtn(code) { const n = rulingsFor(RULINGS, code).length; return n ? `<button type="button" class="btn small ghost rul-btn" data-rul="${esc(code)}">📖 公式Q&amp;A（${n}件）</button>` : ''; }
+function showRulings(code) {
+  const list = rulingsFor(RULINGS, code); if (!list.length) return;
+  $('#rulingBox').innerHTML = rulingsHtml(CARD_POOL[code]?.name || '', list);
+  if (list.length === 1) { const d = $('#rulingBox details'); if (d) d.open = true; } // 1件だけなら、はじめから開いておく
+  $('#rulingDlg').hidden = false;
+}
+/* ---------- 操作ガイド：はじめて開いた時に1回だけ。☰メニューからいつでも ---------- */
+let guideAt = 0;
+const guideEnv = () => ({ touch: matchMedia('(hover: none)').matches, land: landscape() });
+function openGuide(i = 0) { guideAt = Math.max(0, Math.min(guidePages().length - 1, i)); $('#guideBox').innerHTML = guideHtml(guideAt, guideEnv()); $('#guideDlg').hidden = false; }
+function closeGuide() { $('#guideDlg').hidden = true; if (!OPTS.demo && !OPTS.quick) try { localStorage.setItem(GUIDE_KEY, '1'); } catch { /* 覚えられない環境 */ } setTimeout(() => { if (S && !pausedUi()) scheduleCpu(); }, 0); }
+/** この端末でまだ見ていなければ、ガイドを出す（DEMO・2人対戦の準備中などでは出さない） */
+function maybeGuide() { if (OPTS.demo || OPTS.quick) return; let seen = false; try { seen = !!localStorage.getItem(GUIDE_KEY); } catch { seen = true; } if (!seen) openGuide(0); }
 function describe(uid) {
   const c = S.cards[uid], d = defOf(S, uid);
-  if (isCpu(c.controller) && (c.zone === 'hand' || ((c.zone === 'mzone' || c.zone === 'szone') && !c.faceUp))) {
+  if (isRemote(c.controller) && (c.zone === 'hand' || ((c.zone === 'mzone' || c.zone === 'szone') && !c.faceUp))) {
     return { head: `<h3>裏側のカード</h3><p class="tl">${NAME(c.controller)}の${c.zone === 'hand' ? '手札' : 'フィールド'}のカードです。中身は見えません。</p>`, text: '' };
   }
   const typeLine = d.kind === 'monster'
     ? `${d.attribute}属性・${d.race}・★${d.level}・${(d.monsterTypes || []).join('／')}・攻${d.atk}／守${d.def}`
     : `${d.subtype}${d.kind === 'spell' ? '魔法' : '罠'}`;
-  const where = { hand: '手札', mzone: 'モンスターゾーン', emz: 'エクストラモンスターゾーン', szone: '魔法＆罠ゾーン', fzone: 'フィールドゾーン', gy: '墓地', deck: 'デッキ', extra: 'EXデッキ', banished: '除外' }[c.zone];
+  const where = { hand: '手札', mzone: 'モンスターゾーン', emz: 'モンスターゾーン', szone: '魔法＆罠ゾーン', fzone: 'フィールドゾーン', gy: '墓地', deck: 'デッキ', extra: 'EXデッキ', banished: '除外' }[c.zone];
   const state = c.zone === 'mzone' || c.zone === 'emz' ? `・${c.faceUp ? '表側' : '裏側'}${c.position === 'atk' ? '攻撃' : '守備'}表示・今の攻${currentAtk(S, uid)}／守${currentDef(S, uid)}` : (c.zone === 'szone' || c.zone === 'fzone') ? `・${c.faceUp ? '表側' : '裏側'}` : '';
   const extra = [];
   if (c.counters && c.counters.magic) extra.push(`魔力カウンター ${c.counters.magic}`);
@@ -1174,11 +1504,11 @@ function describe(uid) {
   // 墓地・除外の儀式・融合モンスターが蘇生できるか（正規の召喚をしていないものは特殊召喚できない）
   if ((c.zone === 'gy' || c.zone === 'banished') && d.kind === 'monster' && (d.frame === 'ritual' || d.frame === 'fusion')) {
     const how = d.frame === 'ritual' ? '儀式召喚' : '融合召喚';
-    if (SCRIPTS[c.code] && SCRIPTS[c.code].fusionOnly) extra.push('融合召喚でしか特殊召喚できないので、蘇生できません');
-    else extra.push(c.proper ? `正規の${how}をしているので、蘇生できます` : `正規の${how}をしていないので、蘇生できません`);
+    if (SCRIPTS[c.code] && SCRIPTS[c.code].fusionOnly) extra.push('融合召喚でしか出せないカードなので、墓地から出し直せません');
+    else extra.push(c.proper ? `${how}で正しく出したカードなので、墓地から出し直せます` : `${how}で正しく出していないカードなので、墓地から出し直せません`);
   }
   return {
-    head: `<h3>${esc(d.name)}</h3><p class="tl">${esc(typeLine)}</p><p class="tl">${NAME(c.controller)}の${where}${state}</p>${extra.length ? `<p class="tl">${esc(extra.join('・'))}</p>` : ''}`,
+    head: `<h3>${esc(d.name)}</h3>${rulBtn(c.code)}<p class="tl">${esc(typeLine)}</p><p class="tl">${NAME(c.controller)}の${where}${state}</p>${extra.length ? `<p class="tl">${esc(extra.join('・'))}</p>` : ''}`,
     text: `<p class="tx">${esc(d.text)}</p>`,
   };
 }
@@ -1212,7 +1542,7 @@ function candidates(uid) {
       }
       if (d.frame === 'ritual') out.push({ info: '儀式モンスターは儀式魔法で儀式召喚します。' });
       else if (SCRIPTS[c.code]?.cannotNormalSummon) out.push({ info: 'このカードは通常召喚できません。' });
-      else if (tributesFor(S, uid) > 0) out.push({ info: `リリース${tributesFor(S, uid)}体が必要です。` });
+      else if (tributesFor(S, uid) > 0) out.push({ info: `リリース（自分の場のモンスターを墓地へ送る）が${tributesFor(S, uid)}体必要です。` });
       else if (S.players[S.turnPlayer].normalSummonUsed) out.push({ info: '通常召喚（セットを含む）は、このターンもう行いました。' });
     } else add('セットする', { type: 'setSpellTrap', card: uid }, legal.some(a => a.type === 'setSpellTrap' && a.card === uid));
   } else if (c.zone === 'mzone' || c.zone === 'emz') {
@@ -1237,11 +1567,11 @@ function renderChoice() {
   const head = `<h3>${who}</h3><p class="prompt">${esc(r.prompt)}</p>`;
   if (r.kind === 'yesno') return head + `<div class="acts row2"><button class="btn act go" data-ans="true">はい</button><button class="btn act" data-ans="false">いいえ</button></div>`;
   if (r.kind === 'option') return head + `<div class="acts">${r.options.map((o, i) => `<button class="btn act${i === 0 ? ' go' : ''}" data-ans="${i}">${esc(o)}</button>`).join('')}</div>`;
-  const where = u => ({ hand: '手札', deck: 'デッキ', gy: '墓地', mzone: 'フィールド', emz: 'フィールド', szone: 'フィールド', extra: 'EX', banished: '除外' }[S.cards[u].zone]);
+  const where = u => ({ hand: '手札', deck: 'デッキ', gy: '墓地', mzone: 'フィールド', emz: 'フィールド', szone: 'フィールド', extra: 'EXデッキ', banished: '除外' }[S.cards[u].zone]);
   // 相手の裏側のカード（伏せた魔法・罠、裏守備のモンスター）と相手の手札は、中身を見せない。どれか分かるように、画面の左から何番目かを書く
   const hidden = u => { const c = S.cards[u]; return c.controller !== r.player && ((!c.faceUp && ['mzone', 'emz', 'szone', 'fzone'].includes(c.zone)) || c.zone === 'hand' || c.zone === 'deck'); };
-  const pos = u => { const c = S.cards[u]; if (c.zone !== 'mzone' && c.zone !== 'szone') return ''; const i = c.controller === 1 ? 5 - c.index : c.index + 1; return `（左から${i}番目）`; };
-  const label = u => { const c = S.cards[u]; if (!hidden(u)) return defOf(S, u).name; return c.zone === 'hand' ? '相手の手札' : c.zone === 'mzone' || c.zone === 'emz' ? `相手の裏側のモンスター${pos(u)}` : `相手の伏せカード${pos(u)}`; };
+  const pos = u => { const c = S.cards[u]; if (c.zone !== 'mzone' && c.zone !== 'szone') return ''; const i = c.controller !== ME() ? 5 - c.index : c.index + 1; return `（左から${i}番目）`; };
+  const label = u => { const c = S.cards[u]; if (!hidden(u)) return defOf(S, u).name; const op = oppWord(cpuMode()); return c.zone === 'hand' ? `${op}の手札` : c.zone === 'mzone' || c.zone === 'emz' ? `${op}の裏側のモンスター${pos(u)}` : `${op}の伏せカード${pos(u)}`; };
   const range = r.min === r.max ? `${r.min}枚` : `${r.min}〜${r.max}枚`;
   const ok = pick.length >= r.min && pick.length <= r.max;
   return head + `<p class="tl">${range}選んでください（${pick.length}枚選択中）。盤面のカードを押しても選べます。</p><div class="optlist cards" role="listbox" aria-multiselectable="${r.max > 1}">${r.options.map(u => { const c = S.cards[u], show = !hidden(u); const d = defOf(S, u); return `<button class="opt cardopt${pick.includes(u) ? ' on' : ''}" data-opt="${u}" role="option" aria-selected="${pick.includes(u)}" aria-label="${esc(label(u))}"><span class="${show ? faceCls(d) : 'card back'}">${show ? faceHtml(u, d, false) : ''}</span><span class="on-mark" aria-hidden="true">✓</span><small>${esc(label(u))}</small><small class="wh">${NAME(c.controller)}・${where(u)}</small></button>`; }).join('')}</div>
@@ -1252,7 +1582,7 @@ function renderChoice() {
 const fxSoon = () => !!pendingMoves || pendingSummons.length > 0;
 function renderDetail() {
   const el = $('#detail');
-  if (S.pending && isCpu(S.pending.request.player)) { el.innerHTML = `<h3>CPUが選んでいます</h3><p class="prompt">${esc(S.pending.request.prompt)}</p>`; return; }
+  if (S.pending && isRemote(S.pending.request.player)) { el.innerHTML = `<h3>${netMode() ? `${esc(NAME(OPP()))}が選んでいます…` : 'CPUが考え中…'}</h3><p class="prompt">${esc(S.pending.request.prompt)}</p>`; return; }
   if (S.pending && isDeckPick(S.pending.request)) {
     el.innerHTML = `<h3>あなたの選択</h3><p class="prompt">${esc(S.pending.request.prompt)}</p><p class="tl">広げた${fanSrc(S.pending.request) === 'hand' ? '手札' : '山札'}から選んでください。</p>`;
     if (!fxSoon()) openFan(); // これから演出がある時は、演出が終わってから広げる
@@ -1271,8 +1601,7 @@ function renderDetail() {
 
 function renderLog() {
   const el = $('#log');
-  const who = t => (cpuMode() ? t.replace(/P1/g, 'あなた').replace(/P2/g, 'CPU') : t);
-  el.innerHTML = S.log.slice(-200).map(l => `<li class="${l.text.startsWith('―') ? 'turn' : ''}">${esc(who(l.text))}</li>`).join('');
+  el.innerHTML = S.log.slice(-200).map(l => `<li class="${l.text.startsWith('―') ? 'turn' : ''}">${linkNames(esc(WHO(l.text)), RUL_NAMES)}</li>`).join('');
   el.scrollTop = el.scrollHeight;
 }
 
@@ -1352,7 +1681,7 @@ function openFan() {
   layer.className = 'fan-layer';
   const range = r.min === r.max ? `${r.min}枚選ぶ` : `${r.min}〜${r.max}枚選ぶ`;
   layer.innerHTML = `<div class="fan-head"><b>${esc(r.prompt)}</b><span>${src === 'hand' ? '手札' : '山札'} ${all.length}枚から${range}（明るいカードが選べます）</span></div><div class="fan-area"></div>`
-    + `<div class="fan-btns">${history.length ? '<button class="btn ghost" data-fanundo aria-label="元に戻す">↶ 元に戻す</button>' : ''}${r.min === 0 ? '<button class="btn" data-fanskip>選ばない</button>' : ''}${r.max > 1 ? '<button class="btn primary" data-fanok disabled>決定</button>' : ''}</div>`;
+    + `<div class="fan-btns">${history.length ? '<button class="btn ghost" data-fanundo aria-label="ひとつ戻す">↶ ひとつ戻す</button>' : ''}${r.min === 0 ? '<button class="btn" data-fanskip>選ばない</button>' : ''}${r.max > 1 ? '<button class="btn primary" data-fanok disabled>決定</button>' : ''}</div>`;
   $('.droot').appendChild(layer);
   const area = layer.querySelector('.fan-area');
   area.innerHTML = all.map(u => fanCardHtml(u, false)).join('');
@@ -1370,7 +1699,7 @@ function openFan() {
   } else layoutFan(area, els, src === 'hand');
   fan = { key, layer, sel: [], req: r, p, src };
   // 山札（または手札）の場所から、カードが扇の形に開く
-  const from = src === 'hand' ? $(`#hand${p}`) : pileEl(p, 'deck');
+  const from = src === 'hand' ? handEl(p) : pileEl(p, 'deck');
   if (src !== 'hand') glowPile(p);
   const opened = from ? flyIn(els, centerOf(rectOf(from))) : Promise.resolve();
   // 開き終わったら、選べるカードを下の段にまとめる（押しやすいように）
@@ -1404,7 +1733,7 @@ function openTopReveal(r, key) {
   layer.className = 'fan-layer topreveal';
   layer.innerHTML = `<div class="hb-bg" aria-hidden="true"><i class="hb-flame"></i><i class="hb-swirl"></i></div>`
     + `<div class="fan-head"><b>${esc(r.prompt)}</b><span>デッキの上の${r.options.length}枚から1枚選ぶ（タップで選ぶ・長押しで効果）</span></div>`
-    + `<div class="hb-row"></div><div class="fan-btns">${history.length ? '<button class="btn ghost" data-fanundo aria-label="元に戻す">↶ 元に戻す</button>' : ''}</div>`;
+    + `<div class="hb-row"></div><div class="fan-btns">${history.length ? '<button class="btn ghost" data-fanundo aria-label="ひとつ戻す">↶ ひとつ戻す</button>' : ''}</div>`;
   $('.droot').appendChild(layer);
   const row = layer.querySelector('.hb-row');
   const order = [...r.options]; // デッキの一番上から順に左へ
@@ -1473,9 +1802,9 @@ async function fanFinish(sel) {
   fan.busy = true;
   const r = fan.req, p = fan.p, layer = fan.layer;
   layer.classList.add('done');
-  const dest = /除外/.test(r.prompt) ? pileEl(p, 'banished') : /墓地|捨て/.test(r.prompt) ? pileEl(p, 'gy') : /特殊召喚|フィールド/.test(r.prompt) ? $('#board') : $(`#hand${p}`);
+  const dest = /除外/.test(r.prompt) ? pileEl(p, 'banished') : /墓地|捨て/.test(r.prompt) ? pileEl(p, 'gy') : /特殊召喚|フィールド/.test(r.prompt) ? $('#board') : handEl(p);
   const to = dest ? centerOf(rectOf(dest)) : { x: innerWidth / 2, y: innerHeight };
-  const pile = fan.src === 'hand' ? $(`#hand${p}`) : pileEl(p, 'deck'), back = pile ? centerOf(rectOf(pile)) : to;
+  const pile = fan.src === 'hand' ? handEl(p) : pileEl(p, 'deck'), back = pile ? centerOf(rectOf(pile)) : to;
   const els = [...layer.querySelectorAll('[data-fan]')];
   const picked = els.filter(el => sel.includes(Number(el.dataset.fan)));
   picked.forEach(el => { el.classList.add('picked'); el.style.zIndex = '100'; });
@@ -1491,7 +1820,7 @@ async function fanFinish(sel) {
 
 /* ---------- 手札から墓地へ：手札が扇の形に開き、送るカードが表になって墓地へ飛ぶ ---------- */
 async function handOpenFx(j) {
-  const hand = $(`#hand${j.p}`), gy = pileEl(j.p, 'gy');
+  const hand = handEl(j.p), gy = pileEl(j.p, 'gy');
   if (!hand || !gy) return;
   const pause = ms => new Promise(res => setTimeout(res, fanDur(ms)));
   const layer = document.createElement('div');
@@ -1526,7 +1855,7 @@ async function handOpenFx(j) {
 
 /* ---------- 手札に加わった時：残りの手札を左に扇で、加わったカードを右に置いて大きく見せ、並べ替えてから手札へ ---------- */
 async function handAddFx(j) {
-  const hand = $(`#hand${j.p}`);
+  const hand = handEl(j.p);
   if (!hand) return;
   // ドローの演出：①引いたカードを中央に見せる → ②下から手札が出てきて、一番右に引いたカードが入る
   // → ③中央で重なるように閉じながら裏返る → ④表に返りながら、並べ替えた順で開く → ⑤手札の場所へ
@@ -1539,7 +1868,7 @@ async function handAddFx(j) {
   const verb = j.drew ? 'ドロー' : '手札に加えた';
   layer.innerHTML = `<div class="fan-head"><b>${esc(verb)}：${esc(names)}</b><span>手札 ${j.kept.length + j.added.length}枚</span></div><div class="dfx-stage"></div>`;
   $('.droot').appendChild(layer);
-  if (j.p === 0 && narrow()) $('.droot').classList.add('hand-lifted');
+  if (j.p === ME() && narrow()) $('.droot').classList.add('hand-lifted');
   const stage = layer.querySelector('.dfx-stage');
   const W = stage.clientWidth || innerWidth, H = stage.clientHeight || innerHeight;
   // 自分の手札（スマホ）：最後は、開いた手札と同じ大きさ・同じ並びのまま降ろして、そのまま手札になる（縮めない）。
@@ -1650,7 +1979,7 @@ function layoutHandAdd(area, kept, added) {
 
 /* ---------- CPUのサーチ：裏面の扇から1枚を見せて、手札へ ---------- */
 async function cpuSearchFx(j) {
-  const pile = pileEl(j.p, 'deck'), hand = $(`#hand${j.p}`);
+  const pile = pileEl(j.p, 'deck'), hand = handEl(j.p);
   if (!pile || !hand) return;
   const layer = document.createElement('div');
   layer.className = 'fan-layer cpu';
@@ -1686,7 +2015,6 @@ async function cpuSearchFx(j) {
    画面を更新する前のカードの位置を覚えておき、更新した後の位置まで、カードの写しを飛ばす */
 let pendingMoves = null;
 let fanDoneUids = new Set();   // 扇から選んだカード（扇の演出で飛ばし済み）
-const VIEWER = 0;              // 画面を見ている人（CPU対戦では P1）
 const dur = ms => (fxMode() === 'short' ? ms / 2 : ms);
 const wait = ms => new Promise(res => setTimeout(res, dur(ms)));
 const PUBLIC = ['mzone', 'emz', 'szone', 'fzone', 'gy', 'banished'];
@@ -1694,8 +2022,8 @@ const PUBLIC = ['mzone', 'emz', 'szone', 'fzone', 'gy', 'banished'];
 function visibleTo(st, u) {
   const c = st.cards[u];
   if (!c) return false;
-  if (PUBLIC.includes(c.zone)) return c.faceUp || (c.zone !== 'banished' && c.controller === VIEWER && cpuMode());
-  if (c.zone === 'hand') return !cpuMode() || c.owner === VIEWER;
+  if (PUBLIC.includes(c.zone)) return c.faceUp || (c.zone !== 'banished' && c.controller === ME() && cpuMode());
+  if (c.zone === 'hand') return !(cpuMode() || netMode()) || c.owner === ME();
   return false;
 }
 function snapRects() {
@@ -1871,7 +2199,7 @@ async function revealMill(mill, P) {
   const n = mill.length, cw = Math.min(110, (innerWidth - 40) / n - 10), ch = cw * 86 / 59;
   const layer = document.createElement('div');
   layer.className = 'mill-layer';
-  const who = cpuMode() ? (mill[0].fromP === 0 ? 'あなた' : 'CPU') : NAME(mill[0].fromP);
+  const who = NAME(mill[0].fromP);
   layer.innerHTML = `<div class="mill-head"><b>デッキの上から墓地へ送る${n}枚</b><span>${esc(who)}のデッキ</span></div><div class="mill-row"></div>`;
   $('.droot').appendChild(layer);
   const row = layer.querySelector('.mill-row');
@@ -1891,7 +2219,7 @@ async function revealMill(mill, P) {
 function playPendingMoves() {
   if (!pendingMoves || (fxN > 0)) return false;
   const P = pendingMoves; pendingMoves = null;
-  fxN++;
+  fxN++; fxBlock();
   (async () => {
     try {
       // デッキの上から墓地へ送るカード（光の援軍など）：まず表にして中央に並べて見せてから、墓地へ送る
@@ -1899,7 +2227,7 @@ function playPendingMoves() {
       if (mill.length) await revealMill(mill, P);
       await Promise.all(P.moves.map((m, i) => flyOne(m, P, i)));
       await Promise.all(P.acts.map((a, i) => activateOne(a, P, i)));
-      if (P.win !== null) await banner(P.win === 'draw' ? '引き分け' : cpuMode() ? (P.win === 0 ? '勝利！' : '敗北…') : `${NAME(P.win)}の勝利！`, P.win === 0 || !cpuMode() ? 'win' : 'lose', 1800);
+      if (P.win !== null) await banner(P.win === 'draw' ? '引き分け' : `${resultText(P.win, cpuMode() || netMode(), ME())}${P.win === ME() || !(cpuMode() || netMode()) ? '！' : '…'}`, P.win === ME() || !(cpuMode() || netMode()) ? 'win' : 'lose', 1800);
       else if (P.turn !== null) {
         const text = cpuMode() ? (P.turn === 0 ? 'あなたのターン' : 'CPUのターン') : `${NAME(P.turn)}のターン`;
         const drawing = pendingSummons.some(j => j && j.handAdd && j.p === P.turn && sortsHand(P.turn));
@@ -1908,7 +2236,7 @@ function playPendingMoves() {
       }
     } catch (e) { console.error(e); }
     const l = $('.fly-layer'); if (l) l.innerHTML = '';
-    fxN = Math.max(0, fxN - 1);
+    fxN = Math.max(0, fxN - 1); fxBlock();
     render();
   })();
   return true;
@@ -1933,7 +2261,7 @@ function tweenLp(el, p, to) {
 const ZONE_Q = /を出すモンスターゾーン$/;
 /** 効果で特殊召喚するマスを選んでいる時：選べるマス（uid → 答えの番号） */
 function zonePick() {
-  if (!S || !S.pending || isCpu(S.pending.request.player)) return null;
+  if (!S || !S.pending || isRemote(S.pending.request.player)) return null;
   const r = S.pending.request;
   if (r.kind !== 'option' || !ZONE_Q.test(r.prompt)) return null;
   const p = r.player, map = new Map();
@@ -1947,9 +2275,9 @@ function actZones(a) {
   const P = S.players[0], d = defOf(S, a.card);
   if (a.type === 'normalSummon' || a.type === 'setMonster') {
     const free = P.mzone.map((v, i) => (v === null || (a.tributes || []).includes(v) ? i : -1)).filter(i => i >= 0);
-    return free.map(i => `0:mz:${i}`);
+    return free.map(i => `${me}:mz:${i}`);
   }
-  if ((a.type === 'setSpellTrap' || a.type === 'activate') && d.kind !== 'monster' && d.subtype !== 'フィールド') return P.szone.map((v, i) => (v === null ? `0:st:${i}` : null)).filter(Boolean);
+  if ((a.type === 'setSpellTrap' || a.type === 'activate') && d.kind !== 'monster' && d.subtype !== 'フィールド') return P.szone.map((v, i) => (v === null ? `${me}:st:${i}` : null)).filter(Boolean);
   return null;
 }
 /** マス選びの案内と光るマスを、すぐ消す（マスを押した時。演出の間も残らないように） */
@@ -1972,7 +2300,7 @@ function renderZonePick() {
   tip.innerHTML = `<b>出すマスを押してください</b><small>「${esc(zp.r.prompt.replace(ZONE_Q, '').replace(/^「|」$/g, ''))}」</small>`; placeTip(tip);
 }
 function renderSheets(duringFx = false) {
-  const humanChoice = S.pending && !isCpu(S.pending.request.player) && !zonePick();
+  const humanChoice = S.pending && !isRemote(S.pending.request.player) && !zonePick();
   const detailOpen = !duringFx && narrow() && ((humanChoice && !peek && !fan) || (sheet === 'detail' && selected !== null));
   const logOpen = !duringFx && narrow() && sheet === 'log' && !detailOpen;
   $('#detailSheet').classList.toggle('open', detailOpen);
@@ -1980,7 +2308,7 @@ function renderSheets(duringFx = false) {
   $('#scrim').hidden = !(detailOpen || logOpen);
 }
 function closeSheets() {
-  if (S.pending && !isCpu(S.pending.request.player)) peek = true;
+  if (S.pending && !isRemote(S.pending.request.player)) peek = true;
   sheet = null; selected = null;
   render();
 }
@@ -2034,21 +2362,23 @@ function renderHandHold() {
 }
 /* 自分のターンが始まったら（ドローの後のメインフェイズ1で）手札を開き、相手のターンになったら閉じる（CPU対戦） */
 let trayTurn = null, trayWantOpen = false;
+/** スマホを横にした時：手札は盤面にかぶるので、ふだんはしまっておく（軽くスワイプ・タップですぐ開く） */
+const landscape = () => matchMedia('(max-width: 860px) and (orientation: landscape)').matches;
 function turnTray() {
   if (!narrow() || !S || !cpuMode() || S.winner !== null) return;
   if (S.turn !== trayTurn) {
     trayTurn = S.turn;
-    if (isCpu(S.turnPlayer)) { trayWantOpen = false; if (trayOpen) setTray(false); }
-    else trayWantOpen = true;
+    if (isRemote(S.turnPlayer)) { trayWantOpen = false; if (trayOpen) setTray(false); }
+    else trayWantOpen = !landscape(); // 横向きでは、自分のターンになっても自動では開かない
   }
-  if (trayWantOpen && !isCpu(S.turnPlayer) && S.phase === 'main1' && humanActing() && !S.pending && S.window.kind === 'open') { trayWantOpen = false; if (!trayOpen) setTray(true); }
+  if (trayWantOpen && !isRemote(S.turnPlayer) && S.phase === 'main1' && humanActing() && !S.pending && S.window.kind === 'open') { trayWantOpen = false; if (!trayOpen) setTray(true); }
 }
 function autoTray() {
   turnTray();
   if (!narrow() || !S) return;
   const needs = S.winner !== null || (humanActing() && (S.pending || (S.window.kind === 'priority' && activatableList(S, actorOf(S)).length)));
   if (needs && trayOpen) setTray(false, true);
-  else if (!needs && !trayOpen && trayAuto && humanActing() && S.turnPlayer === actorOf(S) && S.window.kind !== 'priority') setTray(true);
+  else if (!needs && !trayOpen && trayAuto && !landscape() && humanActing() && S.turnPlayer === actorOf(S) && S.window.kind !== 'priority') setTray(true);
   else setTray(trayOpen, trayAuto);
 }
 /** 指の位置にある手札のカード（重なっている時は上のカード） */
@@ -2099,14 +2429,14 @@ function checkPachi() {
 }
 function render() {
   if ((fxN > 0)) { renderSheets(true); return; } // 演出が終わってから画面を更新する（演出の間はシートを閉じておき、選ぶ画面も演出の後に開く）
-  if (fan && !(S.pending && !isCpu(S.pending.request.player) && isDeckPick(S.pending.request))) closeFan();
+  if (fan && !(S.pending && !isRemote(S.pending.request.player) && isDeckPick(S.pending.request))) closeFan();
   canAct = new Set(S.pending ? [] : activatableList(S, actorOf(S)).map(a => a.uid));
   renderBoard(); renderSide(); renderTop(); renderChain(); renderTargets(); tombAuto(); renderZonePick(); renderDetail(); renderLog(); renderDock(); renderSheets(fxSoon()); autoTray(); renderHandHold(); // シャカパチは手札をゆっくりなぞった時だけ（罠が来た時などの自動の演出はしない）
   // これから召喚の演出をするカードは、演出が始まるまで盤面に出さない（先に置かれてから巻き戻って見えないように）
   if (narrow() && pendingSummons.some(j => j && j.handAdd && j.p === 0)) $('.droot').classList.add('hand-lifted');
   for (const j of pendingSummons) if (j && j.uid != null && !j.search && !j.handOpen && !j.handAdd) { const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`); if (el) el.style.visibility = 'hidden'; }
   $('#result').hidden = S.winner === null;
-  if (S.winner !== null) $('#result').textContent = S.winner === 'draw' ? `引き分け：${S.winReason}` : `${NAME(S.winner)}の勝利：${cpuMode() ? S.winReason.replace(/P1/g, 'あなた').replace(/P2/g, 'CPU') : S.winReason}`;
+  if (S.winner !== null) $('#result').textContent = `${resultText(S.winner, cpuMode() || netMode(), ME())}：${WHO(S.winReason)}`;
   // カードの移動・召喚の演出があれば、それが終わるまでCPUの手番と自動パスを待つ
   if (playPendingMoves()) { saveSoon(); return; }
   if (playPendingSummons()) { saveSoon(); return; }
@@ -2126,9 +2456,9 @@ function saveSoon() {
   clearTimeout(saveT);
   saveT = setTimeout(() => {
     try {
-      if (placeholder) return;
+      if (placeholder || netMode()) return; // オンライン対戦は保存しない（途中のCPU対戦の保存を上書きしない・消さない）
       if (!S || S.winner !== null) localStorage.removeItem(OPTS.storageKey);
-      else localStorage.setItem(OPTS.storageKey, JSON.stringify({ v: SAVE_V, S, trace, mode: $('#mode').value, d0: $('#deck0').value, d1: $('#deck1').value, lv: cpuLevel }));
+      else localStorage.setItem(OPTS.storageKey, JSON.stringify({ v: SAVE_V, S, trace, mode: $('#mode').value, d0: $('#deck0').value, d1: $('#deck1').value, lv: cpuLevel, undo: undoUsed }));
     } catch { /* 保存できない環境では覚えない */ }
   }, 400);
 }
@@ -2141,9 +2471,9 @@ function loadSaved() {
 function showPile(p, kind) {
   const list = S.players[p][kind];
   const label = { deck: 'デッキ', gy: '墓地', extra: 'EXデッキ', banished: '除外' }[kind];
-  const hiddenExtra = kind === 'extra' && isCpu(p);
+  const hiddenExtra = kind === 'extra' && isRemote(p);
   // 自分のデッキ：次に引くカードが分からないように、手札と同じ順に並べ替え、同じカードはまとめて「×枚数」で見せる
-  if (kind === 'deck' && !isCpu(p) && list.length) {
+  if (kind === 'deck' && !isRemote(p) && list.length) {
     const groups = [];
     for (const u of sortHand(S, list)) { const g = groups.find(x => S.cards[x.u].code === S.cards[u].code); if (g) g.n++; else groups.push({ u, n: 1 }); }
     const body = `<p class="menu-note">並び順は山札の順番ではありません（種類・レベル順）。カードを押すと効果を見られます。</p><div class="pilelist">${groups.map(g => `<span class="deck-g">${cardHtml(g.u)}${g.n > 1 ? `<b class="deck-n">×${g.n}</b>` : ''}</span>`).join('')}</div>`;
@@ -2197,19 +2527,20 @@ function showPile(p, kind) {
 /* ---------- メニュー ---------- */
 function menuNames() {
   const cpu = cpuMode(), L = (id, t) => { const el = ROOT.querySelector(`label[for="${id}"]`); if (el && el.firstChild && el.firstChild.nodeType === 3) el.firstChild.textContent = t; };
-  L('deck0', cpu ? 'あなたのデッキ' : 'あなたのデッキ（P1）'); L('deck1', cpu ? 'CPUのデッキ' : '相手のデッキ（P2）');
-  const f = $('#first'); if (f) { f.options[0].textContent = cpu ? 'あなた' : 'P1（あなた）'; f.options[1].textContent = cpu ? 'CPU' : 'P2'; }
+  L('deck0', cpu ? 'あなたのデッキ' : 'プレイヤー1のデッキ'); L('deck1', cpu ? 'CPUのデッキ' : 'プレイヤー2のデッキ');
+  const f = $('#first'); if (f) { f.options[0].textContent = cpu ? 'あなた' : 'プレイヤー1'; f.options[1].textContent = cpu ? 'CPU' : 'プレイヤー2'; }
 }
-function openMenu() { menuNames(); { const el = $('#menuLevel'); if (el) { el.hidden = !cpuMode(); el.textContent = `この対戦のCPUの強さ：${LEVEL_LABEL[cpuLevel] || 'ふつう'}（強さは準備画面で選びます）`; } } $('#menu').hidden = false; $('#menuBtn').setAttribute('aria-expanded', 'true'); disarm(); clearTimeout(cpuTimer); }
+function openMenu() { menuNames(); { const el = $('#menuLevel'); if (el) el.hidden = true; } /* 強さの行は出さない（CPUはいつも全力） */ $('#menu').hidden = false; $('#menuBtn').setAttribute('aria-expanded', 'true'); disarm(); clearTimeout(cpuTimer); }
 function closeMenu() { $('#menu').hidden = true; $('#menu').classList.remove('from-setup'); $('#menuBtn').setAttribute('aria-expanded', 'false'); disarm(); setTimeout(() => { if (S && !pausedUi()) scheduleCpu(); }, 0); }
 let armT;
-function disarm() { const b = $('#surrender'); b.classList.remove('armed'); b.textContent = 'サレンダーする'; clearTimeout(armT); }
+function disarm() { const b = $('#surrender'); b.classList.remove('armed'); b.textContent = '🏳 降参する'; clearTimeout(armT); }
 function surrender() {
   const b = $('#surrender');
   if (S.winner !== null) { closeMenu(); return; }
   // 押し間違いを防ぐため、2回押して確定する
-  if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'もう一度押すとサレンダー'; armT = setTimeout(disarm, 3000); return; }
+  if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'もう一度押すと降参'; armT = setTimeout(disarm, 5000); return; }
   disarm(); closeMenu();
+  if (netMode()) { if (net.link && net.link.send({ type: 'surrender', player: ME() })) { commit(net.link.state); render(); } return; }
   if (cpuMode()) { clearTimeout(cpuTimer); history.push(S); commit(applyAction(S, { type: 'surrender', player: 0 })); render(); return; }
   run({ type: 'surrender', player: actorOf(S) });
 }
@@ -2323,12 +2654,12 @@ function aimTargets(u, acts) {
   if (mon) {
     let idx = P.mzone.map((v, i) => (v === null ? i : -1)).filter(i => i >= 0);
     if (!idx.length) idx = [0, 1, 2, 3, 4]; // アドバンス召喚でリリースして空くマス
-    idx.forEach(i => out.push({ kind: 'mz', idx: i, key: `0:mz:${i}` }));
+    idx.forEach(i => out.push({ kind: 'mz', idx: i, key: `${me}:mz:${i}` }));
   }
   const stActs = acts.some(a => a.type === 'setSpellTrap' || (a.type === 'activate' && d.kind === 'spell'));
   if (stActs && d.kind !== 'monster') {
-    if (d.subtype === 'フィールド') out.push({ kind: 'fz', idx: 0, key: '0:fz:0' });
-    else P.szone.forEach((v, i) => { if (v === null) out.push({ kind: 'st', idx: i, key: `0:st:${i}` }); });
+    if (d.subtype === 'フィールド') out.push({ kind: 'fz', idx: 0, key: `${me}:fz:0` });
+    else P.szone.forEach((v, i) => { if (v === null) out.push({ kind: 'st', idx: i, key: `${me}:st:${i}` }); });
   }
   return out.map(t => ({ ...t, el: zoneEl(t.key) })).filter(t => t.el);
 }
@@ -2407,7 +2738,7 @@ function castSpell(x, y) {
   const field = defOf(S, u).subtype === 'フィールド';
   const free = S.players[0].szone.map((v, i) => (v === null ? i : -1)).filter(i => i >= 0);
   const idx = field ? 0 : aim.hover && aim.hover.kind === 'st' ? aim.hover.idx : free.length ? free[Math.floor(Math.random() * free.length)] : 0;
-  const el = zoneEl(field ? '0:fz:0' : `0:st:${idx}`);
+  const el = zoneEl(field ? `${me}:fz:0` : `0:st:${idx}`);
   const go = () => { endAim(); selected = null; run(field ? list[0] : { ...list[0], zone: idx }); };
   if (!el) { go(); return; }
   const r = el.getBoundingClientRect(), g = aim.ghost;
@@ -2439,8 +2770,8 @@ function aimTap(x, y, target) {
 
 /* ----- 置いた後：表・裏を切り替えて決定 ----- */
 /** リリースが必要なモンスターの召喚・セットは「アドバンス召喚・アドバンスセット」 */
-const modeLabel = (mode, u) => { const n = u != null && defOf(S, u).kind === 'monster' ? tributesFor(S, u) : 0; if (n > 0 && mode === 'summon') return `アドバンス召喚（${n}体リリース）`; if (n > 0 && mode === 'mset') return `アドバンスセット（${n}体リリース）`; if (mode === 'tomb') return `陵墓の効果で召喚（${n * 1000}LP）`; if (mode === 'tombset') return `陵墓の効果でセット（${n * 1000}LP）`; return MODE_LABEL[mode]; };
-const MODE_LABEL = { summon: '攻撃表示で召喚', mset: '裏側守備表示でセット', activate: '発動', sset: 'セット', tomb: '陵墓の効果で召喚', tombset: '陵墓の効果でセット' };
+const modeLabel = (mode, u) => { const n = u != null && defOf(S, u).kind === 'monster' ? tributesFor(S, u) : 0; if (n > 0 && mode === 'summon') return `召喚する（${n}体リリース）`; if (n > 0 && mode === 'mset') return `セットする（${n}体リリース）`; if (mode === 'tomb') return `死皇帝の陵墓で召喚（${n * 1000}LP払う）`; if (mode === 'tombset') return `陵墓の効果でセット（${n * 1000}LP）`; return MODE_LABEL[mode]; };
+const MODE_LABEL = { summon: '召喚する（攻撃表示）', mset: 'セットする（裏側守備表示）', activate: '発動する', sset: 'セットする', tomb: '死皇帝の陵墓で召喚', tombset: '死皇帝の陵墓でセット' };
 function placeModes(acts, t, u) {
   const d = defOf(S, u);
   if (t.kind === 'mz') return [acts.some(a => a.type === 'normalSummon' || a.type === 'procSummon') && 'summon', acts.some(a => a.type === 'setMonster') && 'mset', acts.some(isTombAct) && 'tomb', acts.some(isTombAct) && !SCRIPTS[S.cards[u].code]?.cannotSet && 'tombset'].filter(Boolean);
@@ -2604,20 +2935,20 @@ function atkActs(u) {
 }
 function atkTargets(acts) {
   return acts.map(a => {
-    const el = a.target === null ? ($('#side1 .lp') || $('#side1')) : ROOT.querySelector(`#board [data-uid="${a.target}"]`);
+    const el = a.target === null ? ($('#side1 .lp') || $('#side1')) /* 相手の帯（上）はいつも #side1 */ : ROOT.querySelector(`#board [data-uid="${a.target}"]`);
     return el ? { a, el } : null;
   }).filter(Boolean);
 }
 /** 力の差の説明（裏側で中身の分からないモンスターは ???） */
 function atkVerdict(u, a) {
   const atk = currentAtk(S, u);
-  if (a.target === null) return { main: `ダイレクトアタック`, sub: `相手に ${atk} ダメージ`, cls: 'win' };
+  if (a.target === null) return { main: `ダイレクトアタック`, sub: `${oppWord(cpuMode())}に ${atk} ダメージ`, cls: 'win' };
   const c = S.cards[a.target], known = c.faceUp || c.pub;
   const name = known ? defOf(S, a.target).name : '裏側守備表示モンスター';
   if (!known) return { main: `${atk} vs ???`, sub: `${name}（守備力は分からない）`, cls: 'unk' };
   if (c.position === 'atk') {
     const t = currentAtk(S, a.target), d = atk - t;
-    return { main: `${atk} vs 攻${t}`, sub: d > 0 ? `勝ち：${name}を破壊、相手に ${d} ダメージ` : d === 0 ? `相打ち：お互いのモンスターを破壊` : `負け：こちらが破壊され、あなたに ${-d} ダメージ`, cls: d > 0 ? 'win' : d === 0 ? 'even' : 'lose' };
+    return { main: `${atk} vs 攻${t}`, sub: d > 0 ? `勝ち：${name}を破壊、${oppWord(cpuMode())}に ${d} ダメージ` : d === 0 ? `相打ち：お互いのモンスターを破壊` : `負け：こちらが破壊され、あなたに ${-d} ダメージ`, cls: d > 0 ? 'win' : d === 0 ? 'even' : 'lose' };
   }
   const t = currentDef(S, a.target), d = atk - t;
   return { main: `${atk} vs 守${t}${c.faceUp ? '' : '（裏）'}`, sub: d > 0 ? `勝ち：${name}を破壊` : d === 0 ? `どちらも破壊されない` : `負け：あなたに ${-d} ダメージ`, cls: d > 0 ? 'win' : d === 0 ? 'even' : 'lose' };
@@ -2685,7 +3016,7 @@ root.addEventListener('pointercancel', () => { atkEnd(); });
 /* 手札の開け閉め：何も選んでいない普通の状態なら、画面のどこを上に払っても開き、下に払っても閉じる
  * （スマホでは上下に払うとページのスクロールとして先に取られ、pointer の「離した」が届かないことがあるので、touch でも受ける） */
 let trayGesture = null;
-const calmState = () => narrow() && S && S.winner === null && !(S.pending && !isCpu(S.pending.request.player)) && !fan && !sheet && selected === null && !aim && !place && !handPress && !batk
+const calmState = () => narrow() && S && S.winner === null && !(S.pending && !isRemote(S.pending.request.player)) && !fan && !sheet && selected === null && !aim && !place && !handPress && !batk
   && $('#menu').hidden && $('#pileDlg').hidden && $('#reviewDlg').hidden;
 function trayGestureStart(x, y, target) {
   // ボタン・選ぶ画面の中から始めた操作は対象外
@@ -2753,6 +3084,8 @@ root.addEventListener('click', e => {
   { const ap = actPick; const zEl = ap && t.closest && t.closest('#board [data-zone]');
     if (ap) { actPick = null; clearZoneTip(); if (zEl && ap.zones.has(zEl.dataset.zone)) { run({ ...ap.a, zone: Number(zEl.dataset.zone.split(':')[2]) }); return; } render(); if (zEl) return; } }
   const actEl = t.closest('[data-act]');
+  // 今はできない操作（薄いボタン）：マスを選ばせてから断るのではなく、押した時にすぐ理由を出す
+  if (actEl && actEl.classList.contains('off')) { let why = ''; try { why = whyIllegal(S, JSON.parse(actEl.dataset.act)) || ''; } catch { /* 理由が分からない */ } toast(why ? `できません：${WHO(why)}` : '今はできません', true); return; }
   if (actEl && cpuMode() && actEl.closest('#detailSheet, #detail')) {
     const a = JSON.parse(actEl.dataset.act);
     const zs = actZones(a);
@@ -2775,6 +3108,11 @@ root.addEventListener('click', e => {
     return;
   }
   if (t.closest('#pileClose') || t.id === 'pileDlg') { $('#pileDlg').hidden = true; return; }
+  if (t.closest('#rulClose') || t.id === 'rulingDlg') { $('#rulingDlg').hidden = true; return; }
+  if (netClick(t)) return;
+  { const g = t.closest('[data-gd]'); if (g) { const k = g.dataset.gd; if (k === 'next') openGuide(guideAt + 1); else if (k === 'prev') openGuide(guideAt - 1); else closeGuide(); return; } }
+  if (t.closest('#guideOpen')) { closeMenu(); openGuide(0); return; }
+  { const rb = t.closest('[data-rul]'); if (rb) { showRulings(rb.dataset.rul); return; } }
   // パソコン（広い画面）では、置き場を押すと一覧。スマホでは一番上のカードの説明（一覧は長押し）
   const pileHit = t.closest('#board [data-pile]');
   if (pileHit && !narrow() && !(S.pending && S.pending.request.kind === 'cards')) { const [p, k] = pileHit.dataset.pile.split(':'); showPile(Number(p), k); return; }
@@ -2782,7 +3120,7 @@ root.addEventListener('click', e => {
   if (cardEl) {
     const u = Number(cardEl.dataset.uid);
     // 選択中なら、盤面のカードを押しても選べる
-    if (S.pending && S.pending.request.kind === 'cards' && S.pending.request.options.includes(u) && !isCpu(S.pending.request.player)) { togglePick(u); return; }
+    if (S.pending && S.pending.request.kind === 'cards' && S.pending.request.options.includes(u) && !isRemote(S.pending.request.player)) { togglePick(u); return; }
     // スマホの自分の手札：1回押すと飛び出して光る（選ぶ）、もう一度押すと戻る。効果は長押しで見る
     if (narrow() && cardEl.closest('#hand0')) { handTap(u); return; }
     selected = u; sheet = 'detail';
@@ -2803,7 +3141,9 @@ document.addEventListener('keydown', e => {
   if (e.key === ' ' && !/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test((e.composedPath()[0] || {}).tagName || '')) { const g = $('#goBtn'); if (g && !g.disabled) { e.preventDefault(); g.click(); } return; }
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
   if (e.key === 'Escape') {
-    if (!$('#pileDlg').hidden) $('#pileDlg').hidden = true;
+    if (!$('#guideDlg').hidden) closeGuide();
+    else if (!$('#rulingDlg').hidden) $('#rulingDlg').hidden = true;
+    else if (!$('#pileDlg').hidden) $('#pileDlg').hidden = true;
     else if (!$('#menu').hidden) closeMenu();
     else closeSheets();
   }
@@ -2824,6 +3164,8 @@ try { const v = localStorage.getItem('gx-duel-chain-mode'); if (v) $('#chainMode
 $('#chainMode').onchange = () => { try { localStorage.setItem('gx-duel-chain-mode', $('#chainMode').value); } catch { /* 保存できない環境 */ } if (S) render(); };
 $('#cpuSpeed').onchange = () => { try { localStorage.setItem('gx-duel-cpu-speed', $('#cpuSpeed').value); } catch { /* 保存できない環境 */ } };
 matchMedia('(max-width: 860px)').addEventListener('change', () => S && render());
+// スマホを横に向けた時は、手札をしまう（縦に戻した時はそのまま。上に払えば開く）
+matchMedia('(max-width: 860px) and (orientation: landscape)').addEventListener('change', e => { if (e.matches && trayOpen) setTray(false); });
 // 画面の幅が変わったら、手札の扇を並べ直す
 if (window.ResizeObserver) { const ro = new ResizeObserver(() => { fanOut($('#hand0')); fanOut($('#hand1')); }); ro.observe($('#hand0')); ro.observe($('#hand1')); }
 }
@@ -2855,27 +3197,43 @@ export function boot(root, opts = {}) {
   // スマホでは、下に固定したドック・手札トレイの高さだけ盤面の下を空ける
   if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(() => measureBottom()); ['#dock', '#tray'].forEach(q => { const e = root.querySelector(q); if (e) ro.observe(e); }); }
   wireTray(root);
+  // 操作ガイド：左右に払ってめくる
+  { const gb = root.querySelector('#guideBox'); let gx = null; if (gb) { gb.addEventListener('pointerdown', e => { gx = e.clientX; }); gb.addEventListener('pointerup', e => { if (gx === null) return; const dx = e.clientX - gx; gx = null; if (Math.abs(dx) > 40) openGuide(guideAt + (dx < 0 ? 1 : -1)); }); } }
   wireSheets(root);
   window.addEventListener('resize', () => measureBottom());
   measureBottom();
+  if (landscape()) setTray(false); // 横向きで開いた時は、手札をしまった形から
   const start = data => {
+    // 演出のDEMO（demo.html）：2人対戦の形で静かに始める（CPUは動かない・開始の帯もセリフも出さない・保存もしない）
+    // 招待（サイトの招待・招待リンクから）：opts.netJoin＝相手のキー番号。窓を開いて、すぐ子として［つなぐ］（スイッチ ONLINE が入っている時だけ。DEMOのページでも同じ）
+    const joinVs = () => {
+      const vs = opts.netJoin || (ONLINE ? (() => { try { return new URLSearchParams(location.search).get('vs'); } catch { return null; } })() : null); // 卓だけのページは、URLの ?vs=キー も見る
+      if (ONLINE && vs && /^\d{4}$/.test(String(vs))) { if (setupOpen()) closeSetup(); openNet(); netUi.key = String(vs); netConnect(false); }
+    };
+    if (opts.demo) { $('#mode').value = 'hot'; $('#hideOppRow').hidden = false; newDuel(true); joinVs(); return; }
+    // 全力のCPUとすぐ対戦する DEMO（cpu-demo.html）：opts.quick = [あなたのデッキ, CPUのデッキ]。先攻・後攻はランダム
+    if (opts.quick) { $('#mode').value = 'cpu'; $('#hideOppRow').hidden = true; for (const i of [0, 1]) if (DECKS[opts.quick[i]]) $(`#deck${i}`).value = opts.quick[i]; $('#first').value = 'r'; cpuLevel = CPU_LEVEL; showDeckFmt(); newDuel(); joinVs(); return; }
     if (data && data.mode) $('#mode').value = data.mode;
     if (data && data.d0 && DECKS[data.d0]) $('#deck0').value = data.d0;
     if (data && data.d1 && DECKS[data.d1]) $('#deck1').value = data.d1;
-    if (data && ['easy', 'normal', 'hard'].includes(data.lv)) cpuLevel = data.lv;
+    cpuLevel = CPU_LEVEL; // 前に保存した対戦の続きも、全力で
+    if (data && data.undo) undoUsed = true;
     $('#hideOppRow').hidden = cpuMode();
     showDeckFmt();
     if (data && data.S && (data.v === 4 || data.v === SAVE_V)) {
-      try { S = data.S; if (!S.askZone) S.askZone = cpuMode() ? [0] : [0, 1]; history = data.history || []; trace = Array.isArray(data.trace) ? data.trace : []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); return; }
+      try { S = data.S; if (!S.askZone) S.askZone = netMode() ? [ME()] : cpuMode() ? [0] : [0, 1]; history = data.history || []; trace = Array.isArray(data.trace) ? data.trace : []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); joinVs(); return; } // 途中のCPU対戦があっても、招待は受ける（CPU対戦は保存されたまま）
       catch (e) { console.warn('保存していたデュエルを開けませんでした', e); }
     }
     // ルールページでは、最初に準備画面（デッキ選び → 先攻・後攻 → デュエル開始）を開く。後ろの仮の対戦では、開始の帯もセリフも出さない
     const first = opts.menuFirst && cpuMode();
     newDuel(first);
     if (opts.menuFirst) { if (cpuMode()) { placeholder = true; openSetup(); } else openMenu(); }
+    else maybeGuide(); // 準備画面を出さない時（対戦卓だけのページ）は、すぐにガイド
+    // 招待（サイトの招待・招待リンクから）：opts.netJoin＝相手のキー番号。窓を開いて、すぐ子として［つなぐ］（スイッチ ONLINE が入っている時だけ）
+    joinVs();
   };
   // 動作確認用：開発者ツールから状態を読み書きできるようにする
-  window.__duel = { get state() { return S; }, speak(t) { speak(t); }, act(a) { run(a); }, review(tr) { if (tr) trace = tr; showReview(); }, get cpu() { return { thinking: thinking === S, ready: !!ready, waiting: waiting.size, worker: !!worker, workerBroken, timer: cpuTimer, trace: trace.length }; }, load(s) { clearTimeout(cpuTimer); S = s; history = []; selected = null; pick = []; lastLp = [s.players[0].lp, s.players[1].lp]; render(); } };
+  window.__duel = { /* DEMO用：操作ガイドを開く（DEMOでは見たことを覚えない） */ openGuide(i) { openGuide(i || 0); }, /* 確かめ用：オンライン対戦の準備の窓を開く（スイッチ ONLINE が入っている時だけ） */ openNet() { if (ONLINE) openNet(); }, /* 確かめ用：オンライン対戦の席（0／1）と相手の名前で見た画面にする（通信はしない）。null で元にもどす */ previewSeat(seat, name) { if (seat == null) { mySeat = 0; net = null; } else { mySeat = seat; net = { link: null, oppName: name || '相手' }; $('#mode').value = 'hot'; } render(); }, get state() { return S; }, speak(t) { speak(t); }, act(a) { run(a); }, review(tr) { if (tr) trace = tr; showReview(); }, get cpu() { return { thinking: thinking === S, ready: !!ready, waiting: waiting.size, worker: !!worker, workerBroken, timer: cpuTimer, trace: trace.length }; }, load(s) { clearTimeout(cpuTimer); S = s; history = []; selected = null; pick = []; lastLp = [s.players[0].lp, s.players[1].lp]; render(); } };
   if (opts.standalone) {
     window.claude?.hot?.snapshot?.(() => ({ v: 4, S, history: history.slice(-30), mode: $('#mode').value }));
     window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});

@@ -1,7 +1,11 @@
 // カードごとの専用演出（キャンバスに描く）。強力な制限カードの発動を、カード名と効果に合わせて見せる。
 // playSignature() は演出が終わったら解決する Promise を返す。カードの位置は画面上の四角（getBoundingClientRect）で受け取る
-import { cardImg, backImg } from './fx.js';
+import { cardImg, backImg } from './fx.js?v=20261121-1400-91ea7cd635';
 const TAU = Math.PI * 2;
+/** カード名の帯を、消え始める前にそのまま見せる長さ（ミリ秒。MASTER：読み終われるだけ長く） */
+const TITLE_HOLD = 1600;
+/** 文字は、見せ終わったら速く消す（そのあとで画面がゆっくり消える） */
+const TITLE_OUT = 250;
 
 /* ---------- どのカードにどの演出を使うか ---------- */
 const SIG = {
@@ -75,6 +79,14 @@ function mk(c) {
 /* ---------- 演出はプレイマット（盤面）の中だけに描く：描いた後、盤面の外を消す ---------- */
 let clipR = null;
 function setClip(root) { const b = root.querySelector('#board'); clipR = b ? b.getBoundingClientRect() : null; }
+/** 盤面の外（画面全体）にも、演出と同じ暗さ・白いベールをかける（MASTER：暗転と明転は画面全体で） */
+function veilOutside(fill) {
+  if (!clipR || !fill) return;
+  const dpr = cv.width / (window.innerWidth || 1), b = clipR, r = 14;
+  ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = fill; ctx.beginPath(); ctx.rect(-10, -10, W + 20, H + 20);
+  ctx.moveTo(b.left + r, b.top); ctx.arcTo(b.left, b.top, b.left, b.bottom, r); ctx.arcTo(b.left, b.bottom, b.right, b.bottom, r); ctx.arcTo(b.right, b.bottom, b.right, b.top, r); ctx.arcTo(b.right, b.top, b.left, b.top, r); ctx.closePath();
+  ctx.fill('evenodd'); ctx.restore();
+}
 function maskToBoard() {
   if (!clipR) return;
   const dpr = cv.width / (window.innerWidth || 1);
@@ -110,8 +122,11 @@ export function playSignature(root, info) {
     cv.style.display = 'block';
     const step = now => {
       if (S.done) return;
-      tick(S, now); maskToBoard(); drawMat(S);
-      if (S.t > S.end) { S.done = true; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; if (S.mat) S.mat.ctx.clearRect(0, 0, S.mat.w, S.mat.h); resolve(); return; }
+      tick(S, now); maskToBoard(); veilOutside(S.dark > .01 ? `rgba(0,0,0,${S.dark * .65})` : null); drawMat(S);
+      // カード名の帯が読み終われるまでは終わらない。最後の0.5秒で画面全体をだんだん消す
+      const end = S.title ? Math.max(S.end, S.title.t + 160 + TITLE_HOLD + TITLE_OUT + 1000) : S.end, left = end - S.t;
+      cv.style.opacity = left < 1000 ? String(Math.max(0, left / 1000)) : '';
+      if (S.t > end) { cv.style.opacity = ''; S.done = true; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; if (S.mat) S.mat.ctx.clearRect(0, 0, S.mat.w, S.mat.h); resolve(); return; }
       requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -841,7 +856,7 @@ function tick(S, now) {
   S.shards.forEach(s => { s.x += s.vx; s.y += s.vy; s.vy += .3; s.rot += s.vr; s.a -= .016; }); S.shards = S.shards.filter(s => s.a > 0);
   S.rings.forEach(r => { r.r += r.v; r.v *= .96; r.a *= .94; }); S.rings = S.rings.filter(r => r.a > .03);
   S.shake *= .85; S.flash *= .82; S.invert *= .5; S.chroma *= .88;
-  if (t > S.end - 500) S.dark *= .9;
+  if (t > S.end - 500) S.dark *= .975; // 明るく戻るのは、ゆっくり
   draw(S);
 }
 
@@ -1131,7 +1146,7 @@ function draw(S) {
   if (S.flash > .01) { ctx.fillStyle = `rgba(${S.flashC},${S.flash * .5})`; ctx.fillRect(0, 0, W, H); }
   // カード名の帯
   if (S.title) {
-    const T = S.title, k = Math.min(1, (t - T.t) / 160), fo = Math.max(0, Math.min(1, (T.t + 1300 - t) / 250)), y = B.cy, bh = Math.max(34, 40 * U), fs = Math.min(26, Math.max(16, 21 * U));
+    const T = S.title, k = Math.min(1, (t - T.t) / 160), fo = Math.max(0, Math.min(1, (T.t + 160 + TITLE_HOLD + TITLE_OUT - t) / TITLE_OUT)), y = B.cy, bh = Math.max(34, 40 * U), fs = Math.min(26, Math.max(16, 21 * U));
     ctx.globalAlpha = k * fo; ctx.save(); ctx.translate((1 - k) * 40, 0); ctx.transform(1, 0, -.18, 1, 0, 0);
     ctx.fillStyle = 'rgba(10,10,14,.9)'; ctx.fillRect(-60, y - bh / 2, W + 200, bh);
     if (T.rb) { const g = ctx.createLinearGradient(0, 0, W, 0); for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, hsl(i * 60, 62, 1)); ctx.fillStyle = g; } else ctx.fillStyle = T.col;

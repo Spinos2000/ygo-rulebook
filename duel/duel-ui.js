@@ -90,6 +90,13 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #phases li button, #phases li span { display: block; min-width: 34px; text-align: center; font-size: 12px; letter-spacing: .06em; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--sub); font-weight: 700; font-variant-numeric: tabular-nums }
 #phases li.past span { opacity: .45 }
 #phases li.cur span { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
+/* 今のフェイズは日本語（メイン1・スタンバイ など）。折り返さず、長い名前は字間をつめる */
+#phases li.cur span { white-space: nowrap }
+#phases li.cur.long span { letter-spacing: -.02em; padding-inline: 4px }
+/* スマホ（440px以下）：上の帯に全部は入らず、右のボタン（音・ひとつ戻す・メニュー、サイトの中では「ルールブックに戻る」も）と重なるので、今のフェイズと、すぐ次のフェイズ・エンドフェイズ（押して移れる時だけ）を出す */
+@media (max-width: 440px) { #phases li:not(.cur) { display: none } #phases li.cur + li:has(button), #phases li:last-child:has(button) { display: list-item } }
+/* さらに狭い時（360px以下）は、今のフェイズと次のフェイズだけ */
+@media (max-width: 360px) { #phases li:last-child:not(li.cur + li) { display: none } }
 #phases li button { color: var(--ink); border-color: var(--accent); border-style: dashed }
 #phases li button:hover { background: var(--accent-soft) }
 .topbtns { margin-left: auto; display: flex; gap: 6px }
@@ -324,10 +331,75 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #toast[data-bad="1"] { background: var(--bad); color: #fff }
 /* CPU が考えている間の小さな表示 */
 .pstrip .think { font-size: .78rem; color: var(--sub); font-weight: 600; letter-spacing: .04em; animation: thinkPulse 1.2s ease-in-out infinite }
+/* 考え中の進み具合：文字の下の細い線（--p＝0〜1）。勝負所でじっくり考えている時は、文字を少し濃く */
+.pstrip .think { position: relative; padding-bottom: 3px }
+.pstrip .think::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: calc(var(--p, 0) * 100%); background: var(--accent); border-radius: 2px; transition: width .3s linear }
+.pstrip .think.deep { color: var(--ink) }
 @keyframes thinkPulse { 50% { opacity: .35 } }
 /* ロマンの台詞：画面の中央に大きく */
 #speech { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 45; pointer-events: none; text-align: center; width: min(92vw, 620px);
   animation: speechIn 2.8s ease forwards }
+/* 準備画面・メニュー・一覧・振り返りの窓が開いている間は、セリフを窓の上に重ねない */
+.droot:has(.overlay:not([hidden])) #speech { display: none }
+/* PCだけの説明（キーボードの操作など）は、指で操作する端末では出さない */
+@media (hover: none) { .pc-only { display: none } }
+/* 演出の間は、透明な幕で画面全体をおおって、どこを押しても何も起きないようにする */
+/* スマホを横にした時：召喚・攻撃・カードの演出の間だけ、盤面にかぶる手札を下へしまう（盤面は動かさない） */
+@media (max-width: 860px) and (orientation: landscape) { .droot.fx-stage .tray { transform: translateY(115%) !important; transition: transform .25s ease } }
+/* 辞書（公式Q&A）の窓：スマホでも長い答えを折り返して読める。外側を押す・閉じる・Escで閉じる */
+.rul-box { max-width: 560px }
+/* 長い答えを読み進めても「閉じる」が見えるように、見出しは窓の上に固定する */
+.rul-box .box-head { position: sticky; top: -16px; z-index: 1; background: var(--panel); margin: -16px -16px 0; padding: 12px 16px 8px; border-bottom: 1px solid var(--line) }
+.rul-box h3 small { font-size: 12px; color: var(--sub); font-weight: 500; margin-left: 4px }
+.rul-list { display: grid; gap: 8px; margin-top: 6px }
+.rul-it { border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); padding: 0 }
+.rul-it summary { cursor: pointer; list-style: none; padding: 10px 12px; display: grid; gap: 2px; font-weight: 700; font-size: 14px; line-height: 1.5 }
+.rul-it summary::-webkit-details-marker { display: none }
+.rul-it summary::before { content: "▶ "; font-size: 10px; color: var(--sub) }
+.rul-it[open] summary::before { content: "▼ " }
+.rul-id { font-weight: 500; font-size: 11px; color: var(--sub) }
+.rul-q, .rul-a { margin: 0 12px 10px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere }
+.rul-a { background: var(--panel); border-radius: 8px; padding: 8px 10px; margin-top: 0 }
+.rul-btn { margin: 2px 0 6px }
+/* 記録の中のカード名（公式Q&Aがあるもの）：押せることが分かる下線 */
+.rul-name { font: inherit; color: inherit; background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px }
+/* 操作ガイド：真ん中の小さいカード。左右に払ってめくる */
+.gd-box { max-width: 380px; text-align: center; touch-action: pan-y }
+.gd-icon { font-size: 44px; line-height: 1; margin: 6px 0 4px }
+.gd-title { font-family: var(--display); font-size: 20px; margin: 4px 0 8px }
+.gd-line { margin: 0 0 6px; font-size: 14px; line-height: 1.65; text-align: left }
+.gd-dots { display: flex; justify-content: center; gap: 6px; margin: 10px 0 }
+.gd-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line) }
+.gd-dots i.on { background: var(--accent); outline: 1px solid var(--edge) }
+.gd-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap }
+.gd-btns .btn { min-height: 44px }
+/* オンライン対戦（人どうし）の準備の窓・上の知らせの帯。オンラインの間は、ひとつ戻す・CPUの設定・対戦相手の切りかえを出さない */
+.net-box { max-width: 420px }
+.net-row { display: grid; gap: 4px; font-size: 13px; margin: 6px 0 }
+.net-row select { font: inherit; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink) }
+.net-key { display: grid; gap: 2px; text-align: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin: 8px 0 }
+.net-key b { font-family: var(--num); font-size: 34px; letter-spacing: .2em }
+.net-key small { font-size: 12px; color: var(--sub) }
+.net-q { font-size: 13px; margin: 10px 0 6px; font-weight: 700 }
+.net-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.net-modes .btn { display: grid; gap: 2px; min-height: 52px } .net-modes small { font-size: 11px; font-weight: 500 }
+.net-wide { width: 100%; min-height: 48px; margin-top: 8px }
+.net-join { display: grid; grid-template-columns: 1fr auto; gap: 8px }
+.net-join input { font-family: var(--num); font-size: 22px; letter-spacing: .2em; text-align: center; padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); min-width: 0 }
+.net-st { font-weight: 700; text-align: center; margin: 12px 0 }
+.net-err { color: var(--bad); font-size: 13px; font-weight: 700 }
+.net-lobby { display: grid; gap: 6px }
+.net-lb { display: flex; align-items: center; gap: 8px; font: inherit; text-align: left; border: 2px solid var(--edge); border-radius: 8px; background: var(--panel-2); color: var(--ink); padding: 8px 10px; cursor: pointer; min-height: 48px }
+.net-lb b { font-size: 15px } .net-lb span { font-size: 12px; color: var(--sub); flex: 1 }
+.net-lb i { font-style: normal; font-weight: 900; color: #fff; background: var(--opp); border: 2px solid var(--edge); border-radius: 4px; padding: 3px 8px; font-size: 12px; white-space: nowrap }
+.net-none { font-size: 12px; color: var(--sub); margin: 0 }
+.net-note { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 56px); transform: translateX(-50%); z-index: 40; width: min(92vw, 520px); display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: center; background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow); font-size: 13px; text-align: center }
+.net-note[hidden] { display: none }
+.droot.net-on #undo, .droot.net-on #undoMini, .droot.net-on label[for="cpuSpeed"], .droot.net-on label[for="mode"], .droot.net-on label[for="deck0"], .droot.net-on label[for="deck1"], .droot.net-on label[for="first"], .droot.net-on #newDuel { display: none !important }
+.su-net { margin-bottom: 10px; border-style: dashed }
+.droot.fx-busy::after { content: ""; position: fixed; inset: 0; z-index: 90; touch-action: none; cursor: default }
+/* 準備画面の間は、後ろの盤面と手札（前の対戦のカード）をぼかして、読めないようにする */
+.droot:has(#setup:not([hidden])) :is(#board, #hand0, #hand1, .tray) { filter: blur(6px); transition: filter .2s }
 #speech .speech-who { display: inline-block; font-size: .8rem; font-weight: 700; letter-spacing: .08em; color: var(--accent-ink); background: var(--accent); border: 2px solid var(--edge); border-radius: 999px; padding: 2px 12px; margin-bottom: 8px }
 #speech .speech-text { font-family: var(--display); font-weight: 900; font-size: clamp(1.5rem, 6.5vw, 2.6rem); line-height: 1.25; color: #fff; text-wrap: balance;
   text-shadow: 0 0 2px var(--edge), 0 3px 0 var(--edge), 0 0 18px color-mix(in srgb, var(--opp) 70%, transparent), 0 0 36px color-mix(in srgb, var(--accent) 50%, transparent) }
@@ -770,6 +842,11 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .su-dots i.on { background: var(--accent); width: 12px; border-radius: 3px }
 .su-q { font-family: var(--display); font-size: 19px; margin: 14px 0 12px; display: grid; gap: 2px }
 .su-q small { font-family: var(--body); font-size: 12px; color: var(--sub) }
+.su-note { margin: 10px 0 0; font-size: 13px; color: var(--sub); text-align: center }
+.su-help { margin-top: 12px; font-size: 12px; color: var(--sub); border-top: 1px dashed var(--line); padding-top: 8px }
+.su-help summary { cursor: pointer; font-weight: 700; color: var(--ink) }
+.su-help p { margin: 6px 0 }
+.su-help .btn { margin-top: 4px }
 .su-opts { display: grid; gap: 10px }
 .su-opt { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; text-align: left; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; cursor: pointer }
 .su-opt span { grid-row: span 2; font-size: 26px }
@@ -908,7 +985,7 @@ export const MARKUP = `
   <div class="turn"><span id="turnInfo"></span><ol id="phases" aria-label="フェイズ"></ol></div>
   <div class="topbtns">
     <button class="btn small ghost" id="soundBtn" aria-pressed="true" title="効果音のオン・オフ">音 オン</button>
-    <button class="btn small ghost" id="undo" title="元に戻す（Ctrl+Z）" aria-label="元に戻す"><span aria-hidden="true">↶</span><span class="bl"> 元に戻す</span></button>
+    <button class="btn small ghost" id="undo" title="ひとつ戻す（Ctrl+Z）" aria-label="ひとつ戻す"><span aria-hidden="true">↶</span><span class="bl"> ひとつ戻す</span></button>
     <button class="btn small" id="menuBtn" aria-haspopup="dialog" aria-label="メニュー"><span aria-hidden="true">☰</span><span class="bl"> メニュー</span></button>
     <button class="btn small" id="closeDuel" hidden aria-label="ルールブックに戻る">✕<span class="long"> ルールブックに戻る</span></button>
   </div>
@@ -916,16 +993,16 @@ export const MARKUP = `
 
 <div class="app">
   <main class="table" aria-label="デュエル">
-    <div class="pstrip opp" id="side1"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="think" id="cpuThink" hidden aria-live="polite">考え中…</span><span class="meta"></span></div>
+    <div class="pstrip opp" id="side1"><span class="who"></span><span class="lp" title="LP（ライフポイント）：0になると負け"></span><span class="tag" hidden></span><span class="think" id="cpuThink" hidden aria-live="polite">考え中…</span><span class="meta"></span></div>
     <div class="hand opp" id="hand1"></div>
     <div id="board"></div>
     <div id="result" hidden></div>
     <section class="panel" id="chain" hidden aria-live="polite"></section>
     <div class="tray" id="tray"><button class="tray-handle" id="trayHandle" type="button" aria-expanded="true" aria-controls="hand0"><span class="grip" aria-hidden="true"></span><span class="tray-lbl" id="trayLbl">手札をしまう</span></button><div class="hand me" id="hand0"></div></div>
-    <div class="pstrip me" id="side0"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="meta"></span></div>
+    <div class="pstrip me" id="side0"><span class="who"></span><span class="lp" title="LP（ライフポイント）：0になると負け"></span><span class="tag" hidden></span><span class="meta"></span></div>
     <div class="dock" id="dock">
       <div class="dock-status"><span id="actor"></span><span id="actorHint"></span><span id="oppInfo"></span></div>
-      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できるタイミングで、必ず止めて聞く">✋ 次で止める</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">ログ</button><button class="btn small mini-only" id="undoMini" type="button">↶ ひとつ戻す</button><button class="btn small mini-only end-btn" id="endBtn" type="button" hidden>エンド</button></div>
+      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できる時、自動で進めずに必ず聞きます">✋ 次は聞いて</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">記録</button><button class="btn small mini-only" id="undoMini" type="button">↶ ひとつ戻す</button><button class="btn small mini-only end-btn" id="endBtn" type="button" hidden>エンド</button></div>
       <div class="dock-acts"><div id="phaseBtns"></div><button class="btn primary go" id="goBtn"></button></div>
     </div>
   </main>
@@ -936,7 +1013,7 @@ export const MARKUP = `
     </section>
     <section class="panel sheet" id="logSheet">
       <div class="sheet-head"><span></span><button class="btn small ghost" data-close="log">閉じる</button></div>
-      <div class="loghead"><h3>ログ</h3></div><ol id="log"></ol>
+      <div class="loghead"><h3>記録</h3></div><ol id="log"></ol>
     </section>
   </aside>
 </div>
@@ -947,24 +1024,25 @@ export const MARKUP = `
   <div class="box">
     <div class="box-head"><h3 id="menuTitle">メニュー</h3><button class="btn small ghost" id="menuClose">閉じる</button></div>
     <div class="menu-grid">
-      <label for="deck0">あなたのデッキ（P1）<select id="deck0"></select><span class="deck-fmt" id="deckFmt0"></span></label>
-      <label for="deck1">相手のデッキ（P2）<select id="deck1"></select><span class="deck-fmt" id="deckFmt1"></span></label>
+      <label for="deck0">あなたのデッキ<select id="deck0"></select><span class="deck-fmt" id="deckFmt0"></span></label>
+      <label for="deck1">相手のデッキ<select id="deck1"></select><span class="deck-fmt" id="deckFmt1"></span></label>
       <label for="mode">対戦相手<select id="mode"><option value="cpu">CPU</option><option value="hot">2人で交互に操作</option></select></label>
-      <label for="first">先攻<select id="first"><option value="0">P1（あなた）</option><option value="1">P2</option><option value="r">ランダム</option></select></label>
-      <label for="chainMode">チェーンの確認<select id="chainMode"><option value="auto">おまかせ（相手が動いた時だけ聞く）</option><option value="always">いつも聞く</option><option value="never">聞かない（「次で止める」の時だけ）</option></select></label>
+      <label class="check" id="hideOppRow"><input type="checkbox" id="hideOpp"> 2人対戦で、自分の番でない人の手札を隠す</label>
+      <label for="first">先攻<select id="first"><option value="0">あなた</option><option value="1">相手</option><option value="r">ランダム</option></select></label>
+      <label for="chainMode">発動するか聞くタイミング<select id="chainMode"><option value="auto">相手が動いた時だけ（おすすめ）</option><option value="always">自分が発動できる時はいつも</option><option value="never">聞かない（✋を押した時だけ）</option></select></label>
       <label for="fxMode">攻撃の演出<select id="fxMode"><option value="full">あり</option><option value="short">短く（2倍速）</option><option value="none">なし</option></select></label>
       <label for="cpuSpeed">CPUの速さ<select id="cpuSpeed"><option value="slow">ゆっくり</option><option value="normal" selected>ふつう</option><option value="fast">はやい</option></select></label>
     </div>
     <p class="menu-note" id="menuLevel" hidden></p>
-    <label class="check" id="hideOppRow"><input type="checkbox" id="hideOpp"> 手番でない側の手札を伏せる</label>
     <div class="menu-row">
-      <button class="btn primary" id="newDuel">新しいデュエルを始める</button>
+      <button class="btn primary" id="newDuel">新しいデュエル</button>
+      <button class="btn ghost" id="guideOpen">📖 操作ガイド</button>
     </div>
     <div class="menu-row">
-      <button class="btn danger" id="surrender">サレンダーする</button>
+      <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
-    <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261120-1620</p>
+    <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
+    <p class="menu-note ver">版：20261121-1400</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
@@ -974,6 +1052,10 @@ export const MARKUP = `
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>
+<div class="overlay" id="netDlg" hidden role="dialog" aria-modal="true" aria-label="人と対戦の準備"><div class="box net-box" id="netBox"></div></div>
+<div class="net-note" id="netNote" hidden aria-live="polite"></div>
+<div class="overlay" id="guideDlg" hidden role="dialog" aria-modal="true" aria-label="操作ガイド"><div class="box gd-box" id="guideBox"></div></div>
+<div class="overlay" id="rulingDlg" hidden role="dialog" aria-modal="true" aria-label="公式Q&amp;A"><div class="box rul-box" id="rulingBox"></div></div>
 <div id="toast" role="status" hidden></div>
 <div id="speech" hidden aria-live="polite"><div class="speech-who"></div><div class="speech-text"></div></div>
 <div class="overlay" id="reviewDlg" hidden role="dialog" aria-modal="true" aria-labelledby="reviewTitle"><div class="box" id="reviewBox"></div></div>

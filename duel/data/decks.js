@@ -1,5 +1,7 @@
 // 自動生成ファイル（scripts/make-cardpool.mjs）。手で編集しないこと。
-                                                                                                                                                                                        
+/** 切り札の分類：god＝神・レベル10以上、roman＝ロマンエース、ace＝エース、partner＝相棒、top＝トップエース（MASTERのチェック表） */
+                                                                  
+                                                                                                                                                                                                                          
 
 export const DECKS                          = {
   "7n2h41w": {
@@ -63,7 +65,27 @@ export const DECKS                          = {
       ]
     },
     "owner": "もぎ",
-    "theme": "バニラサクリファイスマジシャン"
+    "theme": "バニラサクリファイスマジシャン",
+    "aces": {
+      "4041": [
+        "top"
+      ],
+      "4728": [
+        "roman"
+      ],
+      "4737": [
+        "partner"
+      ],
+      "4740": [
+        "top"
+      ],
+      "4983": [
+        "ace"
+      ],
+      "5628": [
+        "roman"
+      ]
+    }
   },
   "5m2qcka": {
     "code": "5m2qcka",
@@ -122,7 +144,24 @@ export const DECKS                          = {
       ]
     },
     "owner": "もぎ",
-    "theme": "武藤遊戯デッキ"
+    "theme": "武藤遊戯デッキ",
+    "aces": {
+      "4041": [
+        "ace"
+      ],
+      "4999": [
+        "god"
+      ],
+      "6076": [
+        "roman"
+      ],
+      "6167": [
+        "partner"
+      ],
+      "6170": [
+        "top"
+      ]
+    }
   },
   "dno7": {
     "code": "dno7",
@@ -181,7 +220,24 @@ export const DECKS                          = {
       "ctr": []
     },
     "owner": "もぎ",
-    "theme": "混沌ユベルライロ暗黒界"
+    "theme": "混沌ユベルライロ暗黒界",
+    "aces": {
+      "5860": [
+        "top"
+      ],
+      "7409": [
+        "ace"
+      ],
+      "7410": [
+        "roman"
+      ],
+      "7411": [
+        "god"
+      ],
+      "9712": [
+        "partner"
+      ]
+    }
   },
   "dno8": {
     "code": "dno8",
@@ -244,7 +300,27 @@ export const DECKS                          = {
       ]
     },
     "owner": "もぎ",
-    "theme": "サイバーダーク"
+    "theme": "サイバーダーク",
+    "aces": {
+      "5502": [
+        "god"
+      ],
+      "6830": [
+        "partner"
+      ],
+      "6831": [
+        "partner"
+      ],
+      "6832": [
+        "partner"
+      ],
+      "6833": [
+        "top"
+      ],
+      "7557": [
+        "roman"
+      ]
+    }
   },
   "dno9": {
     "code": "dno9",
@@ -300,7 +376,36 @@ export const DECKS                          = {
       ]
     },
     "owner": "もぎ",
-    "theme": "A召喚"
+    "theme": "A召喚",
+    "aces": {
+      "4758": [
+        "ace"
+      ],
+      "5860": [
+        "roman"
+      ],
+      "6176": [
+        "roman"
+      ],
+      "6603": [
+        "partner"
+      ],
+      "6821": [
+        "top"
+      ],
+      "6881": [
+        "ace"
+      ],
+      "7091": [
+        "god"
+      ],
+      "7346": [
+        "top"
+      ],
+      "7516": [
+        "ace"
+      ]
+    }
   },
   "dno10": {
     "code": "dno10",
@@ -366,7 +471,24 @@ export const DECKS                          = {
       ]
     },
     "owner": "もぎ",
-    "theme": "墓守り"
+    "theme": "墓守り",
+    "aces": {
+      "5422": [
+        "roman"
+      ],
+      "5515": [
+        "ace"
+      ],
+      "8638": [
+        "roman"
+      ],
+      "9282": [
+        "partner"
+      ],
+      "10920": [
+        "top"
+      ]
+    }
   },
   "dno11": {
     "code": "dno11",
@@ -422,7 +544,30 @@ export const DECKS                          = {
       ]
     },
     "owner": "もぎ",
-    "theme": "D-HERO"
+    "theme": "D-HERO",
+    "aces": {
+      "6660": [
+        "partner"
+      ],
+      "6661": [
+        "roman"
+      ],
+      "6753": [
+        "ace"
+      ],
+      "6757": [
+        "top"
+      ],
+      "6949": [
+        "ace"
+      ],
+      "7095": [
+        "partner"
+      ],
+      "7096": [
+        "roman"
+      ]
+    }
   },
   "dno12": {
     "code": "dno12",
@@ -480,7 +625,27 @@ export const DECKS                          = {
       "ctr": []
     },
     "owner": "もぎ",
-    "theme": "絵札の騎士"
+    "theme": "絵札の騎士",
+    "aces": {
+      "4368": [
+        "ace"
+      ],
+      "5316": [
+        "ace"
+      ],
+      "5503": [
+        "partner"
+      ],
+      "5558": [
+        "partner"
+      ],
+      "5559": [
+        "top"
+      ],
+      "6454": [
+        "roman"
+      ]
+    }
   },
   "dno13": {
     "code": "dno13",
@@ -538,7 +703,21 @@ export const DECKS                          = {
       ]
     },
     "owner": "もぎ",
-    "theme": "月書恐竜"
+    "theme": "月書恐竜",
+    "aces": {
+      "5889": [
+        "top"
+      ],
+      "6777": [
+        "roman"
+      ],
+      "7559": [
+        "ace"
+      ],
+      "10924": [
+        "partner"
+      ]
+    }
   },
   "dno14": {
     "code": "dno14",
@@ -610,6 +789,44 @@ export const DECKS                          = {
       ]
     },
     "owner": "もぎ",
-    "theme": "海馬瀬戸デッキ"
+    "theme": "海馬瀬戸デッキ",
+    "aces": {
+      "4007": [
+        "top"
+      ],
+      "4386": [
+        "roman"
+      ],
+      "4998": [
+        "god"
+      ],
+      "5504": [
+        "partner"
+      ],
+      "5552": [
+        "partner"
+      ],
+      "5553": [
+        "ace"
+      ],
+      "5555": [
+        "partner"
+      ],
+      "5556": [
+        "ace"
+      ],
+      "5625": [
+        "ace"
+      ],
+      "5626": [
+        "ace"
+      ],
+      "6483": [
+        "ace"
+      ],
+      "6484": [
+        "roman"
+      ]
+    }
   }
 };
