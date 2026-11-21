@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1400-91ea7cd635';
-import { fullThink } from './ai/levels.js?v=20261121-1400-91ea7cd635';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1400-91ea7cd635';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1400-91ea7cd635';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1400-91ea7cd635';
-import { playSignature, sigKey } from './sig.js?v=20261121-1400-91ea7cd635';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1400-91ea7cd635';
-import { firstEntrance } from './aces.js?v=20261121-1400-91ea7cd635';
-import { RULINGS } from './data/rulings.js?v=20261121-1400-91ea7cd635';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1400-91ea7cd635';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1400-91ea7cd635';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1400-91ea7cd635';
-import { joinSiteRoom } from './net/site-room.js?v=20261121-1400-91ea7cd635';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1423-9eb0780fdd';
+import { fullThink } from './ai/levels.js?v=20261121-1423-9eb0780fdd';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1423-9eb0780fdd';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1423-9eb0780fdd';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1423-9eb0780fdd';
+import { playSignature, sigKey } from './sig.js?v=20261121-1423-9eb0780fdd';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1423-9eb0780fdd';
+import { firstEntrance } from './aces.js?v=20261121-1423-9eb0780fdd';
+import { RULINGS } from './data/rulings.js?v=20261121-1423-9eb0780fdd';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1423-9eb0780fdd';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1423-9eb0780fdd';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1423-9eb0780fdd';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-1423-9eb0780fdd';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261121-1400-91ea7cd635';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-1400-91ea7cd635';
-import { DECKS } from './data/decks.js?v=20261121-1400-91ea7cd635';
-import { SCRIPTS } from './cards/index.js?v=20261121-1400-91ea7cd635';
+} from './engine/game.js?v=20261121-1423-9eb0780fdd';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1423-9eb0780fdd';
+import { DECKS } from './data/decks.js?v=20261121-1423-9eb0780fdd';
+import { SCRIPTS } from './cards/index.js?v=20261121-1423-9eb0780fdd';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -357,7 +357,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261121-1400-91ea7cd635', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-1423-9eb0780fdd', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1287,7 +1287,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261121-1400-91ea7cd635';
+const DUEL_BUILD = '20261121-1423-9eb0780fdd';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -2275,9 +2275,9 @@ function actZones(a) {
   const P = S.players[0], d = defOf(S, a.card);
   if (a.type === 'normalSummon' || a.type === 'setMonster') {
     const free = P.mzone.map((v, i) => (v === null || (a.tributes || []).includes(v) ? i : -1)).filter(i => i >= 0);
-    return free.map(i => `${me}:mz:${i}`);
+    return free.map(i => `${ME()}:mz:${i}`);
   }
-  if ((a.type === 'setSpellTrap' || a.type === 'activate') && d.kind !== 'monster' && d.subtype !== 'フィールド') return P.szone.map((v, i) => (v === null ? `${me}:st:${i}` : null)).filter(Boolean);
+  if ((a.type === 'setSpellTrap' || a.type === 'activate') && d.kind !== 'monster' && d.subtype !== 'フィールド') return P.szone.map((v, i) => (v === null ? `${ME()}:st:${i}` : null)).filter(Boolean);
   return null;
 }
 /** マス選びの案内と光るマスを、すぐ消す（マスを押した時。演出の間も残らないように） */
@@ -2654,12 +2654,12 @@ function aimTargets(u, acts) {
   if (mon) {
     let idx = P.mzone.map((v, i) => (v === null ? i : -1)).filter(i => i >= 0);
     if (!idx.length) idx = [0, 1, 2, 3, 4]; // アドバンス召喚でリリースして空くマス
-    idx.forEach(i => out.push({ kind: 'mz', idx: i, key: `${me}:mz:${i}` }));
+    idx.forEach(i => out.push({ kind: 'mz', idx: i, key: `${ME()}:mz:${i}` }));
   }
   const stActs = acts.some(a => a.type === 'setSpellTrap' || (a.type === 'activate' && d.kind === 'spell'));
   if (stActs && d.kind !== 'monster') {
-    if (d.subtype === 'フィールド') out.push({ kind: 'fz', idx: 0, key: `${me}:fz:0` });
-    else P.szone.forEach((v, i) => { if (v === null) out.push({ kind: 'st', idx: i, key: `${me}:st:${i}` }); });
+    if (d.subtype === 'フィールド') out.push({ kind: 'fz', idx: 0, key: `${ME()}:fz:0` });
+    else P.szone.forEach((v, i) => { if (v === null) out.push({ kind: 'st', idx: i, key: `${ME()}:st:${i}` }); });
   }
   return out.map(t => ({ ...t, el: zoneEl(t.key) })).filter(t => t.el);
 }
@@ -2738,7 +2738,7 @@ function castSpell(x, y) {
   const field = defOf(S, u).subtype === 'フィールド';
   const free = S.players[0].szone.map((v, i) => (v === null ? i : -1)).filter(i => i >= 0);
   const idx = field ? 0 : aim.hover && aim.hover.kind === 'st' ? aim.hover.idx : free.length ? free[Math.floor(Math.random() * free.length)] : 0;
-  const el = zoneEl(field ? `${me}:fz:0` : `0:st:${idx}`);
+  const el = zoneEl(field ? `${ME()}:fz:0` : `${ME()}:st:${idx}`);
   const go = () => { endAim(); selected = null; run(field ? list[0] : { ...list[0], zone: idx }); };
   if (!el) { go(); return; }
   const r = el.getBoundingClientRect(), g = aim.ghost;
