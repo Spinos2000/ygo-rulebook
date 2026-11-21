@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261122-0228-d76ebdb3a5';
-import { fullThink } from './ai/levels.js?v=20261122-0228-d76ebdb3a5';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261122-0228-d76ebdb3a5';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261122-0228-d76ebdb3a5';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261122-0228-d76ebdb3a5';
-import { playSignature, sigKey } from './sig.js?v=20261122-0228-d76ebdb3a5';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261122-0228-d76ebdb3a5';
-import { firstEntrance } from './aces.js?v=20261122-0228-d76ebdb3a5';
-import { RULINGS } from './data/rulings.js?v=20261122-0228-d76ebdb3a5';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261122-0228-d76ebdb3a5';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261122-0228-d76ebdb3a5';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261122-0228-d76ebdb3a5';
-import { joinSiteRoom } from './net/site-room.js?v=20261122-0228-d76ebdb3a5';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261122-0240-e8afb3d7b2';
+import { fullThink } from './ai/levels.js?v=20261122-0240-e8afb3d7b2';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261122-0240-e8afb3d7b2';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261122-0240-e8afb3d7b2';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261122-0240-e8afb3d7b2';
+import { playSignature, sigKey } from './sig.js?v=20261122-0240-e8afb3d7b2';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261122-0240-e8afb3d7b2';
+import { firstEntrance } from './aces.js?v=20261122-0240-e8afb3d7b2';
+import { RULINGS } from './data/rulings.js?v=20261122-0240-e8afb3d7b2';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261122-0240-e8afb3d7b2';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261122-0240-e8afb3d7b2';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261122-0240-e8afb3d7b2';
+import { joinSiteRoom } from './net/site-room.js?v=20261122-0240-e8afb3d7b2';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261122-0228-d76ebdb3a5';
-import { CARD_POOL } from './data/cardpool.js?v=20261122-0228-d76ebdb3a5';
-import { DECKS } from './data/decks.js?v=20261122-0228-d76ebdb3a5';
-import { SCRIPTS } from './cards/index.js?v=20261122-0228-d76ebdb3a5';
+} from './engine/game.js?v=20261122-0240-e8afb3d7b2';
+import { CARD_POOL } from './data/cardpool.js?v=20261122-0240-e8afb3d7b2';
+import { DECKS } from './data/decks.js?v=20261122-0240-e8afb3d7b2';
+import { SCRIPTS } from './cards/index.js?v=20261122-0240-e8afb3d7b2';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -397,7 +397,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261122-0228-d76ebdb3a5', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261122-0240-e8afb3d7b2', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1389,7 +1389,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261122-0228-d76ebdb3a5';
+const DUEL_BUILD = '20261122-0240-e8afb3d7b2';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -1447,7 +1447,7 @@ const NET_RESUME = 'gx-net-resume', NET_RESUME_MS = 180000;
 const netResumeKey = host => NET_RESUME + (host ? ':host' : ':guest');
 function netRemember(u) {
   if (!u) return;
-  const r = JSON.stringify({ myKey: u.myKey, key: u.key, host: !!u.host, deck: u.deck, mode: u.mode, uid: netUid(), at: Date.now() });
+  const r = JSON.stringify({ myKey: u.myKey, key: u.key, host: !!u.host, deck: u.deck, mode: u.mode, uid: netUid(), at: Date.now(), giveUp: u.giveUp || null });
   try { sessionStorage.setItem(NET_RESUME, r); } catch { /* 覚えられない環境 */ }
   try { localStorage.setItem(netResumeKey(!!u.host), r); } catch { /* 覚えられない環境 */ }
 }
@@ -1458,7 +1458,9 @@ function netForget() {
 const netResumeOk = r => !!r && /^\d{4}$/.test(String(r.host ? r.myKey : r.key)) && typeof r.uid === 'string' && Date.now() - (r.at || 0) < NET_RESUME_MS && (!OPTS.uid || r.uid === OPTS.uid);
 /** 同じタブの読み直し：タブの覚え（自動で戻る）／無ければ null */
 function netSavedTab() {
-  try { const r = JSON.parse(sessionStorage.getItem(NET_RESUME) || 'null'); if (netResumeOk(r) && r.uid === netUid()) return r; } catch { /* */ }
+  let r = null;
+  try { r = JSON.parse(sessionStorage.getItem(NET_RESUME) || 'null'); if (netResumeOk(r) && r.uid === netUid()) return r; } catch { /* */ }
+  if (r && r.giveUp && r.uid === netUid()) { netRecordGiveUp(r); netForget(); return null; } // 降参を送ったまま3分すぎた：負けを書く（ブラウザの覚えも同じものなので消す）
   try { sessionStorage.removeItem(NET_RESUME); } catch { /* */ }
   return null;
 }
@@ -1466,7 +1468,7 @@ function netSavedTab() {
 function netSavedBrowser() {
   const out = [];
   for (const h of [true, false]) {
-    try { const r = JSON.parse(localStorage.getItem(netResumeKey(h)) || 'null'); if (netResumeOk(r)) out.push(r); else localStorage.removeItem(netResumeKey(h)); } catch { /* */ }
+    try { const r = JSON.parse(localStorage.getItem(netResumeKey(h)) || 'null'); if (netResumeOk(r)) out.push(r); else { if (r && r.giveUp && (!OPTS.uid || r.uid === OPTS.uid)) netRecordGiveUp(r); localStorage.removeItem(netResumeKey(h)); } } catch { /* */ }
   }
   return out.sort((x, y) => y.at - x.at);
 }
@@ -1487,7 +1489,7 @@ function netResume(r) {
   if (setupOpen()) closeSetup();
   if ($('#menu') && !$('#menu').hidden) closeMenu();
   openNet();
-  const u = netUi; u.myKey = String(r.myKey); u.key = String(r.key || ''); u.deck = DECKS[r.deck] ? r.deck : u.deck; u.mode = r.mode === 'practice' ? 'practice' : 'official'; u.resuming = true;
+  const u = netUi; u.myKey = String(r.myKey); u.key = String(r.key || ''); u.deck = DECKS[r.deck] ? r.deck : u.deck; u.mode = r.mode === 'practice' ? 'practice' : 'official'; u.resuming = true; u.resumeFrom = r; u.giveUp = r.giveUp || null;
   netConnect(!!r.host);
   // しばらく戻れなかった時：閉じこめないように、言葉を変える（ボタンはずっと出ている）
   setTimeout(() => { if (netUi === u && !netMode() && u.resuming) { u.resumeSlow = true; renderNet(); } }, 12000);
@@ -1558,9 +1560,9 @@ function renderNet() {
       + (!u.host && u.ready ? `<p class="net-q">⏳ ${esc(u.peerName || '親')}さんが始めるのを待っています…</p>` : '');
   }
   if (u.err && !(u.step === 'wait' && u.stopped)) body += `<p class="net-err">${esc(u.err)}</p>`;
-  // 対戦に戻っている間：見出しを変え、上の「やめる」は出さない（やめる道は［やめてCPU戦へ］の1つ。CODE 02:19）
-  const back = u.step === 'wait' && u.resuming && !u.stopped;
-  $('#netBox').innerHTML = `<div class="box-head"><h3>${back ? '📡 対戦に戻っています' : '👥 人と対戦の準備'}</h3>${back ? '' : '<button type="button" class="btn small ghost" data-net="close">やめる</button>'}</div>${body}`;
+  // 対戦に戻っている間・「戻りますか？」の窓：見出しを変え、上の「やめる」は出さない（やめる道は［やめてCPU戦へ］の1つ。CODE 02:19・02:31）
+  const back = u.step === 'wait' && u.resuming && !u.stopped ? '📡 対戦に戻っています' : u.step === 'resumeAsk' && u.saved ? '📡 さっきの対戦の続き' : '';
+  $('#netBox').innerHTML = `<div class="box-head"><h3>${back || '👥 人と対戦の準備'}</h3>${back ? '' : '<button type="button" class="btn small ghost" data-net="close">やめる</button>'}</div>${body}`;
 }
 async function netConnect(host) {
   const u = netUi; if (!u) return;
@@ -1630,7 +1632,8 @@ function netEvent(u, e) {
     history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp]; glowDone.clear(); costShown.clear(); heldAnims = []; trace = []; thinking = null; aceSeen = new Set(); undoUsed = false; resultSent = false;
     netNote(''); render();
     // 読み直して同じ部屋に入り直した時（resumed）：開始の帯は出さず、「つなぎ直しました」を少し出す（MEMEの知らせの形）
-    if (e.resumed) { netNote('<b>📡 つなぎ直しました。続きから再開します</b>'); const nt = net; setTimeout(() => { if (net === nt && $('#netNote') && /つなぎ直しました/.test($('#netNote').textContent)) netNote(''); }, 3000); }
+    if (e.resumed && u.link && u.link.giveUpPending) netNote('<b>🏳 降参しています…</b><span>相手の画面に届くと決着します</span><button type="button" class="btn small ghost" data-net="quit">やめてCPU戦へ</button>'); // 降参を送ったあとに読み直した
+    else if (e.resumed) { netNote('<b>📡 つなぎ直しました。続きから再開します</b>'); const nt = net; setTimeout(() => { if (net === nt && $('#netNote') && /つなぎ直しました/.test($('#netNote').textContent)) netNote(''); }, 3000); }
     else banner(S.turnPlayer === ME() ? 'あなたの先攻' : `${NAME(OPP())}の先攻`, S.turnPlayer === ME() ? 'me' : 'opp', 1100);
   } else if (e.type === 'remote') { if (net) { u.lastSeen = Date.now(); commit(e.state); render(); } }
   else if (e.type === 'end') { netForget(); if (net) netEndNote(e.winner); }
@@ -1643,13 +1646,19 @@ function netEvent(u, e) {
 }
 /** 上の知らせの帯（つながりが切れたかも／終わりの知らせ） */
 function netNote(html) { const el = $('#netNote'); if (!el) return; el.innerHTML = html; el.hidden = !html; }
+/** サイトの戦績（人どうし📊）に渡す中身：勝ち負け・自分と相手の名前とデッキ・LP・ターン・先攻か（公式試合で、サイトの時だけ。ほかは null） */
+function netResultOf(winner) {
+  if (!net || net.mode === 'practice' || !OPTS.onNetResult || !S) return null;
+  const md = DECKS[net.ui && net.ui.deck], od = DECKS[net.ui && net.ui.peerDeck];
+  return { winner, me: ME(), result: winner === 'draw' ? 'draw' : winner === ME() ? 'win' : 'lose', oppName: net.oppName, mode: net.mode, myTheme: md ? themeOf(md) : null, oppTheme: od ? themeOf(od) : null, myLp: S.players[ME()].lp, oppLp: S.players[OPP()].lp, turn: S.turn, first: S.firstPlayer === ME() };
+}
+function netRecord(res) { if (res && OPTS.onNetResult) try { OPTS.onNetResult(res); } catch (err) { console.error(err); } }
+/** 降参を送ったまま、決着を受け取らずに抜けた時（読み直して［やめてCPU戦へ］・3分たった・降参の待ちで［やめてCPU戦へ］）：覚えておいた負けを戦績に書く（💜MIMIの見つけた穴：わざと負けを残さずに抜けられた） */
+function netRecordGiveUp(r) { if (r && r.giveUp) netRecord(r.giveUp); }
 function netEndNote(winner) {
   const rec = net && net.mode === 'practice' ? '📝 練習なので記録しません' : OPTS.onNetResult ? '🏆 公式試合として戦績に記録しました' : '（この画面では戦績に記録しません）';
-  if (net && net.mode !== 'practice' && OPTS.onNetResult && S) {
-    // サイトの戦績（人どうし📊）に渡す中身：勝ち負け・自分と相手の名前とデッキ・LP・ターン・先攻か
-    const md = DECKS[net.ui && net.ui.deck], od = DECKS[net.ui && net.ui.peerDeck];
-    try { OPTS.onNetResult({ winner, me: ME(), result: winner === 'draw' ? 'draw' : winner === ME() ? 'win' : 'lose', oppName: net.oppName, mode: net.mode, myTheme: md ? themeOf(md) : null, oppTheme: od ? themeOf(od) : null, myLp: S.players[ME()].lp, oppLp: S.players[OPP()].lp, turn: S.turn, first: S.firstPlayer === ME() }); } catch (err) { console.error(err); }
-  }
+  netRecord(netResultOf(winner));
+  if (net && net.ui) net.ui.giveUp = null;
   netNote(`<b>${winner === 'draw' ? '引き分け' : winner === ME() ? 'あなたの勝ち！' : 'あなたの負け…'}</b><span>${rec}</span>`
     + '<button type="button" class="btn small primary" data-net="ask">もう一度（同じ相手と）を申し込む</button>'
     + '<button type="button" class="btn small ghost" data-net="quit">やめる</button>'
@@ -1667,6 +1676,7 @@ function netStop(msg, reload) {
   }
 }
 function netQuit() {
+  if (net && net.link && net.link.giveUpPending && net.ui) netRecordGiveUp(net.ui); // 降参を送ったまま、決着を待たずにやめた：負けを書く
   netForget(); // 自分でやめた
   const u = net ? net.ui : netUi;
   if (u) { try { u.peerOff && u.peerOff(); } catch { /* */ } try { u.link && u.link.close(); } catch { /* */ } }
@@ -1686,9 +1696,9 @@ setInterval(() => {
 function netClick(t) {
   const b = t.closest('[data-net]'); if (!b) return false;
   const [k, v] = b.dataset.net.split(':');
-  if (k === 'close') { if (netUi && (netUi.resuming || netUi.step === 'resumeAsk')) netForget(); closeNet(); if (OPTS.menuFirst && !netMode()) openSetup(); return true; }
+  if (k === 'close') { if (netUi && (netUi.resuming || netUi.step === 'resumeAsk')) { netRecordGiveUp(netUi.saved || netUi.resumeFrom); netForget(); } closeNet(); if (OPTS.menuFirst && !netMode()) openSetup(); return true; }
   if (k === 'resumeGo') { const r = netUi && netUi.saved; if (r) { if (!OPTS.uid) try { sessionStorage.setItem('gx-net-uid', r.uid); } catch { /* */ } closeNet(); netResume(r); } return true; }
-  if (k === 'resumeQuit') { netForget(); closeNet(); if (OPTS.menuFirst && !netMode()) openSetup(); return true; }
+  if (k === 'resumeQuit') { netRecordGiveUp(netUi && (netUi.saved || netUi.resumeFrom)); netForget(); closeNet(); if (OPTS.menuFirst && !netMode()) openSetup(); return true; }
   if (k === 'mode') { netUi.mode = v; renderNet(); return true; }
   if (k === 'host') { netConnect(true); return true; }
   if (k === 'invlink') { netInviteLink(); return true; }
@@ -2939,7 +2949,7 @@ function surrender() {
   if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'もう一度押すと降参'; armT = setTimeout(disarm, 5000); return; }
   disarm(); closeMenu();
   // オンライン：子の降参は、親が入れて2台で同じ順番に並んでから決着する（同時に降参しても2台で同じ答え）。待つ間は「降参しています…」
-  if (netMode()) { if (net.link && net.link.send({ type: 'surrender', player: ME() })) { commit(net.link.state); render(); if (net.link.giveUpPending) netNote('<b>🏳 降参しています…</b><span>相手の画面に届くと決着します</span><button type="button" class="btn small ghost" data-net="quit">やめてCPU戦へ</button>'); } return; }
+  if (netMode()) { if (net.link && net.link.send({ type: 'surrender', player: ME() })) { commit(net.link.state); render(); if (net.link.giveUpPending) { net.ui.giveUp = netResultOf(OPP()); netRemember(net.ui); } if (net.link.giveUpPending) netNote('<b>🏳 降参しています…</b><span>相手の画面に届くと決着します</span><button type="button" class="btn small ghost" data-net="quit">やめてCPU戦へ</button>'); } return; }
   if (cpuMode()) { clearTimeout(cpuTimer); history.push(S); commit(applyAction(S, { type: 'surrender', player: 0 })); render(); return; }
   run({ type: 'surrender', player: actorOf(S) });
 }
