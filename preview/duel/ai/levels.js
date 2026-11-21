@@ -4,7 +4,7 @@
 // - 本気：理想のCPUに、考える量を約2倍・読む世界を多くして考えさせる。ロマンは無視して勝つことだけで手を選ぶ（見えないカードは推測のまま。ズルはしない）
 import { cpuDecide, scoreCandidates } from './cpu.js';
 import { idealThink,                                 } from './ideal.js';
-import { actorOf, opp, monstersOf, legalActions, currentStats, battleDamageZero, scriptOf, defOf, couldAttackNextBattle } from '../engine/game.js';
+import { actorOf, opp, monstersOf, legalActions, currentStats, battleDamageZero, scriptOf, defOf, couldAttackNextBattle, fieldCards } from '../engine/game.js';
                                                             
 
                                                   
@@ -41,6 +41,9 @@ export function lethalNow(s           )                {
   const o = opp(me), lp = s.players[o].lp;
   // 相手が戦闘ダメージを受けない状態（チキンレースなど）の時は、攻撃だけではとどめにならない
   if (battleDamageZero(s, o)) return null;
+  // LPの大小などで、攻撃の途中からダメージが0になりうるカード（チキンレース）が表側である時は、攻撃の合計だけでは決めない。
+  // 勝ち筋は ideal.ts のリーサルの総当たり（エンジンをそのまま動かす）に任せる（MIMIの報告 seed 9032：1発目でLPが入れ替わり2発目が0になった）
+  if ([...fieldCards(s, 0), ...fieldCards(s, 1)].some(u => s.cards[u].faceUp && scriptOf(s, u).damageZeroFor)) return null;
   // 攻撃で相手に与えるダメージ（攻撃のダメージが0のモンスターは0）
   const power = (u        ) => (scriptOf(s, u).attackNoDamage ? 0 : currentStats(s, u).atk);
   const acts = legalActions(s);
