@@ -2272,7 +2272,7 @@ function surrender() {
   const b = $('#surrender');
   if (S.winner !== null) { closeMenu(); return; }
   // 押し間違いを防ぐため、2回押して確定する
-  if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'もう一度押すと降参'; armT = setTimeout(disarm, 3000); return; }
+  if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'もう一度押すと降参'; armT = setTimeout(disarm, 5000); return; }
   disarm(); closeMenu();
   if (cpuMode()) { clearTimeout(cpuTimer); history.push(S); commit(applyAction(S, { type: 'surrender', player: 0 })); render(); return; }
   run({ type: 'surrender', player: actorOf(S) });
@@ -2817,6 +2817,8 @@ root.addEventListener('click', e => {
   { const ap = actPick; const zEl = ap && t.closest && t.closest('#board [data-zone]');
     if (ap) { actPick = null; clearZoneTip(); if (zEl && ap.zones.has(zEl.dataset.zone)) { run({ ...ap.a, zone: Number(zEl.dataset.zone.split(':')[2]) }); return; } render(); if (zEl) return; } }
   const actEl = t.closest('[data-act]');
+  // 今はできない操作（薄いボタン）：マスを選ばせてから断るのではなく、押した時にすぐ理由を出す
+  if (actEl && actEl.classList.contains('off')) { let why = ''; try { why = whyIllegal(S, JSON.parse(actEl.dataset.act)) || ''; } catch { /* 理由が分からない */ } toast(why ? `できません：${WHO(why)}` : '今はできません', true); return; }
   if (actEl && cpuMode() && actEl.closest('#detailSheet, #detail')) {
     const a = JSON.parse(actEl.dataset.act);
     const zs = actZones(a);

@@ -16,5 +16,7 @@ export const oppWord = cpu => (cpu ? 'CPU' : '相手');
  * 「P1」「P2」→ 呼び名、「サレンダー」→「降参」（MASTERの決定。エンジンの文と、戦績の「サレンダー」の見分けはそのまま）
  */
 export const whoText = (text, cpu) => String(text ?? '')
+  // CPU対戦の勝ち負けは、ほかの所（帯・結果）と同じ「あなたの勝ち／あなたの負け」に
+  .replace(/P([12])の勝利/g, (m, k) => (cpu ? (k === '1' ? 'あなたの勝ち' : 'あなたの負け') : m))
   .replace(/P([12])(?!\d)/g, (_, n) => playerName(Number(n) - 1, cpu))
   .replace(/サレンダー/g, '降参');
