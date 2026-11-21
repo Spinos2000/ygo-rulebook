@@ -2437,7 +2437,7 @@ function saveSoon() {
   clearTimeout(saveT);
   saveT = setTimeout(() => {
     try {
-      if (placeholder) return;
+      if (placeholder || netMode()) return; // オンライン対戦は保存しない（途中のCPU対戦の保存を上書きしない・消さない）
       if (!S || S.winner !== null) localStorage.removeItem(OPTS.storageKey);
       else localStorage.setItem(OPTS.storageKey, JSON.stringify({ v: SAVE_V, S, trace, mode: $('#mode').value, d0: $('#deck0').value, d1: $('#deck1').value, lv: cpuLevel, undo: undoUsed }));
     } catch { /* 保存できない環境では覚えない */ }
