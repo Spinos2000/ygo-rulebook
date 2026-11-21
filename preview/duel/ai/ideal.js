@@ -2,13 +2,13 @@
 // 1. 見えないカード（相手の手札・伏せカード・デッキ、自分のデッキの順番）を、デッキリストからまだ見えていないカードで埋めた「ありえる世界」を何通りも作る
 // 2. それぞれの世界で、相手も手札・伏せカードを使って最善を尽くす前提で各候補を先読みし、盤面の点数を勝率に直して平均する
 // 3. 勝率が一番高い手を選ぶ。ただし、切り札を出す手・一気に大ダメージを与える手が最善手から10%以内なら、そちら（ロマン）を選ぶ
-import { actorOf, defOf, scriptOf, monstersOf, fieldCards, opp, isOnField, poolDef } from '../engine/game.js?v=20261121-1721-fe605bd1fd';
-import { cloneState } from '../engine/types.js?v=20261121-1721-fe605bd1fd';
+import { actorOf, defOf, scriptOf, monstersOf, fieldCards, opp, isOnField, poolDef } from '../engine/game.js?v=20261121-1732-131c2bace6';
+import { cloneState } from '../engine/types.js?v=20261121-1732-131c2bace6';
                                                                       
-import { scoreCandidates, cpuDecide, evaluate, answerCandidates,                                            } from './cpu.js?v=20261121-1721-fe605bd1fd';
-import { DECK_WEIGHTS } from './deck-weights.js?v=20261121-1721-fe605bd1fd';
-import { DECKS } from '../data/decks.js?v=20261121-1721-fe605bd1fd';
-import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js?v=20261121-1721-fe605bd1fd';
+import { scoreCandidates, cpuDecide, evaluate, answerCandidates,                                            } from './cpu.js?v=20261121-1732-131c2bace6';
+import { DECK_WEIGHTS } from './deck-weights.js?v=20261121-1732-131c2bace6';
+import { DECKS } from '../data/decks.js?v=20261121-1732-131c2bace6';
+import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js?v=20261121-1732-131c2bace6';
 
                                
                            

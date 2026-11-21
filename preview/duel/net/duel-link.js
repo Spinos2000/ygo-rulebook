@@ -4,10 +4,10 @@
 // - 部屋の部品（Room）は、サイトの room().join(name) と同じ形（presence・onPeers・leave）。
 //   本番ではサイトの Firestore の部屋を、試す時は下の「手元の部屋」を渡す
 // - 2台とも全部の情報を持つ作り（MASTERの決定）。相手の手札・伏せカードを画面で見せないのは画面の仕事
-import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261121-1721-fe605bd1fd';
-import { answerCandidates } from '../ai/cpu.js?v=20261121-1721-fe605bd1fd';
-import { CARD_POOL } from '../data/cardpool.js?v=20261121-1721-fe605bd1fd';
-import { DECKS } from '../data/decks.js?v=20261121-1721-fe605bd1fd';
+import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261121-1732-131c2bace6';
+import { answerCandidates } from '../ai/cpu.js?v=20261121-1732-131c2bace6';
+import { CARD_POOL } from '../data/cardpool.js?v=20261121-1732-131c2bace6';
+import { DECKS } from '../data/decks.js?v=20261121-1732-131c2bace6';
                                                                       
 
 /* ===================== 部屋（サイトの room() と同じ形） ===================== */
@@ -67,7 +67,7 @@ export function tabRoom(name        , uid        )       {
 
 /** お試し版・本番を作る時（scripts/build.mjs）に、できあがった .js ぜんぶの指紋をここに書きこむ（手元では 'dev'）。
  *  画面（app.js）にも同じ指紋が書かれるので、卓を開いた時に「app.js の指紋」とこれが同じか比べる（ちがえばページを読み直す） */
-export const BUILD_FP = '20261121-1721-fe605bd1fd';
+export const BUILD_FP = '20261121-1732-131c2bace6';
 
 /* ===================== エンジンの指紋 ===================== */
 /**
@@ -129,7 +129,8 @@ export function engineFingerprint()         {
                                            
 
                        
-                                                                                  
+                                                                     
+                                                                                                    
                                                         
                                                      
                                       
@@ -204,16 +205,29 @@ export class DuelLink {
     if (this.lastBeat && now - this.lastBeat > iv * 2.5) this.lastSeen = now;
     this.lastBeat = now;
     this.doc.at = now;
-    void this.o.room.presence(this.doc);
+    this.write();
     if (this.state && this.lastSeen && now - this.lastSeen > (this.o.awayMs ?? 180000)) {
       this.doc.end = { winner: null, reason: 'away' };
-      void this.o.room.presence(this.doc);
+      this.write();
       this.o.on({ type: 'away' });
       this.stop();
     }
   }
 
-          stop() { this.stopped = true; if (this.beat) { clearInterval(this.beat); this.beat = null; } if (this.timer) { clearTimeout(this.timer); this.timer = null; } }
+  /** 自分の欄を書く。書けなかった時（電波が切れた等）は、3秒後にもう一度書く（欄にはいつも全部の操作が入っているので、書き直せば相手に全部届く） */
+          retry                                       = null;
+          write() {
+    if (this.stopped && !this.doc.end) return;
+    let p                  ;
+    try { p = this.o.room.presence(this.doc); } catch (e) { p = Promise.reject(e); }
+    p.catch(() => {
+      if (this.retry || this.stopped) return;
+      this.retry = setTimeout(() => { this.retry = null; this.write(); }, 3000);
+      (this.retry                                     ).unref?.();
+    });
+  }
+
+          stop() { if (this.retry) { clearTimeout(this.retry); this.retry = null; } this.stopped = true; if (this.beat) { clearInterval(this.beat); this.beat = null; } if (this.timer) { clearTimeout(this.timer); this.timer = null; } }
 
           onPeers(peers        ) {
     if (this.stopped) return;
@@ -229,7 +243,7 @@ export class DuelLink {
       if (mine && mine.app === 'ygo-duel' && mine.v === this.o.version && !mine.end && (mine.start || mine.ops?.length) && fresh(mine)) this.doc = { ...mine, ops: [...(mine.ops ?? [])], j: this.doc.j };
       this.doc.at = Date.now();
       this.lastBeat = Date.now();
-      void this.o.room.presence(this.doc);
+      this.write();
     }
     const other = peers.find(p => !p.isMe && (p.presence                  )?.app === 'ygo-duel');
     if (!other) return;
@@ -238,7 +252,7 @@ export class DuelLink {
     // 前の対戦の残り（もう書かれない欄）は相手として扱わない。時計は使わずに「自分が入った後に、相手の欄が一度でも変わったか」で見分ける
     // （相手の端末の時計がずれていても大丈夫）。初めて変わったのを見たら、自分の欄も書き直して、相手にもこちらがいることを知らせる
     // 相手の合図が新しくなったら、一度だけ返事を書く（相手が、こちらがいると分かるように）
-    if (them.j && them.j !== this.lastJ) { this.lastJ = them.j; this.doc.ack = them.j; this.doc.at = Date.now(); void this.o.room.presence(this.doc); }
+    if (them.j && them.j !== this.lastJ) { this.lastJ = them.j; this.doc.ack = them.j; this.doc.at = Date.now(); this.write(); }
     if (!this.live) {
       // 今そこにいる相手：こちらの合図に返事をくれた、または入った後に欄が変わった
       if (them.ack !== this.doc.j && key === this.initialKey) return;
@@ -259,7 +273,7 @@ export class DuelLink {
       if (this.o.host && !this.doc.start && them.ready) {
         const rnd = this.o.random ?? Math.random;
         this.doc.start = { seed: Math.floor(rnd() * 2 ** 31), first: rnd() < 0.5 ? 0 : 1, decks: [this.o.deck, them.deck], guest: other.uid, round: this.round + 1, mode: this.o.mode ?? 'official' };
-        void this.o.room.presence(this.doc);
+        this.write();
       }
       const st = this.o.host ? this.doc.start : them.start;
       if (!st || (!this.o.host && st.guest !== this.o.uid)) return;
@@ -276,8 +290,8 @@ export class DuelLink {
         else { if (ti >= theirs.length) break; s = applyAction(s, theirs[ti++]); }
       }
       this.state = s; this.applied = ti; this.round = st.round;
-      if (this.doc.round !== st.round) { this.doc.round = st.round; void this.o.room.presence(this.doc); }
-      this.o.on({ type: 'start', state: this.state, seat: this.seat, round: st.round, mode: st.mode });
+      if (this.doc.round !== st.round) { this.doc.round = st.round; this.write(); }
+      this.o.on({ type: 'start', state: this.state, seat: this.seat, round: st.round, mode: st.mode, resumed: mi + ti > 0 });
     }
     // 相手の操作を、まだ入れていない分だけ順に入れる
     const ops = them.round === this.round ? (them.ops ?? []) : [];
@@ -304,7 +318,7 @@ export class DuelLink {
   requestRematch()          {
     if (!this.state || this.state.winner === null || this.stopped) return false;
     this.doc.rematchAsk = this.round;
-    void this.o.room.presence(this.doc);
+    this.write();
     if (this.o.host && this.them?.rematchAsk === this.round) this.rematch();
     return true;
   }
@@ -326,13 +340,13 @@ export class DuelLink {
   get lastSeenAt()         { return this.lastSeen; }
 
   /** 子：［準備OK］を押した */
-  setReady() { this.doc.ready = true; void this.o.room.presence(this.doc); }
+  setReady() { this.doc.ready = true; this.write(); }
 
   /** 親：決着のあと「もう一度（同じ相手と）」。新しい種で、同じデッキ・同じ公式／練習で始め直す */
   rematch()          {
     if (!this.o.host || !this.state || this.state.winner === null || this.stopped) return false;
     this.state = null; this.applied = 0; this.doc.ops = []; delete this.doc.end; delete this.doc.start;
-    void this.o.room.presence(this.doc);
+    this.write();
     return true;
   }
 
@@ -341,19 +355,19 @@ export class DuelLink {
 
           schedule() {
     if (this.timer) return;
-    this.timer = setTimeout(() => { this.timer = null; void this.o.room.presence(this.doc); }, this.o.flushMs ?? 1000);
+    this.timer = setTimeout(() => { this.timer = null; this.write(); }, this.o.flushMs ?? 1000);
   }
 
           finish() {
     if (!this.state || this.doc.end) return;
     this.doc.end = { winner: this.state.winner                             };
     if (this.timer) { clearTimeout(this.timer); this.timer = null; }
-    void this.o.room.presence(this.doc);
+    this.write();
     this.o.on({ type: 'end', winner: this.doc.end.winner });
   }
 
   /** つながり直し：書きかけの操作をすぐ書く（相手の操作は onPeers で最初から読み直される） */
-  flush() { if (this.timer) { clearTimeout(this.timer); this.timer = null; } void this.o.room.presence(this.doc); }
+  flush() { if (this.timer) { clearTimeout(this.timer); this.timer = null; } this.write(); }
 
   close() { this.stop(); this.unsub(); void this.o.room.leave(); }
 }
