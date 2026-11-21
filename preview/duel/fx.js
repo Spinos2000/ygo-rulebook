@@ -491,11 +491,27 @@ export function backImg() {
   return (BACK = o);
 }
 const SUMMON_COLOR = { normal: '#ffe08a', set: '#d9a35a', advance: '#ffd27a', special: '#9fe6ff', flip: '#ffffff', ritual: '#7fb2ff', fusion: '#c9a7ff', god: '#ffc93d' };
-const SUMMON_LAND = { normal: 420, set: 300, advance: 900, special: 1100, flip: 500, ritual: 1800, fusion: 2700, god: 2700, ace: 2300 };
+const SUMMON_LAND = { normal: 420, set: 300, advance: 900, special: 1100, flip: 500, ritual: 1800, fusion: 2700, god: 2700, ace: 2300, partner: 1500 };
 /* エース（2体以上のリリースが必要なモンスター・レベル7以上）：
    暗転と黒帯 → リリースした素材が光になって天へ → 魔法陣と光の柱 → 上空から大きく降臨して着地 → 名前と攻撃力の帯 */
 const ACE_COLOR = { 闇: '#b07cff', 光: '#ffd75a', 地: '#e0b47a', 水: '#6bd0ff', 炎: '#ff7a4a', 風: '#7aff9a' };
 const ACE = { circle: 350, pillar: 900, drop: 1350 };
+/* 切り札の5分類（MASTERのチェック表）：分類ごとに登場の仕方と色を変える。
+   大きい演出＝そのカードが初めて場に出た時。2回目からと、表の無いデッキの予備の判定は、短い演出（光の輪と札）だけ */
+export const ACE_CLS = {
+  god: { label: '神', how: 'god' },
+  roman: { label: 'ロマンエース', how: 'ace', rainbow: true },
+  ace: { label: 'エース', how: 'ace' },
+  partner: { label: '相棒', how: 'partner', c: '#ffb35c' },
+  top: { label: 'トップエース', how: 'ace', c: '#ffd75a' },
+};
+const PARTNER = { gather: 200, rise: 700 };
+/** 色相（度）から #rrggbb（虹色の演出用。15度ごとにまとめて、光の粒の絵を作りすぎない） */
+function hueHex(h) {
+  h = Math.round((((h % 360) + 360) % 360) / 15) * 15;
+  const f = n => { const k = (n + h / 30) % 12, v = .62 - .38 * Math.max(-1, Math.min(k - 3, 9 - k, 1)); return Math.round(v * 255).toString(16).padStart(2, '0'); };
+  return '#' + f(0) + f(8) + f(4);
+}
 /* 融合：素材が渦の中心へ集まる → 渦に巻き込まれて回りながら混ざる → 光って融合モンスターが現れる → 自分のマスへ降りる */
 const FU = { gather: 450, mix: 1750, born: 1950 };
 const FU_COLS = ['#c9a7ff', '#7f77dd', '#ff8ad8', '#6bd0ff', '#ffffff', '#b45cff'];
@@ -542,6 +558,7 @@ function magicCircle(x, cx, cy, R, rot, col, n, lw) {
   x.restore();
 }
 const SUM_MAT = {
+  partner(S, x, w, h, t) { SUM_MAT.ace(S, x, w, h, t); },
   /* エース：属性の色の夜空に、大きな魔法陣がゆっくり回る。墓地からの時は、墓地の側から光の粒が昇る */
   ace(S, x, w, h, t) {
     const c = mloc(S, S.x, S.y), col = S.c, R = Math.min(w, h) * .46 * (.6 + .4 * ease(Math.min(1, t / 900)));
@@ -628,14 +645,19 @@ export function playSummon(root, info) {
     let how = info.how;
     if (!info.faceDown && (info.d.race === '幻神獣族' || info.d.race === '創造神族') && how !== 'set') how = 'god';
     if (info.faceDown) how = how === 'flip' ? 'flip' : 'set';
-    // レベル7以上（＝2体以上のリリースが必要なモンスター）は、エースとして特別な登場にする。儀式・融合・神は専用の演出のまま
-    if (!info.faceDown && ['normal', 'advance', 'special', 'flip'].includes(how) && (info.d.level ?? 0) >= 7) how = 'ace';
+    // 切り札（表で決めた5分類）：初めて出た時は分類ごとの大きい登場。儀式・融合はいつもの演出のあとに名前の帯だけ出す。
+    // 2回目から・予備の判定・裏側の時は、いつもの演出に短い光の輪と札を足すだけ
+    const A = !info.faceDown && info.ace && ACE_CLS[info.ace.cls] ? { ...ACE_CLS[info.ace.cls], ...info.ace } : null;
+    const big = !!(A && A.big && !A.fallback);
+    if (big && ['normal', 'advance', 'special', 'flip'].includes(how) && how !== 'god') how = A.how;
     const fr = info.fromRect;
-    const S = { soul: how === 'ace' && fr ? { x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 } : null, how, c: how === 'ace' ? (ACE_COLOR[info.d.attribute] || '#ffd27a') : SUMMON_COLOR[how] || '#9fe6ff', U, d: info.d, atk: info.atk, def: info.def, pos: info.pos, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height,
+    const S = { soul: (how === 'ace' || how === 'partner') && fr ? { x: fr.left + fr.width / 2, y: fr.top + fr.height / 2 } : null, how, c: A && A.c && how !== 'god' ? A.c : how === 'ace' ? (ACE_COLOR[info.d.attribute] || '#ffd27a') : SUMMON_COLOR[how] || '#9fe6ff', U, d: info.d, atk: info.atk, def: info.def, pos: info.pos, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height,
       img: info.faceDown && how !== 'flip' ? backImg() : cardImg(info.d, info.atk, info.def), parts: [], rings: [], shake: 0, flash: 0, dark: 0, quake: 0, t: 0, last: 0,
       speed: (info.speed || 1) * (window.__fxSlow || 1), L: SUMMON_LAND[how] || 600, hit: false, bolt: null, done: false,
       mats: (info.mats || []).map(m => ({ x: m.rect.left + m.rect.width / 2, y: m.rect.top + m.rect.height / 2, w: m.rect.width, h: m.rect.height, img: cardImg(m.d, m.atk, m.def), a: 1, s: 1 })) };
-    S.end = S.L + (how === 'god' ? 900 : how === 'ace' ? 1100 : how === 'set' ? 250 : 650);
+    S.end = S.L + (how === 'god' ? 900 : how === 'ace' ? 1100 : how === 'partner' ? 1100 : how === 'set' ? 250 : 650);
+    if (A && big) { S.plate = { label: A.label, side: A.side || '' }; S.rainbow = !!A.rainbow; if (how === 'ritual' || how === 'fusion') S.end = Math.max(S.end, S.L + 1100); }
+    if (A && !big) { S.chip = { label: `★${A.label}`, c: A.c || (A.rainbow ? '#ff8ad8' : ACE_COLOR[info.d.attribute] || '#ffd27a') }; S.end = Math.max(S.end, S.L + 750); }
     S.onLand = info.onLand || null; S.landed = false;
     // 融合の渦の中心：召喚するマスと画面の中央の間
     if (how === 'fusion') S.C = { x: (S.x + W / 2) / 2, y: (S.y + H / 2) / 2 };
@@ -663,7 +685,9 @@ function summonTick(S) {
     if (t < 600) for (let i = 0; i < 4; i++) SP(S, { x: m.x + (Math.random() - .5) * m.w, y: m.y + (Math.random() - .5) * m.h, vx: (x - m.x) * .02 + (Math.random() - .5), vy: (y - m.y) * .02 - 1, life: 40, sz: 2.4, c: Math.random() < .5 ? c : '#ffffff', drag: .97 });
   });
   if (k === 'fusion') fusionTick(S);
+  if (S.rainbow) S.c = hueHex(t / 4);
   if (k === 'ace') aceTick(S);
+  if (k === 'partner') partnerTick(S);
   if (k === 'ritual') S.mats.forEach(m => {
     const p = Math.min(1, t / (L * .8)), ang = Math.atan2(m.y - y, m.x - x) + p * 6, d0 = Math.hypot(m.x - x, m.y - y), r = d0 * (1 - easeIn(p));
     m.dx = x + Math.cos(ang) * r; m.dy = y + Math.sin(ang) * r * .7; m.a = 1 - Math.max(0, (p - .7) / .3); m.s = 1 - .5 * p;
@@ -682,8 +706,9 @@ function summonTick(S) {
   if (!S.hit && t >= L) {
     S.hit = true;
     if (S.onLand) { try { S.onLand(); } catch { /* 置けなくても演出は続ける */ } S.onLand = null; }
-    const big = k === 'god' || k === 'ace' ? 1 : k === 'advance' || k === 'ritual' || k === 'fusion' ? .75 : k === 'set' ? .1 : .45;
-    S.flash = big; S.shake = k === 'set' ? 1 : 18 * big;
+    if (S.chip) { S.rings.push({ x, y: y + S.h / 2 - 4, r: S.w * .45, v: 6 * U, a: 1, c: S.chip.c }); S.rings.push({ x, y: y + S.h / 2 - 4, r: S.w * .3, v: 4 * U, a: .8, c: '#ffffff' }); }
+    const big = k === 'god' || k === 'ace' ? 1 : k === 'partner' ? .3 : k === 'advance' || k === 'ritual' || k === 'fusion' ? .75 : k === 'set' ? .1 : .45;
+    S.flash = big; S.shake = k === 'set' ? 1 : k === 'partner' ? 0 : 18 * big;
     S.rings.push({ x, y: y + S.h / 2 - 4, r: S.w * .5, v: k === 'set' ? 2 : (9 * big + 3) * U, a: 1, c: k === 'normal' || k === 'advance' ? '#e8d2a8' : c });
     if (k !== 'set') sburst(S, x, y + S.h / 2 - 6, k === 'normal' ? 36 : 70 * big + 20, k === 'normal' ? ['#d8c3a0', '#bfa27c', '#ffffff'] : [c, '#ffffff'], (k === 'normal' ? 5 : 8 * big + 3) * U, 40, 3, k === 'normal');
     if (k === 'god') { for (let i = 0; i < 3; i++) S.rings.push({ x, y, r: 20 + i * 20, v: (14 - i * 3) * U, a: 1, c: i ? c : '#ffffff' }); sburst(S, x, y, 120, [c, '#fff1b0', '#ffffff'], 11 * U, 60, 3.5); }
@@ -715,6 +740,18 @@ function aceTick(S) {
     sburst(S, x, y, 90, [c, '#ffffff', '#fff1b0'], 11 * U, 55, 3.4);
     S.cracks = []; for (let i = 0; i < 9; i++) { const a = Math.random() * TAU, pts = [[x, y + S.h * .45]]; let px = x, py = y + S.h * .45; for (let j = 0; j < 4; j++) { const aa = a + (Math.random() - .5) * .7; px += Math.cos(aa) * 26 * U; py += Math.sin(aa) * 9 * U; pts.push([px, py]); } S.cracks.push(pts); }
   }
+}
+/* 相棒：ゆれない・あたたかい色。光の粒がゆっくり集まって、カードが光の中から浮かび上がり、そっと降りる */
+function partnerTick(S) {
+  const t = S.t, x = S.x, y = S.y, U = S.U, c = S.c, L = S.L;
+  S.dark = t < L + 500 ? Math.min(.45, t / 600) : S.dark * .9;
+  S.bars = t < L + 600 ? Math.min(1, t / 400) : Math.max(0, 1 - (t - L - 600) / 400);
+  S.mats.forEach(m => { m.a = Math.max(0, 1 - t / 600); });
+  if (t > PARTNER.gather && t < L) for (let q = 0; q < 4; q++) {
+    const a = Math.random() * TAU, d = (120 + Math.random() * 80) * U, px = x + Math.cos(a) * d, py = y + Math.sin(a) * d * .7;
+    SP(S, { x: px, y: py, vx: (x - px) * .028 - Math.sin(a) * 1.2, vy: (y - py) * .028 + Math.cos(a) * .8, life: 44, sz: 2.8, c: q % 2 ? c : '#fff3d6', drag: .985 });
+  }
+  if (S.soul && t < PARTNER.rise) { const p = ease(t / PARTNER.rise); S.soul.cx = lerp(S.soul.x, x, p); S.soul.cy = lerp(S.soul.y, y, p) - Math.sin(p * Math.PI) * 30 * U; }
 }
 function fusionTick(S) {
   const t = S.t, C = S.C, U = S.U, n = Math.max(1, S.mats.length), R0 = 115 * U;
@@ -841,24 +878,41 @@ function summonDraw(S) {
       sImg(S, img, x, lerp(top, y, easeIn(p)), 1.8 - .8 * ease(p), Math.min(1, p * 4));
     }
   }
+  else if (k === 'partner') {
+    if (S.soul && t < PARTNER.rise && S.soul.cx != null) sImg(S, img, S.soul.cx, S.soul.cy, .8, .35);
+    if (t > PARTNER.rise) { const p = Math.min(1, (t - PARTNER.rise) / (L - PARTNER.rise)); ctx.globalCompositeOperation = 'lighter'; glow(x, y, (90 - 30 * p) * U, c, .8 * (1 - p * .5)); ctx.globalCompositeOperation = 'source-over'; sImg(S, img, x, y - 26 * U * (1 - ease(p)), 1.2 - .2 * ease(p), Math.min(1, p * 1.6)); }
+  }
   else if (k === 'god') { if (t > 1700) { const p = Math.min(1, (t - 1700) / (L - 1700)); sImg(S, img, x, y - 220 * (1 - easeIn(p)), 1.6 - .6 * ease(p), Math.min(1, p * 3)); } }
   if (k === 'ace' && S.cracks && t >= L) { ctx.strokeStyle = `rgba(255,255,255,${Math.max(0, .8 - (t - L) / 900)})`; ctx.lineWidth = 2; S.cracks.forEach(pts => { ctx.beginPath(); pts.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]))); ctx.stroke(); }); }
   if (t >= L && t < L + 500 && k !== 'set') { ctx.globalCompositeOperation = 'lighter'; glow(x, y, 130 * U, c, .5 * (1 - (t - L) / 500)); ctx.globalCompositeOperation = 'source-over'; }
   ctx.restore();
   if (S.flash > .01) { ctx.fillStyle = `rgba(255,255,255,${S.flash * .4})`; ctx.fillRect(0, 0, W, H); }
-  if (k === 'ace') {
-    const bh = 40 * S.bars; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
-    if (t > L - 150) {
-      const k2 = Math.min(1, (t - L + 150) / 220), fo = Math.max(0, Math.min(1, (S.end - 250 - t) / 300)), yb = H * .62;
-      ctx.globalAlpha = k2 * fo; ctx.save(); ctx.translate((1 - k2) * -60, 0); ctx.transform(1, 0, -.2, 1, 0, 0);
-      ctx.fillStyle = 'rgba(10,10,14,.88)'; ctx.fillRect(-40, yb - 26, W + 120, 52); ctx.fillStyle = S.c; ctx.fillRect(-40, yb - 26, W + 120, 3); ctx.fillRect(-40, yb + 23, W + 120, 3);
-      ctx.restore(); ctx.textAlign = 'center'; ctx.fillStyle = S.c; ctx.font = '700 11px sans-serif'; ctx.fillText(`★${S.d.level}  ${S.d.attribute || ''}属性  ${S.d.race || ''}`, W / 2, yb - 8);
-      ctx.fillStyle = '#fff'; ctx.font = `700 ${Math.min(22, Math.max(15, W / 22))}px sans-serif`; ctx.fillText(`${S.d.name}　${S.pos === 'def' ? `DEF ${S.def}` : `ATK ${S.atk}`}`, W / 2, yb + 15); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
-    }
+  if (k === 'ace' || k === 'partner') {
+    const bh = 40 * S.bars;
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+  }
+  // 切り札の名前の帯：着地の少し前から、斜めに滑りこむ
+  if (S.plate && t > L - 150) {
+    const k2 = Math.min(1, (t - L + 150) / 220), fo = Math.max(0, Math.min(1, (S.end - 250 - t) / 300));
+    // 盤面の外は切り取られるので、帯と文字は盤面の真ん中にそろえる（PCでは盤面が画面より狭い）
+    const bl = clipR ? clipR.left : 0, bw = clipR ? clipR.width : W, cx = bl + bw / 2, yb = clipR ? clipR.top + clipR.height * .62 : H * .62;
+    ctx.globalAlpha = k2 * fo; ctx.save(); ctx.translate((1 - k2) * -60, 0); ctx.transform(1, 0, -.2, 1, 0, 0);
+    ctx.fillStyle = 'rgba(10,10,14,.88)'; ctx.fillRect(-40, yb - 26, W + 120, 52); ctx.fillStyle = S.c; ctx.fillRect(-40, yb - 26, W + 120, 3); ctx.fillRect(-40, yb + 23, W + 120, 3);
+    ctx.restore(); ctx.textAlign = 'center'; ctx.fillStyle = S.c; ctx.font = '700 11px sans-serif';
+    const head = `${S.plate.side ? `${S.plate.side}の` : ''}${S.plate.label}`, info = S.d.level != null ? `　★${S.d.level} ${S.d.attribute || ''}属性 ${S.d.race || ''}` : '';
+    ctx.fillText(fitText(ctx, `― ${head} ―${info}`, bw - 16), cx, yb - 8);
+    ctx.fillStyle = '#fff'; ctx.font = `700 ${Math.min(22, Math.max(14, bw / 22))}px sans-serif`; ctx.fillText(fitText(ctx, `${S.d.name}　${S.pos === 'def' ? `DEF ${S.def}` : `ATK ${S.atk}`}`, bw - 16), cx, yb + 15); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+  }
+  // 短い演出：着地した後、カードの上に小さい札「★エース」
+  if (S.chip && t >= L) {
+    const p = (t - L) / 750, a = p < .15 ? p / .15 : Math.max(0, 1 - (p - .6) / .4), fs = Math.max(11, Math.min(14, S.w * .17));
+    ctx.font = `700 ${fs}px sans-serif`; const tw = ctx.measureText(S.chip.label).width + 14, bx = x - tw / 2, by = y - S.h / 2 - fs - 12 - 6 * ease(Math.min(1, p * 3));
+    ctx.globalAlpha = a; rr(ctx, bx, by, tw, fs + 8, (fs + 8) / 2); ctx.fillStyle = 'rgba(10,10,14,.85)'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = S.chip.c; ctx.stroke();
+    ctx.fillStyle = S.chip.c; ctx.textAlign = 'center'; ctx.fillText(S.chip.label, x, by + fs + 1); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
   if (k === 'god') {
     const bh = 44 * Math.min(1, t / 400) * (t > S.end - 400 ? Math.max(0, (S.end - t) / 400) : 1);
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
-    if (bh > 20) { ctx.fillStyle = '#fff1b0'; ctx.font = '700 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('― 神 の 降 臨 ―', W / 2, bh - 16); ctx.textAlign = 'left'; }
+    if (bh > 20) { ctx.fillStyle = '#fff1b0'; ctx.font = '700 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(godKind(S.d) ? '― 神 の 降 臨 ―' : '― 降 臨 ―', W / 2, bh - 16); ctx.textAlign = 'left'; }
   }
 }

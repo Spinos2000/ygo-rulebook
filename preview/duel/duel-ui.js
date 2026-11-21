@@ -328,6 +328,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* ロマンの台詞：画面の中央に大きく */
 #speech { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 45; pointer-events: none; text-align: center; width: min(92vw, 620px);
   animation: speechIn 2.8s ease forwards }
+/* 準備画面・メニュー・一覧・振り返りの窓が開いている間は、セリフを窓の上に重ねない */
+.droot:has(.overlay:not([hidden])) #speech { display: none }
 #speech .speech-who { display: inline-block; font-size: .8rem; font-weight: 700; letter-spacing: .08em; color: var(--accent-ink); background: var(--accent); border: 2px solid var(--edge); border-radius: 999px; padding: 2px 12px; margin-bottom: 8px }
 #speech .speech-text { font-family: var(--display); font-weight: 900; font-size: clamp(1.5rem, 6.5vw, 2.6rem); line-height: 1.25; color: #fff; text-wrap: balance;
   text-shadow: 0 0 2px var(--edge), 0 3px 0 var(--edge), 0 0 18px color-mix(in srgb, var(--opp) 70%, transparent), 0 0 36px color-mix(in srgb, var(--accent) 50%, transparent) }
@@ -908,7 +910,7 @@ export const MARKUP = `
   <div class="turn"><span id="turnInfo"></span><ol id="phases" aria-label="フェイズ"></ol></div>
   <div class="topbtns">
     <button class="btn small ghost" id="soundBtn" aria-pressed="true" title="効果音のオン・オフ">音 オン</button>
-    <button class="btn small ghost" id="undo" title="元に戻す（Ctrl+Z）" aria-label="元に戻す"><span aria-hidden="true">↶</span><span class="bl"> 元に戻す</span></button>
+    <button class="btn small ghost" id="undo" title="ひとつ戻す（Ctrl+Z）" aria-label="ひとつ戻す"><span aria-hidden="true">↶</span><span class="bl"> ひとつ戻す</span></button>
     <button class="btn small" id="menuBtn" aria-haspopup="dialog" aria-label="メニュー"><span aria-hidden="true">☰</span><span class="bl"> メニュー</span></button>
     <button class="btn small" id="closeDuel" hidden aria-label="ルールブックに戻る">✕<span class="long"> ルールブックに戻る</span></button>
   </div>
@@ -925,7 +927,7 @@ export const MARKUP = `
     <div class="pstrip me" id="side0"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="meta"></span></div>
     <div class="dock" id="dock">
       <div class="dock-status"><span id="actor"></span><span id="actorHint"></span><span id="oppInfo"></span></div>
-      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できるタイミングで、必ず止めて聞く">✋ 次で止める</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">ログ</button><button class="btn small mini-only" id="undoMini" type="button">↶ ひとつ戻す</button><button class="btn small mini-only end-btn" id="endBtn" type="button" hidden>エンド</button></div>
+      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できるタイミングで、必ず止めて聞く">✋ 次で止める</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">記録</button><button class="btn small mini-only" id="undoMini" type="button">↶ ひとつ戻す</button><button class="btn small mini-only end-btn" id="endBtn" type="button" hidden>エンド</button></div>
       <div class="dock-acts"><div id="phaseBtns"></div><button class="btn primary go" id="goBtn"></button></div>
     </div>
   </main>
@@ -936,7 +938,7 @@ export const MARKUP = `
     </section>
     <section class="panel sheet" id="logSheet">
       <div class="sheet-head"><span></span><button class="btn small ghost" data-close="log">閉じる</button></div>
-      <div class="loghead"><h3>ログ</h3></div><ol id="log"></ol>
+      <div class="loghead"><h3>記録</h3></div><ol id="log"></ol>
     </section>
   </aside>
 </div>
@@ -958,13 +960,13 @@ export const MARKUP = `
     <p class="menu-note" id="menuLevel" hidden></p>
     <label class="check" id="hideOppRow"><input type="checkbox" id="hideOpp"> 手番でない側の手札を伏せる</label>
     <div class="menu-row">
-      <button class="btn primary" id="newDuel">新しいデュエルを始める</button>
+      <button class="btn primary" id="newDuel">新しいデュエル</button>
     </div>
     <div class="menu-row">
       <button class="btn danger" id="surrender">サレンダーする</button>
     </div>
-    <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z で元に戻せます。</p>
-    <p class="menu-note ver">版：20261120-2016</p>
+    <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z でひとつ戻せます。</p>
+    <p class="menu-note ver">版：20261121-0910</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

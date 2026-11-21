@@ -49,6 +49,8 @@ export const ZONES = 5;
                            
                                
                                                                             
+                                                      
+                      
                                
                                                                      
                             
@@ -374,7 +376,10 @@ export function moveCard(s           , uid        , to          , opt          =
   c.summoning = false; c.noAttack = false; c.mods = []; c.summonedHow = null; c.summonedTurn = null; c.attackedList = undefined; c.tributedWith = undefined;
   if (to === 'hand' || to === 'deck' || to === 'extra') c.proper = false;
   // 相手にカード名が知られているか（CPU の推測用）。デッキに戻ると分からなくなり、手札に加えた（ドロー以外）・手札以外からフィールドに出たカードは知られる
+  // ただし裏側のままフィールドから手札に戻ったカード（伏せた魔法・罠、裏側守備のモンスター）は相手に見せていないので、前から知られていた時だけ知られたまま
+  const hiddenBack = to === 'hand' && fromField && !c.faceUp;
   if (to === 'deck' || to === 'extra') c.pub = false;
+  else if (hiddenBack) c.pub = !!c.pub;
   else if (to === 'hand' || (toField && fromZone !== 'hand')) c.pub = true;
   if (toField) {
     c.faceUp = opt.faceUp ?? true;
@@ -481,6 +486,7 @@ export function currentStats(s           , uid        )                         
   const neg = monsterNegated(s, uid);
   const set = neg ? null : sc.statSet?.(s, uid);
   if (set) { atk = set.atk; def = set.def; }
+  if (set && sc.statFixed) return { atk: Math.max(0, atk), def: Math.max(0, def) };
   const add = neg ? null : sc.statAdd?.(s, uid);
   if (add) { atk += add.atk; def += add.def; }
   for (const u of activeCards(s)) { if (u === uid) continue; const a = scriptOf(s, u).aura?.(s, u, uid); if (a) { atk += a.atk; def += a.def; } }
@@ -635,7 +641,11 @@ export function emit(s           , ev            )       {
  * カードを動かす処理（効果・ルールから使う）
  * ===================================================================== */
 function leaveCleanup(s           , befores            , reason        )       {
-  for (const b of befores) scriptOf(s, b.uid).onLeaveField?.(s, b, reason);
+  for (const b of befores) {
+    // サイコ・ショッカーなどで罠の効果が無効になっている間は、罠が場を離れた時の効果（リビングデッドの呼び声の「離れたら破壊」など）も行わない（公式Q&A [6393]）
+    if (POOL[b.code]?.kind === 'trap' && b.zone === 'szone' && b.faceUp && trapsNegated(s)) continue;
+    scriptOf(s, b.uid).onLeaveField?.(s, b, reason);
+  }
   cleanupOrphans(s);
 }
 /** 装備対象を失った装備カード、「そのモンスター」を失ったカードを破壊する */
@@ -1254,6 +1264,9 @@ function buildTriggerChain(s           , trig               )       {
       list = list.filter(x => { const e = (scriptOf(s, x.uid).effects || []).find(f => f.id === x.effect) ; return optAvailable(s, x.uid, e, x.player); });
     }
   }
+  // 誘発効果の発動にも、光と闇の竜は必ずチェーンする（一番上の発動に）
+  const top = s.chain[s.chain.length - 1];
+  if (top && trig.some(t => t.uid === top.uid)) forcedResponses(s, top);
 }
 
 export function ctxOf(s           , self        , player          , link                  )      { return { s, self, player, link }; }
@@ -1444,9 +1457,10 @@ function forcedResponses(s           , link           )       {
     // 同一チェーン上で複数回発動することはない
     const u = allMonsters(s).find(m => m !== top.uid && isFaceUpMonster(s, m) && !monsterNegated(s, m) && scriptOf(s, m).forcedNegate && !s.chain.some(l => l.uid === m && l.effect === scriptOf(s, m).forcedNegate));
     if (u === undefined) return;
-    activateEffect(s, s.cards[u].controller, u, scriptOf(s, u).forcedNegate );
+    const l = activateEffect(s, s.cards[u].controller, u, scriptOf(s, u).forcedNegate );
+    // きっかけになった発動（最初の link）を覚える。2体目以降は、きっかけに直接チェーンしていないので効果は適用されない（公式Q&A [6350]）
+    l.data.trigger = s.chain.indexOf(link);
   }
-  void link;
 }
 /** 対象が処理時もそのまま存在するか */
 export function targetValid(s           , link           , i = 0)          {

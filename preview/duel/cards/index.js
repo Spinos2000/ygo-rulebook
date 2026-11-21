@@ -2222,7 +2222,8 @@ export const SCRIPTS                             = {
     },
     effects: [{
       id: 'e1', label: '相手の表側表示モンスターを全て裏側守備表示にする', type: 'card', ss: 1,
-      resolve: x => { setFaceDown(x.s, monstersOf(x.s, opp(x.player)).filter(u => isFaceUpMonster(x.s, u) && !isToken(x.s, u))); },
+      // 永続魔法なので、処理の時にこのカードが場に無ければ（チェーンしたサイクロンで破壊された等）何もしない（公式Q&A [5385]）
+      resolve: x => { if (!sameCard(x.s, x.self, x.link .serial) || !isOnField(x.s.cards[x.self])) return; setFaceDown(x.s, monstersOf(x.s, opp(x.player)).filter(u => isFaceUpMonster(x.s, u) && !isToken(x.s, u))); },
     }],
   },
   /* 化石発掘 */
@@ -2553,6 +2554,8 @@ export const SCRIPTS                             = {
   '7091': {
     specialSummonOk: () => false,
     tributes: 3,
+    // 攻撃力・守備力は自身の効果で決まり、装備魔法・オシリスなどの上げ下げを受けない（公式Q&A [6526][11913]）
+    statFixed: true,
     // ②：「邪神アバター」以外のフィールドの攻撃力が一番高いモンスターの攻撃力＋100
     statSet: (s, self) => {
       const others = allMonsters(s).filter(u => u !== self && isFaceUpMonster(s, u) && defOf(s, u).name !== '邪神アバター');
@@ -2581,7 +2584,8 @@ export const SCRIPTS                             = {
       resolve: x => {
         const s = x.s, t = x.link .targets[0];
         if (!targetValid(s, x.link ) || !isOnField(s.cards[t])) return;
-        const dark = isMonsterZone(s.cards[t]) && s.cards[t].faceUp && isDark(s, t);
+        // 裏側表示のモンスターも表側で除外されるので、闇属性ならダメージを与える（公式Q&A [7110]）
+        const dark = isMonsterZone(s.cards[t]) && isDark(s, t);
         log(s, `${nameOf(s, t)}を除外`);
         banish(s, [t], 'effect');
         if (dark && s.cards[t].zone === 'banished') effectDamage(s, opp(x.player), 1000);
@@ -2644,6 +2648,9 @@ export const SCRIPTS                             = {
       activate: x => { x.link .data.index = x.s.chain.length - 1; },
       resolve: x => {
         const s = x.s, l = s.chain[x.link .data.index          ];
+        // 2体いる時のチェーン3の竜など、きっかけの発動に直接チェーンしていなければ効果は適用されない（公式Q&A [6350]）
+        const trig = x.link .data.trigger                      ;
+        if (trig !== undefined && trig !== s.chain.length - 2) return;
         if (!l || !isFaceUpMonster(s, x.self) || !sameCard(s, x.self, x.link .serial) || s.battle?.destroyed.includes(x.self)) return;
         if (currentAtk(s, x.self) < 500 || currentDef(s, x.self) < 500) return;
         negateActivation(s, l, false);

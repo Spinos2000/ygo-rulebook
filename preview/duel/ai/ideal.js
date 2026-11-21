@@ -7,6 +7,7 @@ import { cloneState } from '../engine/types.js';
                                                                       
 import { scoreCandidates, cpuDecide, evaluate, answerCandidates,                                            } from './cpu.js';
 import { DECK_WEIGHTS } from './deck-weights.js';
+import { DECKS } from '../data/decks.js';
 import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js';
 
                                
@@ -170,7 +171,21 @@ function romanceOf(before           , after                       , me          
   return null;
 }
 
-                                                                                                                   
+/** その手で、攻撃力0のモンスターが自分のフィールドに表側攻撃表示で新しく出るか（早すぎた埋葬で千眼の邪教神 など。相手の攻撃でそのままダメージを受ける） */
+function zeroAtkOut(before           , after                       , me          )          {
+  if (!after) return false;
+  // 発動した直後（対象を選ぶ途中・チェーンの処理前）なら、速い判断で処理が終わるまで進めてから見る
+  for (let i = 0; i < 20 && after.winner === null && (after.pending || after.chain.length > 0 || after.window.kind !== 'open'); i++) {
+    try { after = applyAction(after, cpuDecide(after, { depth: 0, planSteps: 0 })); } catch { break; }
+  }
+  const was = new Set(monstersOf(before, me).filter(u => before.cards[u].faceUp && before.cards[u].position === 'atk').map(u => `${u}:${before.cards[u].serial}`));
+  return monstersOf(after, me).some(u => {
+    const c = after .cards[u];
+    return c.faceUp && c.position === 'atk' && !was.has(`${u}:${c.serial}`) && currentStats(after , u).atk === 0;
+  });
+}
+
+                                                                                                                                                
 
 /** 理想のCPUの考え（行動と勝率の見積もり） */
 export function idealThink(s           , opt               = {}, deckNames                   = ['', ''])          {
@@ -178,7 +193,9 @@ export function idealThink(s           , opt               = {}, deckNames      
   const rnd = opt.random ?? Math.random;
   const me = actorOf(s);
   const free = !s.pending && s.window.kind === 'open' && s.chain.length === 0 && s.turnPlayer === me;
-  const aces = acesOf(s, me, deckNames[me]);
+  // 切り札：MASTERのチェック表（デッキの aces）があればそれを使い、無いデッキだけ自動判定（src/ai/aces.ts と同じ決め方）
+  const table = (opt.deckCodes ? DECKS[opt.deckCodes[me]] : Object.values(DECKS).find(d => d.name === deckNames[me]))?.aces;
+  const aces = table ? new Set(Object.entries(table).filter(([, k]) => k.length > 0).map(([code]) => code)) : acesOf(s, me, deckNames[me]);
   const dw = (p          )                               => (opt.deckCodes ? DECK_WEIGHTS[opt.deckCodes[p]] : undefined);
   const cpuOpt             = { ...opt.cpu, weights: { ...dw(me), ...opt.cpu?.weights } };
   const wts                                                               = [dw(0), dw(1)];
@@ -200,6 +217,9 @@ export function idealThink(s           , opt               = {}, deckNames      
     const k = keyOf(sc.action);
     const a = acc.get(k) ?? acc.set(k, { action: sc.action, p: 0, n: 0, romance: 0, burst: 0, base }).get(k) ;
     a.p += prob(sc.score + (base ? margin : 0), o.scale); a.n++;
+    // 盤面の点数そのもの（勝率に直すと、負けそうな時はどれも0%になって差が消えるため、その時の比べ直しに使う）
+    a.raw = (a.raw ?? 0) + Math.max(-1e5, Math.min(1e5, sc.score + (base ? margin : 0)));
+    if (zeroAtkOut(world, sc.after, me)) a.zero = (a.zero ?? 0) + 1;
     if (free) {
       const r = romanceOf(world, sc.after, me, aces);
       if (r?.kind === 'ace') { a.romance++; a.ace ??= r.ace; }
@@ -291,6 +311,12 @@ export function idealThink(s           , opt               = {}, deckNames      
   // 勝率がほぼ同じ手（差 tie 未満）からランダムに選ぶ
   const near = list.filter(a => a.rate >= bestRate - (opt.tie ?? 1e-9));
   let pick = near[Math.floor(rnd() * near.length)];
+  // 負けそうな時（最善でも勝率5%未満）は、勝率がほぼ同じ（1%以内）手の中から、盤面の点数が一番良い手を選ぶ。
+  // どの手も0%に見えて適当に選ぶ（攻撃できるのに攻撃しない など）のを防ぎ、最後まで最善を尽くす
+  if (bestRate < 0.05) {
+    const close = list.filter(a => a.rate >= bestRate - 0.01 && a.raw !== undefined && a.n > 0);
+    if (close.length > 1) pick = close.reduce((x, y) => (y.raw  / y.n > x.raw  / x.n ? y : x));
+  }
   // 勝ちがほぼ決まっている時（95%以上）に、見込みがほぼ同じ（2%以内）なら、決着を早める手（攻撃 → バトルフェイズへ）を選ぶ。
   // ターンを終える手ばかり選んで引き延ばさないため（MIMIの報告③）
   if (free && bestRate >= 0.95) {
@@ -305,6 +331,17 @@ export function idealThink(s           , opt               = {}, deckNames      
       const r = rom.reduce((x, y) => (y.rate > x.rate ? y : x));
       pick = r;
       romance = r.romance >= r.burst ? 'ace' : 'burst';
+    }
+  }
+  // 攻撃力0のモンスターを攻撃表示で出す手は、ほかに手が無い時だけ（MASTERの決定）。
+  // ただし、その手が見込みで10%以上はっきり良い時（そのターンに素材にする などの狙いがある時）は残す
+  // 相手の伏せカードで止められる世界もあるので、3割以上の世界で出るなら「出す手」とみなす
+  const zeroish = (a                     ) => (a.zero ?? 0) * 10 >= a.n * 3 && (a.zero ?? 0) > 0;
+  if (zeroish(pick)) {
+    const others = list.filter(a => !zeroish(a));
+    if (others.length) {
+      const alt = others.reduce((x, y) => (y.rate > x.rate ? y : x));
+      if (alt.rate >= pick.rate - 0.1) { pick = alt; romance = null; }
     }
   }
   const alts = [...list].sort((x, y) => y.rate - x.rate).slice(0, 5).map(a => ({ action: a.action, rate: a.rate }));
