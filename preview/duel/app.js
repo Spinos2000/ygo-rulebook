@@ -643,7 +643,12 @@ function deckAces(d) {
   if (!d || !d.code) return [];
   if (aceCache2.has(d.code)) return aceCache2.get(d.code);
   let names = [];
-  try { const st = createGame({ pool: CARD_POOL, decks: [d, d], firstPlayer: 0 }); names = acesNamesOf(st); } catch { /* 分からない */ }
+  // 表（MASTERのチェック表）のあるデッキ：分類の強い順（神→ロマン→エース→相棒→トップ）に全部。多い時は5枚まで出して「ほか○枚」
+  if (d.aces) {
+    const ORDER = ['god', 'roman', 'ace', 'partner', 'top'], rank = ks => Math.min(...ks.map(k => { const i = ORDER.indexOf(k); return i < 0 ? 9 : i; }));
+    const all = Object.entries(d.aces).filter(([, ks]) => ks.length).sort((x, y) => rank(x[1]) - rank(y[1])).map(([code]) => CARD_POOL[code]?.name).filter(Boolean);
+    names = all.length > 5 ? [...all.slice(0, 5), `ほか${all.length - 5}枚`] : all;
+  } else try { const st = createGame({ pool: CARD_POOL, decks: [d, d], firstPlayer: 0 }); names = acesNamesOf(st); } catch { /* 分からない */ }
   aceCache2.set(d.code, names); return names;
 }
 function closeSetup() { $('#setup').hidden = true; SU = null; render(); }
@@ -685,7 +690,7 @@ function renderSetup() {
     const d0 = DECKS[SU.p0], d1 = DECKS[SU.p1];
     const firstTxt = { 0: 'あなたが先攻', 1: 'CPUが先攻', r: 'ランダム（開始の時に決める）' }[SU.first];
     el.innerHTML = `<p class="su-q">この内容でデュエルを始めます</p><div class="su-sum">`
-      + `<div><span>あなた</span><b>${esc(themeOf(d0))}</b><small>${esc(ownerOf(d0))}・${esc(fmtTag(d0))}</small>${(() => { const a = deckAces(d0); return a.length ? `<small>👑 切り札：${esc(a.map(n => `「${n}」`).join('／'))}</small>` : ''; })()}</div>`
+      + `<div><span>あなた</span><b>${esc(themeOf(d0))}</b><small>${esc(ownerOf(d0))}・${esc(fmtTag(d0))}</small>${(() => { const a = deckAces(d0); return a.length ? `<small>👑 切り札：${esc(a.map(n => (/^ほかd+枚$/.test(n) ? n : `「${n}」`)).join('／'))}</small>` : ''; })()}</div>`
       + `<div><span>CPU</span><b>${SU.rand ? '🎲 おまかせ' : esc(themeOf(d1))}</b><small>${SU.rand ? 'あなたと違うデッキからランダム（開始の時に発表）' : `${esc(ownerOf(d1))}・${esc(fmtTag(d1))}`}</small></div>`
       + `<div><span>先攻</span><b>${esc(firstTxt)}</b></div>`
       + `</div><p class="su-note">🤖 CPUは、いつも全力で戦います</p>`
@@ -1167,7 +1172,7 @@ function renderDock() {
     // 発動できるカードは左に並べる（効果が複数あるカードは効果名も出す）
     const acts = activatableList(S, actorOf(S));
     const multi = uid => acts.filter(x => x.uid === uid).length > 1;
-    hint.textContent = acts.length ? '発動するなら左のボタンを押す。しないなら「発動しない」を押す' : '';
+    hint.textContent = acts.length ? '発動するなら、発動するカードのボタンを押す。しないなら「発動しない」を押す' : '';
     btns.innerHTML = acts.slice(0, 3).map(x => {
       const eff = (SCRIPTS[S.cards[x.uid].code]?.effects || []).find(e => e.id === x.effect);
       const label = `「${defOf(S, x.uid).name}」${multi(x.uid) && eff ? `の${eff.label}` : ''}を発動`;
@@ -2126,12 +2131,14 @@ function renderHandHold() {
 }
 /* 自分のターンが始まったら（ドローの後のメインフェイズ1で）手札を開き、相手のターンになったら閉じる（CPU対戦） */
 let trayTurn = null, trayWantOpen = false;
+/** スマホを横にした時：手札は盤面にかぶるので、ふだんはしまっておく（軽くスワイプ・タップですぐ開く） */
+const landscape = () => matchMedia('(max-width: 860px) and (orientation: landscape)').matches;
 function turnTray() {
   if (!narrow() || !S || !cpuMode() || S.winner !== null) return;
   if (S.turn !== trayTurn) {
     trayTurn = S.turn;
     if (isCpu(S.turnPlayer)) { trayWantOpen = false; if (trayOpen) setTray(false); }
-    else trayWantOpen = true;
+    else trayWantOpen = !landscape(); // 横向きでは、自分のターンになっても自動では開かない
   }
   if (trayWantOpen && !isCpu(S.turnPlayer) && S.phase === 'main1' && humanActing() && !S.pending && S.window.kind === 'open') { trayWantOpen = false; if (!trayOpen) setTray(true); }
 }
@@ -2140,7 +2147,7 @@ function autoTray() {
   if (!narrow() || !S) return;
   const needs = S.winner !== null || (humanActing() && (S.pending || (S.window.kind === 'priority' && activatableList(S, actorOf(S)).length)));
   if (needs && trayOpen) setTray(false, true);
-  else if (!needs && !trayOpen && trayAuto && humanActing() && S.turnPlayer === actorOf(S) && S.window.kind !== 'priority') setTray(true);
+  else if (!needs && !trayOpen && trayAuto && !landscape() && humanActing() && S.turnPlayer === actorOf(S) && S.window.kind !== 'priority') setTray(true);
   else setTray(trayOpen, trayAuto);
 }
 /** 指の位置にある手札のカード（重なっている時は上のカード） */
@@ -2918,6 +2925,8 @@ try { const v = localStorage.getItem('gx-duel-chain-mode'); if (v) $('#chainMode
 $('#chainMode').onchange = () => { try { localStorage.setItem('gx-duel-chain-mode', $('#chainMode').value); } catch { /* 保存できない環境 */ } if (S) render(); };
 $('#cpuSpeed').onchange = () => { try { localStorage.setItem('gx-duel-cpu-speed', $('#cpuSpeed').value); } catch { /* 保存できない環境 */ } };
 matchMedia('(max-width: 860px)').addEventListener('change', () => S && render());
+// スマホを横に向けた時は、手札をしまう（縦に戻した時はそのまま。上に払えば開く）
+matchMedia('(max-width: 860px) and (orientation: landscape)').addEventListener('change', e => { if (e.matches && trayOpen) setTray(false); });
 // 画面の幅が変わったら、手札の扇を並べ直す
 if (window.ResizeObserver) { const ro = new ResizeObserver(() => { fanOut($('#hand0')); fanOut($('#hand1')); }); ro.observe($('#hand0')); ro.observe($('#hand1')); }
 }
@@ -2952,6 +2961,7 @@ export function boot(root, opts = {}) {
   wireSheets(root);
   window.addEventListener('resize', () => measureBottom());
   measureBottom();
+  if (landscape()) setTray(false); // 横向きで開いた時は、手札をしまった形から
   const start = data => {
     // 演出のDEMO（demo.html）：2人対戦の形で静かに始める（CPUは動かない・開始の帯もセリフも出さない・保存もしない）
     if (opts.demo) { $('#mode').value = 'hot'; $('#hideOppRow').hidden = false; newDuel(true); return; }

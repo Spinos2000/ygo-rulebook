@@ -976,13 +976,13 @@ export const MARKUP = `
       <label for="deck0">あなたのデッキ<select id="deck0"></select><span class="deck-fmt" id="deckFmt0"></span></label>
       <label for="deck1">相手のデッキ<select id="deck1"></select><span class="deck-fmt" id="deckFmt1"></span></label>
       <label for="mode">対戦相手<select id="mode"><option value="cpu">CPU</option><option value="hot">2人で交互に操作</option></select></label>
+      <label class="check" id="hideOppRow"><input type="checkbox" id="hideOpp"> 2人対戦で、自分の番でない人の手札を隠す</label>
       <label for="first">先攻<select id="first"><option value="0">あなた</option><option value="1">相手</option><option value="r">ランダム</option></select></label>
       <label for="chainMode">発動するか聞くタイミング<select id="chainMode"><option value="auto">相手が動いた時だけ（おすすめ）</option><option value="always">自分が発動できる時はいつも</option><option value="never">聞かない（✋を押した時だけ）</option></select></label>
       <label for="fxMode">攻撃の演出<select id="fxMode"><option value="full">あり</option><option value="short">短く（2倍速）</option><option value="none">なし</option></select></label>
       <label for="cpuSpeed">CPUの速さ<select id="cpuSpeed"><option value="slow">ゆっくり</option><option value="normal" selected>ふつう</option><option value="fast">はやい</option></select></label>
     </div>
     <p class="menu-note" id="menuLevel" hidden></p>
-    <label class="check" id="hideOppRow"><input type="checkbox" id="hideOpp"> 2人対戦で、自分の番でない人の手札を隠す</label>
     <div class="menu-row">
       <button class="btn primary" id="newDuel">新しいデュエル</button>
     </div>
@@ -990,7 +990,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-1202</p>
+    <p class="menu-note ver">版：20261121-1219</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
