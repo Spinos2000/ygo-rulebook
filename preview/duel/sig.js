@@ -4,6 +4,8 @@ import { cardImg, backImg } from './fx.js';
 const TAU = Math.PI * 2;
 /** カード名の帯を、消え始める前にそのまま見せる長さ（ミリ秒。MASTER：読み終われるだけ長く） */
 const TITLE_HOLD = 1600;
+/** 文字は、見せ終わったら速く消す（そのあとで画面がゆっくり消える） */
+const TITLE_OUT = 250;
 
 /* ---------- どのカードにどの演出を使うか ---------- */
 const SIG = {
@@ -122,7 +124,7 @@ export function playSignature(root, info) {
       if (S.done) return;
       tick(S, now); maskToBoard(); veilOutside(S.dark > .01 ? `rgba(0,0,0,${S.dark * .65})` : null); drawMat(S);
       // カード名の帯が読み終われるまでは終わらない。最後の0.5秒で画面全体をだんだん消す
-      const end = S.title ? Math.max(S.end, S.title.t + 160 + TITLE_HOLD + 700) : S.end, left = end - S.t;
+      const end = S.title ? Math.max(S.end, S.title.t + 160 + TITLE_HOLD + TITLE_OUT + 1000) : S.end, left = end - S.t;
       cv.style.opacity = left < 1000 ? String(Math.max(0, left / 1000)) : '';
       if (S.t > end) { cv.style.opacity = ''; S.done = true; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); cv.style.display = 'none'; if (S.mat) S.mat.ctx.clearRect(0, 0, S.mat.w, S.mat.h); resolve(); return; }
       requestAnimationFrame(step);
@@ -1144,7 +1146,7 @@ function draw(S) {
   if (S.flash > .01) { ctx.fillStyle = `rgba(${S.flashC},${S.flash * .5})`; ctx.fillRect(0, 0, W, H); }
   // カード名の帯
   if (S.title) {
-    const T = S.title, k = Math.min(1, (t - T.t) / 160), fo = Math.max(0, Math.min(1, (T.t + 160 + TITLE_HOLD + 700 - t) / 700)), y = B.cy, bh = Math.max(34, 40 * U), fs = Math.min(26, Math.max(16, 21 * U));
+    const T = S.title, k = Math.min(1, (t - T.t) / 160), fo = Math.max(0, Math.min(1, (T.t + 160 + TITLE_HOLD + TITLE_OUT - t) / TITLE_OUT)), y = B.cy, bh = Math.max(34, 40 * U), fs = Math.min(26, Math.max(16, 21 * U));
     ctx.globalAlpha = k * fo; ctx.save(); ctx.translate((1 - k) * 40, 0); ctx.transform(1, 0, -.18, 1, 0, 0);
     ctx.fillStyle = 'rgba(10,10,14,.9)'; ctx.fillRect(-60, y - bh / 2, W + 200, bh);
     if (T.rb) { const g = ctx.createLinearGradient(0, 0, W, 0); for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, hsl(i * 60, 62, 1)); ctx.fillStyle = g; } else ctx.fillStyle = T.col;

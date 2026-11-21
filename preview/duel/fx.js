@@ -524,6 +524,10 @@ const ACE_TONE = { 闇: { c: '#9a74ff', tone: 'abyss' }, 光: { c: '#ffe7a0', to
 const PARTNER = { beam: 500, turn: 350, turnEnd: 900 };
 /** 文字の帯・札を、消え始める前にそのまま見せる長さ（ミリ秒） */
 const PLATE_HOLD = 1600;
+/** 文字は、見せ終わったら速く消す（そのあとで画面と演出がゆっくり消える。MASTER：文字までゆっくり消えると違和感） */
+const TEXT_OUT = 250;
+/** 文字の消え方：textEnd の TEXT_OUT 前から速く消えて、textEnd で0 */
+const textFade = (S, t) => Math.max(0, Math.min(1, (S.textEnd - t) / TEXT_OUT));
 /* 融合：素材が渦の中心へ集まる → 渦に巻き込まれて回りながら混ざる → 光って融合モンスターが現れる → 自分のマスへ降りる */
 const FU = { gather: 450, mix: 1750, born: 1950 };
 const FU_COLS = ['#c9a7ff', '#7f77dd', '#ff8ad8', '#6bd0ff', '#ffffff', '#b45cff'];
@@ -681,7 +685,7 @@ export function playSummon(root, info) {
       const cfg = ACE_CLS[A.cls];
       if (how === 'ace' || how === 'partner' || how === 'god') {
         S.fx = cfg.fx; if (cfg.L) S.L = cfg.L; S.end = S.L + cfg.tail;
-        S.plateAt = S.L - 450; // カードが降りきる少し前に帯を出す
+        S.plateAt = S.L - 700; // カードが降りてくる途中で、早めに帯を出す
         S.tone = how === 'partner' || godKind(info.d) ? '' : ACE_TONE[info.d.attribute]?.tone || '';
         S.T = { circle: S.L * .15, pillar: S.L * .4, drop: S.L * .6 };
       }
@@ -694,8 +698,9 @@ export function playSummon(root, info) {
     // 終わり方：いきなり明るくせず、最後に画面全体（暗さ・光の粒・帯）をだんだん消していく。切り札は少し長めに
     S.fade = A ? 1400 : 500; if (A && !S.fx) S.end += 400;
     // 帯・札（文字）は、出てから1.5秒以上そのまま見せて、そのあと0.8秒でゆっくり消す（MASTER：読み終われるだけ長く）
-    if (S.plate) { if (S.plateAt == null) S.plateAt = S.L - 150; S.end = Math.max(S.end, S.plateAt + 220 + PLATE_HOLD + S.fade); }
-    if (S.chip) S.end = Math.max(S.end, S.L + 150 + PLATE_HOLD + S.fade);
+    // 文字（帯・札）：早めに出す → 1.6秒そのまま → 0.25秒で速く消す → そのあと画面と演出が S.fade かけてゆっくり消える
+    if (S.plate) { if (S.plateAt == null) S.plateAt = S.L - 400; S.textEnd = S.plateAt + 220 + PLATE_HOLD + TEXT_OUT; S.end = Math.max(S.end, S.textEnd + S.fade); }
+    if (S.chip) { S.chipAt = S.L - 200; S.textEnd = S.chipAt + 150 + PLATE_HOLD + TEXT_OUT; S.end = Math.max(S.end, S.textEnd + S.fade); }
     S.safe = info.safe || null;
     sumMatStart(S, root, info.mat);
     cv.style.display = 'block'; cv.style.opacity = '';
@@ -965,8 +970,8 @@ function summonDraw(S) {
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
   }
   // 切り札の名前の帯：着地の少し前から、斜めに滑りこむ
-  if (S.plate && t > S.plateAt) {
-    const k2 = Math.min(1, (t - S.plateAt) / 220), fo = 1; // 消え方は、画面全体がだんだん消えるのに任せる（帯だけ先に消えて読めなくならないように）
+  if (S.plate && t > S.plateAt && t < S.textEnd) {
+    const k2 = Math.min(1, (t - S.plateAt) / 220), fo = textFade(S, t);
     // 盤面の外は切り取られるので、帯と文字は盤面の真ん中にそろえる（PCでは盤面が画面より狭い）
     const bl = clipR ? clipR.left : 0, bw = clipR ? clipR.width : W, cx = bl + bw / 2, yb = plateY(S);
     ctx.globalAlpha = k2 * fo; ctx.save(); ctx.translate((1 - k2) * -60, 0); ctx.transform(1, 0, -.2, 1, 0, 0);
@@ -982,9 +987,9 @@ function summonDraw(S) {
     ctx.fillStyle = '#fff'; ctx.fillText(fitText(ctx, line, bw - 16), cx, yb + 15); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
   // 短い演出：着地した後、カードの上に小さい札「★エース」
-  if (S.chip && t >= L) {
-    const a = Math.min(1, (t - L) / 150), fs = Math.max(12, Math.min(15, S.w * .18));
-    ctx.font = `700 ${fs}px sans-serif`; const tw = ctx.measureText(S.chip.label).width + 14, bx = x - tw / 2, by = y - S.h / 2 - fs - 12 - 6 * ease(Math.min(1, (t - L) / 250));
+  if (S.chip && t >= S.chipAt && t < S.textEnd) {
+    const a = Math.min(1, (t - S.chipAt) / 150) * textFade(S, t), fs = Math.max(12, Math.min(15, S.w * .18));
+    ctx.font = `700 ${fs}px sans-serif`; const tw = ctx.measureText(S.chip.label).width + 14, bx = x - tw / 2, by = y - S.h / 2 - fs - 12 - 6 * ease(Math.min(1, (t - S.chipAt) / 250));
     ctx.globalAlpha = a; rr(ctx, bx, by, tw, fs + 8, (fs + 8) / 2); ctx.fillStyle = 'rgba(10,10,14,.85)'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = S.chip.c; ctx.stroke();
     ctx.fillStyle = S.chip.c; ctx.textAlign = 'center'; ctx.fillText(S.chip.label, x, by + fs + 1); ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   }
