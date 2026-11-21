@@ -837,6 +837,11 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #board .zone.zone-pick { outline: 3px dashed var(--accent); outline-offset: -3px; box-shadow: 0 0 16px 4px color-mix(in srgb, var(--accent) 60%, transparent); animation: zonePick 1s ease-in-out infinite; cursor: pointer }
 @keyframes zonePick { 0%, 100% { filter: brightness(1) } 50% { filter: brightness(1.35) } }
 .zone-tip { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 96px); transform: translateX(-50%); z-index: 36; background: rgba(10,14,20,.88); color: #fff; font-weight: 800; font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--accent); white-space: normal; max-width: calc(100vw - 24px); width: max-content; text-align: center; display: grid; gap: 1px; pointer-events: none }
+/* No.19：盤面の上で直接選ぶカード（光る・選んだら色が変わる） */
+#board .fp-on { outline: 3px dashed var(--accent); outline-offset: 2px; box-shadow: 0 0 14px 4px color-mix(in srgb, var(--accent) 60%, transparent); animation: zonePick 1s ease-in-out infinite; cursor: pointer }
+#board .fp-sel { outline: 3px solid var(--me); outline-offset: 2px; box-shadow: 0 0 16px 5px color-mix(in srgb, var(--me) 70%, transparent) }
+.zone-tip .fp-btns { display: flex; gap: 8px; justify-content: center; margin-top: 6px }
+.zone-tip .fp-btns .btn { min-height: 36px; pointer-events: auto }
 .zone-tip b { font-size: 14px } .zone-tip small { font-size: 11px; font-weight: 600; opacity: .85; overflow-wrap: anywhere }
 .mill-layer { position: fixed; inset: 0; z-index: 30; background: rgba(6,14,10,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; pointer-events: none }
 .mill-head { display: grid; justify-items: center; gap: 2px; color: #fff; text-align: center }
@@ -1082,7 +1087,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-2102</p>
+    <p class="menu-note ver">版：20261121-2106</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

@@ -4,10 +4,10 @@
 // - 部屋の部品（Room）は、サイトの room().join(name) と同じ形（presence・onPeers・leave）。
 //   本番ではサイトの Firestore の部屋を、試す時は下の「手元の部屋」を渡す
 // - 2台とも全部の情報を持つ作り（MASTERの決定）。相手の手札・伏せカードを画面で見せないのは画面の仕事
-import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261121-2102-b76a493524';
-import { answerCandidates } from '../ai/cpu.js?v=20261121-2102-b76a493524';
-import { CARD_POOL } from '../data/cardpool.js?v=20261121-2102-b76a493524';
-import { DECKS } from '../data/decks.js?v=20261121-2102-b76a493524';
+import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261121-2106-6d2b18141d';
+import { answerCandidates } from '../ai/cpu.js?v=20261121-2106-6d2b18141d';
+import { CARD_POOL } from '../data/cardpool.js?v=20261121-2106-6d2b18141d';
+import { DECKS } from '../data/decks.js?v=20261121-2106-6d2b18141d';
                                                                       
 
 /* ===================== 部屋（サイトの room() と同じ形） ===================== */
@@ -67,7 +67,7 @@ export function tabRoom(name        , uid        )       {
 
 /** お試し版・本番を作る時（scripts/build.mjs）に、できあがった .js ぜんぶの指紋をここに書きこむ（手元では 'dev'）。
  *  画面（app.js）にも同じ指紋が書かれるので、卓を開いた時に「app.js の指紋」とこれが同じか比べる（ちがえばページを読み直す） */
-export const BUILD_FP = '20261121-2102-b76a493524';
+export const BUILD_FP = '20261121-2106-6d2b18141d';
 
 /* ===================== エンジンの指紋 ===================== */
 /**
@@ -144,7 +144,7 @@ export function engineFingerprint()         {
                                                              
                             
                                                      
-                     
+                                          
 
                               
              
@@ -214,9 +214,9 @@ export class DuelLink {
     // 先攻・後攻を決める人が、選ばないまま「いなくなった」と同じ時間（3分）たった：その対戦は始めずに終わる（記録しない）
     const waitingPick = this.o.chooseFirst && this.toldChooser === this.round + 1 && (!this.state || this.state.winner !== null);
     if (waitingPick && this.chooserAt && now - this.chooserAt > (this.o.awayMs ?? 180000)) {
-      this.doc.end = { winner: null, reason: 'away' }; this.doc.round = this.round;
+      this.doc.end = { winner: null, reason: 'nochoose' }; this.doc.round = this.round;
       this.write();
-      this.o.on({ type: 'away' });
+      this.o.on({ type: 'away', reason: 'nochoose' });
       this.stop();
       return;
     }
@@ -261,7 +261,7 @@ export class DuelLink {
       const mine = peers.find(p => p.isMe)?.presence                       ;
       // ただし、古い欄（いなくなったと決まる時間より前に書かれたもの）は前の対戦の残りなので引きつがない
       const fresh = (d          ) => !!d && Date.now() - (d.at ?? 0) < (this.o.awayMs ?? 180000);
-      if (mine && mine.app === 'ygo-duel' && mine.v === this.o.version && mine.end?.reason !== 'away' && (mine.start || mine.ops?.length) && fresh(mine)) this.doc = { ...mine, ops: [...(mine.ops ?? [])], j: this.doc.j };
+      if (mine && mine.app === 'ygo-duel' && mine.v === this.o.version && mine.end?.reason !== 'away' && mine.end?.reason !== 'nochoose' && (mine.start || mine.ops?.length) && fresh(mine)) this.doc = { ...mine, ops: [...(mine.ops ?? [])], j: this.doc.j };
       this.doc.at = Date.now();
       this.lastBeat = Date.now();
       this.write();
@@ -284,6 +284,8 @@ export class DuelLink {
     if (key !== this.seenKey || !this.lastSeen) { this.seenKey = key; this.lastSeen = Date.now(); }
     // 相手が「いなくなった」と決めた印は、今の対戦のものだけ信じる（前の対戦の印が残っていても、次の対戦は止めない）
     if (them.end?.reason === 'away' && this.state && them.round === this.round) { this.o.on({ type: 'away' }); this.stop(); return; }
+    // 先攻・後攻を選ばないまま3分（相手の側が先に気づいた時）
+    if (them.end?.reason === 'nochoose' && this.o.chooseFirst && this.toldChooser === this.round + 1 && them.round === this.round) { this.o.on({ type: 'away', reason: 'nochoose' }); this.stop(); return; }
     if (them.v !== this.o.version || (them.fp && them.fp !== this.doc.fp) || (them.b && them.b !== this.doc.b)) { this.o.on({ type: 'version', mine: this.o.version, theirs: them.v }); return; }
     // 先攻・後攻を決める人の知らせ（子）：親が次の回の決める人を書いたら、1回だけ知らせる
     if (!this.o.host && this.o.chooseFirst && them.pick && them.pick.round === this.round + 1 && this.toldChooser !== them.pick.round) {

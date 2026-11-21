@@ -55,12 +55,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   <div id="demoList"></div>
 </section>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261121-2102-b76a493524';
-import { playSummon } from './fx.js?v=20261121-2102-b76a493524';
-import { play, unlock } from './sound.js?v=20261121-2102-b76a493524';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-2102-b76a493524';
-import { createGame, legalActions } from './engine/game.js?v=20261121-2102-b76a493524';
-import { answerCandidates } from './ai/cpu.js?v=20261121-2102-b76a493524';
+import { mountDuel } from './embed.js?v=20261121-2106-6d2b18141d';
+import { playSummon } from './fx.js?v=20261121-2106-6d2b18141d';
+import { play, unlock } from './sound.js?v=20261121-2106-6d2b18141d';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-2106-6d2b18141d';
+import { createGame, legalActions } from './engine/game.js?v=20261121-2106-6d2b18141d';
+import { answerCandidates } from './ai/cpu.js?v=20261121-2106-6d2b18141d';
 
 const host = document.getElementById('duel-host');
 mountDuel(host, { demo: true });
@@ -149,13 +149,14 @@ list.addEventListener('click', async e => {
 /* ---------- 順番の確かめ（No.7）：場面を作って、本物の対戦と同じ流れで発動まで進める ----------
  * 発動の演出 → チェーンの効果 → 結果の移動（墓地へ）の順に見えるかを、直す前と直した後で同じボタンで比べる。
  * 「自分が発動」＝下の人（P1）、「相手が発動」＝上の人（P2。CPU側と同じ見え方） */
-const C = { bomber: '7094', dmagic: '5752', bm: '4041', skilled: '5649', mirror: '4887', torrent: '5114', thunder: '5544', hole: '4342', vortex: '5217', pit: '5400', witch: '4580', a: '5503', b: '5504', c: '6471', d: '7193' };
+const C = { valley: '5533', reborn: '4842', bomber: '7094', dmagic: '5752', bm: '4041', skilled: '5649', mirror: '4887', torrent: '5114', thunder: '5544', hole: '4342', vortex: '5217', pit: '5400', witch: '4580', a: '5503', b: '5504', c: '6471', d: '7193' };
 const SCENES = [
   ['ミラーフォース', '攻撃された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.mirror] }, mons: { [1 - p]: [C.a, C.b, C.c] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', a => a.type === 'attack', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.mirror] })],
   ['ミラーフォース（ウィッチ）', 'ウィッチの効果で選び待ち（No.7）', p => ({ tp: 1 - p, set: { [p]: [C.mirror] }, mons: { [1 - p]: [C.witch, C.b, C.c] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', (a, S) => a.type === 'attack' && S.cards[a.attacker].code !== C.witch, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.mirror] })],
   ['奈落の落とし穴', '専用演出なしの罠', p => ({ tp: 1 - p, set: { [p]: [C.pit] }, mons: { [1 - p]: [C.a] }, hand: { [1 - p]: [C.b] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.pit] })],
   ['ディメンション・マジック', '処理でリリースして特殊召喚（見張りNo.）', p => ({ tp: p, hand: { [p]: [C.dmagic, C.bm] }, mons: { [p]: [C.skilled], [1 - p]: [C.b] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.dmagic] })],
   ['ボマー・ドラゴン', '戦闘で破壊→墓地で発動して相手を破壊', p => ({ tp: 1 - p, mons: { [p]: [C.bomber], [1 - p]: [C.b] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', (a, S) => a.type === 'attack' && a.target !== null] })],
+  ['死者蘇生（ネクロバレー）', '発動できて、処理で無効（No.10）', p => ({ tp: p, hand: { [p]: [C.reborn] }, field: { [1 - p]: C.valley }, gy: { [p]: [C.b] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.reborn] })],
   ['激流葬', '召喚された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.torrent] }, mons: { [1 - p]: [C.a, C.b] }, hand: { [1 - p]: [C.c] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.torrent] })],
   ['サンダー・ブレイク', '手札を1枚捨てて発動', p => ({ tp: p, set: { [p]: [C.thunder] }, hand: { [p]: [C.a] }, mons: { [1 - p]: [C.b, C.c] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.thunder] })],
   ['ブラック・ホール', '場のモンスターを全部破壊', p => ({ tp: p, hand: { [p]: [C.hole] }, mons: { [p]: [C.a], [1 - p]: [C.b, C.c, C.d] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.hole] })],
@@ -163,7 +164,7 @@ const SCENES = [
 ];
 /** 場面の盤面を作る：決まったカードを手札・場に置き、3ターン目の tp のメインフェイズ1から始める */
 function sceneState(sc) {
-  const need = p => [...(sc.set?.[p] || []), ...(sc.hand?.[p] || []), ...(sc.mons?.[p] || [])];
+  const need = p => [...(sc.set?.[p] || []), ...(sc.hand?.[p] || []), ...(sc.mons?.[p] || []), ...(sc.field?.[p] ? [sc.field[p]] : []), ...(sc.gy?.[p] || [])];
   const fill = Array(20).fill(C.a);
   const s = createGame({ pool: CARD_POOL, decks: [0, 1].map(p => ({ main: [...fill, ...need(p)], extra: [] })), seed: 7, firstPlayer: sc.tp, shuffle: false });
   for (const p of [0, 1]) { const P = s.players[p]; for (const u of P.hand) Object.assign(s.cards[u], { zone: 'deck', faceUp: false }); P.deck.push(...P.hand); P.hand = []; P.normalSummonUsed = false; }
@@ -173,6 +174,8 @@ function sceneState(sc) {
     (sc.mons?.[p] || []).forEach((code, i) => { const u = take(p, code); P.mzone[i] = u; Object.assign(s.cards[u], { zone: 'mzone', index: i, faceUp: true, position: 'atk', controller: p, enteredTurn: 1, summonedTurn: 1 }); });
     (sc.set?.[p] || []).forEach((code, i) => { const u = take(p, code); P.szone[i] = u; Object.assign(s.cards[u], { zone: 'szone', index: i, faceUp: false, position: null, controller: p, enteredTurn: 1 }); });
     (sc.hand?.[p] || []).forEach(code => { const u = take(p, code); P.hand.push(u); Object.assign(s.cards[u], { zone: 'hand', index: P.hand.length - 1, faceUp: false }); });
+    if (sc.field?.[p]) { const u = take(p, sc.field[p]); P.fzone = u; Object.assign(s.cards[u], { zone: 'fzone', index: 0, faceUp: true, controller: p, enteredTurn: 1 }); }
+    (sc.gy?.[p] || []).forEach(code => { const u = take(p, code); P.gy.push(u); Object.assign(s.cards[u], { zone: 'gy', index: P.gy.length - 1, faceUp: true }); });
     P.deck.forEach((u, i) => { s.cards[u].index = i; });
   }
   Object.assign(s, { turn: 3, turnPlayer: sc.tp, phase: 'main1', window: { kind: 'open', respondDue: false }, chain: [], pending: null, battle: null });

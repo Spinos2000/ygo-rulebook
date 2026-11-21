@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-2102-b76a493524';
-import { fullThink } from './ai/levels.js?v=20261121-2102-b76a493524';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-2102-b76a493524';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-2102-b76a493524';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-2102-b76a493524';
-import { playSignature, sigKey } from './sig.js?v=20261121-2102-b76a493524';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-2102-b76a493524';
-import { firstEntrance } from './aces.js?v=20261121-2102-b76a493524';
-import { RULINGS } from './data/rulings.js?v=20261121-2102-b76a493524';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-2102-b76a493524';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-2102-b76a493524';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-2102-b76a493524';
-import { joinSiteRoom } from './net/site-room.js?v=20261121-2102-b76a493524';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-2106-6d2b18141d';
+import { fullThink } from './ai/levels.js?v=20261121-2106-6d2b18141d';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-2106-6d2b18141d';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-2106-6d2b18141d';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-2106-6d2b18141d';
+import { playSignature, sigKey } from './sig.js?v=20261121-2106-6d2b18141d';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-2106-6d2b18141d';
+import { firstEntrance } from './aces.js?v=20261121-2106-6d2b18141d';
+import { RULINGS } from './data/rulings.js?v=20261121-2106-6d2b18141d';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-2106-6d2b18141d';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-2106-6d2b18141d';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-2106-6d2b18141d';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-2106-6d2b18141d';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261121-2102-b76a493524';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-2102-b76a493524';
-import { DECKS } from './data/decks.js?v=20261121-2102-b76a493524';
-import { SCRIPTS } from './cards/index.js?v=20261121-2102-b76a493524';
+} from './engine/game.js?v=20261121-2106-6d2b18141d';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-2106-6d2b18141d';
+import { DECKS } from './data/decks.js?v=20261121-2106-6d2b18141d';
+import { SCRIPTS } from './cards/index.js?v=20261121-2106-6d2b18141d';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -130,6 +130,8 @@ function commit(next) {
   if (prev) queueBattleFx(prev, next);
   if (prev) queueMoves(prev, next);
   if (prev) { narrate(prev, next); phaseCue(prev, next); }
+  // No.10：ネクロバレーで効果が無効になった時は、帯で理由を出す（発動はできて、処理の時に墓地のカードへ及ぶ部分だけ無効。公式Q&A [10691]）。演出を切っていても出す
+  if (prev) for (const x of (next.anim || []).filter(a => a.seq > (prev.animSeq ?? 0))) if (x.kind === 'negate' && x.by != null && next.cards[x.uid] && next.cards[x.by]) toast(`「${defOf(next, x.uid).name}」の効果は、「${defOf(next, x.by).name}」の効果で無効になりました（墓地のカードには効果が及びません）`);
 }
 
 /* ---------- 攻撃の演出：演出の間は画面の更新とCPUの手番を止め、終わったら続ける ---------- */
@@ -391,7 +393,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261121-2102-b76a493524', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-2106-6d2b18141d', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1354,7 +1356,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261121-2102-b76a493524';
+const DUEL_BUILD = '20261121-2106-6d2b18141d';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -2186,8 +2188,6 @@ function queueMoves(prev, next) {
     added.forEach(u => skip.add(u));
   }
   const negs = new Set(fresh.filter(x => x.kind === 'negate').map(x => x.uid));
-  // No.10：ネクロバレーで効果が無効になった時は、帯で理由を出す（発動はできて、処理の時に墓地のカードへ及ぶ部分だけ無効。公式Q&A [10691]）
-  for (const x of fresh) if (x.kind === 'negate' && x.by != null && next.cards[x.uid] && next.cards[x.by]) toast(`「${defOf(next, x.uid).name}」の効果は、「${defOf(next, x.by).name}」の効果で無効になりました（墓地のカードには効果が及びません）`);
   const destroys = new Set(fresh.filter(x => x.kind === 'destroy').map(x => x.uid));
   const moves = [];
   for (const k of Object.keys(next.cards)) {
@@ -2504,7 +2504,14 @@ function actZones(a) {
   return null;
 }
 /** マス選びの案内と光るマスを、すぐ消す（マスを押した時。演出の間も残らないように） */
-function clearZoneTip() { ROOT.querySelectorAll('#board .zone-pick').forEach(el => el.classList.remove('zone-pick')); const t = $('.zone-tip'); if (t) t.remove(); }
+/** 場のカードを選ぶ選択なら、その選択（盤面の上で直接選ぶ。No.19）。候補に手札・墓地などがまざる時は、今までどおり窓の一覧 */
+function fieldPick() {
+  if (!S || !S.pending || isRemote(S.pending.request.player)) return null;
+  const r = S.pending.request;
+  if (r.kind !== 'cards' || !r.options.length || isDeckPick(r)) return null;
+  return r.options.every(u => S.cards[u] && ['mzone', 'emz', 'szone', 'fzone'].includes(S.cards[u].zone) && ROOT.querySelector(`#board [data-uid="${u}"]`)) ? r : null;
+}
+function clearZoneTip() { ROOT.querySelectorAll('#board .zone-pick, #board .fp-on, #board .fp-sel').forEach(el => el.classList.remove('zone-pick', 'fp-on', 'fp-sel')); const t = $('.zone-tip'); if (t) t.remove(); }
 /** マス選びの案内を、盤面のすぐ上（LPの箱にかぶらない所）に出す */
 function placeTip(tip) { const b = $('#board'); if (!b) return; const r = b.getBoundingClientRect(); tip.style.top = Math.max(8, r.top + 6) + 'px'; }
 function renderZonePick() {
@@ -2516,6 +2523,17 @@ function renderZonePick() {
     tip.innerHTML = `<b>置くマスを押してください</b><small>「${esc(defOf(S, actPick.a.card).name)}」　ほかを押すとやめる</small>`; placeTip(tip);
     return;
   }
+  ROOT.querySelectorAll('#board .fp-on, #board .fp-sel').forEach(el => el.classList.remove('fp-on', 'fp-sel'));
+  const fp = fxSoon() || fxN > 0 ? null : fieldPick();
+  if (fp) {
+    for (const x of fp.options) { const el = ROOT.querySelector(`#board [data-uid="${x}"]`); if (el) el.classList.add(pick.includes(x) ? 'fp-sel' : 'fp-on'); }
+    if (!tip) { tip = document.createElement('div'); tip.className = 'zone-tip'; $('.droot').appendChild(tip); }
+    const n = fp.min === fp.max ? `${fp.min}枚` : `${fp.min}〜${fp.max}枚`, ok = pick.length >= fp.min && pick.length <= fp.max;
+    tip.innerHTML = `<b>${esc(WHO(fp.prompt))}</b><small>光っているカードを押して選ぶ（${n}）${fp.max > 1 ? `・選んだ数 ${pick.length}` : ''}</small>`
+      + (fp.max > 1 || fp.min === 0 ? `<span class="fp-btns">${fp.min === 0 ? '<button type="button" class="btn small" data-fp="skip">選ばない</button>' : ''}${fp.max > 1 ? `<button type="button" class="btn small primary" data-fp="ok"${ok ? '' : ' disabled'}>決定</button>` : ''}</span>` : '');
+    placeTip(tip);
+    return;
+  }
   const zp = fxSoon() || fxN > 0 ? null : zonePick();
   if (!zp) { if (tip) tip.remove(); return; }
   for (const k of zp.map.keys()) { const el = ROOT.querySelector(`#board [data-zone="${k}"]`); if (el) el.classList.add('zone-pick'); }
@@ -2523,7 +2541,7 @@ function renderZonePick() {
   tip.innerHTML = `<b>出すマスを押してください</b><small>「${esc(zp.r.prompt.replace(ZONE_Q, '').replace(/^「|」$/g, ''))}」</small>`; placeTip(tip);
 }
 function renderSheets(duringFx = false) {
-  const humanChoice = S.pending && !isRemote(S.pending.request.player) && !zonePick();
+  const humanChoice = S.pending && !isRemote(S.pending.request.player) && !zonePick() && !fieldPick();
   const detailOpen = !duringFx && narrow() && ((humanChoice && !peek && !fan) || (sheet === 'detail' && selected !== null));
   const logOpen = !duringFx && narrow() && sheet === 'log' && !detailOpen;
   $('#detailSheet').classList.toggle('open', detailOpen);
@@ -3356,6 +3374,8 @@ root.addEventListener('click', e => {
   }
   const ansEl = t.closest('[data-ans]');
   if (ansEl) { sheet = null; selected = null; run({ type: 'answer', value: JSON.parse(ansEl.dataset.ans) }); return; }
+  { const fb = t.closest('[data-fp]'); const fp = fb && fieldPick();
+    if (fp) { const chosen = fb.dataset.fp === 'ok' ? pick.slice() : []; pick = []; clearZoneTip(); (chosen.length ? lockOn(chosen, fp.prompt) : Promise.resolve()).then(() => run({ type: 'answer', value: chosen })); return; } }
   const optEl = t.closest('[data-opt]');
   if (optEl) { togglePick(Number(optEl.dataset.opt)); return; }
   if (t.closest('#confirmPick')) {
@@ -3378,7 +3398,11 @@ root.addEventListener('click', e => {
   if (cardEl) {
     const u = Number(cardEl.dataset.uid);
     // 選択中なら、盤面のカードを押しても選べる
-    if (S.pending && S.pending.request.kind === 'cards' && S.pending.request.options.includes(u) && !isRemote(S.pending.request.player)) { togglePick(u); return; }
+    if (S.pending && S.pending.request.kind === 'cards' && S.pending.request.options.includes(u) && !isRemote(S.pending.request.player)) {
+      const fp = fieldPick();
+      if (fp && fp.max === 1) { const prompt = fp.prompt; pick = []; clearZoneTip(); lockOn([u], prompt).then(() => run({ type: 'answer', value: [u] })); return; }
+      togglePick(u); if (fp) renderZonePick(); return;
+    }
     // スマホの自分の手札：1回押すと飛び出して光る（選ぶ）、もう一度押すと戻る。効果は長押しで見る
     if (narrow() && cardEl.closest('#hand0')) { handTap(u); return; }
     selected = u; sheet = 'detail';

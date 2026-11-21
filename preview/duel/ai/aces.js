@@ -3,8 +3,8 @@
 // - 1枚に付いている分類ぜんぶ（kinds）と、MASTERの順（god→roman→ace→partner→top）で一番強い1つ（main）を返す
 // - 表の無いデッキだけ、前からの自動判定（acesOf）を予備にする（fallback: true）
 // - 見る人（viewer）から見えないカード（相手の手札・デッキ・裏側のカード）には何も返さない（中身がばれないように）
-import { DECKS,                            } from '../data/decks.js?v=20261121-2102-b76a493524';
-import { acesOf } from './ideal.js?v=20261121-2102-b76a493524';
+import { DECKS,                            } from '../data/decks.js?v=20261121-2106-6d2b18141d';
+import { acesOf } from './ideal.js?v=20261121-2106-6d2b18141d';
                                                               
 
                         
