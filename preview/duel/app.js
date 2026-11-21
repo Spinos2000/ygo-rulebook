@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-2118-dc08c158a7';
-import { fullThink } from './ai/levels.js?v=20261121-2118-dc08c158a7';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-2118-dc08c158a7';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-2118-dc08c158a7';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-2118-dc08c158a7';
-import { playSignature, sigKey } from './sig.js?v=20261121-2118-dc08c158a7';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-2118-dc08c158a7';
-import { firstEntrance } from './aces.js?v=20261121-2118-dc08c158a7';
-import { RULINGS } from './data/rulings.js?v=20261121-2118-dc08c158a7';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-2118-dc08c158a7';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-2118-dc08c158a7';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-2118-dc08c158a7';
-import { joinSiteRoom } from './net/site-room.js?v=20261121-2118-dc08c158a7';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-2130-759d7a1558';
+import { fullThink } from './ai/levels.js?v=20261121-2130-759d7a1558';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-2130-759d7a1558';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-2130-759d7a1558';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-2130-759d7a1558';
+import { playSignature, sigKey } from './sig.js?v=20261121-2130-759d7a1558';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-2130-759d7a1558';
+import { firstEntrance } from './aces.js?v=20261121-2130-759d7a1558';
+import { RULINGS } from './data/rulings.js?v=20261121-2130-759d7a1558';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-2130-759d7a1558';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-2130-759d7a1558';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-2130-759d7a1558';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-2130-759d7a1558';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261121-2118-dc08c158a7';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-2118-dc08c158a7';
-import { DECKS } from './data/decks.js?v=20261121-2118-dc08c158a7';
-import { SCRIPTS } from './cards/index.js?v=20261121-2118-dc08c158a7';
+} from './engine/game.js?v=20261121-2130-759d7a1558';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-2130-759d7a1558';
+import { DECKS } from './data/decks.js?v=20261121-2130-759d7a1558';
+import { SCRIPTS } from './cards/index.js?v=20261121-2130-759d7a1558';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -167,7 +167,9 @@ function queueBattleFx(prev, next) {
   // 効果の処理の途中で選ぶこと（死者蘇生の表示形式など）がある間は、カードの演出を待たせ、選び終わってから召喚の演出と続けて流す
   // 待たせるのは、いま処理中で選び待ちになっている最後の1つだけ。それより前に処理が終わったカード（ミラーフォースなど）の演出は、その場で先に流す
   // （No.7：ミラーフォースのあと黒き森のウィッチで選び待ちになり、ミラーフォースの演出が出る前にモンスターが墓地へ飛んでいた）
-  if (next.pending) { const last = fresh.filter(x => x.kind === 'resolve').pop(); if (last) { heldAnims.push(last); fresh = fresh.filter(x => x !== last); } }
+  // 待たせるのは、その選び待ちが「まだ処理中のカード」のものの時だけ（チェーンに残っている＝処理の途中）。
+  // 処理が終わってチェーンから外れたカード（チェーンした神の宣告など）の演出は、あとの別の選び待ち（墓守の審神者の効果など）で待たせない（MIMIの見張り）
+  if (next.pending) { const last = fresh.filter(x => x.kind === 'resolve').pop(); if (last && (next.chain || []).some(l => l.uid === last.uid)) { heldAnims.push(last); fresh = fresh.filter(x => x !== last); } }
   else if (heldAnims.length) { fresh = [...heldAnims, ...fresh]; heldAnims = []; }
   // 召喚（通常・アドバンス・反転・決まった手順の特殊召喚）は、カードを場に置いた時にすぐ召喚の演出をする。
   // 召喚が成功した時（相手の応答の後）に、もう一度演出してカードが2回出てくるように見えないようにする
@@ -395,7 +397,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261121-2118-dc08c158a7', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-2130-759d7a1558', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1378,7 +1380,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261121-2118-dc08c158a7';
+const DUEL_BUILD = '20261121-2130-759d7a1558';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');

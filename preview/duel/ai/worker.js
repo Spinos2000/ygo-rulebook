@@ -1,7 +1,7 @@
 // 理想のCPUを画面とは別の場所（Web Worker）で考えさせる。考えている間も画面が固まらない
-import { setPool } from '../engine/game.js?v=20261121-2118-dc08c158a7';
-import { CARD_POOL } from '../data/cardpool.js?v=20261121-2118-dc08c158a7';
-import { fullThink,               } from './levels.js?v=20261121-2118-dc08c158a7';
+import { setPool } from '../engine/game.js?v=20261121-2130-759d7a1558';
+import { CARD_POOL } from '../data/cardpool.js?v=20261121-2130-759d7a1558';
+import { fullThink,               } from './levels.js?v=20261121-2130-759d7a1558';
                                                     
 
 setPool(CARD_POOL);

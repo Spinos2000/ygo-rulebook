@@ -880,6 +880,18 @@ body.rt.has-sub .totop{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .stepnav button b{font-family:var(--display);font-size:14px}
 @media (prefers-reduced-motion: reduce){.hit-flash{transition:none}}
 
+/* ===== 先攻・後攻を決める人のルーレット（No.16 の転用） ===== */
+.pick-fx{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:rgba(12,18,32,.72);padding:16px}
+.pick-fx[hidden]{display:none}
+.pk-box{width:min(420px,100%);background:var(--surface);border:3px solid var(--edge);border-radius:16px;box-shadow:5px 5px 0 var(--edge);padding:18px;display:grid;gap:10px;text-align:center}
+.pk-q{margin:0;font-family:var(--display);font-weight:900;font-size:17px}
+.pk-roul{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pk-roul span{display:grid;place-items:center;min-height:58px;border-radius:12px;border:2px solid var(--line);background:var(--surface2);font-family:var(--display);font-weight:900;font-size:18px;color:var(--muted);overflow-wrap:anywhere;padding:4px}
+.pk-roul span.on{border-color:var(--edge);background:var(--ra);color:var(--edge);transform:scale(1.04)}
+.pk-roul.done span.on{box-shadow:0 0 0 3px var(--ra),3px 3px 0 var(--edge)}
+.pk-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pk-btns button{min-height:52px;font-size:17px}
+.pk-wait{margin:0;font-weight:700;color:var(--muted)}
 /* ===== 先攻・後攻の抽選（全画面の演出） ===== */
 .fx-first{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px 16px calc(24px + env(safe-area-inset-bottom,0px));overflow:hidden;color:#fff;text-align:center;
   background:radial-gradient(circle at 50% 42%,#4a7fcc 0%,#2f4f8f 45%,#1b2440 100%);perspective:1100px;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -3902,8 +3914,9 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   function pushPresence(lk,la){
     if(!sub)return Promise.resolve();
     if(lk!=null){lastLk=lk;lastLa=la;}
-    var p={app:'ygo',v:3,role:role,name:str(myName(),20),theme:str(myThemeNow(),30),phase:myPhase(),hb:hb,seq:seq,lk:lastLk,la:lastLa};
-    if(role==='host'){p.set=setNow();p.page=S2.page;if(S2.start)p.start=S2.start;}
+    var p={app:'ygo',v:4,role:role,name:str(myName(),20),theme:str(myThemeNow(),30),phase:myPhase(),hb:hb,seq:seq,lk:lastLk,la:lastLa};
+    if(role==='host'){p.set=setNow();p.page=S2.page;if(S2.start)p.start=S2.start;if(S2.pick)p.pick=S2.pick;}
+    if(S2.choice)p.choice=S2.choice; /* 決める人が選んだ先攻・後攻（自分から見て） */
     if(D&&D.phase==='result'&&D.gid)p.rs={gid:D.gid,r:res||null};else if(S2.lastRes)p.rs=S2.lastRes;
     if(D){p.rec=D.rec!==false;p.lp=D.lp;p.T=D.T;p.tv=D.tv||0;p.aceT=D.aceT||null;p.gid=D.gid||null;
       if(D.ctr&&D.ctr.length)p.ctr=D.ctr.filter(function(c){return c.own!=='op';}).slice(0,12).map(function(c){return {k:c.k,n:String(c.n||'').slice(0,30),v:Number(c.v)||0,max:Number(c.max)||0,w:String(c.when||''),od:!!c.oppDraw,au:!!c.auto,up:String(c.up||'')};});
@@ -3920,7 +3933,11 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     cf:pr.cf&&typeof pr.cf==='object'?{T:Number(pr.cf.T)||0,l:Array.isArray(pr.cf.l)?pr.cf.l.slice(0,6).map(function(x){return str(x,80);}):[]}:null,cfT:Number(pr.cfT)||0,
     set:pr.set&&typeof pr.set==='object'?{rec:pr.set.rec!==false,fmt:pr.set.fmt==='bo3'?'bo3':'bo1',m:pr.set.m&&typeof pr.set.m==='object'?{id:str(pr.set.m.id,30),g:num(pr.set.m.g)||1,w:num(pr.set.m.w)||0,l:num(pr.set.m.l)||0,d:num(pr.set.m.d)||0}:null}:null,
     rec:pr.rec!==false,rs:pr.rs&&typeof pr.rs==='object'&&pr.rs.gid?{gid:str(pr.rs.gid,20),r:/^(win|lose|draw)$/.test(pr.rs.r||'')?pr.rs.r:null}:null,
-    page:str(pr.page,8),start:pr.start&&typeof pr.start==='object'&&pr.start.id?{id:str(pr.start.id,20),first:!!pr.start.first}:null};}
+    page:str(pr.page,8),start:pr.start&&typeof pr.start==='object'&&pr.start.id?{id:str(pr.start.id,20),first:!!pr.start.first,chosen:!!pr.start.chosen}:null,
+    v:Number(pr.v)||0,pick:pr.pick&&typeof pr.pick==='object'&&pr.pick.id?{id:str(pr.pick.id,20),chooser:pr.pick.chooser==='guest'?'guest':'host'}:null,
+    choice:pr.choice&&typeof pr.choice==='object'&&pr.choice.id?{id:str(pr.choice.id,20),first:!!pr.choice.first}:null};}
+  /* 親：子が選んだ先攻・後攻が届いたら、その結果で始める（子の「先攻」は、親から見て後攻） */
+  function hostPickSync(){if(role!=='host'||!opp||!S2.pick||S2.pick.chooser!=='guest'||!opp.choice||opp.choice.id!==S2.pick.id||S2.pickDone===S2.pick.id)return;S2.pickDone=S2.pick.id;pickFxNote(opp.name+'さんが'+(opp.choice.first?'先攻':'後攻')+'を選びました');if(S2.pickGo)S2.pickGo(!opp.choice.first);}
   function onPeers(ch){
     var others=ch.peers.filter(function(p){return !p.isMe&&p.presence&&p.presence.app==='ygo'&&p.presence.v>=3;});
     /* 親は子だけ、子は親だけを相手にする */
@@ -3933,6 +3950,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     if(!opp&&had&&!D){setLinkSt('相手との接続が切れました。','err');if(role==='guest'){S2.page='link';startHosting().then(function(){setLinkSt('親との接続が切れました。もう一度つないでください。','err');});}else if(role==='host'&&S2.page!=='link'&&S2.page!=='inv'){S2.page='link';renderSetup();}}
     if(opp){
       if(role==='guest')childSync();
+      if(role==='host')hostPickSync(); /* 子が先攻・後攻を選んだら始める（No.16 の転用） */
       if(D&&role==='guest'&&opp.gid&&opp.gid===D.gid&&(D.rec!==false)!==opp.rec){D.rec=opp.rec;saveD();}
       if(D&&D.phase==='result'&&!views.result.hidden)renderRes();
       if(D&&D.phase==='play'&&opp.gid&&opp.gid===D.gid){
@@ -3958,7 +3976,8 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   /* 子：親が決めた内容を受け取る。スタートが来たら同時に始める */
   function childSync(){
     if(!opp||opp.role!=='host')return;
-    if(opp.start&&opp.start.id!==S2.lastStartId&&!D&&S2.page==='wait'&&opp.phase==='play'){
+    if(opp.pick&&opp.pick.id!==S2.seenPick&&!D&&S2.page==='wait'){S2.seenPick=opp.pick.id;var pk=opp.pick;pickFx(pk.chooser==='guest',opp.name,function(myFirst){S2.choice={id:pk.id,first:myFirst};pushPresence();});}
+    if(opp.start&&opp.start.id!==S2.lastStartId&&!D&&S2.page==='wait'&&opp.phase==='play'){pickFxClose();
       var st=opp.start;startGame(!st.first,opp.set||{rec:true,fmt:'bo1'},st);}
   }
   /* キー（親として待つ） */
@@ -4127,11 +4146,11 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   /* ---------- 先攻・後攻：全画面の豪華な演出 ---------- */
   var fxT=null,fxAfter=null;
   function firstFx(first,from,cb,after){var fx=$('fx-first'),card=$('fx-card'),stars=$('fx-stars');fxAfter=after||null;if(!fx){if(cb)cb();closeFx();return;}
-    clearTimeout(fxT);fx.hidden=false;fx.className='fx-first spin';$('fx-top').textContent='先攻・後攻 抽選！';$('fx-res').textContent='';$('fx-sub').textContent='';
+    clearTimeout(fxT);fx.hidden=false;fx.className='fx-first spin';$('fx-top').textContent=from==='chosen'?'先攻・後攻 決定！':'先攻・後攻 抽選！';$('fx-res').textContent='';$('fx-sub').textContent='';
     stars.innerHTML='';for(var i=0;i<26;i++){var st=document.createElement('i'),a=Math.random()*Math.PI*2,d=110+Math.random()*170;st.textContent=['★','✦','⚡','✨'][i%4];
       st.style.setProperty('--x',Math.cos(a)*d+'px');st.style.setProperty('--y',Math.sin(a)*d+'px');st.style.setProperty('--r',(Math.random()*360-180)+'deg');st.style.setProperty('--sz',(16+Math.random()*20)+'px');st.style.setProperty('--d',(Math.random()*.15)+'s');st.style.color=i%3?'#f6d77c':'#fff';stars.appendChild(st);}
     document.dispatchEvent(new CustomEvent('ygo:roll',{detail:{first:first}}));
-    var T=reduce?250:2300,end=(reduce?0:6*360)+(first?0:180);
+    var T=reduce||from==='chosen'?250:2300,end=(reduce||from==='chosen'?0:6*360)+(first?0:180);
     if(card.animate&&!reduce){card.getAnimations&&card.getAnimations().forEach(function(a){a.cancel();});card.animate([{transform:'rotateY(0deg) scale(.55)'},{transform:'rotateY('+Math.round(end*.72)+'deg) scale(1.08)',offset:.68},{transform:'rotateY('+end+'deg) scale(1)'}],{duration:T,easing:'cubic-bezier(.25,.6,.25,1)',fill:'forwards'});}
     else card.style.transform='rotateY('+(first?0:180)+'deg)';
     setTimeout(function(){fx.classList.remove('spin');fx.classList.add('reveal',first?'is-first':'is-second');
@@ -4140,6 +4159,22 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       if(cb)cb();fxT=setTimeout(closeFx,reduce?2200:3200);},T);}
   function closeFx(){clearTimeout(fxT);var fx=$('fx-first');if(fx)fx.hidden=true;var a=fxAfter;fxAfter=null;if(a)a();}
   if($('fx-first'))$('fx-first').addEventListener('click',function(){if(this.classList.contains('reveal'))closeFx();});
+
+  /* ---------- 先攻・後攻を決める人のルーレット（No.16 の転用）。me：自分が選ぶ。solo：1台で2人（相手もこのスマホで選ぶ） ---------- */
+  var pkT=null;
+  function escH(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function pickFxEl(){var x=$('pick-fx');if(x)return x;x=el('div','pick-fx');x.id='pick-fx';x.setAttribute('role','dialog');x.setAttribute('aria-modal','true');x.setAttribute('aria-label','先攻・後攻を決める人');x.hidden=true;document.body.appendChild(x);return x;}
+  function pickFx(me,oppName,onPick,solo){
+    var x=pickFxEl();clearTimeout(pkT);x.hidden=false;var on=me?'me':'op',lit='me',k=0,gaps=reduce?[]:[90,90,100,110,120,140,160,190,230,280,340];
+    function draw(done){x.innerHTML='<div class="pk-box"><p class="pk-q">先攻・後攻を決める人は…</p><div class="pk-roul'+(done?' done':'')+'"><span class="'+(lit==='me'?'on':'')+'">あなた</span><span class="'+(lit==='op'?'on':'')+'">'+escH(oppName)+'</span></div><div class="pk-act"></div></div>';}
+    function step(){if(k<gaps.length){lit=lit==='me'?'op':'me';draw(false);pkT=setTimeout(step,gaps[k++]);return;}
+      lit=on;draw(true);var act=x.querySelector('.pk-act');
+      if(me||solo){var who=me?'あなた':escH(oppName);act.innerHTML='<p class="pk-q">'+who+'が選びます</p><div class="pk-btns"><button type="button" class="primary" data-pk="1">⚔️ '+(me?'':'相手が')+'先攻</button><button type="button" class="primary" data-pk="0">🛡️ '+(me?'':'相手が')+'後攻</button></div>';
+        act.querySelectorAll('[data-pk]').forEach(function(bt){bt.addEventListener('click',function(){var f=bt.dataset.pk==='1',myFirst=me?f:!f;act.innerHTML='<p class="pk-wait">⏳ '+(me?'':'相手が')+(f?'先攻':'後攻')+'を選びました。始まります…</p>';onPick(myFirst);});});}
+      else act.innerHTML='<p class="pk-wait">⏳ '+escH(oppName)+'さんが先攻・後攻を選んでいます…</p>';}
+    draw(false);step();}
+  function pickFxNote(t){var a=$('pick-fx')&&$('pick-fx').querySelector('.pk-act');if(a)a.innerHTML='<p class="pk-wait">⏳ '+escH(t)+'。始まります…</p>';}
+  function pickFxClose(){clearTimeout(pkT);var x=$('pick-fx');if(x)x.hidden=true;}
 
   /* ---------- デュエル開始（親がスタート → 2台で同時に抽選） ---------- */
   function startGame(first,set,st){
@@ -4154,14 +4189,22 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     D={v:2,rec:set.rec!==false,phase:'play',lp:START,T:1,tv:0,TAt:Date.now(),first:!!first,firstAt:Date.now(),myTheme:th,myName:pf.name||'あなた',hist:[],aceT:null,linkKey:sub?linkKey:null,role:sub?role:null,gid:st?st.id:null,startedAt:Date.now(),zeroAsked:false,oppZeroAsked:false,oppSnap:null,fmt:set.fmt==='bo3'?'bo3':'bo1',match:MM?{id:MM.id,g:MM.g}:null,ctr:[],ctrT:1,cf:null,cfT:0};
     if(opp){lastOppSeq=opp.seq;lastOppLp=opp.lp;}
     saveD();amount=0;mode='dmg';show('play');renderAll();pushPresence();acquireWake();
-    firstFx(!!first,'sync',null,function(){document.dispatchEvent(new Event('ygo:start'));});
+    firstFx(!!first,(st?st.chosen:S2.soloChosen)?'chosen':'sync',null,function(){document.dispatchEvent(new Event('ygo:start'));});
   }
   $('duel-start').addEventListener('click',function(){
     var b=this;if(b.disabled||D)return;
     if(S2.fmt==='bo3'&&!getM()&&role==='host'&&opp)setM({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),g:1,w:0,l:0,d:0,theme:S2.theme,startedAt:Date.now()});
     var parent=role==='host'&&!!opp,set=setNow(),first=rnd(2)===1;
-    if(!parent){if(sub){leave();}leaveLobby();cancelInvite();startGame(first,{rec:false,fmt:'bo1',m:null},null);return;}
+    /* 1台（リンクなし）：「あなた／相手」でルーレット → 選ばれた人がこのスマホで選ぶ */
+    if(!parent){if(sub){leave();}leaveLobby();cancelInvite();b.disabled=true;var meC=rnd(2)===1;pickFx(meC,'相手',function(myFirst){b.disabled=false;pickFxClose();S2.soloChosen=true;startGame(myFirst,{rec:false,fmt:'bo1',m:null},null);S2.soloChosen=false;},true);return;}
     if(opp.phase!=='wait'){renderGo();return;}
+    /* リンク対戦：相手の電卓が新しい時は、決める人のルーレット（No.16）。古い時は今までどおりの抽選 */
+    if(opp.v>=4&&!S2.pickGo){
+      b.disabled=true;var pk={id:Date.now().toString(36)+rnd(1e4).toString(36),chooser:rnd(2)===1?'host':'guest'};S2.pick=pk;pushPresence();
+      S2.pickGo=function(hostFirst){S2.pickGo=null;S2.pick=null;b.disabled=false;var st={id:pk.id,first:hostFirst,chosen:true};S2.start=st;S2.starting=true;var go2=false;function fire2(){if(go2)return;go2=true;pickFxClose();startGame(hostFirst,set,st);}pushPresence().then(fire2);setTimeout(fire2,1500);};
+      pickFx(pk.chooser==='host',opp.name,function(myFirst){if(S2.pickGo)S2.pickGo(myFirst);});
+      return;
+    }
     b.disabled=true;var st={id:Date.now().toString(36)+rnd(1e4).toString(36),first:first};S2.start=st;S2.starting=true;var go=false;
     function fire(){if(go)return;go=true;b.disabled=false;startGame(first,set,st);}
     pushPresence().then(fire);setTimeout(fire,1500);
