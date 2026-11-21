@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1442-586fc41f63';
-import { fullThink } from './ai/levels.js?v=20261121-1442-586fc41f63';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1442-586fc41f63';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1442-586fc41f63';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1442-586fc41f63';
-import { playSignature, sigKey } from './sig.js?v=20261121-1442-586fc41f63';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1442-586fc41f63';
-import { firstEntrance } from './aces.js?v=20261121-1442-586fc41f63';
-import { RULINGS } from './data/rulings.js?v=20261121-1442-586fc41f63';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1442-586fc41f63';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1442-586fc41f63';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1442-586fc41f63';
-import { joinSiteRoom } from './net/site-room.js?v=20261121-1442-586fc41f63';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1505-cef0c6543c';
+import { fullThink } from './ai/levels.js?v=20261121-1505-cef0c6543c';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1505-cef0c6543c';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1505-cef0c6543c';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1505-cef0c6543c';
+import { playSignature, sigKey } from './sig.js?v=20261121-1505-cef0c6543c';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1505-cef0c6543c';
+import { firstEntrance } from './aces.js?v=20261121-1505-cef0c6543c';
+import { RULINGS } from './data/rulings.js?v=20261121-1505-cef0c6543c';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1505-cef0c6543c';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1505-cef0c6543c';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1505-cef0c6543c';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-1505-cef0c6543c';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261121-1442-586fc41f63';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-1442-586fc41f63';
-import { DECKS } from './data/decks.js?v=20261121-1442-586fc41f63';
-import { SCRIPTS } from './cards/index.js?v=20261121-1442-586fc41f63';
+} from './engine/game.js?v=20261121-1505-cef0c6543c';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1505-cef0c6543c';
+import { DECKS } from './data/decks.js?v=20261121-1505-cef0c6543c';
+import { SCRIPTS } from './cards/index.js?v=20261121-1505-cef0c6543c';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -42,6 +42,8 @@ let mySeat = 0;
 let net = null; // オンライン対戦の時だけ：{ link, oppName }（スイッチ ONLINE が入っている時だけ作る）
 const ME = () => mySeat;
 const OPP = () => 1 - mySeat;
+/** 長押しと見なすまでの時間（ミリ秒）。手札・置き場（墓地など）・カードを選ぶ扇、ぜんぶ同じ長さ（No.3 ボスの注文：そろえて少し早く） */
+const LONG_PRESS_MS = 300;
 const netMode = () => !!net;
 /** 画面の上の段・相手の欄に出すプレイヤーか（CPU、またはオンラインの相手）：中身を見せない・操作させない */
 const isRemote = p => (netMode() ? p !== mySeat : cpuMode() && p === CPU);
@@ -357,7 +359,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261121-1442-586fc41f63', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-1505-cef0c6543c', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -724,8 +726,31 @@ function ryuHelp() {
     + '<p>🌏 <b>留学生デッキ</b>：ルールや規制には沿っていないけれど、環境のトップにならないように調整して、遊びに来たデッキ。</p>'
     + (OPTS.onClose ? '<button type="button" class="btn small ghost" data-su="ryu">📖 ルールブックで読む</button>' : '') + '</details>';
 }
+/** 準備画面を横に払った時の行き先（No.5 ボスの注文）。左に払う＝次へ（いま選んでいる内容のまま）、右に払う＝ひとつ戻る。行けない時は null */
+function suSwipeTarget(su, dir, skip = false) {
+  if (dir > 0) return su.hist.length ? su.hist[su.hist.length - 1] : null;
+  const p = su.page;
+  if (p === 'p0own') return su.p0own ? 'p0deck' : null;
+  if (p === 'p0deck') return su.p0 ? (skip ? 'p1deck' : 'p1own') : null;
+  if (p === 'p1own') return su.rand ? 'first' : su.p1own ? 'p1deck' : null;
+  if (p === 'p1deck') return su.rand || su.p1 ? 'first' : null;
+  if (p === 'first' || p === 'level') return su.first != null ? 'go' : null;
+  return null;
+}
+let suSwipe = null, suSwiped = false;
+function suSwipeEnd(x, y) {
+  const sw = suSwipe; suSwipe = null;
+  if (!sw || !SU || !setupOpen()) return;
+  const dx = x - sw.x, dy = y - sw.y;
+  if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return; // 横にはっきり払った時だけ
+  const to = suSwipeTarget(SU, dx > 0 ? 1 : -1, skipOwner());
+  if (!to) return;
+  suSwiped = true; setTimeout(() => { suSwiped = false; }, 400); // 払った指を離した時の「押した」で、選び直さないように
+  if (dx > 0) { SU.page = SU.hist.pop(); renderSetup(); } else { SU.hist.push(SU.page); SU.page = to; renderSetup(); }
+}
 function setupClick(t) {
   const b = t.closest('[data-su]'); if (!b || !SU) return false;
+  if (suSwiped) return true;
   const [k, v] = b.dataset.su.split(/:(.*)/);
   const me = SU.page === 'p0own' || SU.page === 'p0deck';
   if (k === 'net') { closeSetup(); openNet(); return true; }
@@ -1287,7 +1312,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261121-1442-586fc41f63';
+const DUEL_BUILD = '20261121-1505-cef0c6543c';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -1437,6 +1462,7 @@ function netEndNote(winner) {
 }
 function netStop(msg, reload) {
   netNote(`<b>${esc(msg)}</b>${reload ? '<button type="button" class="btn small primary" data-net="reload">読み直す</button>' : ''}<button type="button" class="btn small ghost" data-net="quit">準備にもどる</button>`);
+  if (net) net.stopped = true; // 止まった印：1秒ごとの見回りが「つながりが切れました」で上書きしないように（MIMIの気づき）
   if (net && net.link) { try { net.link.close(); } catch { /* もう閉じている */ } }
   if (netUi && !net) {
     netUi.err = msg; netUi.stopped = reload ? 'reload' : 'stop';
@@ -1452,7 +1478,7 @@ function netQuit() {
 }
 /** 相手の知らせが来ない時：上の帯に「つながりが切れたかも（あと m:ss で終わり）」 */
 setInterval(() => {
-  if (!net || !net.ui || !S || S.winner !== null) return;
+  if (!net || net.stopped || !net.ui || !S || S.winner !== null) return;
   // 通信の部品と同じ数え方（相手の欄が変わったのを、この端末が受け取った時刻）。無ければ画面の側で覚えた時刻
   const seen = Math.max((net.link && net.link.lastSeenAt) || 0, net.ui.lastSeen || 0);
   const gone = Date.now() - (seen || Date.now());
@@ -1769,7 +1795,7 @@ function openTopReveal(r, key) {
   layer.addEventListener('pointerdown', e => {
     const el = e.target.closest('.hb-card'); if (!el) return;
     clearTimeout(lp?.t);
-    lp = { el, x: e.clientX, y: e.clientY, t: setTimeout(() => { lp.fired = true; fanPeek(el, Number(el.dataset.fan)); const h = layer.querySelector('.fan-hint'); if (h) h.textContent = 'タップで手札に加えます'; }, 420) };
+    lp = { el, x: e.clientX, y: e.clientY, t: setTimeout(() => { lp.fired = true; fanPeek(el, Number(el.dataset.fan)); const h = layer.querySelector('.fan-hint'); if (h) h.textContent = 'タップで手札に加えます'; }, LONG_PRESS_MS) };
   });
   layer.addEventListener('pointermove', e => { if (lp && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) > 10) clearTimeout(lp.t); });
   layer.addEventListener('pointerup', () => { if (lp) clearTimeout(lp.t); });
@@ -2894,7 +2920,7 @@ root.addEventListener('pointerdown', e => {
   if (!el || e.button > 0) return;
   pressEnd(); pressEl = el; pressXY = [e.clientX, e.clientY];
   el.classList.add('pressing');
-  pressT = setTimeout(() => { const [p, k] = el.dataset.pile.split(':'); pressFired = true; pressEnd(); if (navigator.vibrate) try { navigator.vibrate(15); } catch { /* 振動できない端末 */ } showPile(Number(p), k); }, 450);
+  pressT = setTimeout(() => { const [p, k] = el.dataset.pile.split(':'); pressFired = true; pressEnd(); if (navigator.vibrate) try { navigator.vibrate(15); } catch { /* 振動できない端末 */ } showPile(Number(p), k); }, LONG_PRESS_MS);
 });
 root.addEventListener('pointermove', e => { if (pressT && pressXY && Math.hypot(e.clientX - pressXY[0], e.clientY - pressXY[1]) > 10) pressEnd(); });
 /* スマホの手札：長押し・選んだカードの長押し（矢印）・置いた後の切り替え */
@@ -2914,7 +2940,7 @@ root.addEventListener('pointerdown', e => {
     const hp = handPress; if (!hp) return;
     hp.fired = true;
     if (handActs(u).length) startAim(u, hp.lx, hp.ly);
-  }, 230);
+  }, LONG_PRESS_MS);
 });
 root.addEventListener('pointermove', e => {
   if (aim && aim.held) { aimMove(e.clientX, e.clientY); return; }
@@ -3041,6 +3067,10 @@ function trayGestureEnd(x, y) {
 }
 root.addEventListener('pointerdown', e => trayGestureStart(e.clientX, e.clientY, e.target));
 root.addEventListener('pointerup', e => trayGestureEnd(e.clientX, e.clientY));
+// 準備画面：横に払ってページを移る（No.5）
+root.addEventListener('pointerdown', e => { suSwipe = setupOpen() && e.target.closest && e.target.closest('#setup') ? { x: e.clientX, y: e.clientY } : null; });
+root.addEventListener('pointerup', e => suSwipeEnd(e.clientX, e.clientY));
+root.addEventListener('pointercancel', () => { suSwipe = null; });
 root.addEventListener('touchstart', e => { const p = e.touches[0]; if (p && e.touches.length === 1) trayGestureStart(p.clientX, p.clientY, e.target); }, { passive: true });
 root.addEventListener('touchend', e => { const p = e.changedTouches[0]; if (p) trayGestureEnd(p.clientX, p.clientY); }, { passive: true });
 root.addEventListener('pointercancel', () => { if (handPress) { clearTimeout(handPress.timer); handPress = null; } if (aim && aim.held) endAim(); });

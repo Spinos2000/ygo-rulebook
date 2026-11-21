@@ -147,7 +147,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .pile { border-style: solid; padding: 0; cursor: pointer }
 /* 長押し：スマホの長押しメニューや文字選択を出さず、押している間はリングが満ちていく */
 .pile { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation }
-.pile.pressing::after { content: ""; position: absolute; inset: -3px; border-radius: 9px; border: 3px solid var(--accent); clip-path: inset(0 100% 0 0); animation: pressFill .45s linear forwards; pointer-events: none }
+.pile.pressing::after { content: ""; position: absolute; inset: -3px; border-radius: 9px; border: 3px solid var(--accent); clip-path: inset(0 100% 0 0); animation: pressFill .3s linear forwards; pointer-events: none }
 @keyframes pressFill { to { clip-path: inset(0 0 0 0) } }
 .pile .pl { position: absolute; bottom: 2px; left: 0; right: 0 }
 .pile .cnt { position: absolute; top: -6px; right: -4px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; font-size: 10px; padding: 0 5px; font-variant-numeric: tabular-nums }
@@ -832,7 +832,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .pile-info b { font-family: var(--display); font-size: 16px } .pile-info small { color: var(--sub); font-size: 12px } .pile-info p { margin: 4px 0 0; font-size: 13px; line-height: 1.6 }
 .pile-tip { margin: 0 }
 .fx-banner.with-draw { position: fixed; top: 20%; z-index: 40; pointer-events: none }
-#setup .su-box { width: min(94vw, 520px); max-height: 88vh; overflow-y: auto }
+#setup .su-box { width: min(94vw, 520px); max-height: 88vh; overflow-y: auto; touch-action: pan-y } /* 横に払うとページを移る（No.5）：横の動きはブラウザに取られないように */
 .su-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px }
 .su-head b { font-family: var(--display); font-size: 15px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .su-x { width: 36px; height: 36px; border-radius: 10px; border: 1.5px solid var(--line); background: transparent; color: var(--ink); font-size: 18px; cursor: pointer; flex: none }
@@ -1042,7 +1042,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-1442</p>
+    <p class="menu-note ver">版：20261121-1505</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
