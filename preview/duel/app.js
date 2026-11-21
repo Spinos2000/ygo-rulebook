@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1628-6bfb622ba3';
-import { fullThink } from './ai/levels.js?v=20261121-1628-6bfb622ba3';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1628-6bfb622ba3';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1628-6bfb622ba3';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1628-6bfb622ba3';
-import { playSignature, sigKey } from './sig.js?v=20261121-1628-6bfb622ba3';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1628-6bfb622ba3';
-import { firstEntrance } from './aces.js?v=20261121-1628-6bfb622ba3';
-import { RULINGS } from './data/rulings.js?v=20261121-1628-6bfb622ba3';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1628-6bfb622ba3';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1628-6bfb622ba3';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1628-6bfb622ba3';
-import { joinSiteRoom } from './net/site-room.js?v=20261121-1628-6bfb622ba3';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1642-73a6b6a22b';
+import { fullThink } from './ai/levels.js?v=20261121-1642-73a6b6a22b';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1642-73a6b6a22b';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1642-73a6b6a22b';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1642-73a6b6a22b';
+import { playSignature, sigKey } from './sig.js?v=20261121-1642-73a6b6a22b';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1642-73a6b6a22b';
+import { firstEntrance } from './aces.js?v=20261121-1642-73a6b6a22b';
+import { RULINGS } from './data/rulings.js?v=20261121-1642-73a6b6a22b';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1642-73a6b6a22b';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1642-73a6b6a22b';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1642-73a6b6a22b';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-1642-73a6b6a22b';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261121-1628-6bfb622ba3';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-1628-6bfb622ba3';
-import { DECKS } from './data/decks.js?v=20261121-1628-6bfb622ba3';
-import { SCRIPTS } from './cards/index.js?v=20261121-1628-6bfb622ba3';
+} from './engine/game.js?v=20261121-1642-73a6b6a22b';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1642-73a6b6a22b';
+import { DECKS } from './data/decks.js?v=20261121-1642-73a6b6a22b';
+import { SCRIPTS } from './cards/index.js?v=20261121-1642-73a6b6a22b';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -155,6 +155,9 @@ function safeArea() {
 const fxMode = () => ($('#fxMode') && $('#fxMode').value) || 'full';
 let pendingSummons = [];   // 画面を更新した後に再生する召喚の演出
 let heldAnims = [];
+/** コストの見た目（No.7の続き・CODEの決まり：発動の光 → コストのカードが動く → 効果の処理）。
+ *  glowDone：発動の手続きを始めた時にもう光らせたカード（チェーンに乗った時・処理の時に二重に光らせない）。costShown：専用演出の前に飛ばしたコストのカード */
+const glowDone = new Set(), costShown = new Set();
 const earlySummon = new Set(); // 置いた時に召喚の演出を済ませたカード        // 効果の処理の途中で選んでいる間、待たせているカードの演出
 function queueBattleFx(prev, next) {
   if (fxMode() === 'none' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -194,14 +197,21 @@ function queueBattleFx(prev, next) {
     const x = fresh.find(f => f.kind === 'resolve' && f.seq === j.seq);
     if (!x || !prev.cards[x.uid]) continue;
     const el = ROOT.querySelector(`#board [data-uid="${x.uid}"], #hand0 [data-uid="${x.uid}"], #hand1 [data-uid="${x.uid}"]`), d = defOf(prev, x.uid);
-    if (el) j.glow = { uid: x.uid, d, kind: d.kind, rect: el.getBoundingClientRect() };
+    if (el && !glowDone.has(x.uid)) j.glow = { uid: x.uid, d, kind: d.kind, rect: el.getBoundingClientRect() };
+    glowDone.delete(x.uid);
+    // この専用演出より前に払ったコスト（手札を捨てる・リリースなど）：専用演出の前に、元の場所から置き場へ飛ばす
+    j.costs = fresh.filter(c => ((c.kind === 'discard' && c.cost) || (c.kind === 'cost' && !c.proc)) && c.seq < j.seq && !fanDoneUids.has(c.uid) && prev.cards[c.uid]).map(c => {
+      const ce = ROOT.querySelector(`#board [data-uid="${c.uid}"], #hand0 [data-uid="${c.uid}"], #hand1 [data-uid="${c.uid}"]`), pc = prev.cards[c.uid];
+      return ce && !ce.closest('[data-pile]') ? { u: c.uid, d: defOf(prev, c.uid), face: true, el: ce, rect: ce.getBoundingClientRect(), to: `${pc.owner}:${c.kind === 'discard' ? 'gy' : c.to}` } : null;
+    }).filter(Boolean);
+    j.costs.forEach(c => { sigSkip.add(c.u); costShown.add(c.u); });
   }
   const jobs = [...battles, ...sigs].sort((p, q) => p.seq - q.seq);
   // 召喚：素材のカードの位置は今のうちに覚えておき、召喚されたカードの位置は画面を更新してから調べる
   pendingSummons.push(...fresh.filter(x => x.kind === 'summon').map(x => summonInfo(prev, next, x)).filter(Boolean));
   pendingSummons.push(...fresh.filter(x => x.kind === 'search' && isRemote(x.player)).map(x => ({ search: true, uid: x.uid, p: x.player, d: defOf(next, x.uid) })));
   for (const p of [0, 1]) {
-    const gone = fresh.filter(x => x.kind === 'discard' && x.player === p && !fanDoneUids.has(x.uid)).map(x => x.uid);
+    const gone = fresh.filter(x => x.kind === 'discard' && x.player === p && !x.cost && !fanDoneUids.has(x.uid)).map(x => x.uid); // コストで捨てた手札は、光った後にふつうの移動で飛ばす
     if (!gone.length) continue;
     // 同じ処理の中でドローしてすぐ捨てたカードも、手札の中に入れて見せる
     const hand0 = [...new Set([...prev.players[p].hand, ...gone])];
@@ -217,6 +227,7 @@ function queueBattleFx(prev, next) {
       // 専用演出の前に、発動したカードを元の場所で光らせる（No.7：発動の光 → 専用演出 → 墓地へ。CODEの決まり）
       // 手札から発動して、その場で処理まで進んだ魔法（ブラック・ホールなど）は、盤面に無いので手札の場所で光らせる
       if (j.sig && j.glow && j.glow.rect) { try { await preGlow(j.glow, null, 0); } catch (e) { console.error(e); } }
+      if (j.sig && j.costs && j.costs.length) { try { await flyCosts(j.costs); } catch (e) { console.error(e); } }
       const hide = j.hide.map(el => { el.style.visibility = 'hidden'; return el; });
       const brd = j.sig ? ROOT.querySelector('#board') : null; if (brd) brd.classList.add('skin-on');
       if (j.sig) fxRec('sig', j.glow ? j.glow.uid : j.info.self ? j.info.self.uid : null, { key: j.info.key, dest: (j.info.dest || []).map(c => c.uid) }); else fxRec('battle', null);
@@ -380,7 +391,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261121-1628-6bfb622ba3', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-1642-73a6b6a22b', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1340,7 +1351,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261121-1628-6bfb622ba3';
+const DUEL_BUILD = '20261121-1642-73a6b6a22b';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -2157,7 +2168,20 @@ function queueMoves(prev, next) {
   // 発動して、この1手の中で処理まで終わったカード（相手が応答しなかった時など）：チェーンに残らないので acts に入らない。
   // 「発動したカードは必ず光ってから結果」（No.7・CODEの決まり）：元の場所で光らせてから（pre）、墓地へ飛ばす。
   // 専用演出のあるカードは、専用演出が発動の演出。破壊されて墓地で発動したモンスターの効果は、墓地へ行った後に墓地で光る（acts へ）
-  const hadUid = new Set((prev.chain || []).map(l => l.uid)), glowed = new Set(acts.map(a => a.uid)), pre = [];
+  // 発動の手続きを始めた時（コストや対象を選ぶ前）に光らせる。チェーンに乗った時の光（acts）とは二重にしない
+  const pre = [], resolvedNow = new Set(fresh.filter(x => x.kind === 'resolve').map(x => x.uid)), lateGlow = new Set();
+  for (const x of fresh) {
+    if (x.kind !== 'activate' || x.proc || glowDone.has(x.uid) || !prev.cards[x.uid] || !next.cards[x.uid]) continue;
+    const d = defOf(next, x.uid);
+    if (sigKey(d.name) && resolvedNow.has(x.uid)) continue; // 専用演出のあるカードは、専用演出の頭で光る
+    glowDone.add(x.uid);
+    const pc = prev.cards[x.uid], nc = next.cards[x.uid], item = { uid: x.uid, p: x.player, kind: d.kind === 'monster' ? 'monster' : d.kind, zone: nc.zone, d };
+    // 破壊されて墓地・除外へ行ってから発動したモンスターの効果は、着いた後にそこで光る。もともと墓地・除外にあるカードは置き場で光る
+    if (!x.card && ['gy', 'banished'].includes(nc.zone) && pc.zone !== nc.zone) { if (!acts.some(a => a.uid === x.uid)) acts.push(item); lateGlow.add(x.uid); }
+    else pre.push({ ...item, fromP: pc.controller, fromZone: pc.zone, rect: ['gy', 'banished'].includes(pc.zone) ? null : undefined });
+  }
+  for (let k = acts.length - 1; k >= 0; k--) if (glowDone.has(acts[k].uid) && !lateGlow.has(acts[k].uid)) acts.splice(k, 1);
+  const hadUid = new Set((prev.chain || []).map(l => l.uid)), glowed = new Set([...acts.map(a => a.uid), ...glowDone]);
   for (const x of fresh) {
     if (x.kind !== 'resolve' || hadUid.has(x.uid) || glowed.has(x.uid) || !prev.cards[x.uid] || !next.cards[x.uid]) continue;
     const d = defOf(prev, x.uid); if (sigKey(d.name)) continue;
@@ -2166,10 +2190,14 @@ function queueMoves(prev, next) {
     if (!x.act && ['gy', 'banished'].includes(nc.zone) && pc.zone !== nc.zone) acts.push(item);
     else pre.push({ ...item, fromP: pc.controller, fromZone: pc.zone });
   }
+  for (const u of resolvedNow) glowDone.delete(u); // 処理まで終わったカードは、次の発動でまた光る
+  // コストで動いたカード：結果より先に飛ばす（専用演出の前に飛ばしたものは除く）
+  const cost = new Set(fresh.filter(x => ((x.kind === 'discard' && x.cost) || (x.kind === 'cost' && !x.proc)) && !costShown.has(x.uid)).map(x => x.uid));
+  fresh.forEach(x => costShown.delete(x.uid));
   if (!moves.length && !acts.length && !pre.length && turn === null && win === null) return;
   const snap = snapRects();
-  pre.forEach(a => { a.rect = (pendingMoves && pendingMoves.from.get(a.uid)) || snap.m.get(a.uid) || snap.piles[`${a.fromP}:${a.fromZone}`] || null; });
-  if (!pendingMoves) pendingMoves = { from: snap.m, piles: snap.piles, moves: [], acts: [], pre: [], turn: null, win: null };
+  pre.forEach(a => { if (a.rect === null) return; a.rect = (pendingMoves && pendingMoves.from.get(a.uid)) || snap.m.get(a.uid) || snap.piles[`${a.fromP}:${a.fromZone}`] || null; });
+  if (!pendingMoves) pendingMoves = { from: snap.m, piles: snap.piles, moves: [], acts: [], pre: [], cost: new Set(), turn: null, win: null };
   else snap.m.forEach((r, u) => { if (!pendingMoves.from.has(u)) pendingMoves.from.set(u, r); });
   // 同じカードが続けて動いた時は、最初の場所から最後の場所へ
   for (const m of moves) {
@@ -2179,6 +2207,7 @@ function queueMoves(prev, next) {
   }
   pendingMoves.acts.push(...acts);
   pendingMoves.pre.push(...pre);
+  cost.forEach(u => pendingMoves.cost.add(u));
   if (turn !== null) pendingMoves.turn = turn;
   if (win !== null) pendingMoves.win = win;
 }
@@ -2237,8 +2266,21 @@ async function flyOne(m, P, i) {
   if (destEl) destEl.style.visibility = '';
   if (m.cntKey) bumpCnt(m.cntKey, 1);
 }
+/** 専用演出の前に、コストのカード（捨てる手札・リリースなど）を元の場所から置き場へ飛ばす（画面はまだ前の盤面） */
+async function flyCosts(list) {
+  await Promise.all(list.map(async (c, i) => {
+    const pileE = ROOT.querySelector(`#board [data-pile="${c.to}"]`); if (!pileE) return;
+    fxRec('fly', c.u, { from: 'cost', to: c.to });
+    const to = pileE.getBoundingClientRect(), w = c.rect.width, g = ghost(c, { left: c.rect.left, top: c.rect.top + (c.rect.height - w * 86 / 59) / 2, width: w });
+    c.el.style.visibility = 'hidden';
+    await wait(i * 60);
+    const tx = to.left + (to.width - w * .9) / 2 - c.rect.left, ty = to.top + (to.height - w * .9 * 86 / 59) / 2 - c.rect.top;
+    await g.animate([{ transform: 'none' }, { transform: `translate(${tx * .5}px,${ty * .5 - 26}px) scale(1.05)`, offset: .5 }, { transform: `translate(${tx}px,${ty}px) rotate(-8deg) scale(.9)` }], { duration: dur(460), easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' }).finished;
+    g.remove(); bumpCnt(c.to, 1);
+  }));
+}
 /** 置き場の枚数の数字を足し引きする（演出の間だけ。終わると描き直しで正しい数にもどる） */
-function bumpCnt(key, d) { const e = ROOT.querySelector(`#board [data-pile="${key}"] .cnt`); if (e && /^d+$/.test(e.textContent.trim())) e.textContent = String(Math.max(0, Number(e.textContent) + d)); }
+function bumpCnt(key, d) { const e = ROOT.querySelector(`#board [data-pile="${key}"] .cnt`); if (e && /^\d+$/.test(e.textContent.trim())) e.textContent = String(Math.max(0, Number(e.textContent) + d)); }
 /** 発動の光（その場で処理まで終わったカード）：画面はもう次の盤面なので、元の場所にカードの写しを出して光らせる */
 async function preGlow(a, P, i) {
   if (!a.rect) return activateOne(a, P, i);
@@ -2338,24 +2380,27 @@ function playPendingMoves() {
   fxN++; fxBlock();
   (async () => {
     try {
-      // デッキの上から墓地へ送るカード（光の援軍など）：まず表にして中央に並べて見せてから、墓地へ送る
-      // 発動して、その場で処理まで終わったカード：元の場所で先に光らせる（そのあと墓地へ飛ぶ）
-      if (P.pre && P.pre.length) {
-        // 光っている間は、これから動くカードを元の場所に写しで残す（画面はもう次の盤面なので、先に消えて見えないように）
-        const hold = P.moves.filter(m => P.from.get(m.u) && !P.pre.some(a => a.uid === m.u)).map(m => { const r = P.from.get(m.u); return ghost(m, { left: r.left, top: r.top + (r.height - r.width * 86 / 59) / 2, width: r.width }); });
-        await Promise.all(P.pre.map((a, i) => preGlow(a, P, i)));
-        hold.forEach(g => g.remove());
-      }
-      const mill = P.moves.filter(m => m.from === 'deck' && m.to === 'gy');
-      if (mill.length) await revealMill(mill, P);
       // 置き場（墓地・除外・デッキ・EX）の枚数の数字は、カードが着いた時に増やす（画面はもう次の盤面なので、いったん来る分を引いておく）
       const incoming = {};
       for (const m of P.moves) {
-        if (!['gy', 'banished', 'deck', 'extra'].includes(m.to) || ROOT.querySelector(`#board [data-uid="${m.u}"], #hand0 [data-uid="${m.u}"], #hand1 [data-uid="${m.u}"]`)) continue;
+        if (!['gy', 'banished', 'deck', 'extra'].includes(m.to)) continue;
+        const onBoard = ROOT.querySelector(`#board [data-uid="${m.u}"], #hand0 [data-uid="${m.u}"], #hand1 [data-uid="${m.u}"]`);
+        if (onBoard && !onBoard.closest('[data-pile]')) continue; // 置き場の一番上に見えているカードは、置き場へ飛ぶカード
         m.cntKey = `${m.toP}:${m.to}`; incoming[m.cntKey] = (incoming[m.cntKey] || 0) + 1;
       }
       for (const [k, n] of Object.entries(incoming)) bumpCnt(k, -n);
-      await Promise.all(P.moves.map((m, i) => flyOne(m, P, i)));
+      // 発動して、その場で処理まで終わったカード：元の場所で先に光らせる（そのあと墓地へ飛ぶ）
+      // 順番：発動の光（pre）→ コストのカード → 残りの移動。光っている間・コストが飛ぶ間は、あとで動くカードを元の場所に写しで残す
+      const costM = P.cost ? P.moves.filter(m => P.cost.has(m.u)) : [], restM = P.moves.filter(m => !costM.includes(m));
+      const hold = new Map();
+      if ((P.pre && P.pre.length) || costM.length) for (const m of restM) { const r = P.from.get(m.u); if (r && !(P.pre || []).some(a => a.uid === m.u)) hold.set(m.u, ghost(m, { left: r.left, top: r.top + (r.height - r.width * 86 / 59) / 2, width: r.width })); }
+      if (P.pre && P.pre.length) await Promise.all(P.pre.map((a, i) => preGlow(a, P, i)));
+      if (costM.length) await Promise.all(costM.map((m, i) => flyOne(m, P, i)));
+      hold.forEach(g => g.remove());
+      // デッキの上から墓地へ送るカード（光の援軍など）：まず表にして中央に並べて見せてから、墓地へ送る
+      const mill = restM.filter(m => m.from === 'deck' && m.to === 'gy');
+      if (mill.length) await revealMill(mill, P);
+      await Promise.all(restM.map((m, i) => flyOne(m, P, i)));
       await Promise.all(P.acts.map((a, i) => activateOne(a, P, i)));
       if (P.win !== null) { await banner(P.win === 'draw' ? '引き分け' : `${resultText(P.win, cpuMode() || netMode(), ME())}${P.win === ME() || !(cpuMode() || netMode()) ? '！' : '…'}`, P.win === ME() || !(cpuMode() || netMode()) ? 'win' : 'lose', 1800); flushEndSpeech(); }
       else if (P.turn !== null) {

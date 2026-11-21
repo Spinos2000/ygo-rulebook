@@ -5,8 +5,8 @@
                                                                                                                           
                                                                
                     
-import { RuleError, cloneCard, cloneState } from './types.js?v=20261121-1628-6bfb622ba3';
-import { SCRIPTS } from '../cards/index.js?v=20261121-1628-6bfb622ba3';
+import { RuleError, cloneCard, cloneState } from './types.js?v=20261121-1642-73a6b6a22b';
+import { SCRIPTS } from '../cards/index.js?v=20261121-1642-73a6b6a22b';
 
 export const START_LP = 8000;
 export const START_HAND = 5;
@@ -694,7 +694,11 @@ export function sendToGy(s           , uids          , reason        , by       
     if (reason === 'release') emit(s, { type: 'released', uid: u, from, reason });
     emit(s, { type: 'toGy', uid: u, from, reason, by: who });
     // 演出用：手札から墓地へ（手札が開く演出）。融合素材・リリースは召喚の演出で見せるので除く
-    if (from === 'hand' && reason !== 'material' && reason !== 'release') pushAnim(s, { kind: 'discard', uid: u, player: c.owner });
+    // cost：発動の手続き中（コスト）に捨てた。効果で捨てた（手札断殺・暗黒界の取引）と画面で見分けるため
+    const cost = inCost(s);
+    if (from === 'hand' && reason !== 'material' && reason !== 'release') pushAnim(s, { kind: 'discard', uid: u, player: c.owner, ...(cost ? { cost: true } : {}), ...(cost && procPaying ? { proc: true } : {}) });
+    // 演出用：発動のコストで、手札を捨てる以外の動き（リリース・場やデッキから墓地へ送る）
+    else if (cost) pushAnim(s, { kind: 'cost', uid: u, player: c.owner, from, to: 'gy', reason, ...(procPaying ? { proc: true } : {}) });
     if (FIELD_ZONES.includes(from)) { emit(s, { type: 'leftField', uid: u, from, reason, wasFaceUp: before.faceUp }); befores.push(before); }
   }
   if (befores.length) leaveCleanup(s, befores, reason);
@@ -724,6 +728,7 @@ export function banish(s           , uids          , reason        )       {
     const c = s.cards[u]; const from = c.zone; const before = cloneCard(c);
     moveCard(s, u, 'banished');
     emit(s, { type: 'banished', uid: u, from, reason });
+    if (inCost(s)) pushAnim(s, { kind: 'cost', uid: u, player: c.owner, from, to: 'banished', reason, ...(procPaying ? { proc: true } : {}) }); // 演出用：発動のコストで除外
     if (FIELD_ZONES.includes(from)) { emit(s, { type: 'leftField', uid: u, from, reason, wasFaceUp: before.faceUp }); befores.push(before); }
   }
   if (befores.length) leaveCleanup(s, befores, reason);
@@ -800,6 +805,7 @@ export function addToHand(s           , uids          , reason         = 'effect
 export function payLp(s           , p          , amount        )       {
   s.players[p].lp = Math.max(0, s.players[p].lp - amount);
   log(s, `${pl(p)}：${amount}LPを払う（LP ${s.players[p].lp}）`);
+  pushAnim(s, { kind: 'lp', player: p, amount, cost: inCost(s), ...(inCost(s) && procPaying ? { proc: true } : {}) }); // 演出用：LPを払った
   checkLp(s);
 }
 export function gainLp(s           , p          , amount        )       {
@@ -815,6 +821,10 @@ export function effectDamage(s           , p          , amount        )       {
   log(s, `${pl(p)}に${amount}の効果ダメージ（LP ${s.players[p].lp}）`);
   checkLp(s);
 }
+/** 発動の手続き中（コストを払う・対象を選ぶ間）か。効果の処理中は違う（処理の中でさらに発動の手続きはしない） */
+function inCost(s           )          { return s.activating !== null && s.activating !== undefined && !s.resolving; }
+/** 召喚の手順（混沌帝龍・グラファ①など）で払っている間（演出用の印 proc を付けるだけ。ルールには使わない） */
+let procPaying = false;
 /** 画面の演出用の記録を足す（ルールの処理には使わない） */
 export function pushAnim(s           , a                         )       {
   (s.anim ??= []).push({ ...(a          ), seq: (s.animSeq = (s.animSeq ?? 0) + 1) }         );
@@ -1126,8 +1136,8 @@ function doProcSummon(s           , p          , uid        )       {
   const sc = scriptOf(s, uid).procSummon ;
   const x = ctxOf(s, uid, p, null);
   newStep(s);
-  s.activating = p;
-  try { sc.pay(x); } finally { s.activating = null; }
+  s.activating = p; procPaying = true;
+  try { sc.pay(x); } finally { s.activating = null; procPaying = false; }
   const fromExtra = s.cards[uid].zone === 'extra';
   if (fromExtra) s.opt[`${p}:extraAny`] = s.turn;
   const ez = fromExtra ? extraSummonZone(s, p) : null;
@@ -1432,6 +1442,8 @@ function activateEffect(s           , p          , uid        , effectId        
   if (zone !== undefined && !(eff.type === 'card' && !dg)) link.data.zone = zone;
   if (eff.opt || eff.hardOpt) s.opt[`${p}:${optKey(s, uid, eff)}`] = s.turn;
   log(s, `${pl(p)}：${nameOf(s, uid)}${eff.type === 'card' && !dg ? 'を発動' : `の効果を発動`}（チェーン${s.chain.length + 1}）`);
+  // 演出用：発動の手続きを始めた（このあとコスト・対象。画面は「元の場所で光る → コストのカードが動く」の順に見せる）
+  pushAnim(s, { kind: 'activate', uid, player: p, card: eff.type === 'card' && !dg });
   // このターンに効果を発動した記録（混沌帝龍：「このカードの効果を発動するターン、自分は他の効果を発動できない」）
   (s.activatedTurn ??= {})[String(p)] = s.turn;
   if (s.activatedFirst?.[String(p)]?.turn !== s.turn) (s.activatedFirst ??= {})[String(p)] = { turn: s.turn, uid };
