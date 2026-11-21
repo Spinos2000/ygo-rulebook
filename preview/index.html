@@ -4028,7 +4028,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   var inbox={sub:null,seen:{}};
   YGO.ready.then(async function(u){if(!u)return;var r=await getRoom();if(!r)return;try{inbox.sub=await r.join('ygo2-inv-'+u.uid);}catch(e){return;}
     inbox.sub.onPeers(function(ch){var now=Date.now();var L=ch.peers.filter(function(p){var x=p.presence;return !p.isMe&&x&&x.app==='ygo'&&x.id&&/^\d{4}$/.test(x.key||'')&&now-(Number(x.at)||p.updatedAt)<180000&&!inbox.seen[x.id];});
-      L.sort(function(a,b){return b.updatedAt-a.updatedAt;});showInvite(L[0]?{id:L[0].presence.id,key:L[0].presence.key,name:str(L[0].presence.name,20)||'だれか'}:null);},function(){});
+      L.sort(function(a,b){return b.updatedAt-a.updatedAt;});showInvite(L[0]?{id:L[0].presence.id,key:L[0].presence.key,name:str(L[0].presence.name,20)||'だれか',kind:L[0].presence.kind||''}:null);},function(){});
     /* 招待リンクから開いたとき */
     var q=new URLSearchParams(location.search).get('duel');
     if(q&&/^\d{4}$/.test(q)){try{var U=new URL(location.href);U.searchParams.delete('duel');history.replaceState(history.state,'',U.pathname+U.search+U.hash);}catch(e){}acceptKey(q);}
@@ -4036,8 +4036,8 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   YGO.ready.then(function(u){if(u)return;var q=new URLSearchParams(location.search).get('duel');if(q)setTimeout(function(){alert('招待リンクでつなぐには、ページ上部の「🔑 Googleでログイン」でログインしてから、もう一度リンクを開いてください。');},800);});
   var curInv=null;
   function showInvite(x){var b=$('inv-ban');if(!b)return;if(!x||(D&&D.phase==='play')||(opp&&sub)){b.hidden=true;curInv=null;return;}
-    curInv=x;$('inv-ban-t').textContent='⚔️ '+x.name+' さんから対戦の招待！';b.hidden=false;if(navigator.vibrate)try{navigator.vibrate([120,60,120]);}catch(e){}document.dispatchEvent(new Event('ygo:ping'));}
-  $('inv-ok').addEventListener('click',function(){var x=curInv;if(!x)return;inbox.seen[x.id]=1;$('inv-ban').hidden=true;acceptKey(x.key);});
+    curInv=x;$('inv-ban-t').textContent='⚔️ '+x.name+(x.kind==='table'?' さんからデュエル卓（オンライン対戦）の招待！':' さんから対戦の招待！');b.hidden=false;if(navigator.vibrate)try{navigator.vibrate([120,60,120]);}catch(e){}document.dispatchEvent(new Event('ygo:ping'));}
+  $('inv-ok').addEventListener('click',function(){var x=curInv;if(!x)return;inbox.seen[x.id]=1;$('inv-ban').hidden=true;if(x.kind==='table'&&window.YGO_openDuelVs){window.YGO_openDuelVs(x.key);return;}acceptKey(x.key);});
   $('inv-no').addEventListener('click',function(){var x=curInv;if(!x)return;inbox.seen[x.id]=1;$('inv-ban').hidden=true;if(inbox.sub)inbox.sub.presence({app:'ygo',decline:x.id}).catch(function(){});});
   function acceptKey(k){if(D&&D.phase==='play'){alert('いまデュエル中です。終わってからもう一度お試しください。');return;}
     if(overlay.hidden){openOverlay();fillSetup();show('setup');}joinGuest(k);}
@@ -6190,6 +6190,11 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   function label(){var saved=false;try{saved=!!localStorage.getItem(KEY);}catch(e){}btn.textContent=saved?'🤖 CPU対戦を再開する':'🤖 CPUと対戦する';}
   function close(){if(host.hidden)return;host.hidden=true;document.documentElement.style.overflow='';setTimeout(label,500);}
   label();
+  /* デュエル卓の招待リンク（?vs=キー）：ログインを待ってから、卓を開いて子としてつなぐ */
+  var vsKey=(function(){try{var k=new URLSearchParams(location.search).get('vs');return /^d{4}$/.test(k||'')?k:null;}catch(e){return null;}})();
+  if(vsKey&&window.YGO&&YGO.ready)YGO.ready.then(function(u){if(u)setTimeout(function(){btn.click();},300);});
+  /* 招待の通知で［受ける］を押した時：卓を開いて、子としてつなぐ */
+  window.YGO_openDuelVs=function(k){vsKey=k;if(!host.hidden&&window.__duel){close();}btn.click();};
   btn.addEventListener('click',async function(){
     if(busy)return;busy=true;btn.textContent='読み込み中…';st.textContent='';st.className='status';
     try{
@@ -6199,7 +6204,12 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       try{if(Yg.user&&Yg.db&&window.claude&&window.claude.use)rm=await window.claude.use('room');}catch(e){rm=null;}
       m.mountDuel(host,{onClose:close,isOpen:function(){return !host.hidden;},storageKey:KEY,menuFirst:true,onResult:function(r){try{if(window.YGO&&YGO.app&&YGO.app.addCpu)YGO.app.addCpu(r,pv);}catch(e){console.warn(e);}},
         /* オンライン対戦（人どうし）：ログインしている時だけ部屋とアカウントを渡す */room:rm,uid:Yg.user?Yg.user.uid:null,userName:(YGO.app&&YGO.app.pf&&YGO.app.pf().name)||'',
-        onNetResult:function(r){try{if(YGO.app&&YGO.app.addNet)YGO.app.addNet(r,pv);}catch(e){console.warn(e);}}});
+        onNetResult:function(r){try{if(YGO.app&&YGO.app.addNet)YGO.app.addNet(r,pv);}catch(e){console.warn(e);}},
+        /* 👥 招待する：電卓の招待と同じしくみ（相手の画面に通知が出る）。kind:'table' でデュエル卓の招待と分かるようにする */inviteApi:Yg.user?{members:function(){var M=YGO.members||{},me=Yg.user.uid;return Object.keys(M).filter(function(u){return u!==me&&M[u].name;}).map(function(u){return {uid:u,name:String(M[u].name)};}).sort(function(a,b){return a.name.localeCompare(b.name,'ja');});},
+          send:async function(uid,key,onDecline){var room=rm||await window.claude.use('room');var s=await room.join('ygo2-inv-'+uid),id=Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);var un=s.onPeers(function(ch){if(ch.peers.some(function(q){return q.uid===uid&&q.presence&&q.presence.decline===id;})&&onDecline)onDecline();},function(){});
+            await s.presence({app:'ygo',kind:'table',name:(YGO.app&&YGO.app.pf&&YGO.app.pf().name)||'',key:key,id:id,at:Date.now()});return {cancel:function(){try{un();}catch(e){}try{s.leave();}catch(e){}}};}}:null,
+        /* 招待リンク（?vs=キー）で開いた時は、子としてすぐつなぐ。招待リンクの作り方もサイトのURLに合わせる */netJoin:vsKey||null,inviteUrl:function(k){return location.origin+location.pathname+'?vs='+k+(location.search.indexOf('online-test')>=0?'&online-test':'')+'#cpu';}});
+      vsKey=null;
     }catch(e){console.error(e);st.className='status err';st.textContent='対戦卓を読み込めませんでした。ページを開き直してください。';}
     finally{busy=false;label();}
   });

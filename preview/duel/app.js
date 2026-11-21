@@ -1321,7 +1321,7 @@ function openNet() {
   netUi = { step: 'key', myKey, key: '', deck: $('#deck0').value || Object.keys(DECKS)[0], mode: 'official', host: false, room: null, link: null, status: '', peerName: '' };
   renderNet(); $('#netDlg').hidden = false; lobbyOpen();
 }
-function closeNet() { if (netUi && netUi.link && !netMode()) { try { netUi.link.close(); } catch { /* もう閉じている */ } } lobbyClose(); netUi = null; $('#netDlg').hidden = true; }
+function closeNet() { if (netUi && netUi.inv) { try { netUi.inv.cancel(); } catch { /* */ } } if (netUi) clearTimeout(netUi.invT); if (netUi && netUi.link && !netMode()) { try { netUi.link.close(); } catch { /* もう閉じている */ } } lobbyClose(); netUi = null; $('#netDlg').hidden = true; }
 function renderNet() {
   const u = netUi; if (!u) return;
   const deckOpts = Object.values(DECKS).map(d => `<option value="${esc(d.code)}"${d.code === u.deck ? ' selected' : ''}>${esc(themeOf(d))}（${esc(ownerOf(d))}）</option>`).join('');
@@ -1333,8 +1333,16 @@ function renderNet() {
       + `<button type="button" class="btn primary net-wide" data-net="host">⏳ このキーで相手を待つ（親）</button>`
       + `<p class="net-q">📡 いま待っている人（タップでつなぐ）</p>` + (lobby && lobby.peers.length ? `<div class="net-lobby">${lobby.peers.map(p => `<button type="button" class="net-lb" data-net="lb:${esc(p.key)}"><b>${esc(p.name)}</b><span>が待っています・${p.mode === 'practice' ? '📝練習' : '🏆公式'}</span><i>対戦する ▶</i></button>`).join('')}</div>` : '<p class="net-none">いま待っている人はいません</p>')
       + `<p class="net-q">相手のキーを入れる（入れた人は<strong>子</strong>）</p><div class="net-join"><input type="text" inputmode="numeric" maxlength="4" placeholder="0000" aria-label="相手のキー番号" data-net-key value="${esc(u.key)}"><button type="button" class="btn primary" data-net="join">つなぐ</button></div>`;
+  } else if (u.step === 'inv') {
+    // 👥 招待する：だれを招待しますか？（電卓と同じ言葉。招待した人が親）
+    const ms = (OPTS.inviteApi && OPTS.inviteApi.members()) || [];
+    body = `<p class="net-q">だれを招待しますか？</p><p class="net-none">招待した人が<strong>親</strong>になります。相手がこのサイトを開いていると、画面に通知が出ます。</p>`
+      + (ms.length ? `<div class="net-lobby">${ms.map(m => `<button type="button" class="net-lb" data-net="inv:${esc(m.uid)}"><b>${esc(m.name)}</b><span></span><i>招待する ▶</i></button>`).join('')}</div>` : '<p class="net-none">まだほかのメンバーがいません。</p>')
+      + `<button type="button" class="btn ghost net-wide" data-net="invback">← もどる</button>`;
   } else if (u.step === 'wait') {
     body = `<p class="net-st">⏳ ${u.host ? `相手を待っています（キー ${u.myKey}）` : esc(u.status || 'つないでいます…')}</p>`
+      + (u.host && OPTS.inviteApi ? `<button type="button" class="btn net-wide" data-net="invopen">👥 招待する</button>` : '')
+      + (u.host ? `<button type="button" class="btn net-wide" data-net="invlink">🔗 招待リンクを送る</button>${u.invSt ? `<p class="net-q">${esc(u.invSt)}</p>` : ''}` : '')
       + (!u.host && u.link && !u.ready ? `<p class="net-q">${esc(u.peerName || '親')}さんの部屋につながりました。準備ができたら押してください。</p><button type="button" class="btn primary net-wide" data-net="ready">準備OK</button>` : '')
       + (!u.host && u.ready ? `<p class="net-q">⏳ ${esc(u.peerName || '親')}さんが始めるのを待っています…</p>` : '');
   }
@@ -1354,9 +1362,31 @@ async function netConnect(host) {
   u.link = new DuelLink({ room: u.room, uid: netUid(), host, version: netVer(), name: netMyName(), deck: u.deck, mode: u.mode, ready: host, on: e => netEvent(u, e) });
   u.status = host ? '' : 'つながりました'; renderNet();
 }
+/** 招待リンク：開いた人が子になって、すぐつながる（電卓の招待リンクと同じ送り方。電卓の ?duel= とぶつからないよう ?vs=キー） */
+/** 👥 招待する：電卓の招待と同じ通知を送る（3分で返事がなければ知らせる）。送るのはサイトの inviteApi */
+async function netInvite(uid) {
+  const u = netUi; if (!u || !OPTS.inviteApi) return;
+  const m = (OPTS.inviteApi.members() || []).find(x => x.uid === uid), name = m ? m.name : 'メンバー';
+  if (u.inv) { try { u.inv.cancel(); } catch { /* */ } u.inv = null; }
+  u.step = 'wait'; u.invSt = '📨 送っています…'; renderNet();
+  try {
+    u.inv = await OPTS.inviteApi.send(uid, u.myKey, () => { if (netUi === u && !netMode()) { u.invSt = `😢 ${name} さんは、いまは対戦できないようです。`; renderNet(); } });
+    u.invSt = `📨 ${name} さんを招待しました。相手の画面に通知が出ます（サイトを開いていないと届きません。そのときは「🔗 招待リンクを送る」が便利です）。`; renderNet();
+    clearTimeout(u.invT); u.invT = setTimeout(() => { if (netUi === u && !netMode()) { u.invSt = '⌛ 返事がありませんでした。もう一度招待するか、招待リンクを送ってください。'; renderNet(); } }, 180000);
+  } catch (e) { u.invSt = '招待を送れませんでした。'; renderNet(); }
+}
+async function netInviteLink() {
+  const u = netUi; if (!u) return;
+  const base = OPTS.inviteUrl ? OPTS.inviteUrl(u.myKey) : location.origin + location.pathname + '?vs=' + u.myKey + (ONLINE ? '&online-test' : '');
+  const txt = `あのころ遊戯王のデュエル卓で対戦しよう！このリンクを開くと、すぐにつながります（キー ${u.myKey}）`;
+  try { if (navigator.share) { await navigator.share({ title: 'デュエル卓の招待', text: txt, url: base }); u.invSt = '📨 招待リンクを送りました。相手が開くと自動でつながります。'; renderNet(); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(txt + '\n' + base); u.invSt = '📋 招待リンクをコピーしました。LINEなどに貼り付けて送ってください。'; } catch { u.invSt = 'このリンクを送ってください：' + base; }
+  renderNet();
+}
 function netEvent(u, e) {
   if (e.type === 'start') {
     $('#netDlg').hidden = true; lobbyClose(); // 始まったら、待合室からは消える
+    if (u.inv) { try { u.inv.cancel(); } catch { /* */ } u.inv = null; } clearTimeout(u.invT);
     mySeat = e.seat; net = { link: u.link, oppName: u.peerName || '相手', mode: e.mode, ui: u };
     $('#mode').value = 'hot'; $('.droot').classList.add('net-on');
     S = e.state; S.askZone = [ME()];
@@ -1407,6 +1437,10 @@ function netClick(t) {
   if (k === 'close') { closeNet(); if (OPTS.menuFirst && !netMode()) openSetup(); return true; }
   if (k === 'mode') { netUi.mode = v; renderNet(); return true; }
   if (k === 'host') { netConnect(true); return true; }
+  if (k === 'invlink') { netInviteLink(); return true; }
+  if (k === 'invopen') { netUi.step = 'inv'; renderNet(); return true; }
+  if (k === 'invback') { netUi.step = 'wait'; renderNet(); return true; }
+  if (k === 'inv') { netInvite(v); return true; }
   if (k === 'lb') { netUi.key = v; netConnect(false); return true; }
   if (k === 'join') { const i = $('[data-net-key]'); netUi.key = i ? i.value.trim() : ''; netConnect(false); return true; }
   if (k === 'ready') { netUi.ready = true; netUi.link && netUi.link.setReady(); renderNet(); return true; }
@@ -3170,6 +3204,9 @@ export function boot(root, opts = {}) {
     newDuel(first);
     if (opts.menuFirst) { if (cpuMode()) { placeholder = true; openSetup(); } else openMenu(); }
     else maybeGuide(); // 準備画面を出さない時（対戦卓だけのページ）は、すぐにガイド
+    // 招待（サイトの招待・招待リンクから）：opts.netJoin＝相手のキー番号。窓を開いて、すぐ子として［つなぐ］（スイッチ ONLINE が入っている時だけ）
+    const vs = opts.netJoin || (ONLINE ? (() => { try { return new URLSearchParams(location.search).get('vs'); } catch { return null; } })() : null); // 卓だけのページは、URLの ?vs=キー も見る
+    if (ONLINE && vs && /^\d{4}$/.test(String(vs))) { if (setupOpen()) closeSetup(); openNet(); netUi.key = String(vs); netConnect(false); }
   };
   // 動作確認用：開発者ツールから状態を読み書きできるようにする
   window.__duel = { /* DEMO用：操作ガイドを開く（DEMOでは見たことを覚えない） */ openGuide(i) { openGuide(i || 0); }, /* 確かめ用：オンライン対戦の準備の窓を開く（スイッチ ONLINE が入っている時だけ） */ openNet() { if (ONLINE) openNet(); }, /* 確かめ用：オンライン対戦の席（0／1）と相手の名前で見た画面にする（通信はしない）。null で元にもどす */ previewSeat(seat, name) { if (seat == null) { mySeat = 0; net = null; } else { mySeat = seat; net = { link: null, oppName: name || '相手' }; $('#mode').value = 'hot'; } render(); }, get state() { return S; }, speak(t) { speak(t); }, act(a) { run(a); }, review(tr) { if (tr) trace = tr; showReview(); }, get cpu() { return { thinking: thinking === S, ready: !!ready, waiting: waiting.size, worker: !!worker, workerBroken, timer: cpuTimer, trace: trace.length }; }, load(s) { clearTimeout(cpuTimer); S = s; history = []; selected = null; pick = []; lastLp = [s.players[0].lp, s.players[1].lp]; render(); } };
