@@ -92,6 +92,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 section{display:flex;flex-direction:column;gap:18px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 16px;scroll-margin-top:64px}
 .sec-h{display:flex;flex-direction:column;gap:4px;padding-bottom:12px;border-bottom:3px double var(--line)}
 .sec-h span{font-size:12px;letter-spacing:.1em;color:var(--muted);font-weight:700}
+/* ページ内の移動（#ryu など）で、移った先の見出しが上の検索の帯に隠れないようにする。個別に決めてある所はそちらが優先 */
+:where([id]){scroll-margin-top:76px}
 .block{display:flex;flex-direction:column;gap:10px}
 .block + .block{border-top:1px dashed var(--line);padding-top:18px}
 

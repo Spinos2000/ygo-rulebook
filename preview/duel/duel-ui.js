@@ -93,6 +93,8 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* 今のフェイズは日本語（メイン1・スタンバイ など）。折り返さず、長い名前は字間をつめる */
 #phases li.cur span { white-space: nowrap }
 #phases li.cur.long span { letter-spacing: -.02em; padding-inline: 4px }
+/* スマホ（440px以下）：上の帯に全部は入らず、右のボタン（音・ひとつ戻す・メニュー、サイトの中では「ルールブックに戻る」も）と重なるので、今のフェイズと、押して移れるフェイズだけを出す */
+@media (max-width: 440px) { #phases li:not(.cur):not(:has(button)) { display: none } }
 #phases li button { color: var(--ink); border-color: var(--accent); border-style: dashed }
 #phases li button:hover { background: var(--accent-soft) }
 .topbtns { margin-left: auto; display: flex; gap: 6px }
@@ -977,7 +979,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-0918</p>
+    <p class="menu-note ver">版：20261121-0925</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
