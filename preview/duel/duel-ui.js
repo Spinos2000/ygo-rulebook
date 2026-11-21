@@ -346,6 +346,21 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* 演出の間は、透明な幕で画面全体をおおって、どこを押しても何も起きないようにする */
 /* スマホを横にした時：召喚・攻撃・カードの演出の間だけ、盤面にかぶる手札を下へしまう（盤面は動かさない） */
 @media (max-width: 860px) and (orientation: landscape) { .droot.fx-stage .tray { transform: translateY(115%) !important; transition: transform .25s ease } }
+/* 辞書（公式Q&A）の窓：スマホでも長い答えを折り返して読める。外側を押す・閉じる・Escで閉じる */
+.rul-box { max-width: 560px }
+.rul-box h3 small { font-size: 12px; color: var(--sub); font-weight: 500; margin-left: 4px }
+.rul-list { display: grid; gap: 8px; margin-top: 6px }
+.rul-it { border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); padding: 0 }
+.rul-it summary { cursor: pointer; list-style: none; padding: 10px 12px; display: grid; gap: 2px; font-weight: 700; font-size: 14px; line-height: 1.5 }
+.rul-it summary::-webkit-details-marker { display: none }
+.rul-it summary::before { content: "▶ "; font-size: 10px; color: var(--sub) }
+.rul-it[open] summary::before { content: "▼ " }
+.rul-id { font-weight: 500; font-size: 11px; color: var(--sub) }
+.rul-q, .rul-a { margin: 0 12px 10px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere }
+.rul-a { background: var(--panel); border-radius: 8px; padding: 8px 10px; margin-top: 0 }
+.rul-btn { margin: 2px 0 6px }
+/* 記録の中のカード名（公式Q&Aがあるもの）：押せることが分かる下線 */
+.rul-name { font: inherit; color: inherit; background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px }
 .droot.fx-busy::after { content: ""; position: fixed; inset: 0; z-index: 90; touch-action: none; cursor: default }
 /* 準備画面の間は、後ろの盤面と手札（前の対戦のカード）をぼかして、読めないようにする */
 .droot:has(#setup:not([hidden])) :is(#board, #hand0, #hand1, .tray) { filter: blur(6px); transition: filter .2s }
@@ -990,7 +1005,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-1219</p>
+    <p class="menu-note ver">版：20261121-1223</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
@@ -1000,6 +1015,7 @@ export const MARKUP = `
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>
+<div class="overlay" id="rulingDlg" hidden role="dialog" aria-modal="true" aria-label="公式Q&amp;A"><div class="box rul-box" id="rulingBox"></div></div>
 <div id="toast" role="status" hidden></div>
 <div id="speech" hidden aria-live="polite"><div class="speech-who"></div><div class="speech-text"></div></div>
 <div class="overlay" id="reviewDlg" hidden role="dialog" aria-modal="true" aria-labelledby="reviewTitle"><div class="box" id="reviewBox"></div></div>

@@ -8,6 +8,8 @@ import { playBattle, playSummon, rarityOf } from './fx.js';
 import { playSignature, sigKey } from './sig.js';
 import { playerName, whoText, resultText, oppWord } from './names.js';
 import { firstEntrance } from './aces.js';
+import { RULINGS } from './data/rulings.js';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
@@ -387,11 +389,11 @@ function scheduleCpu() {
   if (ready && ready.state === S) { const th = ready.th; cpuTimer = setTimeout(() => playCpu(S, th), cpuDelay() * 0.5); return; }
   const state = S, t0 = performance.now(), delay = cpuDelay() + cpuHold; cpuHold = 0;
   thinking = state;
-  const showT = setTimeout(() => { if (thinking === state) setThinking(true); }, 450);
+  // 「考え中…」は、考えている間だけでなく、指すまでの待ち時間も出し続ける（0.45秒より長くかかる時。下の欄の「CPUが考え中」とそろえる）
+  clearTimeout(thinkShowT); thinkShowT = setTimeout(() => { if (S === state && isCpu(actorOf(S))) setThinking(true); }, 450);
   think(state).then(r => {
-    clearTimeout(showT);
     if (thinking === state) thinking = null;
-    setThinking(false);
+    thinkProgress(1, false); // 考え終わった：線は最後まで（表示は、指す時に消す）
     if (S !== state || !S || S.winner !== null) return; // 考えている間に状態が変わった（元に戻す・新しいデュエルなど）
     if (!r.ok) { console.error(r.error); toast(`CPUのエラー：${WHO(r.error)}`, true); return; }
     const th = r.thought;
@@ -423,7 +425,9 @@ function continueEnd() {
   const fin = legalActions(S).find(x => x.type === 'endTurn');
   if (fin) { autoEnd = false; setTimeout(() => { if (S && legalActions(S).some(x => x.type === 'endTurn')) run(fin); }, 120); }
 }
+let thinkShowT = null; // 「考え中…」を出すまでの待ち
 function playCpu(state, th) {
+  clearTimeout(thinkShowT); setThinking(false);
   if (S !== state) return;
   if (fxN > 0 || pausedUi()) return; // 演出・準備画面・メニューの間は指さない（終わった時に、考えた答えで指し直す）
   ready = null;
@@ -1123,6 +1127,8 @@ function goAction(legal) {
 }
 function renderDock() {
   const dock = $('#dock');
+  // CPUの番でない時（あなたの番・決着）は、相手の帯の「考え中…」を消す
+  if (!S || S.winner !== null || !isCpu(actorOf(S))) { clearTimeout(thinkShowT); setThinking(false); }
   const actor = $('#actor'), hint = $('#actorHint'), btns = $('#phaseBtns'), go = $('#goBtn');
   const legal = humanActing() && !S.pending ? legalActions(S) : [];
   const has = a => legal.some(x => JSON.stringify(x) === JSON.stringify(a));
@@ -1255,6 +1261,16 @@ function renderChain() {
 }
 
 /* ---------- カード詳細と操作 ---------- */
+/* ---------- 辞書：カードの公式Q&A（記録のカード名・盤面のカード・説明の欄から開く小さい窓） ---------- */
+const RUL_NAMES = nameIndex(RULINGS, CARD_POOL);
+/** 説明の欄の「📖 公式Q&A（○件）」ボタン（Q&Aがあるカードだけ） */
+function rulBtn(code) { const n = rulingsFor(RULINGS, code).length; return n ? `<button type="button" class="btn small ghost rul-btn" data-rul="${esc(code)}">📖 公式Q&amp;A（${n}件）</button>` : ''; }
+function showRulings(code) {
+  const list = rulingsFor(RULINGS, code); if (!list.length) return;
+  $('#rulingBox').innerHTML = rulingsHtml(CARD_POOL[code]?.name || '', list);
+  if (list.length === 1) { const d = $('#rulingBox details'); if (d) d.open = true; } // 1件だけなら、はじめから開いておく
+  $('#rulingDlg').hidden = false;
+}
 function describe(uid) {
   const c = S.cards[uid], d = defOf(S, uid);
   if (isCpu(c.controller) && (c.zone === 'hand' || ((c.zone === 'mzone' || c.zone === 'szone') && !c.faceUp))) {
@@ -1276,7 +1292,7 @@ function describe(uid) {
     else extra.push(c.proper ? `${how}で正しく出したカードなので、墓地から出し直せます` : `${how}で正しく出していないカードなので、墓地から出し直せません`);
   }
   return {
-    head: `<h3>${esc(d.name)}</h3><p class="tl">${esc(typeLine)}</p><p class="tl">${NAME(c.controller)}の${where}${state}</p>${extra.length ? `<p class="tl">${esc(extra.join('・'))}</p>` : ''}`,
+    head: `<h3>${esc(d.name)}</h3>${rulBtn(c.code)}<p class="tl">${esc(typeLine)}</p><p class="tl">${NAME(c.controller)}の${where}${state}</p>${extra.length ? `<p class="tl">${esc(extra.join('・'))}</p>` : ''}`,
     text: `<p class="tx">${esc(d.text)}</p>`,
   };
 }
@@ -1369,7 +1385,7 @@ function renderDetail() {
 
 function renderLog() {
   const el = $('#log');
-  el.innerHTML = S.log.slice(-200).map(l => `<li class="${l.text.startsWith('―') ? 'turn' : ''}">${esc(WHO(l.text))}</li>`).join('');
+  el.innerHTML = S.log.slice(-200).map(l => `<li class="${l.text.startsWith('―') ? 'turn' : ''}">${linkNames(esc(WHO(l.text)), RUL_NAMES)}</li>`).join('');
   el.scrollTop = el.scrollHeight;
 }
 
@@ -2876,6 +2892,8 @@ root.addEventListener('click', e => {
     return;
   }
   if (t.closest('#pileClose') || t.id === 'pileDlg') { $('#pileDlg').hidden = true; return; }
+  if (t.closest('#rulClose') || t.id === 'rulingDlg') { $('#rulingDlg').hidden = true; return; }
+  { const rb = t.closest('[data-rul]'); if (rb) { showRulings(rb.dataset.rul); return; } }
   // パソコン（広い画面）では、置き場を押すと一覧。スマホでは一番上のカードの説明（一覧は長押し）
   const pileHit = t.closest('#board [data-pile]');
   if (pileHit && !narrow() && !(S.pending && S.pending.request.kind === 'cards')) { const [p, k] = pileHit.dataset.pile.split(':'); showPile(Number(p), k); return; }
@@ -2904,7 +2922,8 @@ document.addEventListener('keydown', e => {
   if (e.key === ' ' && !/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test((e.composedPath()[0] || {}).tagName || '')) { const g = $('#goBtn'); if (g && !g.disabled) { e.preventDefault(); g.click(); } return; }
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
   if (e.key === 'Escape') {
-    if (!$('#pileDlg').hidden) $('#pileDlg').hidden = true;
+    if (!$('#rulingDlg').hidden) $('#rulingDlg').hidden = true;
+    else if (!$('#pileDlg').hidden) $('#pileDlg').hidden = true;
     else if (!$('#menu').hidden) closeMenu();
     else closeSheets();
   }

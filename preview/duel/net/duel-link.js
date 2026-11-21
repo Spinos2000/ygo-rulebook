@@ -73,7 +73,9 @@ export function tabRoom(name        , uid        )       {
                
                
                                                
-                                                                                    
+                                                                                                               
+                                    
+                  
                    
                 
            
@@ -82,8 +84,11 @@ export function tabRoom(name        , uid        )       {
               
  
 
+/** 公式試合／練習（電卓と同じく親が決める） */
+                                           
+
                        
-                                                       
+                                                                                  
                                                         
                                                      
                                       
@@ -107,6 +112,10 @@ export function tabRoom(name        , uid        )       {
                        
                                                   
                   
+                             
+              
+                                                                        
+                  
                              
  
 
@@ -122,11 +131,12 @@ export class DuelLink {
           joined = false;
           beat                                        = null;
           lastSeen = 0; // 相手の欄が最後に書かれた時刻
+          round = 0; // 何回目の対戦か（もう一度で1つ増える）
           o             ;
 
   constructor(o             ) {
     this.o = o;
-    this.doc = { app: 'ygo-duel', v: o.version, name: o.name, deck: o.deck, ops: [] };
+    this.doc = { app: 'ygo-duel', v: o.version, name: o.name, deck: o.deck, ops: [], ready: o.host ? true : (o.ready ?? true) };
     this.seat = o.host ? 0 : 1;
     // 自分の欄は、最初に部屋の中身を読んでから書く（つながり直しの時に、前の操作を消さないため）
     this.unsub = o.room.onPeers(ch => this.onPeers(ch.peers));
@@ -164,11 +174,15 @@ export class DuelLink {
     this.lastSeen = Math.max(this.lastSeen, other.updatedAt || Date.now());
     if (them.end?.reason === 'away') { this.o.on({ type: 'away' }); this.stop(); return; }
     if (them.v !== this.o.version) { this.o.on({ type: 'version', mine: this.o.version, theirs: them.v }); return; }
+    // もう一度：親が新しい約束（回数が1つ大きい）を書いたら、子は前の対戦を片づけて作り直す
+    if (!this.o.host && them.start && them.start.round > this.round && this.state) {
+      this.state = null; this.applied = 0; this.doc.ops = []; delete this.doc.end;
+    }
     // 最初の約束：親が書く。子は親の約束を読んで同じ盤面を作る
     if (!this.state) {
-      if (this.o.host && !this.doc.start) {
+      if (this.o.host && !this.doc.start && them.ready) {
         const rnd = this.o.random ?? Math.random;
-        this.doc.start = { seed: Math.floor(rnd() * 2 ** 31), first: rnd() < 0.5 ? 0 : 1, decks: [this.o.deck, them.deck], guest: other.uid };
+        this.doc.start = { seed: Math.floor(rnd() * 2 ** 31), first: rnd() < 0.5 ? 0 : 1, decks: [this.o.deck, them.deck], guest: other.uid, round: this.round + 1, mode: this.o.mode ?? 'official' };
         void this.o.room.presence(this.doc);
       }
       const st = this.o.host ? this.doc.start : them.start;
@@ -185,8 +199,8 @@ export class DuelLink {
         if (meNow) { if (mi >= mine.length) break; s = applyAction(s, mine[mi++]); }
         else { if (ti >= theirs.length) break; s = applyAction(s, theirs[ti++]); }
       }
-      this.state = s; this.applied = ti;
-      this.o.on({ type: 'start', state: this.state, seat: this.seat });
+      this.state = s; this.applied = ti; this.round = st.round;
+      this.o.on({ type: 'start', state: this.state, seat: this.seat, round: st.round, mode: st.mode });
     }
     // 相手の操作を、まだ入れていない分だけ順に入れる
     const ops = them.ops ?? [];
@@ -214,6 +228,17 @@ export class DuelLink {
     return true;
   }
 
+  /** 子：［準備OK］を押した */
+  setReady() { this.doc.ready = true; void this.o.room.presence(this.doc); }
+
+  /** 親：決着のあと「もう一度（同じ相手と）」。新しい種で、同じデッキ・同じ公式／練習で始め直す */
+  rematch()          {
+    if (!this.o.host || !this.state || this.state.winner === null || this.stopped) return false;
+    this.state = null; this.applied = 0; this.doc.ops = []; delete this.doc.end; delete this.doc.start;
+    void this.o.room.presence(this.doc);
+    return true;
+  }
+
   /** 今が自分の番か（画面が操作を受けつけてよいか） */
   myTurn()          { return !!this.state && this.state.winner === null && actorOf(this.state) === this.seat; }
 
@@ -228,7 +253,6 @@ export class DuelLink {
     if (this.timer) { clearTimeout(this.timer); this.timer = null; }
     void this.o.room.presence(this.doc);
     this.o.on({ type: 'end', winner: this.doc.end.winner });
-    if (this.beat) { clearInterval(this.beat); this.beat = null; }
   }
 
   /** つながり直し：書きかけの操作をすぐ書く（相手の操作は onPeers で最初から読み直される） */
