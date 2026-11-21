@@ -35,6 +35,8 @@ import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js
                    
                                                                     
                        
+                                                           
+                      
                                                
                 
                       
@@ -264,7 +266,7 @@ export function idealThink(s           , opt               = {}, deckNames      
         if (WORK.n - w0start >= budget && i > 0) break;
         let n           ;
         try { n = applyAction(w, c.action); } catch { continue; }
-        const fin = playout(n, s.turn, wts, opt.strongRest ? me : null);
+        const fin = playout(n, s.turn, wts, opt.strongRest ? me : null, opt.strongOpp ? opp(me) : null);
         const r = sum.get(c) ?? sum.set(c, { p: 0, n: 0, per: [] }).get(c) ;
         const pr = prob(evaluate(fin, me, cpuOpt.weights) + (c.base ? first.margin : 0), o.scale);
         r.p += pr; r.n++; r.per[i] = pr;
@@ -409,11 +411,11 @@ export function findLethal(s0           , me          , nodeLimit        )      
 }
 
 /** 相手の次のターンが終わる（自分の次のターンが始まる）まで、お互いに速い判断で指し進める */
-function playout(s           , startTurn        , wts                                                               = [undefined, undefined], me                  = null)            {
+function playout(s           , startTurn        , wts                                                               = [undefined, undefined], me                  = null, foe                  = null)            {
   for (let i = 0; i < 400 && s.winner === null && s.turn < startTurn + 2; i++) {
     // 自分のターンの残りは、今のCPUと同じ丁寧な判断で指す（その手の後に実際に指す手に近づける）。それ以外は速い判断
     const a = actorOf(s);
-    const careful = me !== null && a === me && s.turn === startTurn;
+    const careful = (me !== null && a === me && s.turn === startTurn) || (foe !== null && a === foe);
     try { s = applyAction(s, cpuDecide(s, careful ? { weights: wts[a] } : { depth: 0, planSteps: 0, weights: wts[a] })); } catch { break; }
     s.log = []; s.anim = [];
   }
