@@ -534,6 +534,13 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .fan-info small { color: var(--sub); font-size: 11px }
 .fan-info p { margin: 2px 0 0; font-size: 12px; line-height: 1.55; max-height: 7.8em; overflow: auto }
 .fan-info .fan-hint { font-size: 11px; font-weight: 700; color: var(--me) }
+/* サーチ（デッキから選ぶ）：墓地と同じ扇の左右スクロール（No.4）。真ん中のカードを押すと選ぶ。選べないカードは後ろの扇に薄く */
+.fan-layer > .fan-car { flex: none; width: 100%; margin: 0; padding-top: 18px; padding-bottom: 22px; --pw: clamp(120px, 38vw, 190px) }
+.fan-car .pile-it { cursor: pointer }
+.fan-car .pile-face.picked { box-shadow: 0 0 0 4px var(--accent), 0 0 22px 6px color-mix(in srgb, var(--accent) 70%, transparent) }
+.fan-car .pile-it:not(.on) .pile-face { filter: brightness(.82) }
+.fan-area.empty { display: none }
+.fan-layer > .fan-area:has(+ .fan-car) .card { opacity: .5 }
 @media (max-width: 860px) {
   .fan-layer > .fan-head { margin-top: 0 }
   .fan-layer > .fan-area { margin-bottom: auto }
@@ -1042,7 +1049,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-1505</p>
+    <p class="menu-note ver">版：20261121-1522</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1505-cef0c6543c';
-import { fullThink } from './ai/levels.js?v=20261121-1505-cef0c6543c';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1505-cef0c6543c';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1505-cef0c6543c';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1505-cef0c6543c';
-import { playSignature, sigKey } from './sig.js?v=20261121-1505-cef0c6543c';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1505-cef0c6543c';
-import { firstEntrance } from './aces.js?v=20261121-1505-cef0c6543c';
-import { RULINGS } from './data/rulings.js?v=20261121-1505-cef0c6543c';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1505-cef0c6543c';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1505-cef0c6543c';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1505-cef0c6543c';
-import { joinSiteRoom } from './net/site-room.js?v=20261121-1505-cef0c6543c';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1522-6e496fe4bc';
+import { fullThink } from './ai/levels.js?v=20261121-1522-6e496fe4bc';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1522-6e496fe4bc';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1522-6e496fe4bc';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1522-6e496fe4bc';
+import { playSignature, sigKey } from './sig.js?v=20261121-1522-6e496fe4bc';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1522-6e496fe4bc';
+import { firstEntrance } from './aces.js?v=20261121-1522-6e496fe4bc';
+import { RULINGS } from './data/rulings.js?v=20261121-1522-6e496fe4bc';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1522-6e496fe4bc';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1522-6e496fe4bc';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1522-6e496fe4bc';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-1522-6e496fe4bc';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261121-1505-cef0c6543c';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-1505-cef0c6543c';
-import { DECKS } from './data/decks.js?v=20261121-1505-cef0c6543c';
-import { SCRIPTS } from './cards/index.js?v=20261121-1505-cef0c6543c';
+} from './engine/game.js?v=20261121-1522-6e496fe4bc';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1522-6e496fe4bc';
+import { DECKS } from './data/decks.js?v=20261121-1522-6e496fe4bc';
+import { SCRIPTS } from './cards/index.js?v=20261121-1522-6e496fe4bc';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -359,7 +359,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261121-1505-cef0c6543c', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-1522-6e496fe4bc', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -477,7 +477,8 @@ function narrate(prev, next) {
     cpuHold = 1200; // 話している間は、次の処理まで少し待つ
     return;
   }
-  if (next.winner !== null && prev.winner === null) { say(next.winner === CPU ? 'win' : 'lose'); return; }
+  // 決着の台詞は、真ん中の「あなたの負け…」などの帯が消えてから（No.6：同じ場所に重なって読めなかった）
+  if (next.winner !== null && prev.winner === null) { endSpeech = next.winner === CPU ? 'win' : 'lose'; clearTimeout(endSpeechT); endSpeechT = setTimeout(flushEndSpeech, 4000); return; }
   // あなたの罠で切り返された（攻撃が止まった・モンスターが破壊された・ダメージを受けた）
   const done = prev.chain.filter(l => l.player === 0 && l.cardKind === 'trap' && !next.chain.some(n => n.uid === l.uid && n.serial === l.serial));
   if (done.length) {
@@ -565,6 +566,12 @@ function renderTargets() {
 
 /* ---------- CPU の台詞 ---------- */
 let speechT;
+let endSpeech = null, endSpeechT = null; // 決着の台詞：帯が消えるまで待つ（帯が出ない時も4秒で出す）
+function flushEndSpeech() {
+  clearTimeout(endSpeechT); endSpeechT = null;
+  const k = endSpeech; endSpeech = null;
+  if (k && S && S.winner !== null && cpuMode()) speak(lineFor(persona, k));
+}
 function speak(text, side = 'opp') {
   const el = $('#speech');
   if (!el || !text) return;
@@ -1312,7 +1319,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261121-1505-cef0c6543c';
+const DUEL_BUILD = '20261121-1522-6e496fe4bc';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -1737,6 +1744,9 @@ function openFan() {
   const from = src === 'hand' ? handEl(p) : pileEl(p, 'deck');
   if (src !== 'hand') glowPile(p);
   const opened = from ? flyIn(els, centerOf(rectOf(from))) : Promise.resolve();
+  // デッキから選ぶ時（サーチ）：開き終わったら、選べるカードを墓地と同じ「扇の左右スクロール」にまとめる（No.4 ボスの注文）。
+  // 真ん中のカードが大きくなって効果が下に出る。真ん中のカードを押すと選ぶ、ほかのカードを押すと真ん中に来る
+  if (src === 'deck') { opened.then(() => { if (fan && fan.layer === layer) fanCarousel(layer, els); }); return; }
   // 開き終わったら、選べるカードを下の段にまとめる（押しやすいように）
   if (src !== 'hand' && els.some(el => el.classList.contains('dim'))) opened.then(() => {
     if (!fan || fan.layer !== layer) return;
@@ -1753,6 +1763,22 @@ function openFan() {
     setTimeout(() => area.classList.remove('sorting'), 600);
     const tip = layer.querySelector('.fan-head span'); if (tip && narrow()) tip.textContent = '下に並んだカードから選べます（1回目で効果、もう1回で決定）';
   });
+}
+/** デッキから選ぶ扇を、左右スクロールに作りかえる（選べないカードは後ろの扇に薄く残す） */
+function fanCarousel(layer, els) {
+  const picks = sortForFan(els.filter(el => !el.classList.contains('dim')).map(el => Number(el.dataset.fan)));
+  const rest = els.filter(el => el.classList.contains('dim')), area = layer.querySelector('.fan-area');
+  els.filter(el => !el.classList.contains('dim')).forEach(el => el.remove());
+  if (rest.length) { area.classList.add('sorting'); layoutFan(area, rest); setTimeout(() => area.classList.remove('sorting'), 600); } else area.classList.add('empty');
+  const car = document.createElement('div');
+  car.className = 'pile-car fan-car'; car.tabIndex = 0; car.setAttribute('aria-label', '選べるカード');
+  car.innerHTML = picks.map(u => { const d = defOf(S, u); return `<span class="pile-it" data-u="${u}"><span class="${faceCls(d)} pile-face" data-fan="${u}">${faceHtml(u, d, false)}</span></span>`; }).join('');
+  layer.insertBefore(car, layer.querySelector('.fan-btns'));
+  car.animate([{ opacity: 0, transform: 'translateY(24px)' }, { opacity: 1, transform: 'none' }], { duration: fanDur(360), easing: 'cubic-bezier(.2,.8,.2,1)' });
+  const ctl = carousel(car, it => fanPeek(it.querySelector('[data-fan]'), Number(it.dataset.u)));
+  fan.car = ctl;
+  const tip = layer.querySelector('.fan-head span');
+  if (tip) tip.textContent = `左右にスクロールして、真ん中のカードを押すと${fan.req.max > 1 ? '選びます' : pickVerb(fan.req.prompt)}（${picks.length}枚から）`;
 }
 /* ---------- デッキの上から何枚かをめくって1枚選ぶ（強欲で謙虚な壺など） ----------
  * 背景に赤い炎（強欲）と緑の渦（謙虚）が流れ、デッキから裏側のカードがパラパラと画面の中央へ出てくる。
@@ -1819,8 +1845,7 @@ function fanPeek(el, u) {
   let box = fan.layer.querySelector('.fan-info');
   if (!box) { box = document.createElement('div'); box.className = 'fan-info'; box.setAttribute('aria-live', 'polite'); fan.layer.insertBefore(box, fan.layer.querySelector('.fan-pick') || fan.layer.querySelector('.fan-btns')); }
   const d = defOf(S, u), ok = fan.req.options.includes(u);
-  const type = d.kind === 'monster' ? `★${d.level ?? '-'}・${d.attribute || ''}・${d.race || ''}　ATK ${d.atk ?? '?'} / DEF ${d.def ?? '?'}` : `${d.subtype || ''}${d.kind === 'spell' ? '魔法' : '罠'}`;
-  box.innerHTML = `<b>${esc(d.name)}</b><small>${esc(type)}</small><p>${esc(d.text || '')}</p><span class="fan-hint">${ok ? (fan.req.max > 1 ? 'もう一度押すと選びます' : `もう一度押すと${pickVerb(fan.req.prompt)}`) : 'このカードは選べません'}</span>`;
+  box.innerHTML = `<b>${esc(d.name)}</b><small>${esc(cardTypeText(d))}</small><p>${esc(d.text || '')}</p><span class="fan-hint">${ok ? `${fan.car ? 'このカードを押すと' : 'もう一度押すと'}${fan.req.max > 1 ? (fan.sel.includes(u) ? '選ぶのをやめます' : '選びます') : pickVerb(fan.req.prompt)}` : 'このカードは選べません'}</span>`;
 }
 function fanPick(u) {
   if (!fan || !fan.req.options.includes(u)) return;
@@ -2262,7 +2287,7 @@ function playPendingMoves() {
       if (mill.length) await revealMill(mill, P);
       await Promise.all(P.moves.map((m, i) => flyOne(m, P, i)));
       await Promise.all(P.acts.map((a, i) => activateOne(a, P, i)));
-      if (P.win !== null) await banner(P.win === 'draw' ? '引き分け' : `${resultText(P.win, cpuMode() || netMode(), ME())}${P.win === ME() || !(cpuMode() || netMode()) ? '！' : '…'}`, P.win === ME() || !(cpuMode() || netMode()) ? 'win' : 'lose', 1800);
+      if (P.win !== null) { await banner(P.win === 'draw' ? '引き分け' : `${resultText(P.win, cpuMode() || netMode(), ME())}${P.win === ME() || !(cpuMode() || netMode()) ? '！' : '…'}`, P.win === ME() || !(cpuMode() || netMode()) ? 'win' : 'lose', 1800); flushEndSpeech(); }
       else if (P.turn !== null) {
         const text = cpuMode() ? (P.turn === 0 ? 'あなたのターン' : 'CPUのターン') : `${NAME(P.turn)}のターン`;
         const drawing = pendingSummons.some(j => j && j.handAdd && j.p === P.turn && sortsHand(P.turn));
@@ -2503,6 +2528,38 @@ function loadSaved() {
 }
 
 /* ---------- 墓地・除外・EXデッキの中身 ---------- */
+/** カードの種類の短い説明（★・属性・種族・攻守、または「通常魔法」など） */
+const cardTypeText = d => (d.kind === 'monster' ? `★${d.level ?? '-'}・${d.attribute || ''}・${d.race || ''}　ATK ${d.atk ?? '?'} / DEF ${d.def ?? '?'}` : `${d.subtype || ''}${d.kind === 'spell' ? '魔法' : '罠'}`);
+/**
+ * 扇の形の左右スクロール（墓地・除外・EXの一覧と、デッキから選ぶ時で同じ動き）。
+ * car の中の .pile-it を横に並べ、真ん中のカードを大きく・まっすぐに、離れるほど小さく傾ける。真ん中が変わったら onCenter(it)
+ */
+function carousel(car, onCenter) {
+  const items = [...car.querySelectorAll('.pile-it')];
+  let cur = null;
+  const update = () => {
+    const r = car.getBoundingClientRect(), mid = r.left + r.width / 2;
+    let best = null, bd = Infinity;
+    for (const it of items) {
+      const ir = it.getBoundingClientRect(), d = (ir.left + ir.width / 2 - mid) / ir.width; // 真ん中からカード何枚分ずれているか
+      const a = Math.max(-1.6, Math.min(1.6, d));
+      it.style.setProperty('--k', String(1 - Math.min(.42, Math.abs(a) * .3)));
+      it.style.setProperty('--r', (a * 10).toFixed(1) + 'deg');
+      it.style.setProperty('--y', (a * a * 14).toFixed(1) + 'px');
+      it.style.zIndex = String(100 - Math.round(Math.abs(d) * 10));
+      if (Math.abs(d) < bd) { bd = Math.abs(d); best = it; }
+    }
+    if (best && best !== cur) { cur = best; items.forEach(x => x.classList.toggle('on', x === best)); onCenter(best); }
+  };
+  car.addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
+  car.scrollLeft = 0;
+  requestAnimationFrame(update);
+  return {
+    // そのカードを真ん中へ（横だけ動かす。窓全体は動かさない）
+    center: it => { const left = it.offsetLeft - (car.clientWidth - it.offsetWidth) / 2; car.scrollTo({ left, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); setTimeout(update, 400); },
+    current: () => cur,
+  };
+}
 function showPile(p, kind) {
   const list = S.players[p][kind];
   const label = { deck: 'デッキ', gy: '墓地', extra: 'EXデッキ', banished: '除外' }[kind];
@@ -2526,31 +2583,12 @@ function showPile(p, kind) {
       + `<div class="pile-info" aria-live="polite"></div>`;
     $('#pileDlg').hidden = false;
     $('#pileBox').classList.add('pile-fan');
-    const car = $('#pileBox .pile-car'), items = [...car.querySelectorAll('.pile-it')], info = $('#pileBox .pile-info');
-    let cur = null;
-    const update = () => {
-      const r = car.getBoundingClientRect(), mid = r.left + r.width / 2;
-      let best = null, bd = Infinity;
-      for (const it of items) {
-        const ir = it.getBoundingClientRect(), d = (ir.left + ir.width / 2 - mid) / ir.width; // 真ん中からカード何枚分ずれているか
-        const a = Math.max(-1.6, Math.min(1.6, d));
-        it.style.setProperty('--k', String(1 - Math.min(.42, Math.abs(a) * .3)));
-        it.style.setProperty('--r', (a * 10).toFixed(1) + 'deg');
-        it.style.setProperty('--y', (a * a * 14).toFixed(1) + 'px');
-        it.style.zIndex = String(100 - Math.round(Math.abs(d) * 10));
-        if (Math.abs(d) < bd) { bd = Math.abs(d); best = it; }
-      }
-      if (best && best !== cur) {
-        cur = best; items.forEach(x => x.classList.toggle('on', x === best));
-        const u = Number(best.dataset.u), d = defOf(S, u);
-        const type = d.kind === 'monster' ? `★${d.level ?? '-'}・${d.attribute || ''}・${d.race || ''}　ATK ${d.atk ?? '?'} / DEF ${d.def ?? '?'}` : `${d.subtype || ''}${d.kind === 'spell' ? '魔法' : '罠'}`;
-        info.innerHTML = `<b>${esc(d.name)}</b><small>${esc(type)}</small><p>${esc(d.text || '')}</p>`;
-        info.scrollTop = 0;
-      }
-    };
-    car.addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
-    car.scrollLeft = 0;
-    requestAnimationFrame(update);
+    const car = $('#pileBox .pile-car'), info = $('#pileBox .pile-info');
+    carousel(car, it => {
+      const u = Number(it.dataset.u), d = defOf(S, u);
+      info.innerHTML = `<b>${esc(d.name)}</b><small>${esc(cardTypeText(d))}</small><p>${esc(d.text || '')}</p>`;
+      info.scrollTop = 0;
+    });
     return;
   }
   $('#pileBox').classList.remove('pile-fan');
@@ -2654,9 +2692,10 @@ function wireTray(root) {
   root.querySelector('#trayHandle').addEventListener('click', e => { e.stopPropagation(); setTray(!trayOpen); });
 }
 /* ---------- スマホの手札の操作 ----------
- * 長押し：カードの効果を見る（もう一度押すと閉じる）
+ * 長押し（動かさずに LONG_PRESS_MS）：カードの効果を見る（No.2 ボスの注文。選んでいないカードでも、選んだカードでも同じ）
  * 1回押す：カードが手札から少し飛び出して光る（選んだ状態）。もう一度押すと戻る
- * 選んだカードを長押し：置ける場所に矢印が伸び、残りの手札は下に沈む。そのまま指を滑らせた先のマスに置く
+ * 選んだカードを押したまま指を動かす：置ける場所に矢印が伸び、残りの手札は下に沈む。そのまま指を滑らせた先のマスに置く
+ *   （長押し＝効果、引っ張る＝置く、で分ける。すばやく2回押しても効果が見られる）
  *   （指を速く払って置き場所が決まらない時は、空いている一番左のマスに置く。指を離しても矢印は残り、マスを押しても置ける）
  * 置いた後：上下左右に払うと「表・裏（攻撃表示で召喚・裏側でセット／発動・セット）」が切り替わり、押すと決定 */
 let aim = null;    // { u, acts, targets, layer, ghost, sx, sy, moved, hover, held }
@@ -2935,11 +2974,12 @@ root.addEventListener('pointerdown', e => {
   if (S.pending && S.pending.request.kind === 'cards' && S.pending.request.options.includes(u)) return;
   clearTimeout(handPress?.timer);
   handPress = { u, x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, fired: false };
-  // 選んだカードの長押し：カードが指についてくる（効果はダブルタップで見る）
-  if (selected === u) handPress.timer = setTimeout(() => {
-    const hp = handPress; if (!hp) return;
-    hp.fired = true;
-    if (handActs(u).length) startAim(u, hp.lx, hp.ly);
+  // 長押し（動かさない）：効果を見る。選んだカードを引っ張る（指を動かす）と置く（下の pointermove）
+  handPress.timer = setTimeout(() => {
+    const hp = handPress; if (!hp || hp.u !== u) return;
+    hp.fired = true; clearTimeout(tapT); tapT = null;
+    if (navigator.vibrate) try { navigator.vibrate(15); } catch { /* 振動できない端末 */ }
+    selected = u; sheet = 'detail'; render();
   }, LONG_PRESS_MS);
 });
 root.addEventListener('pointermove', e => {
@@ -3096,6 +3136,8 @@ root.addEventListener('click', e => {
   const fanEl = t.closest('[data-fan]');
   if (fanEl) {
     const fu = Number(fanEl.dataset.fan);
+    const it = fan && fan.car && fanEl.closest('.fan-car .pile-it');
+    if (it) { if (fan.car.current() !== it) { fan.car.center(it); return; } fanPick(fu); return; }
     if (narrow() && fan && (!fan.peek || fan.peek !== fu || !fan.req.options.includes(fu))) { fanPeek(fanEl, fu); return; }
     fanPick(fu); return;
   }
