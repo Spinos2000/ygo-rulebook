@@ -18,6 +18,8 @@ export const DEFAULT_WEIGHTS = {
   mySetTrap: 480,       // 自分のセットした罠
   mySetSpell: 280,      // 自分のセットした通常魔法など（手札の方が価値がある）
   faceUpST: 200,        // 表側の装備カード・永続カード
+  contST: 400,          // 表側の永続魔法・永続罠（場にあって効果を出し続けるので、手札の魔法より少し高い。MIMIの横広げ）
+  fieldSpell: 420,      // 表側のフィールド魔法（場にあって効果を出し続けるカードなので、手札の魔法より少し高い。MIMIの報告：サーチしたダーク・シティを発動しないまま負けた）
   handMon: 330,         // 手札のモンスター（＋攻撃力×0.02）
   handSpell: 360,       // 手札の魔法・罠
   oppHand: 350,         // 相手の手札1枚
@@ -59,6 +61,8 @@ function cardValueOnField(s           , uid        , viewer          , w        
     if (c.equippedTo !== null) return 150; // サクリファイスに裏側で装備されたモンスター
     return d.kind === 'trap' ? w.mySetTrap : w.mySetSpell;
   }
+  if (c.zone === 'fzone') return w.fieldSpell;
+  if (d.subtype === '永続' && c.equippedTo === null) return w.contST;
   return w.faceUpST;
 }
 

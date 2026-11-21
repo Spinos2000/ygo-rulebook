@@ -187,6 +187,16 @@ function zeroAtkOut(before           , after                       , me         
   });
 }
 
+/**
+ * リリースしたモンスターより攻撃力の低いモンスターを、攻撃表示でアドバンス召喚する手か（MIMIの報告：攻撃力1000のドゥームガイをリリースして
+ * 攻撃力800のディアボリックガイを攻撃表示で出し、次のターンに殴られた）。攻撃力0を攻撃表示で出す手と同じく「ほかに手が無い時だけ」にする
+ */
+function weakTribute(s           , a        )          {
+  if (a.type !== 'normalSummon' || !a.tributes.length) return false;
+  const best = Math.max(...a.tributes.map(u => (s.cards[u] && isOnField(s.cards[u]) ? currentStats(s, u).atk : 0)));
+  return (defOf(s, a.card).atk ?? 0) < best;
+}
+
                                                                                                                                                 
 
 /** 理想のCPUの考え（行動と勝率の見積もり） */
@@ -221,7 +231,7 @@ export function idealThink(s           , opt               = {}, deckNames      
     a.p += prob(sc.score + (base ? margin : 0), o.scale); a.n++;
     // 盤面の点数そのもの（勝率に直すと、負けそうな時はどれも0%になって差が消えるため、その時の比べ直しに使う）
     a.raw = (a.raw ?? 0) + Math.max(-1e5, Math.min(1e5, sc.score + (base ? margin : 0)));
-    if (zeroAtkOut(world, sc.after, me)) a.zero = (a.zero ?? 0) + 1;
+    if (zeroAtkOut(world, sc.after, me) || weakTribute(world, sc.action)) a.zero = (a.zero ?? 0) + 1;
     if (free) {
       const r = romanceOf(world, sc.after, me, aces);
       if (r?.kind === 'ace') { a.romance++; a.ace ??= r.ace; }

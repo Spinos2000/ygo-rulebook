@@ -67,7 +67,7 @@ export function ritualSummon(x     , spec            )       {
     kind: 'cards', prompt: spec.materials === 'deckNormal' ? `デッキから墓地へ送る通常モンスターを選んでください（レベル合計${need}）` : `リリースするモンスターを選んでください（レベル合計${need}${spec.mode === 'atLeast' ? '以上' : ''}）`,
     options: mats, min: 1, max: mats.length, rule: spec.mode === 'atLeast' ? { type: 'levelAtLeast', target: need } : { type: 'levelEqual', target: need },
   });
-  if (spec.materials === 'deckNormal') { log(s, `${pl(p)}：デッキから儀式召喚の素材を墓地へ送る`); sendToGy(s, pick, 'effect'); }
+  if (spec.materials === 'deckNormal') { log(s, `${pl(p)}：デッキから${pick.map(u => `「${defOf(s, u).name}」`).join('、')}を墓地へ送る（儀式召喚の素材）`); sendToGy(s, pick, 'effect'); }
   else release(s, pick, 'release');
   s.animMats = [...pick]; // 演出用：儀式の素材
   newStep(s); // 素材にする処理と儀式召喚は同時に行われない
