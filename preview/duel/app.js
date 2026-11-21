@@ -641,7 +641,8 @@ function renderSetup() {
     const me = p === 'p0deck', o = me ? SU.p0own : SU.p1own;
     el.innerHTML = `<p class="su-q">${me ? 'あなたが使うデッキは？' : 'CPUが使うデッキは？'}<small>${esc(o)}のデッキテーマ</small></p>`
       + (!me && skipOwner() ? `<div class="su-opts su-rand">${opt('rand', '🎲', 'おまかせ', 'あなたと違うデッキからランダムに選ぶ', SU.rand)}</div>` : '')
-      + `<div class="su-grid">` + decksOf(o).map(d => deckBtn(`deck:${d.code}`, d, (me ? SU.p0 : SU.p1) === d.code && (me || !SU.rand))).join('') + '</div>';
+      + `<div class="su-grid">` + decksOf(o).map(d => deckBtn(`deck:${d.code}`, d, (me ? SU.p0 : SU.p1) === d.code && (me || !SU.rand))).join('') + '</div>'
+      + ryuHelp();
   } else if (p === 'first') {
     el.innerHTML = `<p class="su-q">先攻・後攻は？</p><div class="su-opts">`
       + opt('first:0', '🙋', 'あなたが先攻', '最初のターンはドローなし', SU.first === '0')
@@ -661,8 +662,15 @@ function renderSetup() {
       + `<div><span>先攻</span><b>${esc(firstTxt)}</b></div>`
       + `<div><span>強さ</span><b>${esc(LEVEL_LABEL[SU.level] || 'ふつう')}</b></div></div>`
       + `<button type="button" class="su-start" data-su="start">▶ デュエル開始</button>`
-      + `<button type="button" class="su-more" data-su="more">⚙️ チェーンの確認・演出・CPUの速さ</button>`;
+      + `<button type="button" class="su-more" data-su="more">⚙️ 発動の聞き方・演出・CPUの速さ</button>`;
   }
+}
+/** 準備画面の「🏫 在校生・🌏 留学生とは？」：2行の説明と、ルールブックの「🌏 留学生デッキ」への案内（サイトの中の時だけ） */
+function ryuHelp() {
+  return `<details class="su-help"><summary>🏫 在校生・🌏 留学生とは？</summary>`
+    + '<p>🏫 <b>在校生デッキ</b>：この環境のルール（GXまでのテーマ・カード規制）に沿ったデッキ。</p>'
+    + '<p>🌏 <b>留学生デッキ</b>：ルールや規制には沿っていないけれど、環境のトップにならないように調整して、遊びに来たデッキ。</p>'
+    + (OPTS.onClose ? '<button type="button" class="btn small ghost" data-su="ryu">📖 ルールブックで読む</button>' : '') + '</details>';
 }
 function setupClick(t) {
   const b = t.closest('[data-su]'); if (!b || !SU) return false;
@@ -673,6 +681,7 @@ function setupClick(t) {
   if (k === 'deck') { if (me) SU.p0 = v; else { SU.p1 = v; SU.rand = false; } suGo(me ? 'p1own' : 'first'); return true; }
   if (k === 'first') { SU.first = v; suGo('level'); return true; }
   if (k === 'level') { SU.level = v; suGo('go'); return true; }
+  if (k === 'ryu') { $('#setup').hidden = true; try { OPTS.onClose(); } catch { /* 閉じられない時はそのまま */ } setTimeout(() => { location.hash = '#ryu'; }, 0); return true; }
   if (k === 'more') { suKeep = SU; $('#setup').hidden = true; suReturn = true; openMenu(); $('#menu').classList.add('from-setup'); return true; }
   if (k === 'start') {
     const all = Object.keys(DECKS);
@@ -1018,6 +1027,10 @@ function fanOut(el) {
 /* ---------- フェイズ（上の帯） ---------- */
 const PHASES = ['draw', 'standby', 'main1', 'battle', 'main2', 'end'];
 const PH_SHORT = { draw: 'DP', standby: 'SP', main1: 'M1', battle: 'BP', main2: 'M2', end: 'EP' };
+/** 今のフェイズだけは、はじめての人にも読めるように日本語で出す（ほかは略字のまま） */
+const PH_JP = { draw: 'ドロー', standby: 'スタンバイ', main1: 'メイン1', battle: 'バトル', main2: 'メイン2', end: 'エンド' };
+/** ダメージステップの細かいタイミングの、はじめての人向けの一言 */
+const STEP_HINT = { dsStart: '攻撃の勝ち負けを決める前', beforeCalc: '攻撃力を比べる直前', afterCalc: '攻撃力を比べた直後', dsEnd: '戦闘の後かたづけの前', end: '戦闘の後かたづけの前' };
 const STEP_LABEL = { declared: '攻撃宣言時', dsStart: 'ダメージステップ開始時', beforeCalc: 'ダメージ計算前', afterCalc: 'ダメージ計算後', dsEnd: 'ダメージステップ終了時', end: 'ダメージステップ終了時' };
 const humanActing = () => S.winner === null && !isCpu(actorOf(S));
 
@@ -1028,8 +1041,8 @@ function renderTop() {
   // 移れるフェイズは押せるボタンにする
   $('#phases').innerHTML = PHASES.map((ph, i) => {
     const a = legal.find(x => x.type === 'nextPhase' && x.to === ph);
-    const cls = i === cur ? 'cur' : i < cur ? 'past' : '';
-    return `<li class="${cls}">${a ? `<button data-act='${esc(JSON.stringify(a))}' title="${PHASE_LABEL[ph]}へ進む">${PH_SHORT[ph]}</button>` : `<span title="${PHASE_LABEL[ph]}">${PH_SHORT[ph]}</span>`}</li>`;
+    const cls = i === cur ? `cur${PH_JP[ph].length > 4 ? ' long' : ''}` : i < cur ? 'past' : '';
+    return `<li class="${cls}">${a ? `<button data-act='${esc(JSON.stringify(a))}' title="${PHASE_LABEL[ph]}へ進む">${PH_SHORT[ph]}</button>` : `<span title="${PHASE_LABEL[ph]}">${i === cur ? PH_JP[ph] : PH_SHORT[ph]}</span>`}</li>`;
   }).join('');
   $('#turnInfo').innerHTML = S.winner !== null ? '決着' : `<span class="tl">ターン</span><span class="ts">T</span>${S.turn}<span class="tl">・${esc(NAME(S.turnPlayer))}</span>`;
   $('#undo').disabled = history.length === 0;
@@ -1043,30 +1056,30 @@ function respondPrompt() {
   const whose = p => (p === actorOf(S) ? '自分の' : `${NAME(p)}の`);
   if (S.chain.length) {
     const top = S.chain[S.chain.length - 1];
-    return `${whose(top.player)}「${defOf(S, top.uid).name}」にチェーンしますか？`;
+    return top.player === actorOf(S) ? `自分の「${defOf(S, top.uid).name}」に続けて、さらにカードを発動しますか？` : `${NAME(top.player)}が「${defOf(S, top.uid).name}」を発動しました。対抗して、カードを発動しますか？`;
   }
   if (w.mode === 'summoning' && w.cont.type === 'summon') {
     const how = w.cont.how === 'flip' ? '反転召喚' : w.cont.how === 'advance' ? 'アドバンス召喚' : '召喚';
-    return `${whose(w.cont.player)}${cardName(w.cont.uid)}の${how}に対して発動しますか？`;
+    return `${whose(w.cont.player)}${cardName(w.cont.uid)}の${how}に対して、カードを発動しますか？`;
   }
   if (S.battle && (w.cont.type === 'battle' || w.mode === 'damage')) {
     const b = S.battle;
     if (b.step === 'declared') return `${cardName(b.attacker)}の${b.target === null ? 'ダイレクトアタック' : `${cardName(b.target)}への攻撃`}に対して発動しますか？`;
-    return `${STEP_LABEL[b.step] || 'バトル中'}に発動しますか？`;
+    return `${STEP_LABEL[b.step] || 'バトル中'}${STEP_HINT[b.step] ? `（${STEP_HINT[b.step]}）` : ''}に、カードを発動しますか？`;
   }
   if (w.cont.type === 'phase' || w.cont.type === 'endTurn') return `${PHASE_LABEL[S.phase]}を終える前に発動しますか？`;
   // 召喚・特殊召喚に成功した直後など
   const ev = [...S.lastEvents].reverse().find(e => e.type === 'summoned');
   if (ev) {
     const how = { normal: '召喚', advance: 'アドバンス召喚', flip: '反転召喚', special: '特殊召喚', ritual: '儀式召喚', fusion: '融合召喚' }[ev.how];
-    return `${cardName(ev.uid)}の${how}成功に対して発動しますか？`;
+    return `${cardName(ev.uid)}の${how}が成功しました。今、カードを発動しますか？`;
   }
   return '直前の行動に対して発動しますか？';
 }
 /** 右下の「進む」ボタン：今の場面を先に進める行動（応答なら「発動しない」、フェイズなら次のフェイズ） */
 function goAction(legal) {
   const has = x => legal.some(y => JSON.stringify(y) === JSON.stringify(x));
-  if (S.window.kind === 'priority') return { label: '発動しない', sub: 'パスして進む', a: { type: 'pass' } };
+  if (S.window.kind === 'priority') return { label: '発動しない', sub: 'このまま進む', a: { type: 'pass' } };
   const me = S.turnPlayer;
   const attackers = monstersOf(S, me).some(u => S.cards[u].faceUp && S.cards[u].position === 'atk' && !S.cards[u].noAttack);
   const pick = (...list) => list.find(x => has(x.a)) || null;
@@ -1097,6 +1110,7 @@ function renderDock() {
   btns.innerHTML = '';
   $('#stopBtn').hidden = chainMode() === 'always' || S.winner !== null;
   $('#stopBtn').setAttribute('aria-pressed', String(stopNext));
+  $('#stopBtn').textContent = stopNext ? '✋ 聞く予定' : '✋ 次は聞いて';
 
   const rb = $('#reviewBtn'); if (rb) rb.hidden = !(S.winner !== null && cpuMode() && trace.length > 1);
   if (S.winner !== null) {
@@ -1125,7 +1139,7 @@ function renderDock() {
     // 発動できるカードは左に並べる（効果が複数あるカードは効果名も出す）
     const acts = activatableList(S, actorOf(S));
     const multi = uid => acts.filter(x => x.uid === uid).length > 1;
-    hint.textContent = acts.length ? '発動するなら左のボタン、しないなら右下の「発動しない」' : '';
+    hint.textContent = acts.length ? '発動するなら左のボタンを押す。しないなら「発動しない」を押す' : '';
     btns.innerHTML = acts.slice(0, 3).map(x => {
       const eff = (SCRIPTS[S.cards[x.uid].code]?.effects || []).find(e => e.id === x.effect);
       const label = `「${defOf(S, x.uid).name}」${multi(x.uid) && eff ? `の${eff.label}` : ''}を発動`;
@@ -1189,7 +1203,7 @@ function scheduleAutoPass() {
   if (!S || S.winner !== null) return;
   if (!shouldAutoPass()) {
     // 「次で止める」で止まったら、ボタンは元に戻す
-    if (stopNext && humanActing() && !S.pending && S.window.kind === 'priority') { stopNext = false; $('#stopBtn').setAttribute('aria-pressed', 'false'); }
+    if (stopNext && humanActing() && !S.pending && S.window.kind === 'priority') { stopNext = false; $('#stopBtn').setAttribute('aria-pressed', 'false'); $('#stopBtn').textContent = '✋ 次は聞いて'; }
     return;
   }
   autoT = setTimeout(() => {
@@ -1204,7 +1218,7 @@ function renderChain() {
   const el = $('#chain');
   if (!S.chain.length) { el.hidden = true; return; }
   el.hidden = false;
-  el.innerHTML = `<h3>チェーン（上から先に処理）</h3><ol>${S.chain.map((l, i) => `<li class="${l.player === 1 && cpuMode() ? 'opp' : ''}"><b>${i + 1}</b>${NAME(l.player)}：${esc(defOf(S, l.uid).name)}${l.negated ? '（無効）' : ''}${l.targets.length ? `<span class="tg">対象：${l.targets.map(t => esc(S.cards[t].faceUp || S.cards[t].zone === 'gy' ? defOf(S, t).name : '裏側のカード')).join('、')}</span>` : ''}</li>`).reverse().join('')}</ol>`;
+  el.innerHTML = `<h3>発動したカード（チェーン。上から順に効果が出る）</h3><ol>${S.chain.map((l, i) => `<li class="${l.player === 1 && cpuMode() ? 'opp' : ''}"><b>${i + 1}</b>${NAME(l.player)}：${esc(defOf(S, l.uid).name)}${l.negated ? '（無効）' : ''}${l.targets.length ? `<span class="tg">対象：${l.targets.map(t => esc(S.cards[t].faceUp || S.cards[t].zone === 'gy' ? defOf(S, t).name : '裏側のカード')).join('、')}</span>` : ''}</li>`).reverse().join('')}</ol>`;
 }
 
 /* ---------- カード詳細と操作 ---------- */
@@ -1216,7 +1230,7 @@ function describe(uid) {
   const typeLine = d.kind === 'monster'
     ? `${d.attribute}属性・${d.race}・★${d.level}・${(d.monsterTypes || []).join('／')}・攻${d.atk}／守${d.def}`
     : `${d.subtype}${d.kind === 'spell' ? '魔法' : '罠'}`;
-  const where = { hand: '手札', mzone: 'モンスターゾーン', emz: 'エクストラモンスターゾーン', szone: '魔法＆罠ゾーン', fzone: 'フィールドゾーン', gy: '墓地', deck: 'デッキ', extra: 'EXデッキ', banished: '除外' }[c.zone];
+  const where = { hand: '手札', mzone: 'モンスターゾーン', emz: 'モンスターゾーン', szone: '魔法＆罠ゾーン', fzone: 'フィールドゾーン', gy: '墓地', deck: 'デッキ', extra: 'EXデッキ', banished: '除外' }[c.zone];
   const state = c.zone === 'mzone' || c.zone === 'emz' ? `・${c.faceUp ? '表側' : '裏側'}${c.position === 'atk' ? '攻撃' : '守備'}表示・今の攻${currentAtk(S, uid)}／守${currentDef(S, uid)}` : (c.zone === 'szone' || c.zone === 'fzone') ? `・${c.faceUp ? '表側' : '裏側'}` : '';
   const extra = [];
   if (c.counters && c.counters.magic) extra.push(`魔力カウンター ${c.counters.magic}`);
@@ -1225,8 +1239,8 @@ function describe(uid) {
   // 墓地・除外の儀式・融合モンスターが蘇生できるか（正規の召喚をしていないものは特殊召喚できない）
   if ((c.zone === 'gy' || c.zone === 'banished') && d.kind === 'monster' && (d.frame === 'ritual' || d.frame === 'fusion')) {
     const how = d.frame === 'ritual' ? '儀式召喚' : '融合召喚';
-    if (SCRIPTS[c.code] && SCRIPTS[c.code].fusionOnly) extra.push('融合召喚でしか特殊召喚できないので、蘇生できません');
-    else extra.push(c.proper ? `正規の${how}をしているので、蘇生できます` : `正規の${how}をしていないので、蘇生できません`);
+    if (SCRIPTS[c.code] && SCRIPTS[c.code].fusionOnly) extra.push('融合召喚でしか出せないカードなので、墓地から出し直せません');
+    else extra.push(c.proper ? `${how}で正しく出したカードなので、墓地から出し直せます` : `${how}で正しく出していないカードなので、墓地から出し直せません`);
   }
   return {
     head: `<h3>${esc(d.name)}</h3><p class="tl">${esc(typeLine)}</p><p class="tl">${NAME(c.controller)}の${where}${state}</p>${extra.length ? `<p class="tl">${esc(extra.join('・'))}</p>` : ''}`,
@@ -1263,7 +1277,7 @@ function candidates(uid) {
       }
       if (d.frame === 'ritual') out.push({ info: '儀式モンスターは儀式魔法で儀式召喚します。' });
       else if (SCRIPTS[c.code]?.cannotNormalSummon) out.push({ info: 'このカードは通常召喚できません。' });
-      else if (tributesFor(S, uid) > 0) out.push({ info: `リリース${tributesFor(S, uid)}体が必要です。` });
+      else if (tributesFor(S, uid) > 0) out.push({ info: `リリース（自分の場のモンスターを墓地へ送る）が${tributesFor(S, uid)}体必要です。` });
       else if (S.players[S.turnPlayer].normalSummonUsed) out.push({ info: '通常召喚（セットを含む）は、このターンもう行いました。' });
     } else add('セットする', { type: 'setSpellTrap', card: uid }, legal.some(a => a.type === 'setSpellTrap' && a.card === uid));
   } else if (c.zone === 'mzone' || c.zone === 'emz') {
@@ -2247,18 +2261,18 @@ function showPile(p, kind) {
 /* ---------- メニュー ---------- */
 function menuNames() {
   const cpu = cpuMode(), L = (id, t) => { const el = ROOT.querySelector(`label[for="${id}"]`); if (el && el.firstChild && el.firstChild.nodeType === 3) el.firstChild.textContent = t; };
-  L('deck0', cpu ? 'あなたのデッキ' : 'あなたのデッキ（P1）'); L('deck1', cpu ? 'CPUのデッキ' : '相手のデッキ（P2）');
-  const f = $('#first'); if (f) { f.options[0].textContent = cpu ? 'あなた' : 'P1（あなた）'; f.options[1].textContent = cpu ? 'CPU' : 'P2'; }
+  L('deck0', cpu ? 'あなたのデッキ' : 'プレイヤー1のデッキ'); L('deck1', cpu ? 'CPUのデッキ' : 'プレイヤー2のデッキ');
+  const f = $('#first'); if (f) { f.options[0].textContent = cpu ? 'あなた' : 'プレイヤー1'; f.options[1].textContent = cpu ? 'CPU' : 'プレイヤー2'; }
 }
 function openMenu() { menuNames(); { const el = $('#menuLevel'); if (el) { el.hidden = !cpuMode(); el.textContent = `この対戦のCPUの強さ：${LEVEL_LABEL[cpuLevel] || 'ふつう'}（強さは準備画面で選びます）`; } } $('#menu').hidden = false; $('#menuBtn').setAttribute('aria-expanded', 'true'); disarm(); clearTimeout(cpuTimer); }
 function closeMenu() { $('#menu').hidden = true; $('#menu').classList.remove('from-setup'); $('#menuBtn').setAttribute('aria-expanded', 'false'); disarm(); setTimeout(() => { if (S && !pausedUi()) scheduleCpu(); }, 0); }
 let armT;
-function disarm() { const b = $('#surrender'); b.classList.remove('armed'); b.textContent = 'サレンダーする'; clearTimeout(armT); }
+function disarm() { const b = $('#surrender'); b.classList.remove('armed'); b.textContent = '🏳 降参する'; clearTimeout(armT); }
 function surrender() {
   const b = $('#surrender');
   if (S.winner !== null) { closeMenu(); return; }
   // 押し間違いを防ぐため、2回押して確定する
-  if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'もう一度押すとサレンダー'; armT = setTimeout(disarm, 3000); return; }
+  if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'もう一度押すと降参'; armT = setTimeout(disarm, 3000); return; }
   disarm(); closeMenu();
   if (cpuMode()) { clearTimeout(cpuTimer); history.push(S); commit(applyAction(S, { type: 'surrender', player: 0 })); render(); return; }
   run({ type: 'surrender', player: actorOf(S) });
@@ -2489,8 +2503,8 @@ function aimTap(x, y, target) {
 
 /* ----- 置いた後：表・裏を切り替えて決定 ----- */
 /** リリースが必要なモンスターの召喚・セットは「アドバンス召喚・アドバンスセット」 */
-const modeLabel = (mode, u) => { const n = u != null && defOf(S, u).kind === 'monster' ? tributesFor(S, u) : 0; if (n > 0 && mode === 'summon') return `召喚する（${n}体リリース）`; if (n > 0 && mode === 'mset') return `セットする（${n}体リリース）`; if (mode === 'tomb') return `陵墓の効果で召喚（${n * 1000}LP）`; if (mode === 'tombset') return `陵墓の効果でセット（${n * 1000}LP）`; return MODE_LABEL[mode]; };
-const MODE_LABEL = { summon: '召喚する（攻撃表示）', mset: 'セットする（裏側守備表示）', activate: '発動する', sset: 'セットする', tomb: '陵墓の効果で召喚', tombset: '陵墓の効果でセット' };
+const modeLabel = (mode, u) => { const n = u != null && defOf(S, u).kind === 'monster' ? tributesFor(S, u) : 0; if (n > 0 && mode === 'summon') return `召喚する（${n}体リリース）`; if (n > 0 && mode === 'mset') return `セットする（${n}体リリース）`; if (mode === 'tomb') return `死皇帝の陵墓で召喚（${n * 1000}LP払う）`; if (mode === 'tombset') return `陵墓の効果でセット（${n * 1000}LP）`; return MODE_LABEL[mode]; };
+const MODE_LABEL = { summon: '召喚する（攻撃表示）', mset: 'セットする（裏側守備表示）', activate: '発動する', sset: 'セットする', tomb: '死皇帝の陵墓で召喚', tombset: '死皇帝の陵墓でセット' };
 function placeModes(acts, t, u) {
   const d = defOf(S, u);
   if (t.kind === 'mz') return [acts.some(a => a.type === 'normalSummon' || a.type === 'procSummon') && 'summon', acts.some(a => a.type === 'setMonster') && 'mset', acts.some(isTombAct) && 'tomb', acts.some(isTombAct) && !SCRIPTS[S.cards[u].code]?.cannotSet && 'tombset'].filter(Boolean);

@@ -90,6 +90,9 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #phases li button, #phases li span { display: block; min-width: 34px; text-align: center; font-size: 12px; letter-spacing: .06em; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--sub); font-weight: 700; font-variant-numeric: tabular-nums }
 #phases li.past span { opacity: .45 }
 #phases li.cur span { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
+/* 今のフェイズは日本語（メイン1・スタンバイ など）。折り返さず、長い名前は字間をつめる */
+#phases li.cur span { white-space: nowrap }
+#phases li.cur.long span { letter-spacing: -.02em; padding-inline: 4px }
 #phases li button { color: var(--ink); border-color: var(--accent); border-style: dashed }
 #phases li button:hover { background: var(--accent-soft) }
 .topbtns { margin-left: auto; display: flex; gap: 6px }
@@ -330,6 +333,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   animation: speechIn 2.8s ease forwards }
 /* 準備画面・メニュー・一覧・振り返りの窓が開いている間は、セリフを窓の上に重ねない */
 .droot:has(.overlay:not([hidden])) #speech { display: none }
+/* PCだけの説明（キーボードの操作など）は、指で操作する端末では出さない */
+@media (hover: none) { .pc-only { display: none } }
+/* 準備画面の間は、後ろの盤面と手札（前の対戦のカード）をぼかして、読めないようにする */
+.droot:has(#setup:not([hidden])) :is(#board, #hand0, #hand1, .tray) { filter: blur(6px); transition: filter .2s }
 #speech .speech-who { display: inline-block; font-size: .8rem; font-weight: 700; letter-spacing: .08em; color: var(--accent-ink); background: var(--accent); border: 2px solid var(--edge); border-radius: 999px; padding: 2px 12px; margin-bottom: 8px }
 #speech .speech-text { font-family: var(--display); font-weight: 900; font-size: clamp(1.5rem, 6.5vw, 2.6rem); line-height: 1.25; color: #fff; text-wrap: balance;
   text-shadow: 0 0 2px var(--edge), 0 3px 0 var(--edge), 0 0 18px color-mix(in srgb, var(--opp) 70%, transparent), 0 0 36px color-mix(in srgb, var(--accent) 50%, transparent) }
@@ -772,6 +779,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .su-dots i.on { background: var(--accent); width: 12px; border-radius: 3px }
 .su-q { font-family: var(--display); font-size: 19px; margin: 14px 0 12px; display: grid; gap: 2px }
 .su-q small { font-family: var(--body); font-size: 12px; color: var(--sub) }
+.su-help { margin-top: 12px; font-size: 12px; color: var(--sub); border-top: 1px dashed var(--line); padding-top: 8px }
+.su-help summary { cursor: pointer; font-weight: 700; color: var(--ink) }
+.su-help p { margin: 6px 0 }
+.su-help .btn { margin-top: 4px }
 .su-opts { display: grid; gap: 10px }
 .su-opt { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; text-align: left; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; cursor: pointer }
 .su-opt span { grid-row: span 2; font-size: 26px }
@@ -927,7 +938,7 @@ export const MARKUP = `
     <div class="pstrip me" id="side0"><span class="who"></span><span class="lp"></span><span class="tag" hidden></span><span class="meta"></span></div>
     <div class="dock" id="dock">
       <div class="dock-status"><span id="actor"></span><span id="actorHint"></span><span id="oppInfo"></span></div>
-      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できるタイミングで、必ず止めて聞く">✋ 次で止める</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">記録</button><button class="btn small mini-only" id="undoMini" type="button">↶ ひとつ戻す</button><button class="btn small mini-only end-btn" id="endBtn" type="button" hidden>エンド</button></div>
+      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できる時、自動で進めずに必ず聞きます">✋ 次は聞いて</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">記録</button><button class="btn small mini-only" id="undoMini" type="button">↶ ひとつ戻す</button><button class="btn small mini-only end-btn" id="endBtn" type="button" hidden>エンド</button></div>
       <div class="dock-acts"><div id="phaseBtns"></div><button class="btn primary go" id="goBtn"></button></div>
     </div>
   </main>
@@ -949,24 +960,24 @@ export const MARKUP = `
   <div class="box">
     <div class="box-head"><h3 id="menuTitle">メニュー</h3><button class="btn small ghost" id="menuClose">閉じる</button></div>
     <div class="menu-grid">
-      <label for="deck0">あなたのデッキ（P1）<select id="deck0"></select><span class="deck-fmt" id="deckFmt0"></span></label>
-      <label for="deck1">相手のデッキ（P2）<select id="deck1"></select><span class="deck-fmt" id="deckFmt1"></span></label>
+      <label for="deck0">あなたのデッキ<select id="deck0"></select><span class="deck-fmt" id="deckFmt0"></span></label>
+      <label for="deck1">相手のデッキ<select id="deck1"></select><span class="deck-fmt" id="deckFmt1"></span></label>
       <label for="mode">対戦相手<select id="mode"><option value="cpu">CPU</option><option value="hot">2人で交互に操作</option></select></label>
-      <label for="first">先攻<select id="first"><option value="0">P1（あなた）</option><option value="1">P2</option><option value="r">ランダム</option></select></label>
-      <label for="chainMode">チェーンの確認<select id="chainMode"><option value="auto">おまかせ（相手が動いた時だけ聞く）</option><option value="always">いつも聞く</option><option value="never">聞かない（「次で止める」の時だけ）</option></select></label>
+      <label for="first">先攻<select id="first"><option value="0">あなた</option><option value="1">相手</option><option value="r">ランダム</option></select></label>
+      <label for="chainMode">発動するか聞くタイミング<select id="chainMode"><option value="auto">相手が動いた時だけ（おすすめ）</option><option value="always">自分が発動できる時はいつも</option><option value="never">聞かない（✋を押した時だけ）</option></select></label>
       <label for="fxMode">攻撃の演出<select id="fxMode"><option value="full">あり</option><option value="short">短く（2倍速）</option><option value="none">なし</option></select></label>
       <label for="cpuSpeed">CPUの速さ<select id="cpuSpeed"><option value="slow">ゆっくり</option><option value="normal" selected>ふつう</option><option value="fast">はやい</option></select></label>
     </div>
     <p class="menu-note" id="menuLevel" hidden></p>
-    <label class="check" id="hideOppRow"><input type="checkbox" id="hideOpp"> 手番でない側の手札を伏せる</label>
+    <label class="check" id="hideOppRow"><input type="checkbox" id="hideOpp"> 2人対戦で、自分の番でない人の手札を隠す</label>
     <div class="menu-row">
       <button class="btn primary" id="newDuel">新しいデュエル</button>
     </div>
     <div class="menu-row">
-      <button class="btn danger" id="surrender">サレンダーする</button>
+      <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
-    <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXの枠を押すと中身を見られます。Ctrl+Z でひとつ戻せます。</p>
-    <p class="menu-note ver">版：20261121-0910</p>
+    <p class="menu-note">カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
+    <p class="menu-note ver">版：20261121-0918</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

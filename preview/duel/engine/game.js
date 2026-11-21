@@ -447,13 +447,11 @@ export function freeSZones(s           , p          )           {
   s.players[p].szone.forEach((u, i) => { if (u === null) res.push(i); });
   return res;
 }
-/** EXデッキから出すモンスターを置ける場所（メインモンスターゾーン、または自分がまだ使っていないEXモンスターゾーン） */
+/** EXデッキから出すモンスターを置ける場所。この環境はEXモンスターゾーンを使わない（GXの時代に合わせ、普通の5マスだけ。MASTERの決定 2026-11-21）。
+ *  s.emz の入れ物は、画面・CPUが読んでいるので空のまま残している */
 export function extraSummonZone(s           , p          , released           = [])                                                  {
   const m = freeMZones(s, p, released);
-  if (m.length) return { zone: 'mzone', index: m[0] };
-  const hasEmz = s.emz.some(u => u !== null && s.cards[u].controller === p && !released.includes(u));
-  if (!hasEmz) { const i = s.emz.findIndex(u => u === null || released.includes(u)); if (i >= 0) return { zone: 'emz', index: i }; }
-  return null;
+  return m.length ? { zone: 'mzone', index: m[0] } : null;
 }
 export function tributesNeeded(level        )         { return level >= 7 ? 2 : level >= 5 ? 1 : 0; }
 /** リリースなしで通常召喚できる状態か（死皇帝の陵墓） */
