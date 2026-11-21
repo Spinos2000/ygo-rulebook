@@ -214,7 +214,10 @@ function playPendingSummons() {
       el.style.visibility = 'hidden';
       const flipFace = j.how === 'flip';
       try {
-        await playSummon(ROOT, { rect: el.getBoundingClientRect(), track: () => el.isConnected ? el.getBoundingClientRect() : null, onLand: () => { el.style.visibility = ''; }, d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), pos: S.cards[j.uid] && S.cards[j.uid].position, how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, from: j.from, fromRect: j.fromRect, ace: j.ace, mat: matCanvas(), speed: fxMode() === 'short' ? 2 : 1 });
+        const bigAce = j.ace && j.ace.big && !j.ace.fallback;
+        // 相棒：場の仲間（同じ側の表側のモンスター）の位置を渡す（絆の光がそこから集まる）
+        const allies = bigAce && j.ace.cls === 'partner' && S.cards[j.uid] ? [...ROOT.querySelectorAll('#board [data-uid]')].filter(e => { const u = Number(e.dataset.uid), c = S.cards[u]; return u !== j.uid && c && c.zone === 'mzone' && c.faceUp && c.controller === S.cards[j.uid].controller; }).map(e => e.getBoundingClientRect()) : [];
+        await playSummon(ROOT, { rect: el.getBoundingClientRect(), track: () => el.isConnected ? el.getBoundingClientRect() : null, allies, onLand: () => { el.style.visibility = ''; if (bigAce) play([j.ace.cls === 'god' ? 'aceGod' : j.ace.cls === 'partner' ? 'aceBond' : 'aceLand']); }, d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), pos: S.cards[j.uid] && S.cards[j.uid].position, how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, from: j.from, fromRect: j.fromRect, ace: j.ace, mat: matCanvas(), speed: fxMode() === 'short' ? 2 : 1 });
       } catch (e) { console.error(e); }
       el.style.visibility = '';
     }

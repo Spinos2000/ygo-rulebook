@@ -4,7 +4,7 @@
 // - 本気：理想のCPUに、考える量を約2倍・読む世界を多くして考えさせる。ロマンは無視して勝つことだけで手を選ぶ（見えないカードは推測のまま。ズルはしない）
 import { cpuDecide, scoreCandidates } from './cpu.js';
 import { idealThink,                                 } from './ideal.js';
-import { actorOf, opp, monstersOf, legalActions, currentStats, battleDamageZero, scriptOf } from '../engine/game.js';
+import { actorOf, opp, monstersOf, legalActions, currentStats, battleDamageZero, scriptOf, defOf } from '../engine/game.js';
                                                             
 
                                                   
@@ -50,7 +50,11 @@ export function lethalNow(s           )                {
       const atk = power(a.attacker);
       if (a.target === null) return atk;
       const t = s.cards[a.target];
-      return t && t.faceUp && t.position === 'atk' ? atk - currentStats(s, a.target).atk : 0;
+      if (!t || !t.faceUp || t.position !== 'atk') return 0;
+      // 相手のモンスターとの戦闘で相手が受けるダメージが0（または跳ね返る）になるもの（MIMIの報告：ユベル・D-HERO ドレッドガイ）
+      if (scriptOf(s, a.target).redirectBattleDamage || scriptOf(s, a.target).noSelfBattleDamage) return 0;
+      if (defOf(s, a.target).name.startsWith('D-HERO') && s.lingering.some(l => l.type === 'dheroProtect' && l.player === o && l.turn === s.turn)) return 0;
+      return atk - currentStats(s, a.target).atk;
     };
     const one = atks.filter(a => dmg(a) >= lp).sort((x, y) => dmg(y) - dmg(x))[0];
     if (one) return one;

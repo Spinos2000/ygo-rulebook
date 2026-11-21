@@ -96,6 +96,12 @@ const SOUNDS = {
   target: s => { tone(1320, s, 0.05, { type: 'square', gain: 0.12 }); tone(1760, s + 0.06, 0.08, { type: 'square', gain: 0.12 }); noise(s + 0.06, 0.08, { gain: 0.15, filter: 'highpass', freq: 4000 }); },
   // ドロー：小さな音
   draw: s => { noise(s, 0.05, { gain: 0.2, filter: 'highpass', freq: 2500 }); },
+  // 切り札の着地：重い衝撃と和音
+  aceLand: s => { tone(110, s, 0.5, { type: 'sine', gain: 0.6, to: 55 }); noise(s, 0.3, { gain: 0.35, freq: 900, to: 200 }); [392, 523, 659].forEach((f, i) => tone(f, s + 0.05 + i * 0.03, 0.7, { type: 'triangle', gain: 0.22 })); },
+  // 神の降臨：いちばん大きく。雷のような地鳴りと、高く広がる和音
+  aceGod: s => { tone(70, s, 0.9, { type: 'sine', gain: 0.85, to: 40 }); noise(s, 0.7, { gain: 0.55, freq: 1400, to: 120 }); [262, 392, 523, 784, 1046].forEach((f, i) => tone(f, s + 0.1 + i * 0.05, 1.1, { type: 'triangle', gain: 0.3 })); },
+  // 相棒：あたたかい鈴の音（揺れない演出に合わせて、やさしく）
+  aceBond: s => { [659, 784, 988, 1318].forEach((f, i) => tone(f, s + i * 0.09, 0.6, { type: 'sine', gain: 0.28 })); },
   // 勝利・敗北
   win: s => { [523, 659, 784, 1046].forEach((f, i) => tone(f, s + i * 0.12, i === 3 ? 0.6 : 0.16, { type: 'triangle', gain: 0.4 })); },
   lose: s => { [392, 330, 262, 196].forEach((f, i) => tone(f, s + i * 0.18, 0.3, { type: 'triangle', gain: 0.35 })); },
