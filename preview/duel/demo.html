@@ -55,12 +55,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   <div id="demoList"></div>
 </section>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261122-0155-75750bcf8a';
-import { playSummon } from './fx.js?v=20261122-0155-75750bcf8a';
-import { play, unlock } from './sound.js?v=20261122-0155-75750bcf8a';
-import { CARD_POOL } from './data/cardpool.js?v=20261122-0155-75750bcf8a';
-import { createGame, legalActions } from './engine/game.js?v=20261122-0155-75750bcf8a';
-import { answerCandidates } from './ai/cpu.js?v=20261122-0155-75750bcf8a';
+import { mountDuel } from './embed.js?v=20261122-0228-d76ebdb3a5';
+import { playSummon } from './fx.js?v=20261122-0228-d76ebdb3a5';
+import { play, unlock } from './sound.js?v=20261122-0228-d76ebdb3a5';
+import { CARD_POOL } from './data/cardpool.js?v=20261122-0228-d76ebdb3a5';
+import { createGame, legalActions } from './engine/game.js?v=20261122-0228-d76ebdb3a5';
+import { answerCandidates } from './ai/cpu.js?v=20261122-0228-d76ebdb3a5';
 
 const host = document.getElementById('duel-host');
 mountDuel(host, { demo: true });

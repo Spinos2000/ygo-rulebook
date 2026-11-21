@@ -5,8 +5,8 @@
                                                                                                                           
                                                                
                     
-import { RuleError, cloneCard, cloneState } from './types.js?v=20261122-0155-75750bcf8a';
-import { SCRIPTS } from '../cards/index.js?v=20261122-0155-75750bcf8a';
+import { RuleError, cloneCard, cloneState } from './types.js?v=20261122-0228-d76ebdb3a5';
+import { SCRIPTS } from '../cards/index.js?v=20261122-0228-d76ebdb3a5';
 
 export const START_LP = 8000;
 export const START_HAND = 5;
@@ -372,6 +372,7 @@ export function moveCard(s           , uid        , to          , opt          =
   c.controller = ctl;
   c.zone = to;
   c.serial += 1;
+  delete c.lastUp; // 前に表だった時の攻守は、動くと分からなくなる
   if (!toField || !fromField) { c.counters = {}; }
   if (to === 'gy') c.counters.gyTurn = s.turn; // 墓地へ送られたターン（D-HERO ディスクガイ：そのターンは墓地から特殊召喚できない）
   c.equippedTo = null; c.equipSerial = null; c.equipBy = null; c.link = null; c.linkSerial = null;
@@ -936,7 +937,7 @@ export function setFaceDown(s           , uids          )           {
   for (const u of uids) {
     const c = s.cards[u];
     if (!isMonsterZone(c) || (!c.faceUp && c.position === 'def') || isImmune(s, u)) continue;
-    if (c.faceUp) c.pub = true; // 表側の間にカード名は見られている（裏側にしても相手は中身を知っている）
+    if (c.faceUp) { c.pub = true; c.lastUp = currentStats(s, u); } // 表側の間にカード名と攻守は見られている（裏側にしても相手は中身を知っている）
     c.faceUp = false; c.position = 'def'; c.mods = []; c.counters = {};
     done.push(u);
   }

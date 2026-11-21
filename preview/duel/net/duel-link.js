@@ -4,10 +4,10 @@
 // - 部屋の部品（Room）は、サイトの room().join(name) と同じ形（presence・onPeers・leave）。
 //   本番ではサイトの Firestore の部屋を、試す時は下の「手元の部屋」を渡す
 // - 2台とも全部の情報を持つ作り（MASTERの決定）。相手の手札・伏せカードを画面で見せないのは画面の仕事
-import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261122-0155-75750bcf8a';
-import { answerCandidates } from '../ai/cpu.js?v=20261122-0155-75750bcf8a';
-import { CARD_POOL } from '../data/cardpool.js?v=20261122-0155-75750bcf8a';
-import { DECKS } from '../data/decks.js?v=20261122-0155-75750bcf8a';
+import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261122-0228-d76ebdb3a5';
+import { answerCandidates } from '../ai/cpu.js?v=20261122-0228-d76ebdb3a5';
+import { CARD_POOL } from '../data/cardpool.js?v=20261122-0228-d76ebdb3a5';
+import { DECKS } from '../data/decks.js?v=20261122-0228-d76ebdb3a5';
                                                                       
 
 /* ===================== 部屋（サイトの room() と同じ形） ===================== */
@@ -69,7 +69,7 @@ export function tabRoom(name        , uid        )       {
 
 /** お試し版・本番を作る時（scripts/build.mjs）に、できあがった .js ぜんぶの指紋をここに書きこむ（手元では 'dev'）。
  *  画面（app.js）にも同じ指紋が書かれるので、卓を開いた時に「app.js の指紋」とこれが同じか比べる（ちがえばページを読み直す） */
-export const BUILD_FP = '20261122-0155-75750bcf8a';
+export const BUILD_FP = '20261122-0228-d76ebdb3a5';
 
 /* ===================== エンジンの指紋 ===================== */
 /**
@@ -212,6 +212,11 @@ export class DuelLink {
           themUid = '';
           them                 = null; // 相手の欄（最後に読んだもの）
           toldAsk = 0; // 申し込みの知らせを出した回
+  /** 子が降参を送って、親が入れるのを待っている（💜MIMIの見つけた穴：2人が同時に降参すると、2台で勝った人がちがった）。
+   *  決まり（CODE 02:10）：先に届いた降参だけ入れる。2台で同じ順番にするため、親を「並べる人」にする：
+   *  親の降参はすぐ決着。子の降参は送るだけで、親が入れて決着を書いたら、子も自分の降参を入れて決着。
+   *  親の降参が入っていれば、それが先（親が降参できるのは、まだ子の降参を入れていない時だけなので）。子の降参は入れない */
+          giveUpSent = false;
           o             ;
 
   constructor(o             ) {
@@ -254,6 +259,11 @@ export class DuelLink {
       return;
     }
     if (this.doc.end) return;
+    if (this.state && this.lastSeen && now - this.lastSeen > away && this.giveUpSent && this.state.winner === null) {
+      // 子が降参を送ったまま、親がいなくなった：自分の降参で終わる（親が戻れば、親も子の降参を入れて同じ答えになる。CODE 02:21 でこの形に決定）
+      this.giveUpNow();
+      return;
+    }
     if (this.state && this.lastSeen && now - this.lastSeen > away) {
       this.doc.end = { winner: null, reason: 'away' };
       this.write();
@@ -322,7 +332,7 @@ export class DuelLink {
     }
     // もう一度：親が新しい約束（回数が1つ大きい）を書いたら、子は前の対戦を片づけて作り直す
     if (!this.o.host && them.start && them.start.round > this.round && this.state) {
-      this.state = null; this.applied = 0; this.doc.ops = []; delete this.doc.end;
+      this.state = null; this.applied = 0; this.doc.ops = []; this.giveUpSent = false; delete this.doc.end;
     }
     // 最初の約束：親が書く。子は親の約束を読んで同じ盤面を作る
     if (!this.state) {
@@ -336,8 +346,17 @@ export class DuelLink {
       s.askZone = [0, 1];
       // つながり直しの時は、自分と相手の操作を、動く番の順に入れ直して続きから
       const mine = this.doc.ops, theirs = them.round === st.round ? (them.ops ?? []) : [];
+      // 降参の順番：親の降参があれば、それが先。子の降参は入れない（2台で同じ答え）。子は、親が決着を書くまで自分の降参を入れない
+      const isGiveUp = (a         ) => a?.type === 'surrender';
+      const hostGaveUp = (this.o.host ? mine : theirs).some(isGiveUp);
+      const guestOps = this.o.host ? theirs : mine;
+      const gi = guestOps.findIndex(isGiveUp);
+      const hostEnded = !this.o.host && !!them.end && !them.end.reason && them.round === st.round;
+      const skipGuest = gi >= 0 && (hostGaveUp || (!this.o.host && !hostEnded));
+      if (!this.o.host && gi >= 0 && !hostGaveUp) this.giveUpSent = true;
       let mi = 0, ti = 0;
       for (let k = 0; k < mine.length + theirs.length && s.winner === null; k++) {
+        if (skipGuest) { if (this.o.host && ti === gi) { ti++; continue; } if (!this.o.host && mi === gi) { mi++; continue; } }
         const meNow = actorOf(s) === this.seat;
         // 降参は番に関係なく入る
         if (!meNow && mine[mi]?.type === 'surrender') { s = applyAction(s, mine[mi++]); continue; }
@@ -366,6 +385,8 @@ export class DuelLink {
       && !this.doc.ops.some(o => o.type === 'surrender') && !(them.ops ?? []).some(o => o.type === 'surrender')) {
       this.o.on({ type: 'desync', detail: `盤面の印がちがう（${ck.n}手目）` }); this.stop(); return;
     }
+    // 子：降参を送ったあと、親が（子の降参を入れて）決着を書いた → 自分の降参を入れて決着。親の降参が先に入っていたら、上でもう決着している
+    if (!this.o.host && this.giveUpSent && this.state && this.state.winner === null && them.end && !them.end.reason && them.round === this.round) { this.giveUpNow(); return; }
     if (this.state && this.state.winner !== null) this.finish();
     // もう一度：相手が今の回を申し込んできたら知らせる。2人とも申し込んだら、親が始め直す
     if (this.state && this.state.winner !== null && them.rematchAsk === this.round) {
@@ -418,16 +439,36 @@ export class DuelLink {
 
   /** 自分の操作を盤面に入れて、相手に送る。自分の番でない時は false */
   send(a        )          {
-    if (!this.state || this.stopped || this.state.winner !== null) return false;
+    if (!this.state || this.stopped || this.state.winner !== null || this.giveUpSent) return false;
     // 降参はいつでも押せる（自分の分だけ）。それ以外は自分の番の時だけ
     const giveUp = a.type === 'surrender' && a.player === this.seat;
+    if (a.type === 'surrender' && !giveUp) return false;
     if (!giveUp && actorOf(this.state) !== this.seat) return false;
+    // 子の降参：送るだけ（すぐ書く）。親が入れて決着を書いたら、自分の盤面にも入れる（画面は giveUpPending の間「降参しています…」）
+    if (giveUp && !this.o.host) {
+      this.giveUpSent = true;
+      this.doc.ops.push(a);
+      this.flush();
+      return true;
+    }
     this.state.askZone = [0, 1]; // 画面が盤面を書きかえていても、2台で必ず同じにしてから入れる
     this.state = applyAction(this.state, a);
     this.doc.ops.push(a);
     this.schedule();
     if (this.state.winner !== null) this.finish();
     return true;
+  }
+
+  /** 子が降参を送って、親が入れるのを待っている間 true（画面の「🏳 降参しています…」用） */
+  get giveUpPending()          { return this.giveUpSent && !!this.state && this.state.winner === null && !this.stopped; }
+
+  /** 子：送ってある自分の降参を、自分の盤面に入れて決着させる */
+          giveUpNow() {
+    if (!this.state || this.state.winner !== null) return;
+    this.state.askZone = [0, 1];
+    this.state = applyAction(this.state, { type: 'surrender', player: this.seat });
+    this.o.on({ type: 'remote', action: { type: 'surrender', player: this.seat }, state: this.state });
+    this.finish();
   }
 
   /** 相手の欄が最後に書かれた時刻（Date.now() の形。まだ一度も無ければ 0）。画面の「つながりが切れました（あと○分）」用 */
@@ -439,13 +480,13 @@ export class DuelLink {
   /** 親：決着のあと「もう一度（同じ相手と）」。新しい種で、同じデッキ・同じ公式／練習で始め直す */
   rematch()          {
     if (!this.o.host || !this.state || this.state.winner === null || this.stopped) return false;
-    this.state = null; this.applied = 0; this.doc.ops = []; delete this.doc.end; delete this.doc.start;
+    this.state = null; this.applied = 0; this.doc.ops = []; this.giveUpSent = false; delete this.doc.end; delete this.doc.start;
     this.write();
     return true;
   }
 
   /** 今が自分の番か（画面が操作を受けつけてよいか） */
-  myTurn()          { return !!this.state && this.state.winner === null && actorOf(this.state) === this.seat; }
+  myTurn()          { return !!this.state && this.state.winner === null && !this.giveUpSent && actorOf(this.state) === this.seat; }
 
           schedule() {
     if (this.timer) return;
