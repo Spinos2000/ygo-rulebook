@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1522-6e496fe4bc';
-import { fullThink } from './ai/levels.js?v=20261121-1522-6e496fe4bc';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1522-6e496fe4bc';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1522-6e496fe4bc';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1522-6e496fe4bc';
-import { playSignature, sigKey } from './sig.js?v=20261121-1522-6e496fe4bc';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1522-6e496fe4bc';
-import { firstEntrance } from './aces.js?v=20261121-1522-6e496fe4bc';
-import { RULINGS } from './data/rulings.js?v=20261121-1522-6e496fe4bc';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1522-6e496fe4bc';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1522-6e496fe4bc';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1522-6e496fe4bc';
-import { joinSiteRoom } from './net/site-room.js?v=20261121-1522-6e496fe4bc';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1527-c181622aef';
+import { fullThink } from './ai/levels.js?v=20261121-1527-c181622aef';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1527-c181622aef';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1527-c181622aef';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1527-c181622aef';
+import { playSignature, sigKey } from './sig.js?v=20261121-1527-c181622aef';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1527-c181622aef';
+import { firstEntrance } from './aces.js?v=20261121-1527-c181622aef';
+import { RULINGS } from './data/rulings.js?v=20261121-1527-c181622aef';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1527-c181622aef';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1527-c181622aef';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1527-c181622aef';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-1527-c181622aef';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261121-1522-6e496fe4bc';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-1522-6e496fe4bc';
-import { DECKS } from './data/decks.js?v=20261121-1522-6e496fe4bc';
-import { SCRIPTS } from './cards/index.js?v=20261121-1522-6e496fe4bc';
+} from './engine/game.js?v=20261121-1527-c181622aef';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1527-c181622aef';
+import { DECKS } from './data/decks.js?v=20261121-1527-c181622aef';
+import { SCRIPTS } from './cards/index.js?v=20261121-1527-c181622aef';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -96,12 +96,12 @@ let undoUsed = false, resultSent = false;
  *  返り値 { cls: 演出に使う1つ, kinds: 付いている分類ぜんぶ, fallback: 表の無いデッキの予備の判定 } か null */
 const aceDecks = () => ({ codes: deckCodes(), names: deckNames() });
 function aceOf(st, uid) {
-  try { return st && st.cards[uid] ? aceInfo(st, uid, 0, aceDecks()) : null; } catch { return null; }
+  try { return st && st.cards[uid] ? aceInfo(st, uid, ME(), aceDecks()) : null; } catch { return null; }
 }
 let aceSeen = new Set(); // この対戦で大きい登場を見せたカード（uid）
 /** 自分のデッキの切り札の名前 */
 function acesNamesOf(st) {
-  try { const codes = aceCodes(st, 0, aceDecks()); const names = new Set(); for (const c of Object.values(st.cards)) if (c.owner === 0 && codes.has(c.code)) names.add(defOf(st, c.uid).name); return [...names].slice(0, 4); } catch { return []; }
+  try { const codes = aceCodes(st, ME(), aceDecks()); const names = new Set(); for (const c of Object.values(st.cards)) if (c.owner === ME() && codes.has(c.code)) names.add(defOf(st, c.uid).name); return [...names].slice(0, 4); } catch { return []; }
 }
 function reportResult(prev, next) {
   if (!cpuMode() || placeholder || resultSent || !OPTS.onResult) return;
@@ -359,7 +359,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261121-1522-6e496fe4bc', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-1527-c181622aef', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1319,7 +1319,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261121-1522-6e496fe4bc';
+const DUEL_BUILD = '20261121-1527-c181622aef';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -2332,7 +2332,7 @@ function zonePick() {
 let actPick = null;
 function actZones(a) {
   if (!S.cards[a.card] || S.cards[a.card].zone !== 'hand' || a.zone !== undefined) return null;
-  const P = S.players[0], d = defOf(S, a.card);
+  const P = S.players[ME()], d = defOf(S, a.card); // 自分の盤面（オンライン対戦の席1でも、下の盤面）
   if (a.type === 'normalSummon' || a.type === 'setMonster') {
     const free = P.mzone.map((v, i) => (v === null || (a.tributes || []).includes(v) ? i : -1)).filter(i => i >= 0);
     return free.map(i => `${ME()}:mz:${i}`);
@@ -2380,7 +2380,7 @@ function setTray(open, auto = false) {
   const r = $('.droot'); if (!r) return;
   r.classList.toggle('tray-closed', !open);
   const h = $('#trayHandle'); if (h) h.setAttribute('aria-expanded', String(open));
-  const n = S ? S.players[0].hand.length : 0;
+  const n = S ? S.players[ME()].hand.length : 0;
   const l = $('#trayLbl'); if (l) l.textContent = open ? '下にスワイプでしまう' : `上にスワイプで手札（${n}枚）`;
   measureBottom();
 }
@@ -2404,8 +2404,8 @@ function measureBottom() {
 function renderHandHold() {
   const el = $('#handHold'); if (!el) return;
   // 手札を閉じた時：開いた時と同じ大きさのカードを、画面の左下の角から扇形に飛び出させる（下の方は画面の外）
-  const coming = comingToHand(0);
-  const hand = sortHand(S, S.players[0].hand).filter(u => !coming.has(u));
+  const coming = comingToHand(ME());
+  const hand = sortHand(S, S.players[ME()].hand).filter(u => !coming.has(u));
   const key = hand.join(',');
   if (el.dataset.key !== key) {
     // 一番右のカードはまっすぐ立てて全部見せ、残りは左へ扇のように傾ける。枚数が増えるほど、左のカードから自然に画面の外へはみ出す
@@ -2473,7 +2473,7 @@ async function shakaPachi(toRight) {
 /* 罠カードが手札に来たら、シャカパチ（手札が跳ねてパチパチ音） */
 let handSeen = null;
 function checkPachi() {
-  const me = 0, h = S.players[me].hand; // 下の手札（#hand0）はいつもP1
+  const me = ME(), h = S.players[me].hand; // 下の手札（#hand0）は自分の席（オンライン対戦の席1でも）
   const prev = handSeen; handSeen = { p: me, set: new Set(h) };
   if (!prev || prev.p !== me) return;
   const fresh = h.filter(u => !prev.set.has(u) && defOf(S, u).kind === 'trap');
@@ -2717,13 +2717,13 @@ function handActs(u) {
   const legal = legalActions(S), own = legal.filter(a => a.card === u && HAND_TYPES.includes(a.type));
   // リリースが必要なモンスター：表になっている死皇帝の陵墓の効果で、リリースなしで召喚できる
   const d = defOf(S, u), n = d.kind === 'monster' ? tributesFor(S, u) : 0;
-  const tomb = n > 0 && !SCRIPTS[S.cards[u].code]?.cannotNormalSummon && d.frame !== 'ritual' && S.players[0].lp > n * 1000 ? legal.filter(isTombAct).slice(0, 1) : [];
+  const tomb = n > 0 && !SCRIPTS[S.cards[u].code]?.cannotNormalSummon && d.frame !== 'ritual' && S.players[ME()].lp > n * 1000 ? legal.filter(isTombAct).slice(0, 1) : [];
   return [...own, ...tomb];
 }
 const zoneEl = key => ROOT.querySelector(`#board [data-zone="${key}"]`);
 /** 選んだカードを置けるマス */
 function aimTargets(u, acts) {
-  const d = defOf(S, u), P = S.players[0], out = [];
+  const d = defOf(S, u), P = S.players[ME()], out = [];
   const mon = acts.some(a => ['normalSummon', 'setMonster', 'procSummon'].includes(a.type) || isTombAct(a));
   if (mon) {
     let idx = P.mzone.map((v, i) => (v === null ? i : -1)).filter(i => i >= 0);
@@ -2810,7 +2810,7 @@ function castSpell(x, y) {
   const list = acts.filter(a => a.type === 'activate');
   if (list.length !== 1) { endAim(); selected = u; sheet = 'detail'; render(); return; }
   const field = defOf(S, u).subtype === 'フィールド';
-  const free = S.players[0].szone.map((v, i) => (v === null ? i : -1)).filter(i => i >= 0);
+  const free = S.players[ME()].szone.map((v, i) => (v === null ? i : -1)).filter(i => i >= 0);
   const idx = field ? 0 : aim.hover && aim.hover.kind === 'st' ? aim.hover.idx : free.length ? free[Math.floor(Math.random() * free.length)] : 0;
   const el = zoneEl(field ? `${ME()}:fz:0` : `${ME()}:st:${idx}`);
   const go = () => { endAim(); selected = null; run(field ? list[0] : { ...list[0], zone: idx }); };
@@ -2919,7 +2919,7 @@ function placeConfirm(u, acts, t, mode) {
   }
   if (pickOf.length !== 1) { selected = u; sheet = 'detail'; render(); return; }
   const a = pickOf[0];
-  const withZone = (a.type === 'normalSummon' || a.type === 'setMonster') && S.players[0].mzone[t.idx] === null ? { ...a, zone: t.idx }
+  const withZone = (a.type === 'normalSummon' || a.type === 'setMonster') && S.players[ME()].mzone[t.idx] === null ? { ...a, zone: t.idx }
     : (a.type === 'setSpellTrap' || a.type === 'activate') && t.kind === 'st' ? { ...a, zone: t.idx } : a;
   selected = null;
   run(withZone);
@@ -2931,7 +2931,7 @@ function tombAuto() {
   const ti = tombIntent;
   if (!ti) return;
   if (!S.pending) { if (!S.chain.length) tombIntent = null; return; }
-  const r = S.pending.request; if (r.player !== 0) return;
+  const r = S.pending.request; if (r.player !== ME()) return;
   const key = JSON.stringify([S.step, r.prompt, S.pending.answers.length]); if (ti.key === key) return;
   let ans;
   if (r.kind === 'option' && /どちらの効果/.test(r.prompt)) { const i = r.options.findIndex(o => o.startsWith(`${ti.n * 1000}LP`)); ans = i >= 0 ? i : 0; }
@@ -3069,7 +3069,8 @@ root.addEventListener('pointerdown', e => {
   const el = e.target.closest && e.target.closest('#board [data-uid]');
   if (!el) return;
   const u = Number(el.dataset.uid);
-  if (!S || !S.cards[u] || S.cards[u].controller !== 0 || (!cpuMode() && actorOf(S) !== 0)) return;
+  const me = netMode() ? ME() : 0; // 引っ張って攻撃できるのは下の盤面のモンスター（オンライン対戦では自分の席）
+  if (!S || !S.cards[u] || S.cards[u].controller !== me || (!cpuMode() && actorOf(S) !== me)) return;
   const acts = atkActs(u);
   if (!acts.length) return;
   batk = { u, x: e.clientX, y: e.clientY, on: false, layer: null, targets: atkTargets(acts), hover: null };
