@@ -55,10 +55,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   <div id="demoList"></div>
 </section>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261121-1532-90aa64e789';
-import { playSummon } from './fx.js?v=20261121-1532-90aa64e789';
-import { play, unlock } from './sound.js?v=20261121-1532-90aa64e789';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-1532-90aa64e789';
+import { mountDuel } from './embed.js?v=20261121-1604-78a696bb79';
+import { playSummon } from './fx.js?v=20261121-1604-78a696bb79';
+import { play, unlock } from './sound.js?v=20261121-1604-78a696bb79';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1604-78a696bb79';
+import { createGame, legalActions } from './engine/game.js?v=20261121-1604-78a696bb79';
+import { answerCandidates } from './ai/cpu.js?v=20261121-1604-78a696bb79';
 
 const host = document.getElementById('duel-host');
 mountDuel(host, { demo: true });
@@ -143,6 +145,61 @@ list.addEventListener('click', async e => {
   } catch (err) { console.error(err); }
   droot.classList.remove('fx-busy', 'fx-stage'); busy = false; setOpen(true);
 });
+/* ---------- 順番の確かめ（No.7）：場面を作って、本物の対戦と同じ流れで発動まで進める ----------
+ * 発動の演出 → チェーンの効果 → 結果の移動（墓地へ）の順に見えるかを、直す前と直した後で同じボタンで比べる。
+ * 「自分が発動」＝下の人（P1）、「相手が発動」＝上の人（P2。CPU側と同じ見え方） */
+const C = { mirror: '4887', torrent: '5114', thunder: '5544', hole: '4342', vortex: '5217', a: '5503', b: '5504', c: '6471', d: '7193' };
+const SCENES = [
+  ['ミラーフォース', '攻撃された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.mirror] }, mons: { [1 - p]: [C.a, C.b, C.c] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', a => a.type === 'attack', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.mirror] })],
+  ['激流葬', '召喚された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.torrent] }, mons: { [1 - p]: [C.a, C.b] }, hand: { [1 - p]: [C.c] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.torrent] })],
+  ['サンダー・ブレイク', '手札を1枚捨てて発動', p => ({ tp: p, set: { [p]: [C.thunder] }, hand: { [p]: [C.a] }, mons: { [1 - p]: [C.b, C.c] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.thunder] })],
+  ['ブラック・ホール', '場のモンスターを全部破壊', p => ({ tp: p, hand: { [p]: [C.hole] }, mons: { [p]: [C.a], [1 - p]: [C.b, C.c, C.d] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.hole] })],
+  ['ライトニング・ボルテックス', '手札を1枚捨てて発動', p => ({ tp: p, hand: { [p]: [C.vortex, C.a] }, mons: { [1 - p]: [C.b, C.c, C.d] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.vortex] })],
+];
+/** 場面の盤面を作る：決まったカードを手札・場に置き、3ターン目の tp のメインフェイズ1から始める */
+function sceneState(sc) {
+  const need = p => [...(sc.set?.[p] || []), ...(sc.hand?.[p] || []), ...(sc.mons?.[p] || [])];
+  const fill = Array(20).fill(C.a);
+  const s = createGame({ pool: CARD_POOL, decks: [0, 1].map(p => ({ main: [...fill, ...need(p)], extra: [] })), seed: 7, firstPlayer: sc.tp, shuffle: false });
+  for (const p of [0, 1]) { const P = s.players[p]; for (const u of P.hand) Object.assign(s.cards[u], { zone: 'deck', faceUp: false }); P.deck.push(...P.hand); P.hand = []; P.normalSummonUsed = false; }
+  const take = (p, code) => { const P = s.players[p], u = P.deck.find(x => s.cards[x].code === code); P.deck = P.deck.filter(x => x !== u); return u; };
+  for (const p of [0, 1]) {
+    const P = s.players[p];
+    (sc.mons?.[p] || []).forEach((code, i) => { const u = take(p, code); P.mzone[i] = u; Object.assign(s.cards[u], { zone: 'mzone', index: i, faceUp: true, position: 'atk', controller: p, enteredTurn: 1, summonedTurn: 1 }); });
+    (sc.set?.[p] || []).forEach((code, i) => { const u = take(p, code); P.szone[i] = u; Object.assign(s.cards[u], { zone: 'szone', index: i, faceUp: false, position: null, controller: p, enteredTurn: 1 }); });
+    (sc.hand?.[p] || []).forEach(code => { const u = take(p, code); P.hand.push(u); Object.assign(s.cards[u], { zone: 'hand', index: P.hand.length - 1, faceUp: false }); });
+    P.deck.forEach((u, i) => { s.cards[u].index = i; });
+  }
+  Object.assign(s, { turn: 3, turnPlayer: sc.tp, phase: 'main1', window: { kind: 'open', respondDue: false }, chain: [], pending: null, battle: null });
+  return s;
+}
+const fxIdle = async () => { let calm = 0; for (let i = 0; i < 300 && calm < 3; i++) { await new Promise(r => setTimeout(r, 120)); calm = root.querySelector('.droot.fx-busy') ? 0 : calm + 1; } };
+/** 決めた手順どおりに進める。手順の間の答え（捨てるカード・対象など）は1つ目を選び、聞かれたら「発動しない」 */
+async function driveScene(sc) {
+  const D = window.__duel; let k = 0;
+  for (let guard = 0; guard < 60; guard++) {
+    await fxIdle();
+    const S = D.state; if (!S || S.winner !== null) return;
+    if (k >= sc.steps.length && !S.chain.length && !S.pending) return; // 発動して、チェーンが全部解決したら終わり
+    const L = legalActions(S);
+    let a = k < sc.steps.length ? L.find(x => sc.steps[k](x, S)) : null;
+    if (a) k++;
+    else if (S.pending) { const c = answerCandidates(S, S.pending.request, 4); a = c.length ? { type: 'answer', value: c[0] } : null; }
+    else a = L.find(x => x.type === 'offer') || L.find(x => x.type === 'pass');
+    if (!a) return;
+    try { D.act(a); } catch (err) { console.warn('場面の手順を進められませんでした', a, err); return; }
+    await new Promise(r => setTimeout(r, 350));
+  }
+}
+list.insertAdjacentHTML('beforeend', `<h2>🧭 順番の確かめ <small>発動 → 効果 → 墓地へ</small></h2><p class="note">押すと場面ができて、発動まで自動で進みます（本物の対戦と同じ流れ）。演出の順番を見る用です。</p><div class="row">${SCENES.map(([n, sub], i) => [0, 1].map(p => `<button class="fx" type="button" data-scene="${i}" data-p="${p}">${n}<small>${p ? '相手（上）が発動' : '自分（下）が発動'}・${sub}</small></button>`).join('')).join('')}</div>`);
+list.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-scene]'); if (!b || busy) return;
+  e.stopImmediatePropagation();
+  unlock(); setOpen(false); busy = true;
+  const sc = SCENES[b.dataset.scene][2](Number(b.dataset.p));
+  try { window.__duel.load(sceneState(sc)); await driveScene(sc); await fxIdle(); } catch (err) { console.error(err); }
+  busy = false; setOpen(true);
+}, true);
 document.getElementById('guideOpenDemo').onclick = () => { setOpen(false); window.__duel.openGuide(0); const g = root.querySelector('#guideDlg'); const back = new MutationObserver(() => { if (g.hidden) { back.disconnect(); setOpen(true); } }); back.observe(g, { attributes: true, attributeFilter: ['hidden'] }); };
 // ?guide を付けて開いた時は、はじめから操作ガイドを開く
 if (new URLSearchParams(location.search).has('guide')) setTimeout(() => document.getElementById('guideOpenDemo').click(), 300); else setOpen(true);
