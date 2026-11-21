@@ -231,6 +231,9 @@ export class DuelLink {
     return true;
   }
 
+  /** 相手の欄が最後に書かれた時刻（Date.now() の形。まだ一度も無ければ 0）。画面の「つながりが切れました（あと○分）」用 */
+  get lastSeenAt()         { return this.lastSeen; }
+
   /** 子：［準備OK］を押した */
   setReady() { this.doc.ready = true; void this.o.room.presence(this.doc); }
 

@@ -43,6 +43,7 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 #demo button.fx small { display: block; font-weight: 500; font-size: 11px; color: var(--d-sub) }
 #demo button.fx:active { transform: translateY(1px) }
 #demo label { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 6px }
+#demo .guide-open { width: 100%; margin-top: 10px }
 </style>
 <div id="duel-host"></div>
 <button id="demoOpen" type="button">🎬 演出を選ぶ</button>
@@ -50,6 +51,7 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   <header><h1>🎬 演出DEMO</h1><button class="close" type="button" id="demoClose">閉じる</button></header>
   <p class="note">ボタンを押すと、すぐその演出が出ます。対戦は進めなくて大丈夫です。</p>
   <label><input type="checkbox" id="demoSlow"> ゆっくり再生（半分の速さ）</label>
+  <button type="button" class="fx guide-open" id="guideOpenDemo">📖 操作ガイドを開く<small>はじめて卓を開いた時に出る案内（何度でも開けます）</small></button>
   <div id="demoList"></div>
 </section>
 <script type="module">
@@ -141,5 +143,7 @@ list.addEventListener('click', async e => {
   } catch (err) { console.error(err); }
   droot.classList.remove('fx-busy', 'fx-stage'); busy = false; setOpen(true);
 });
-setOpen(true);
+document.getElementById('guideOpenDemo').onclick = () => { setOpen(false); window.__duel.openGuide(0); const g = root.querySelector('#guideDlg'); const back = new MutationObserver(() => { if (g.hidden) { back.disconnect(); setOpen(true); } }); back.observe(g, { attributes: true, attributeFilter: ['hidden'] }); };
+// ?guide を付けて開いた時は、はじめから操作ガイドを開く
+if (new URLSearchParams(location.search).has('guide')) setTimeout(() => document.getElementById('guideOpenDemo').click(), 300); else setOpen(true);
 </script>

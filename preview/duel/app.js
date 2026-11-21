@@ -11,6 +11,8 @@ import { firstEntrance } from './aces.js';
 import { RULINGS } from './data/rulings.js';
 import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js';
 import { GUIDE_KEY, guidePages, guideHtml } from './guide.js';
+import { DuelLink, tabRoom } from './net/duel-link.js';
+import { joinSiteRoom } from './net/site-room.js';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
@@ -712,7 +714,8 @@ function renderSetup() {
       + `</div><p class="su-note">🤖 CPUは、いつも全力で戦います</p>`
       + `<button type="button" class="su-start" data-su="start">▶ デュエル開始</button>`
       + `<button type="button" class="su-more" data-su="more">⚙️ 発動の聞き方・演出・CPUの速さ</button>`;
-  }
+  }  // スイッチ ONLINE が入っている時だけ、最初のページに「👥 人と対戦」
+  if (ONLINE && (p === 'p0own' || (p === 'p0deck' && skipOwner()))) el.insertAdjacentHTML('afterbegin', '<button type="button" class="su-opt su-net" data-su="net"><span>👥</span><b>人と対戦（オンライン）</b><small>キー番号でつなぐ・電卓のリンク対戦と同じ</small></button>');
 }
 /** 準備画面の「🏫 在校生・🌏 留学生とは？」：2行の説明と、ルールブックの「🌏 留学生デッキ」への案内（サイトの中の時だけ） */
 function ryuHelp() {
@@ -725,6 +728,7 @@ function setupClick(t) {
   const b = t.closest('[data-su]'); if (!b || !SU) return false;
   const [k, v] = b.dataset.su.split(/:(.*)/);
   const me = SU.page === 'p0own' || SU.page === 'p0deck';
+  if (k === 'net') { closeSetup(); openNet(); return true; }
   if (k === 'rand') { SU.rand = true; suGo('first'); return true; }
   if (k === 'own') { if (me) SU.p0own = v; else { SU.p1own = v; SU.rand = false; } suGo(me ? 'p0deck' : 'p1deck'); return true; }
   if (k === 'deck') { if (me) SU.p0 = v; else { SU.p1 = v; SU.rand = false; } suGo(me ? 'p1own' : 'first'); return true; }
@@ -801,6 +805,7 @@ function run(action) {
   if (S.winner === null && isRemote(actorOf(S))) { toast(netMode() ? `${NAME(OPP())}の番です` : 'CPUが考え中です'); return; }
   try {
     const next = applyAction(S, action);
+    if (netMode()) { if (!net.link || !net.link.send(action)) { toast(`${NAME(OPP())}の番です`); return; } commit(net.link.state); pick = []; peek = false; render(); return; }
     reactToAce(S, next);
     history.push(S); commit(next); pick = []; peek = false;
     // スマホでは、操作したらシートを閉じて盤面に戻る
@@ -813,7 +818,7 @@ function run(action) {
   }
 }
 // CPU の行動は記録しないので、元に戻すと自分が前に判断した場面まで戻る
-function undo() { if (!history.length) return; undoUsed = true; clearTimeout(cpuTimer); clearTimeout(offerT); cueQ = []; closeFan(); heldAnims = []; tombIntent = null; S = history.pop(); pick = []; render(); }
+function undo() { if (netMode() || !history.length) return; undoUsed = true; clearTimeout(cpuTimer); clearTimeout(offerT); cueQ = []; closeFan(); heldAnims = []; tombIntent = null; S = history.pop(); pick = []; render(); }
 
 let toastT;
 function toast(msg, bad) {
@@ -1275,6 +1280,142 @@ function renderChain() {
 }
 
 /* ---------- カード詳細と操作 ---------- */
+/* ---------- オンライン対戦（人どうし）：MOMOの下書き（docs/momo-notebook.md）どおり。電卓のリンク対戦と同じ並び・言葉 ----------
+ * スイッチ ONLINE：仕上がるまでは切ったまま（URL に ?online-test を付けた時だけ「👥 人と対戦」が出る）
+ * 部屋：サイトから OPTS.room（電卓と同じ room()）・OPTS.uid・OPTS.userName をもらえばサイトの部屋、無ければ同じPCのタブどうし（試す用） */
+const ONLINE = (() => { try { return new URLSearchParams(location.search).has('online-test'); } catch { return false; } })();
+const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
+let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
+const netVer = () => (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev';
+function netUid() {
+  if (OPTS.uid) return OPTS.uid;
+  try { let u = sessionStorage.getItem('gx-net-uid'); if (!u) { u = 't' + Math.random().toString(36).slice(2, 10); sessionStorage.setItem('gx-net-uid', u); } return u; } catch { return 't' + Math.random().toString(36).slice(2, 10); }
+}
+const netMyName = () => OPTS.userName || 'ゲスト'; // サイトではログインの名前。試す時（同じPCのタブ）は「ゲスト」
+const netJoin = key => (OPTS.room ? joinSiteRoom(OPTS.room, key) : Promise.resolve(tabRoom('ygo-duel-' + key, netUid())));
+/* 待合室：待っている親が「名前・キー番号・公式／練習」を書く所（電卓の「📡 いま待っている人」と同じ考え方）。3分より古い書きこみは出さない */
+const NET_LOBBY = 'ygo-duel-lobby';
+let lobby = null; // { room, off, peers: [{ uid, name, key, mode }], beat }
+async function lobbyOpen() {
+  if (lobby) return;
+  lobby = { room: null, off: null, peers: [], beat: null };
+  const me = lobby;
+  try { me.room = OPTS.room ? await OPTS.room.join(NET_LOBBY) : tabRoom(NET_LOBBY, netUid()); } catch (e) { console.warn('待合室に入れませんでした', e); return; }
+  if (lobby !== me) { try { me.room.leave(); } catch { /* */ } return; }
+  me.off = me.room.onPeers(({ peers }) => {
+    const now = Date.now();
+    me.peers = peers.filter(p => !p.isMe && p.presence && p.presence.wait && p.presence.v === netVer() && now - (p.updatedAt || 0) < 180000).map(p => ({ uid: p.uid, name: p.presence.name || 'ゲスト', key: p.presence.key, mode: p.presence.mode }));
+    if (netUi && netUi.step === 'key') renderNet();
+  });
+}
+/** 親として待っている間は、待合室に「待っています」を書く（1分ごとに書き直す）。on=false で消す */
+function lobbyWait(on) {
+  if (!lobby || !lobby.room) return;
+  clearInterval(lobby.beat); lobby.beat = null;
+  const write = () => lobby && lobby.room && lobby.room.presence(on && netUi ? { wait: true, name: netMyName(), key: netUi.myKey, mode: netUi.mode, v: netVer() } : { wait: false });
+  write(); if (on) lobby.beat = setInterval(write, 60000);
+}
+function lobbyClose() { if (!lobby) return; const l = lobby; lobby = null; clearInterval(l.beat); try { l.off && l.off(); } catch { /* */ } try { l.room && l.room.presence({ wait: false }); l.room && l.room.leave(); } catch { /* */ } }
+function openNet() {
+  const myKey = String(1000 + Math.floor(Math.random() * 9000));
+  netUi = { step: 'key', myKey, key: '', deck: $('#deck0').value || Object.keys(DECKS)[0], mode: 'official', host: false, room: null, link: null, status: '', peerName: '' };
+  renderNet(); $('#netDlg').hidden = false; lobbyOpen();
+}
+function closeNet() { if (netUi && netUi.link && !netMode()) { try { netUi.link.close(); } catch { /* もう閉じている */ } } lobbyClose(); netUi = null; $('#netDlg').hidden = true; }
+function renderNet() {
+  const u = netUi; if (!u) return;
+  const deckOpts = Object.values(DECKS).map(d => `<option value="${esc(d.code)}"${d.code === u.deck ? ' selected' : ''}>${esc(themeOf(d))}（${esc(ownerOf(d))}）</option>`).join('');
+  let body = '';
+  if (u.step === 'key') {
+    body = `<label class="net-row">あなたのデッキ<select data-net="deck">${deckOpts}</select></label>`
+      + `<div class="net-key"><small>あなたのキー</small><b>${u.myKey}</b><small>相手にこの番号を入れてもらうと、あなたが<strong>親</strong>（試合を設定する人）になります</small></div>`
+      + `<p class="net-q">どんな試合？</p><div class="net-modes"><button type="button" class="btn${u.mode === 'official' ? ' primary' : ''}" data-net="mode:official">🏆 公式試合<small>戦績・実績に残る</small></button><button type="button" class="btn${u.mode === 'practice' ? ' primary' : ''}" data-net="mode:practice">📝 練習<small>記録しない</small></button></div>`
+      + `<button type="button" class="btn primary net-wide" data-net="host">⏳ このキーで相手を待つ（親）</button>`
+      + `<p class="net-q">📡 いま待っている人（タップでつなぐ）</p>` + (lobby && lobby.peers.length ? `<div class="net-lobby">${lobby.peers.map(p => `<button type="button" class="net-lb" data-net="lb:${esc(p.key)}"><b>${esc(p.name)}</b><span>が待っています・${p.mode === 'practice' ? '📝練習' : '🏆公式'}</span><i>対戦する ▶</i></button>`).join('')}</div>` : '<p class="net-none">いま待っている人はいません</p>')
+      + `<p class="net-q">相手のキーを入れる（入れた人は<strong>子</strong>）</p><div class="net-join"><input type="text" inputmode="numeric" maxlength="4" placeholder="0000" aria-label="相手のキー番号" data-net-key value="${esc(u.key)}"><button type="button" class="btn primary" data-net="join">つなぐ</button></div>`;
+  } else if (u.step === 'wait') {
+    body = `<p class="net-st">⏳ ${u.host ? `相手を待っています（キー ${u.myKey}）` : esc(u.status || 'つないでいます…')}</p>`
+      + (!u.host && u.link && !u.ready ? `<p class="net-q">${esc(u.peerName || '親')}さんの部屋につながりました。準備ができたら押してください。</p><button type="button" class="btn primary net-wide" data-net="ready">準備OK</button>` : '')
+      + (!u.host && u.ready ? `<p class="net-q">⏳ ${esc(u.peerName || '親')}さんが始めるのを待っています…</p>` : '');
+  }
+  if (u.err) body += `<p class="net-err">${esc(u.err)}</p>`;
+  $('#netBox').innerHTML = `<div class="box-head"><h3>👥 人と対戦の準備</h3><button type="button" class="btn small ghost" data-net="close">やめる</button></div>${body}`;
+}
+async function netConnect(host) {
+  const u = netUi; if (!u) return;
+  const key = host ? u.myKey : u.key;
+  if (!/^\d{4}$/.test(key)) { u.err = 'キー番号は4桁の数字です'; renderNet(); return; }
+  u.err = ''; u.host = host; u.step = 'wait'; u.status = 'つないでいます…'; renderNet();
+  lobbyWait(host); // 親は待合室に「待っています」を書く（子は何も書かない）
+  try { u.room = await netJoin(key); } catch (e) { u.err = '部屋に入れませんでした：' + (e && e.message || e); u.step = 'key'; renderNet(); return; }
+  if (netUi !== u) { try { u.room.leave(); } catch { /* もう閉じている */ } return; }
+  u.lastSeen = Date.now();
+  u.peerOff = u.room.onPeers(({ peers }) => { const o = peers.find(p => !p.isMe); if (o) { u.lastSeen = Math.max(u.lastSeen || 0, o.updatedAt || Date.now()); if (o.presence && o.presence.name) { u.peerName = o.presence.name; if (net) net.oppName = o.presence.name; } if (o.presence && o.presence.deck) u.peerDeck = o.presence.deck; } if (netUi === u && !netMode()) renderNet(); });
+  u.link = new DuelLink({ room: u.room, uid: netUid(), host, version: netVer(), name: netMyName(), deck: u.deck, mode: u.mode, ready: host, on: e => netEvent(u, e) });
+  u.status = host ? '' : 'つながりました'; renderNet();
+}
+function netEvent(u, e) {
+  if (e.type === 'start') {
+    $('#netDlg').hidden = true; lobbyClose(); // 始まったら、待合室からは消える
+    mySeat = e.seat; net = { link: u.link, oppName: u.peerName || '相手', mode: e.mode, ui: u };
+    $('#mode').value = 'hot'; $('.droot').classList.add('net-on');
+    S = e.state; S.askZone = [ME()];
+    history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp]; trace = []; thinking = null; aceSeen = new Set(); undoUsed = false; resultSent = false;
+    netNote(''); render();
+    banner(S.turnPlayer === ME() ? 'あなたの先攻' : `${NAME(OPP())}の先攻`, S.turnPlayer === ME() ? 'me' : 'opp', 1100);
+  } else if (e.type === 'remote') { if (net) { u.lastSeen = Date.now(); commit(e.state); render(); } }
+  else if (e.type === 'end') { if (net) netEndNote(e.winner); }
+  else if (e.type === 'away') netStop('相手がいなくなったので、この対戦は終わりです。戦績には残りません。');
+  else if (e.type === 'version') netStop('相手と画面の版がちがうので、対戦できません。2人とも画面を読み直してください。', true);
+  else if (e.type === 'desync') { console.warn('オンライン対戦のずれ', e.detail); netStop('2人の画面がずれてしまいました。この対戦は終わりです（戦績には残りません）。'); }
+}
+/** 上の知らせの帯（つながりが切れたかも／終わりの知らせ） */
+function netNote(html) { const el = $('#netNote'); if (!el) return; el.innerHTML = html; el.hidden = !html; }
+function netEndNote(winner) {
+  const rec = net && net.mode === 'practice' ? '📝 練習なので記録しません' : OPTS.onNetResult ? '🏆 公式試合として戦績に記録しました' : '（この画面では戦績に記録しません）';
+  if (net && net.mode !== 'practice' && OPTS.onNetResult && S) {
+    // サイトの戦績（人どうし📊）に渡す中身：勝ち負け・自分と相手の名前とデッキ・LP・ターン・先攻か
+    const md = DECKS[net.ui && net.ui.deck], od = DECKS[net.ui && net.ui.peerDeck];
+    try { OPTS.onNetResult({ winner, me: ME(), result: winner === 'draw' ? 'draw' : winner === ME() ? 'win' : 'lose', oppName: net.oppName, mode: net.mode, myTheme: md ? themeOf(md) : null, oppTheme: od ? themeOf(od) : null, myLp: S.players[ME()].lp, oppLp: S.players[OPP()].lp, turn: S.turn, first: S.firstPlayer === ME() }); } catch (err) { console.error(err); }
+  }
+  const host = net && net.ui && net.ui.host;
+  netNote(`<b>${winner === 'draw' ? '引き分け' : winner === ME() ? 'あなたの勝ち！' : 'あなたの負け…'}</b><span>${rec}</span>`
+    + (host ? '<button type="button" class="btn small primary" data-net="again">もう一度（同じ相手と）</button>' : '<span>もう一度は、親（相手）が始めると始まります</span>')
+    + '<button type="button" class="btn small ghost" data-net="quit">やめる</button>');
+}
+function netStop(msg, reload) {
+  netNote(`<b>${esc(msg)}</b>${reload ? '<button type="button" class="btn small primary" data-net="reload">読み直す</button>' : ''}<button type="button" class="btn small ghost" data-net="quit">準備にもどる</button>`);
+  if (net && net.link) { try { net.link.close(); } catch { /* もう閉じている */ } }
+  if (netUi && !net) { netUi.err = msg; renderNet(); }
+}
+function netQuit() {
+  const u = net ? net.ui : netUi;
+  if (u) { try { u.peerOff && u.peerOff(); } catch { /* */ } try { u.link && u.link.close(); } catch { /* */ } }
+  lobbyClose(); net = null; netUi = null; mySeat = 0; $('.droot').classList.remove('net-on'); netNote(''); $('#netDlg').hidden = true;
+  $('#mode').value = 'cpu'; newDuel(true); if (OPTS.menuFirst) { placeholder = true; openSetup(); }
+}
+/** 相手の知らせが来ない時：上の帯に「つながりが切れたかも（あと m:ss で終わり）」 */
+setInterval(() => {
+  if (!net || !net.ui || !S || S.winner !== null) return;
+  const gone = Date.now() - (net.ui.lastSeen || Date.now());
+  if (gone > NET_AWAY_SHOW) { const left = Math.max(0, 180000 - gone), m = Math.floor(left / 60000), sec = String(Math.floor(left / 1000) % 60).padStart(2, '0'); netNote(`<b>📡 つながりが切れました。もどるのを待っています（あと ${m}:${sec}）</b>`); }
+  else if ($('#netNote') && /つながりが切れ/.test($('#netNote').textContent)) netNote('');
+}, 1000);
+function netClick(t) {
+  const b = t.closest('[data-net]'); if (!b) return false;
+  const [k, v] = b.dataset.net.split(':');
+  if (k === 'close') { closeNet(); if (OPTS.menuFirst && !netMode()) openSetup(); return true; }
+  if (k === 'mode') { netUi.mode = v; renderNet(); return true; }
+  if (k === 'host') { netConnect(true); return true; }
+  if (k === 'lb') { netUi.key = v; netConnect(false); return true; }
+  if (k === 'join') { const i = $('[data-net-key]'); netUi.key = i ? i.value.trim() : ''; netConnect(false); return true; }
+  if (k === 'ready') { netUi.ready = true; netUi.link && netUi.link.setReady(); renderNet(); return true; }
+  if (k === 'again') { netNote('⏳ もう一度：相手を待っています…'); if (!(net && net.link && net.link.rematch())) netNote(''); return true; } // 始まると、すぐ知らせの帯は消える
+  if (k === 'quit') { netQuit(); return true; }
+  if (k === 'reload') { location.reload(); return true; }
+  return false;
+}
+
 /* ---------- 辞書：カードの公式Q&A（記録のカード名・盤面のカード・説明の欄から開く小さい窓） ---------- */
 const RUL_NAMES = nameIndex(RULINGS, CARD_POOL);
 /** 説明の欄の「📖 公式Q&A（○件）」ボタン（Q&Aがあるカードだけ） */
@@ -1289,9 +1430,9 @@ function showRulings(code) {
 let guideAt = 0;
 const guideEnv = () => ({ touch: matchMedia('(hover: none)').matches, land: landscape() });
 function openGuide(i = 0) { guideAt = Math.max(0, Math.min(guidePages().length - 1, i)); $('#guideBox').innerHTML = guideHtml(guideAt, guideEnv()); $('#guideDlg').hidden = false; }
-function closeGuide() { $('#guideDlg').hidden = true; try { localStorage.setItem(GUIDE_KEY, '1'); } catch { /* 覚えられない環境 */ } setTimeout(() => { if (S && !pausedUi()) scheduleCpu(); }, 0); }
+function closeGuide() { $('#guideDlg').hidden = true; if (!OPTS.demo && !OPTS.quick) try { localStorage.setItem(GUIDE_KEY, '1'); } catch { /* 覚えられない環境 */ } setTimeout(() => { if (S && !pausedUi()) scheduleCpu(); }, 0); }
 /** この端末でまだ見ていなければ、ガイドを出す（DEMO・2人対戦の準備中などでは出さない） */
-function maybeGuide() { if (OPTS.demo) return; let seen = false; try { seen = !!localStorage.getItem(GUIDE_KEY); } catch { seen = true; } if (!seen) openGuide(0); }
+function maybeGuide() { if (OPTS.demo || OPTS.quick) return; let seen = false; try { seen = !!localStorage.getItem(GUIDE_KEY); } catch { seen = true; } if (!seen) openGuide(0); }
 function describe(uid) {
   const c = S.cards[uid], d = defOf(S, uid);
   if (isRemote(c.controller) && (c.zone === 'hand' || ((c.zone === 'mzone' || c.zone === 'szone') && !c.faceUp))) {
@@ -2345,6 +2486,7 @@ function surrender() {
   // 押し間違いを防ぐため、2回押して確定する
   if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'もう一度押すと降参'; armT = setTimeout(disarm, 5000); return; }
   disarm(); closeMenu();
+  if (netMode()) { if (net.link && net.link.send({ type: 'surrender', player: ME() })) { commit(net.link.state); render(); } return; }
   if (cpuMode()) { clearTimeout(cpuTimer); history.push(S); commit(applyAction(S, { type: 'surrender', player: 0 })); render(); return; }
   run({ type: 'surrender', player: actorOf(S) });
 }
@@ -2913,6 +3055,7 @@ root.addEventListener('click', e => {
   }
   if (t.closest('#pileClose') || t.id === 'pileDlg') { $('#pileDlg').hidden = true; return; }
   if (t.closest('#rulClose') || t.id === 'rulingDlg') { $('#rulingDlg').hidden = true; return; }
+  if (netClick(t)) return;
   { const g = t.closest('[data-gd]'); if (g) { const k = g.dataset.gd; if (k === 'next') openGuide(guideAt + 1); else if (k === 'prev') openGuide(guideAt - 1); else closeGuide(); return; } }
   if (t.closest('#guideOpen')) { closeMenu(); openGuide(0); return; }
   { const rb = t.closest('[data-rul]'); if (rb) { showRulings(rb.dataset.rul); return; } }
@@ -3009,6 +3152,8 @@ export function boot(root, opts = {}) {
   const start = data => {
     // 演出のDEMO（demo.html）：2人対戦の形で静かに始める（CPUは動かない・開始の帯もセリフも出さない・保存もしない）
     if (opts.demo) { $('#mode').value = 'hot'; $('#hideOppRow').hidden = false; newDuel(true); return; }
+    // 全力のCPUとすぐ対戦する DEMO（cpu-demo.html）：opts.quick = [あなたのデッキ, CPUのデッキ]。先攻・後攻はランダム
+    if (opts.quick) { $('#mode').value = 'cpu'; $('#hideOppRow').hidden = true; for (const i of [0, 1]) if (DECKS[opts.quick[i]]) $(`#deck${i}`).value = opts.quick[i]; $('#first').value = 'r'; cpuLevel = CPU_LEVEL; showDeckFmt(); newDuel(); return; }
     if (data && data.mode) $('#mode').value = data.mode;
     if (data && data.d0 && DECKS[data.d0]) $('#deck0').value = data.d0;
     if (data && data.d1 && DECKS[data.d1]) $('#deck1').value = data.d1;
@@ -3027,7 +3172,7 @@ export function boot(root, opts = {}) {
     else maybeGuide(); // 準備画面を出さない時（対戦卓だけのページ）は、すぐにガイド
   };
   // 動作確認用：開発者ツールから状態を読み書きできるようにする
-  window.__duel = { /* 確かめ用：オンライン対戦の席（0／1）と相手の名前で見た画面にする（通信はしない）。null で元にもどす */ previewSeat(seat, name) { if (seat == null) { mySeat = 0; net = null; } else { mySeat = seat; net = { link: null, oppName: name || '相手' }; $('#mode').value = 'hot'; } render(); }, get state() { return S; }, speak(t) { speak(t); }, act(a) { run(a); }, review(tr) { if (tr) trace = tr; showReview(); }, get cpu() { return { thinking: thinking === S, ready: !!ready, waiting: waiting.size, worker: !!worker, workerBroken, timer: cpuTimer, trace: trace.length }; }, load(s) { clearTimeout(cpuTimer); S = s; history = []; selected = null; pick = []; lastLp = [s.players[0].lp, s.players[1].lp]; render(); } };
+  window.__duel = { /* DEMO用：操作ガイドを開く（DEMOでは見たことを覚えない） */ openGuide(i) { openGuide(i || 0); }, /* 確かめ用：オンライン対戦の準備の窓を開く（スイッチ ONLINE が入っている時だけ） */ openNet() { if (ONLINE) openNet(); }, /* 確かめ用：オンライン対戦の席（0／1）と相手の名前で見た画面にする（通信はしない）。null で元にもどす */ previewSeat(seat, name) { if (seat == null) { mySeat = 0; net = null; } else { mySeat = seat; net = { link: null, oppName: name || '相手' }; $('#mode').value = 'hot'; } render(); }, get state() { return S; }, speak(t) { speak(t); }, act(a) { run(a); }, review(tr) { if (tr) trace = tr; showReview(); }, get cpu() { return { thinking: thinking === S, ready: !!ready, waiting: waiting.size, worker: !!worker, workerBroken, timer: cpuTimer, trace: trace.length }; }, load(s) { clearTimeout(cpuTimer); S = s; history = []; selected = null; pick = []; lastLp = [s.players[0].lp, s.players[1].lp]; render(); } };
   if (opts.standalone) {
     window.claude?.hot?.snapshot?.(() => ({ v: 4, S, history: history.slice(-30), mode: $('#mode').value }));
     window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});

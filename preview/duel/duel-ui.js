@@ -373,6 +373,30 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .gd-dots i.on { background: var(--accent); outline: 1px solid var(--edge) }
 .gd-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap }
 .gd-btns .btn { min-height: 44px }
+/* オンライン対戦（人どうし）の準備の窓・上の知らせの帯。オンラインの間は、ひとつ戻す・CPUの設定・対戦相手の切りかえを出さない */
+.net-box { max-width: 420px }
+.net-row { display: grid; gap: 4px; font-size: 13px; margin: 6px 0 }
+.net-row select { font: inherit; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink) }
+.net-key { display: grid; gap: 2px; text-align: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin: 8px 0 }
+.net-key b { font-family: var(--num); font-size: 34px; letter-spacing: .2em }
+.net-key small { font-size: 12px; color: var(--sub) }
+.net-q { font-size: 13px; margin: 10px 0 6px; font-weight: 700 }
+.net-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.net-modes .btn { display: grid; gap: 2px; min-height: 52px } .net-modes small { font-size: 11px; font-weight: 500 }
+.net-wide { width: 100%; min-height: 48px; margin-top: 8px }
+.net-join { display: grid; grid-template-columns: 1fr auto; gap: 8px }
+.net-join input { font-family: var(--num); font-size: 22px; letter-spacing: .2em; text-align: center; padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); min-width: 0 }
+.net-st { font-weight: 700; text-align: center; margin: 12px 0 }
+.net-err { color: var(--bad); font-size: 13px; font-weight: 700 }
+.net-lobby { display: grid; gap: 6px }
+.net-lb { display: flex; align-items: center; gap: 8px; font: inherit; text-align: left; border: 2px solid var(--edge); border-radius: 8px; background: var(--panel-2); color: var(--ink); padding: 8px 10px; cursor: pointer; min-height: 48px }
+.net-lb b { font-size: 15px } .net-lb span { font-size: 12px; color: var(--sub); flex: 1 }
+.net-lb i { font-style: normal; font-weight: 900; color: #fff; background: var(--opp); border: 2px solid var(--edge); border-radius: 4px; padding: 3px 8px; font-size: 12px; white-space: nowrap }
+.net-none { font-size: 12px; color: var(--sub); margin: 0 }
+.net-note { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 56px); transform: translateX(-50%); z-index: 40; width: min(92vw, 520px); display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: center; background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow); font-size: 13px; text-align: center }
+.net-note[hidden] { display: none }
+.droot.net-on #undo, .droot.net-on #undoMini, .droot.net-on label[for="cpuSpeed"], .droot.net-on label[for="mode"], .droot.net-on label[for="deck0"], .droot.net-on label[for="deck1"], .droot.net-on label[for="first"], .droot.net-on #newDuel { display: none !important }
+.su-net { margin-bottom: 10px; border-style: dashed }
 .droot.fx-busy::after { content: ""; position: fixed; inset: 0; z-index: 90; touch-action: none; cursor: default }
 /* 準備画面の間は、後ろの盤面と手札（前の対戦のカード）をぼかして、読めないようにする */
 .droot:has(#setup:not([hidden])) :is(#board, #hand0, #hand1, .tray) { filter: blur(6px); transition: filter .2s }
@@ -1018,7 +1042,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-1241</p>
+    <p class="menu-note ver">版：20261121-1254</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
@@ -1028,6 +1052,8 @@ export const MARKUP = `
   </div>
 </div>
 <div class="overlay" id="pileDlg" hidden role="dialog" aria-modal="true"><div class="box" id="pileBox"></div></div>
+<div class="overlay" id="netDlg" hidden role="dialog" aria-modal="true" aria-label="人と対戦の準備"><div class="box net-box" id="netBox"></div></div>
+<div class="net-note" id="netNote" hidden aria-live="polite"></div>
 <div class="overlay" id="guideDlg" hidden role="dialog" aria-modal="true" aria-label="操作ガイド"><div class="box gd-box" id="guideBox"></div></div>
 <div class="overlay" id="rulingDlg" hidden role="dialog" aria-modal="true" aria-label="公式Q&amp;A"><div class="box rul-box" id="rulingBox"></div></div>
 <div id="toast" role="status" hidden></div>

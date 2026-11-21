@@ -4395,7 +4395,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   function releaseWake(){if(wl){try{wl.release();}catch(e){}wl=null;}}
   document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&!overlay.hidden&&D&&D.phase==='play')acquireWake();});
 
-  YGO.app={addCpu:function(r,local){pf.cpuLog=Array.isArray(pf.cpuLog)?pf.cpuLog:[];var o=JSON.parse(JSON.stringify(r||{}));if(local)o.preview=true;pf.cpuLog.push(o);if(CL&&!local){CL.ref.set({cpuLog:firebase.firestore.FieldValue.arrayUnion(o)},{merge:true}).catch(function(){});}else if(!local)savePf();renderLog();},role:function(){return role;},linked:function(){return !!(sub&&opp);},saveD:function(){saveD();},push:function(){pushPresence();},saveAch:function(o){if(CL)CL.ref.set({ach:o},{merge:true}).catch(function(){});},cloud:function(){return !!CL;},pf:function(){return pf;},opp:function(){return opp||null;},D:function(){return D;},
+  YGO.app={/* オンライン対戦（人どうし、デュエル卓）の結果を、人どうしの戦績📊に足す（公式試合だけ。お試し版の時は記録しない） */addNet:function(r,local){if(local||!r)return;var rec={at:Date.now(),result:r.result,why:[],memo:'🌐 オンライン対戦（デュエル卓）',myName:pf.name||'',myTheme:r.myTheme||null,oppName:r.oppName||null,oppTheme:r.oppTheme||null,myLp:r.myLp,oppLp:r.oppLp,turn:r.turn,first:!!r.first,linked:true,online:true,ryu:(pf.kinds||{})[r.myTheme]==='ryu',fmt:'bo1'};pf.log.push(rec);if(CL){CL.results.add(cleanRec(rec)).catch(function(){});}savePf();renderLog();},addCpu:function(r,local){pf.cpuLog=Array.isArray(pf.cpuLog)?pf.cpuLog:[];var o=JSON.parse(JSON.stringify(r||{}));if(local)o.preview=true;pf.cpuLog.push(o);if(CL&&!local){CL.ref.set({cpuLog:firebase.firestore.FieldValue.arrayUnion(o)},{merge:true}).catch(function(){});}else if(!local)savePf();renderLog();},role:function(){return role;},linked:function(){return !!(sub&&opp);},saveD:function(){saveD();},push:function(){pushPresence();},saveAch:function(o){if(CL)CL.ref.set({ach:o},{merge:true}).catch(function(){});},cloud:function(){return !!CL;},pf:function(){return pf;},opp:function(){return opp||null;},D:function(){return D;},
     editLog:function(r,patch){Object.assign(r,patch);if(CL&&r._id){CL.results.doc(r._id).set(cleanRec(r)).catch(function(){alert('保存できませんでした。通信状態を確認してください。');});}else savePf();renderLog();}};
   if(D&&D.phase==='result'){D.phase='play';saveD();}
   if(D&&D.phase==='play'){$('duel-open').textContent='⚔️ デュエルを再開する';}else if(getM()){$('duel-open').textContent='🏆 マッチの次のデュエルへ';}
@@ -6195,7 +6195,11 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     try{
       var m=await import('./duel/embed.js');
       host.hidden=false;document.documentElement.style.overflow='hidden';
-      m.mountDuel(host,{onClose:close,isOpen:function(){return !host.hidden;},storageKey:KEY,menuFirst:true,onResult:function(r){try{var pv=location.pathname.indexOf('/preview/')>=0;if(window.YGO&&YGO.app&&YGO.app.addCpu)YGO.app.addCpu(r,pv);}catch(e){console.warn(e);}}});
+      var Yg=window.YGO||{},pv=location.pathname.indexOf('/preview/')>=0,rm=null;
+      try{if(Yg.user&&Yg.db&&window.claude&&window.claude.use)rm=await window.claude.use('room');}catch(e){rm=null;}
+      m.mountDuel(host,{onClose:close,isOpen:function(){return !host.hidden;},storageKey:KEY,menuFirst:true,onResult:function(r){try{if(window.YGO&&YGO.app&&YGO.app.addCpu)YGO.app.addCpu(r,pv);}catch(e){console.warn(e);}},
+        /* オンライン対戦（人どうし）：ログインしている時だけ部屋とアカウントを渡す */room:rm,uid:Yg.user?Yg.user.uid:null,userName:(YGO.app&&YGO.app.pf&&YGO.app.pf().name)||'',
+        onNetResult:function(r){try{if(YGO.app&&YGO.app.addNet)YGO.app.addNet(r,pv);}catch(e){console.warn(e);}}});
     }catch(e){console.error(e);st.className='status err';st.textContent='対戦卓を読み込めませんでした。ページを開き直してください。';}
     finally{busy=false;label();}
   });

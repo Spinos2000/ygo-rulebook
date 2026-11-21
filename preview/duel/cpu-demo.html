@@ -1,0 +1,61 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>全力CPU DEMO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Fredoka:wght@500;600&display=swap">
+<style>
+/* 全力のCPUとすぐ対戦するページ（MASTERに見てもらう用。遊ぶ人の画面からは入れない）。デッキを2つ選んで［開始］だけ。戦績には記録しない */
+:root {
+  --d-bg: #f5f2eb; --d-panel: #fffdf8; --d-panel-2: #f3eee4; --d-ink: #262b3a; --d-sub: #6a6e7e; --d-line: #e2dbcd; --d-edge: #2c3244;
+  --d-mat: #1d4737; --d-mat-2: #163a2c; --d-mat-line: #5c8c78; --d-mat-ink: #d6ece1;
+  --d-accent: #f1c95b; --d-accent-ink: #262b3a; --d-opp: #d75a5f; --d-me: #3e6fd0; --d-bad: #b23a3a;
+  --d-shadow: 0 10px 30px rgba(10, 30, 20, .18);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --d-bg: #141d33; --d-panel: #1c2742; --d-panel-2: #24314f; --d-ink: #e9ecf4; --d-sub: #a9b2c8; --d-line: #34426a; --d-edge: #0f1628;
+  --d-mat: #173d2f; --d-mat-2: #102c21; --d-mat-line: #3f6e5c; --d-mat-ink: #cfe6da; --d-accent: #f0d27a; --d-opp: #e07479; --d-me: #6b97dd; --d-bad: #e07070;
+  --d-shadow: 0 10px 30px rgba(0, 0, 0, .5); color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --d-bg: #141d33; --d-panel: #1c2742; --d-panel-2: #24314f; --d-ink: #e9ecf4; --d-sub: #a9b2c8; --d-line: #34426a; --d-edge: #0f1628;
+  --d-mat: #173d2f; --d-mat-2: #102c21; --d-mat-line: #3f6e5c; --d-mat-ink: #cfe6da; --d-accent: #f0d27a; --d-opp: #e07479; --d-me: #6b97dd; --d-bad: #e07070;
+  --d-shadow: 0 10px 30px rgba(0, 0, 0, .5); color-scheme: dark;
+}
+body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M PLUS Rounded 1c", "Hiragino Sans", "Yu Gothic", sans-serif }
+#pick { max-width: 420px; margin: 0 auto; padding: 24px 16px calc(24px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px }
+#pick h1 { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: 22px; margin: 0 }
+#pick p { margin: 0; font-size: 13px; color: var(--d-sub); line-height: 1.6 }
+#pick label { display: grid; gap: 6px; font-weight: 700; font-size: 14px }
+#pick select { font-family: inherit; font-size: 15px; padding: 10px; border-radius: 10px; border: 1px solid var(--d-line); background: var(--d-panel); color: var(--d-ink); min-height: 44px }
+#go { font-family: inherit; font-weight: 700; font-size: 18px; min-height: 52px; border: 2px solid var(--d-edge); border-radius: 12px; background: var(--d-accent); color: var(--d-accent-ink); cursor: pointer; box-shadow: var(--d-shadow) }
+[hidden] { display: none !important }
+</style>
+<section id="pick">
+  <h1>🤖 全力のCPUと対戦</h1>
+  <p>デッキを2つ選んで［開始］を押すと、すぐに全力のCPUとの対戦が始まります。先攻・後攻はランダムです。この対戦は戦績・実績には記録しません。デッキを選び直す時は、ページを読み直してください。</p>
+  <label>あなたのデッキ<select id="d0"></select></label>
+  <label>CPUのデッキ<select id="d1"></select></label>
+  <button type="button" id="go">▶ 開始</button>
+</section>
+<div id="duel-host"></div>
+<script type="module">
+import { mountDuel } from './embed.js';
+import { DECKS } from './data/decks.js';
+
+const list = Object.values(DECKS);
+const label = d => `${d.theme || d.name}（${d.owner || ''}）`;
+for (const [id, k] of [['d0', 0], ['d1', 1]]) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = list.map(d => `<option value="${d.code}">${label(d).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))}</option>`).join('');
+  sel.selectedIndex = Math.min(k, list.length - 1);
+}
+document.getElementById('go').onclick = () => {
+  const quick = [document.getElementById('d0').value, document.getElementById('d1').value];
+  document.getElementById('pick').hidden = true;
+  // 戦績には記録しない（onResult を渡さない）。途中の保存もしない（storageKey を渡さない）
+  mountDuel(document.getElementById('duel-host'), { quick });
+};
+</script>
