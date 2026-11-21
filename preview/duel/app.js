@@ -1395,6 +1395,7 @@ function netEvent(u, e) {
     banner(S.turnPlayer === ME() ? 'あなたの先攻' : `${NAME(OPP())}の先攻`, S.turnPlayer === ME() ? 'me' : 'opp', 1100);
   } else if (e.type === 'remote') { if (net) { u.lastSeen = Date.now(); commit(e.state); render(); } }
   else if (e.type === 'end') { if (net) netEndNote(e.winner); }
+  else if (e.type === 'rematchAsked') { if (net && S && S.winner !== null) netNote(`<b>${esc(net.oppName)} さんが、もう一度を申し込んでいます</b><button type="button" class="btn small primary" data-net="ask">受ける</button><button type="button" class="btn small ghost" data-net="quit">やめる</button>`); }
   else if (e.type === 'away') netStop('相手がいなくなったので、この対戦は終わりです。戦績には残りません。');
   else if (e.type === 'version') netStop('相手と画面の版がちがうので、対戦できません。2人とも画面を読み直してください。', true);
   else if (e.type === 'desync') { console.warn('オンライン対戦のずれ', e.detail); netStop('2人の画面がずれてしまいました。この対戦は終わりです（戦績には残りません）。'); }
@@ -1408,9 +1409,8 @@ function netEndNote(winner) {
     const md = DECKS[net.ui && net.ui.deck], od = DECKS[net.ui && net.ui.peerDeck];
     try { OPTS.onNetResult({ winner, me: ME(), result: winner === 'draw' ? 'draw' : winner === ME() ? 'win' : 'lose', oppName: net.oppName, mode: net.mode, myTheme: md ? themeOf(md) : null, oppTheme: od ? themeOf(od) : null, myLp: S.players[ME()].lp, oppLp: S.players[OPP()].lp, turn: S.turn, first: S.firstPlayer === ME() }); } catch (err) { console.error(err); }
   }
-  const host = net && net.ui && net.ui.host;
   netNote(`<b>${winner === 'draw' ? '引き分け' : winner === ME() ? 'あなたの勝ち！' : 'あなたの負け…'}</b><span>${rec}</span>`
-    + (host ? '<button type="button" class="btn small primary" data-net="again">もう一度（同じ相手と）</button>' : '<span>もう一度は、親（相手）が始めると始まります</span>')
+    + '<button type="button" class="btn small primary" data-net="ask">もう一度（同じ相手と）を申し込む</button>'
     + '<button type="button" class="btn small ghost" data-net="quit">やめる</button>');
 }
 function netStop(msg, reload) {
@@ -1444,7 +1444,8 @@ function netClick(t) {
   if (k === 'lb') { netUi.key = v; netConnect(false); return true; }
   if (k === 'join') { const i = $('[data-net-key]'); netUi.key = i ? i.value.trim() : ''; netConnect(false); return true; }
   if (k === 'ready') { netUi.ready = true; netUi.link && netUi.link.setReady(); renderNet(); return true; }
-  if (k === 'again') { netNote('⏳ もう一度：相手を待っています…'); if (!(net && net.link && net.link.rematch())) netNote(''); return true; } // 始まると、すぐ知らせの帯は消える
+  // もう一度：親も子も、勝ち負けに関係なく申し込める。2人とも申し込むと始まる（相手の申し込みを［受ける］も同じ）
+  if (k === 'ask') { if (net && net.link && net.link.requestRematch() && S && S.winner !== null) netNote('<b>⏳ もう一度を申し込みました</b><span>相手が受けると始まります</span><button type="button" class="btn small ghost" data-net="quit">やめる</button>'); return true; }
   if (k === 'quit') { netQuit(); return true; }
   if (k === 'reload') { location.reload(); return true; }
   return false;
@@ -3185,9 +3186,14 @@ export function boot(root, opts = {}) {
   if (landscape()) setTray(false); // 横向きで開いた時は、手札をしまった形から
   const start = data => {
     // 演出のDEMO（demo.html）：2人対戦の形で静かに始める（CPUは動かない・開始の帯もセリフも出さない・保存もしない）
-    if (opts.demo) { $('#mode').value = 'hot'; $('#hideOppRow').hidden = false; newDuel(true); return; }
+    // 招待（サイトの招待・招待リンクから）：opts.netJoin＝相手のキー番号。窓を開いて、すぐ子として［つなぐ］（スイッチ ONLINE が入っている時だけ。DEMOのページでも同じ）
+    const joinVs = () => {
+      const vs = opts.netJoin || (ONLINE ? (() => { try { return new URLSearchParams(location.search).get('vs'); } catch { return null; } })() : null); // 卓だけのページは、URLの ?vs=キー も見る
+      if (ONLINE && vs && /^\d{4}$/.test(String(vs))) { if (setupOpen()) closeSetup(); openNet(); netUi.key = String(vs); netConnect(false); }
+    };
+    if (opts.demo) { $('#mode').value = 'hot'; $('#hideOppRow').hidden = false; newDuel(true); joinVs(); return; }
     // 全力のCPUとすぐ対戦する DEMO（cpu-demo.html）：opts.quick = [あなたのデッキ, CPUのデッキ]。先攻・後攻はランダム
-    if (opts.quick) { $('#mode').value = 'cpu'; $('#hideOppRow').hidden = true; for (const i of [0, 1]) if (DECKS[opts.quick[i]]) $(`#deck${i}`).value = opts.quick[i]; $('#first').value = 'r'; cpuLevel = CPU_LEVEL; showDeckFmt(); newDuel(); return; }
+    if (opts.quick) { $('#mode').value = 'cpu'; $('#hideOppRow').hidden = true; for (const i of [0, 1]) if (DECKS[opts.quick[i]]) $(`#deck${i}`).value = opts.quick[i]; $('#first').value = 'r'; cpuLevel = CPU_LEVEL; showDeckFmt(); newDuel(); joinVs(); return; }
     if (data && data.mode) $('#mode').value = data.mode;
     if (data && data.d0 && DECKS[data.d0]) $('#deck0').value = data.d0;
     if (data && data.d1 && DECKS[data.d1]) $('#deck1').value = data.d1;
@@ -3196,7 +3202,7 @@ export function boot(root, opts = {}) {
     $('#hideOppRow').hidden = cpuMode();
     showDeckFmt();
     if (data && data.S && (data.v === 4 || data.v === SAVE_V)) {
-      try { S = data.S; if (!S.askZone) S.askZone = netMode() ? [ME()] : cpuMode() ? [0] : [0, 1]; history = data.history || []; trace = Array.isArray(data.trace) ? data.trace : []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); return; }
+      try { S = data.S; if (!S.askZone) S.askZone = netMode() ? [ME()] : cpuMode() ? [0] : [0, 1]; history = data.history || []; trace = Array.isArray(data.trace) ? data.trace : []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); joinVs(); return; } // 途中のCPU対戦があっても、招待は受ける（CPU対戦は保存されたまま）
       catch (e) { console.warn('保存していたデュエルを開けませんでした', e); }
     }
     // ルールページでは、最初に準備画面（デッキ選び → 先攻・後攻 → デュエル開始）を開く。後ろの仮の対戦では、開始の帯もセリフも出さない
@@ -3205,8 +3211,7 @@ export function boot(root, opts = {}) {
     if (opts.menuFirst) { if (cpuMode()) { placeholder = true; openSetup(); } else openMenu(); }
     else maybeGuide(); // 準備画面を出さない時（対戦卓だけのページ）は、すぐにガイド
     // 招待（サイトの招待・招待リンクから）：opts.netJoin＝相手のキー番号。窓を開いて、すぐ子として［つなぐ］（スイッチ ONLINE が入っている時だけ）
-    const vs = opts.netJoin || (ONLINE ? (() => { try { return new URLSearchParams(location.search).get('vs'); } catch { return null; } })() : null); // 卓だけのページは、URLの ?vs=キー も見る
-    if (ONLINE && vs && /^\d{4}$/.test(String(vs))) { if (setupOpen()) closeSetup(); openNet(); netUi.key = String(vs); netConnect(false); }
+    joinVs();
   };
   // 動作確認用：開発者ツールから状態を読み書きできるようにする
   window.__duel = { /* DEMO用：操作ガイドを開く（DEMOでは見たことを覚えない） */ openGuide(i) { openGuide(i || 0); }, /* 確かめ用：オンライン対戦の準備の窓を開く（スイッチ ONLINE が入っている時だけ） */ openNet() { if (ONLINE) openNet(); }, /* 確かめ用：オンライン対戦の席（0／1）と相手の名前で見た画面にする（通信はしない）。null で元にもどす */ previewSeat(seat, name) { if (seat == null) { mySeat = 0; net = null; } else { mySeat = seat; net = { link: null, oppName: name || '相手' }; $('#mode').value = 'hot'; } render(); }, get state() { return S; }, speak(t) { speak(t); }, act(a) { run(a); }, review(tr) { if (tr) trace = tr; showReview(); }, get cpu() { return { thinking: thinking === S, ready: !!ready, waiting: waiting.size, worker: !!worker, workerBroken, timer: cpuTimer, trace: trace.length }; }, load(s) { clearTimeout(cpuTimer); S = s; history = []; selected = null; pick = []; lastLp = [s.players[0].lp, s.players[1].lp]; render(); } };

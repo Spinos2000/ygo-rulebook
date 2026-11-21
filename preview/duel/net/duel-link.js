@@ -76,6 +76,8 @@ export function tabRoom(name        , uid        )       {
                                                                                                                
                                                      
                  
+                                                              
+                      
                                     
                   
                    
@@ -95,6 +97,8 @@ export function tabRoom(name        , uid        )       {
                                                      
                                       
                                                      
+                                                             
+                            
                                                      
                      
 
@@ -134,6 +138,8 @@ export class DuelLink {
           beat                                        = null;
           lastSeen = 0; // 相手の欄が最後に書かれた時刻
           round = 0; // 何回目の対戦か（もう一度で1つ増える）
+          them                 = null; // 相手の欄（最後に読んだもの）
+          toldAsk = 0; // 申し込みの知らせを出した回
           o             ;
 
   constructor(o             ) {
@@ -173,6 +179,7 @@ export class DuelLink {
     const other = peers.find(p => !p.isMe && (p.presence                  )?.app === 'ygo-duel');
     if (!other) return;
     const them = other.presence           ;
+    this.them = them;
     this.lastSeen = Math.max(this.lastSeen, other.updatedAt || Date.now());
     if (them.end?.reason === 'away') { this.o.on({ type: 'away' }); this.stop(); return; }
     if (them.v !== this.o.version) { this.o.on({ type: 'version', mine: this.o.version, theirs: them.v }); return; }
@@ -216,6 +223,23 @@ export class DuelLink {
       this.o.on({ type: 'remote', action: a, state: this.state });
     }
     if (this.state && this.state.winner !== null) this.finish();
+    // もう一度：相手が今の回を申し込んできたら知らせる。2人とも申し込んだら、親が始め直す
+    if (this.state && this.state.winner !== null && them.rematchAsk === this.round) {
+      if (this.doc.rematchAsk === this.round) { if (this.o.host) this.rematch(); }
+      else if (this.toldAsk !== this.round) { this.toldAsk = this.round; this.o.on({ type: 'rematchAsked' }); }
+    }
+  }
+
+  /** 自分が今の対戦のあとに「もう一度」を申し込み中か（画面の「申し込みました。相手を待っています…」用） */
+  get rematchRequested()          { return !!this.state && this.state.winner !== null && this.doc.rematchAsk === this.round; }
+
+  /** 決着のあと「もう一度（同じ相手と）」を申し込む／相手の申し込みを受ける。親でも子でも、勝ち負けに関係なく使える */
+  requestRematch()          {
+    if (!this.state || this.state.winner === null || this.stopped) return false;
+    this.doc.rematchAsk = this.round;
+    void this.o.room.presence(this.doc);
+    if (this.o.host && this.them?.rematchAsk === this.round) this.rematch();
+    return true;
   }
 
   /** 自分の操作を盤面に入れて、相手に送る。自分の番でない時は false */
