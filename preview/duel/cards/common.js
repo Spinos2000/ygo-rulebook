@@ -1,11 +1,11 @@
 // カード効果で共通して使う処理
                                                                                 
-import { RuleError, cloneCard } from '../engine/types.js?v=20261121-1732-131c2bace6';
+import { RuleError, cloneCard } from '../engine/types.js?v=20261121-2102-b76a493524';
                                                         
 import {
   defOf, choose, chooseOne, canSpecialSummon, specialSummon, release, sendToGy, newStep, monstersOf, hasLevelCombo,
   extraSummonZone, freeMZones, scriptOf, targetable, releasable, gyLocked, log, pl, opp, isFaceUpMonster, banish, moveCard, emit, shuffleDeck, cleanupOrphans, FIELD_ZONES,
-} from '../engine/game.js?v=20261121-1732-131c2bace6';
+} from '../engine/game.js?v=20261121-2102-b76a493524';
 
 export const nameIs = (s           , uid        , name        ) => defOf(s, uid).name === name;
 export const deckOf = (s           , p          ) => [...s.players[p].deck];
@@ -17,7 +17,8 @@ export const level = (s           , u        ) => defOf(s, u).level ?? 0;
 
 /** 発動時に対象を1つ選んでチェーンブロックに記録する */
 export function target(x     , prompt        , options          )         {
-  options = options.filter(u => targetable(x.s, u) && !(x.s.cards[u].zone === 'gy' && gyLocked(x.s, x.s.cards[u].owner, x.self)));
+  // ネクロバレー：発動の時は、守られた墓地のカードも対象に選べる（処理の時に無効になる。公式Q&A [10691]）。処理の途中で選ぶ時だけ外す
+  options = options.filter(u => targetable(x.s, u) && !(x.s.resolving && x.s.cards[u].zone === 'gy' && gyLocked(x.s, x.s.cards[u].owner, x.self)));
   if (!options.length) throw new RuleError('対象にできるカードがありません');
   const t = chooseOne(x, prompt, options) ;
   x.link .targets.push(t);

@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1732-131c2bace6';
-import { fullThink } from './ai/levels.js?v=20261121-1732-131c2bace6';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1732-131c2bace6';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1732-131c2bace6';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1732-131c2bace6';
-import { playSignature, sigKey } from './sig.js?v=20261121-1732-131c2bace6';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1732-131c2bace6';
-import { firstEntrance } from './aces.js?v=20261121-1732-131c2bace6';
-import { RULINGS } from './data/rulings.js?v=20261121-1732-131c2bace6';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1732-131c2bace6';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1732-131c2bace6';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1732-131c2bace6';
-import { joinSiteRoom } from './net/site-room.js?v=20261121-1732-131c2bace6';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-2102-b76a493524';
+import { fullThink } from './ai/levels.js?v=20261121-2102-b76a493524';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-2102-b76a493524';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-2102-b76a493524';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-2102-b76a493524';
+import { playSignature, sigKey } from './sig.js?v=20261121-2102-b76a493524';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-2102-b76a493524';
+import { firstEntrance } from './aces.js?v=20261121-2102-b76a493524';
+import { RULINGS } from './data/rulings.js?v=20261121-2102-b76a493524';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-2102-b76a493524';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-2102-b76a493524';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-2102-b76a493524';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-2102-b76a493524';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261121-1732-131c2bace6';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-1732-131c2bace6';
-import { DECKS } from './data/decks.js?v=20261121-1732-131c2bace6';
-import { SCRIPTS } from './cards/index.js?v=20261121-1732-131c2bace6';
+} from './engine/game.js?v=20261121-2102-b76a493524';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-2102-b76a493524';
+import { DECKS } from './data/decks.js?v=20261121-2102-b76a493524';
+import { SCRIPTS } from './cards/index.js?v=20261121-2102-b76a493524';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -391,7 +391,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261121-1732-131c2bace6', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-2102-b76a493524', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1354,7 +1354,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261121-1732-131c2bace6';
+const DUEL_BUILD = '20261121-2102-b76a493524';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -1418,6 +1418,15 @@ function renderNet() {
       + `<button type="button" class="btn primary net-wide" data-net="host">⏳ このキーで相手を待つ（親）</button>`
       + `<p class="net-q">📡 いま待っている人（タップでつなぐ）</p>` + (lobby && lobby.peers.length ? `<div class="net-lobby">${lobby.peers.map(p => `<button type="button" class="net-lb" data-net="lb:${esc(p.key)}"><b>${esc(p.name)}</b><span>が待っています・${p.mode === 'practice' ? '📝練習' : '🏆公式'}</span><i>対戦する ▶</i></button>`).join('')}</div>` : '<p class="net-none">いま待っている人はいません</p>')
       + `<p class="net-q">相手のキーを入れる（入れた人は<strong>子</strong>）</p><div class="net-join"><input type="text" inputmode="numeric" maxlength="4" placeholder="0000" aria-label="相手のキー番号" data-net-key value="${esc(u.key)}"><button type="button" class="btn primary" data-net="join">つなぐ</button></div>`;
+  } else if (u.step === 'choose' && u.choose) {
+    // 先攻・後攻を決める人：2人の名前を交互に光らせ、止まった人が選ぶ（No.16）
+    const c = u.choose, opp = esc(u.peerName || '相手');
+    body = `<p class="net-q">${c.round > 1 ? 'もう一度：' : ''}先攻・後攻を決める人は…</p>`
+      + `<div class="net-roul${c.done ? ' done' : ''}"><span class="nr${c.lit === 'me' ? ' on' : ''}">あなた</span><span class="nr${c.lit === 'opp' ? ' on' : ''}">${opp}</span></div>`
+      + (!c.done ? '' : c.me
+        ? (c.sent ? `<p class="net-st">⏳ ${c.sent === 'first' ? '先攻' : '後攻'}を選びました。始まります…</p>`
+          : `<p class="net-q">あなたが選びます。どちらにしますか？</p><div class="net-modes"><button type="button" class="btn primary" data-net="pick:first">⚔️ 先攻<small>先に動く</small></button><button type="button" class="btn primary" data-net="pick:second">🛡️ 後攻<small>先にドローする</small></button></div>`)
+        : `<p class="net-st">⏳ ${opp}さんが先攻・後攻を選んでいます…</p>`);
   } else if (u.step === 'inv') {
     // 👥 招待する：だれを招待しますか？（電卓と同じ言葉。招待した人が親）
     const ms = (OPTS.inviteApi && OPTS.inviteApi.members()) || [];
@@ -1448,7 +1457,7 @@ async function netConnect(host) {
   if (netUi !== u) { try { u.room.leave(); } catch { /* もう閉じている */ } return; }
   u.lastSeen = Date.now();
   u.peerOff = u.room.onPeers(({ peers }) => { const o = peers.find(p => !p.isMe); if (o) { /* 相手の欄が書きかわったのを受け取った時刻（自分の時計）で数える。相手の機械の時計（updatedAt）は2台でずれていることがあるので、比べない */ if (o.updatedAt !== u.peerAt) { u.peerAt = o.updatedAt; u.lastSeen = Date.now(); } if (o.presence && o.presence.name) { u.peerName = o.presence.name; if (net) net.oppName = o.presence.name; } if (o.presence && o.presence.deck) u.peerDeck = o.presence.deck; } if (netUi === u && !netMode()) renderNet(); });
-  u.link = new DuelLink({ room: u.room, uid: netUid(), host, version: netVer(), name: netMyName(), deck: u.deck, mode: u.mode, ready: host, on: e => netEvent(u, e) });
+  u.link = new DuelLink({ room: u.room, uid: netUid(), host, version: netVer(), name: netMyName(), deck: u.deck, mode: u.mode, ready: host, chooseFirst: true, on: e => netEvent(u, e) });
   u.status = host ? '' : 'つながりました'; renderNet();
 }
 /** 招待リンク：開いた人が子になって、すぐつながる（電卓の招待リンクと同じ送り方。電卓の ?duel= とぶつからないよう ?vs=キー） */
@@ -1472,8 +1481,29 @@ async function netInviteLink() {
   try { await navigator.clipboard.writeText(txt + '\n' + base); u.invSt = '📋 招待リンクをコピーしました。LINEなどに貼り付けて送ってください。'; } catch { u.invSt = 'このリンクを送ってください：' + base; }
   renderNet();
 }
+/** 先攻・後攻を決める人のルーレット（約2秒）。止まったら、決める人には［先攻］［後攻］ */
+function netChooser(u, e) {
+  clearTimeout(u.chooseT);
+  const me = e.me != null ? !!e.me : e.chooser === mySeatOf(u);
+  u.choose = { me, lit: 'me', done: false, sent: null, round: e.round || 1 };
+  u.step = 'choose'; $('#netDlg').hidden = false; netNote('');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const gaps = reduce ? [] : [90, 90, 100, 110, 120, 140, 160, 190, 230, 280, 340];
+  let k = 0; const c = u.choose;
+  const step = () => {
+    if (netUi !== u || u.choose !== c) return;
+    if (k < gaps.length) { c.lit = c.lit === 'me' ? 'opp' : 'me'; renderNet(); u.chooseT = setTimeout(step, gaps[k++]); return; }
+    c.lit = me ? 'me' : 'opp'; c.done = true; renderNet();
+    play([me ? 'aceLand' : 'summon']);
+  };
+  step();
+}
+/** 自分の席（始まる前は、親が席0・子が席1） */
+const mySeatOf = u => (u.host ? 0 : 1);
 function netEvent(u, e) {
+  if (e.type === 'chooser') { netChooser(u, e); return; }
   if (e.type === 'start') {
+    u.choose = null; clearTimeout(u.chooseT);
     $('#netDlg').hidden = true; lobbyClose(); // 始まったら、待合室からは消える
     if (u.inv) { try { u.inv.cancel(); } catch { /* */ } u.inv = null; } clearTimeout(u.invT);
     mySeat = e.seat; net = { link: u.link, oppName: u.peerName || '相手', mode: e.mode, ui: u };
@@ -1481,7 +1511,9 @@ function netEvent(u, e) {
     S = e.state; S.askZone = [ME()];
     history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp]; glowDone.clear(); costShown.clear(); heldAnims = []; trace = []; thinking = null; aceSeen = new Set(); undoUsed = false; resultSent = false;
     netNote(''); render();
-    banner(S.turnPlayer === ME() ? 'あなたの先攻' : `${NAME(OPP())}の先攻`, S.turnPlayer === ME() ? 'me' : 'opp', 1100);
+    // 読み直して同じ部屋に入り直した時（resumed）：開始の帯は出さず、「つなぎ直しました」を少し出す（MEMEの知らせの形）
+    if (e.resumed) { netNote('<b>📡 つなぎ直しました。続きから再開します</b>'); const nt = net; setTimeout(() => { if (net === nt && $('#netNote') && /つなぎ直しました/.test($('#netNote').textContent)) netNote(''); }, 3000); }
+    else banner(S.turnPlayer === ME() ? 'あなたの先攻' : `${NAME(OPP())}の先攻`, S.turnPlayer === ME() ? 'me' : 'opp', 1100);
   } else if (e.type === 'remote') { if (net) { u.lastSeen = Date.now(); commit(e.state); render(); } }
   else if (e.type === 'end') { if (net) netEndNote(e.winner); }
   else if (e.type === 'rematchAsked') { if (net) net.oppAsked = true; if (net && S && S.winner !== null) renderDock(); if (net && S && S.winner !== null) netNote(`<b>${esc(net.oppName)}さんが、もう一度を申し込んでいます</b><button type="button" class="btn small primary" data-net="ask">受ける</button><button type="button" class="btn small ghost" data-net="quit">やめる</button>`); }
@@ -1534,6 +1566,7 @@ function netClick(t) {
   if (k === 'mode') { netUi.mode = v; renderNet(); return true; }
   if (k === 'host') { netConnect(true); return true; }
   if (k === 'invlink') { netInviteLink(); return true; }
+  if (k === 'pick' && netUi && netUi.choose && netUi.choose.me && !netUi.choose.sent && netUi.link && netUi.link.chooseFirst) { netUi.choose.sent = v; netUi.link.chooseFirst(v === 'first'); renderNet(); return true; }
   if (k === 'invopen') { netUi.step = 'inv'; renderNet(); return true; }
   if (k === 'invback') { netUi.step = 'wait'; renderNet(); return true; }
   if (k === 'inv') { netInvite(v); return true; }
@@ -2153,6 +2186,8 @@ function queueMoves(prev, next) {
     added.forEach(u => skip.add(u));
   }
   const negs = new Set(fresh.filter(x => x.kind === 'negate').map(x => x.uid));
+  // No.10：ネクロバレーで効果が無効になった時は、帯で理由を出す（発動はできて、処理の時に墓地のカードへ及ぶ部分だけ無効。公式Q&A [10691]）
+  for (const x of fresh) if (x.kind === 'negate' && x.by != null && next.cards[x.uid] && next.cards[x.by]) toast(`「${defOf(next, x.uid).name}」の効果は、「${defOf(next, x.by).name}」の効果で無効になりました（墓地のカードには効果が及びません）`);
   const destroys = new Set(fresh.filter(x => x.kind === 'destroy').map(x => x.uid));
   const moves = [];
   for (const k of Object.keys(next.cards)) {
@@ -2577,7 +2612,8 @@ function autoTray() {
   if (!narrow() || !S) return;
   const needs = S.winner !== null || (humanActing() && (S.pending || (S.window.kind === 'priority' && activatableList(S, actorOf(S)).length)));
   if (needs && trayOpen) setTray(false, true);
-  else if (!needs && !trayOpen && trayAuto && !landscape() && humanActing() && S.turnPlayer === actorOf(S) && S.window.kind !== 'priority') setTray(true);
+  // No.11（ボスの決定②）：返事のために自動でしまった手札は、返事が終わってもすぐには開き直さない（しまう→開くを何度もくり返してピクピク動いていた）。
+  // 開くのは、自分のターンが来た時の1回だけ（turnTray）。それまでに使いたい時は、押すか上に払えば開く
   else setTray(trayOpen, trayAuto);
 }
 /** 指の位置にある手札のカード（重なっている時は上のカード） */

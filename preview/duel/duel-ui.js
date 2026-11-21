@@ -395,6 +395,11 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .net-none { font-size: 12px; color: var(--sub); margin: 0 }
 .net-note { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 56px); transform: translateX(-50%); z-index: 40; width: min(92vw, 520px); display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: center; background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow); font-size: 13px; text-align: center }
 .net-note[hidden] { display: none }
+/* 先攻・後攻を決める人のルーレット（No.16） */
+.net-roul { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0 10px }
+.net-roul .nr { display: grid; place-items: center; min-height: 56px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel-2); font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--sub); transition: background .08s, color .08s, transform .08s }
+.net-roul .nr.on { border-color: var(--edge); background: var(--accent); color: var(--accent-ink, var(--ink)); transform: scale(1.04) }
+.net-roul.done .nr.on { box-shadow: 0 0 0 3px var(--accent), 3px 3px 0 var(--edge) }
 .net-note .btn { min-height: 40px } /* 終わりの帯・つながりの帯のボタン：スマホで押しやすく */
 .droot.net-on #undo, .droot.net-on #undoMini, .droot.net-on label[for="cpuSpeed"], .droot.net-on label[for="mode"], .droot.net-on label[for="deck0"], .droot.net-on label[for="deck1"], .droot.net-on label[for="first"], .droot.net-on #newDuel { display: none !important }
 .su-net { margin-bottom: 10px; border-style: dashed }
@@ -891,8 +896,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* 準備画面の⚙️から開いた時は、対戦の設定（チェーンの確認・演出・CPUの速さ）だけ */
 #menu.from-setup label[for="deck0"], #menu.from-setup label[for="deck1"], #menu.from-setup label[for="mode"], #menu.from-setup label[for="first"], #menu.from-setup #hideOppRow, #menu.from-setup .menu-row, #menu.from-setup .menu-note:not(.ver) { display: none }
 @media (max-width: 860px) {
-  .droot #chain:not([hidden]) { position: fixed; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 150px); z-index: 31; max-height: 30vh; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,.45); padding: 8px 10px; pointer-events: none }
+  .droot #chain:not([hidden]) { position: fixed; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 6px); z-index: 31; max-height: var(--chain-max, 150px); overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,.45); padding: 8px 10px; pointer-events: none }
   .droot #chain h3 { font-size: 12px } .droot #chain li { font-size: 12px }
+  /* No.20（ボスの報告：チェーンの欄が盤面にかぶって、サイクロンの対象が隠れた）：チェーンの欄は盤面の上（LPの欄のあたり）に出して、盤面にはかぶせない。高さは盤面の上の端まで（--chain-max は画面が決める） */
+  .droot #chain h3 { margin-bottom: 3px } .droot #chain ol { gap: 2px } .droot #chain .tg { font-size: 11px }
 }
 .place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: normal; width: max-content; max-width: min(calc(100vw - 24px), 360px) }
 .place-chip small { line-height: 1.45 }
@@ -988,6 +995,17 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .end-btn { background: color-mix(in srgb, var(--opp) 20%, var(--panel)); width: 5.6em; justify-content: center; flex: none } /* 2回押しの間に幅が変わってボタンの並びがずれないように固定 */
   .end-btn.armed { background: var(--opp); color: #fff }
 }
+/* No.13（ボスの報告：サイクロンの対象が下のボタンに隠れた）：下のボタンの欄は、どの場面でも同じ高さにする。
+   盤面の高さはこの欄のふだんの高さで決めて動かさない（No.11）ので、欄が伸びると盤面の下の段（自分の魔法・罠）が隠れてしまう。
+   ボタンの段はそれぞれ1行にまとめて、入りきらない時は横に流す。発動の選択（phaseBtns）の段は、出ていない時も場所を空けておく */
+@media (max-width: 860px) {
+  .droot .dock-extra, .droot #phaseBtns { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; min-width: 0; max-width: 100% }
+  .droot .dock-extra::-webkit-scrollbar, .droot #phaseBtns::-webkit-scrollbar { display: none }
+  .droot .dock-extra .btn, .droot #phaseBtns .btn { flex: none; white-space: nowrap }
+  .droot #phaseBtns, .droot #phaseBtns:empty, .droot .dock.free #phaseBtns { display: flex; min-height: 34px; height: 34px }
+  .droot #phaseBtns:empty, .droot .dock.free #phaseBtns { visibility: hidden }
+  .droot .dock-status { min-height: 1.4em; max-height: 2.8em; overflow: hidden }
+}
 /* スマホ：対戦画面の上下に払う操作を、ページのスクロールにしない（手札の開け閉めに使う） */
 @media (max-width: 860px) { .table, #board, .dock, .hand-hold { touch-action: none; overscroll-behavior: contain } }
 /* ドローの演出：カードは表と裏を持ち、位置・回転・裏返しを transform だけで動かす */
@@ -1064,7 +1082,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-1732</p>
+    <p class="menu-note ver">版：20261121-2102</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

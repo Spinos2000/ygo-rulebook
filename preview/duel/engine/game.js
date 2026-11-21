@@ -5,8 +5,8 @@
                                                                                                                           
                                                                
                     
-import { RuleError, cloneCard, cloneState } from './types.js?v=20261121-1732-131c2bace6';
-import { SCRIPTS } from '../cards/index.js?v=20261121-1732-131c2bace6';
+import { RuleError, cloneCard, cloneState } from './types.js?v=20261121-2102-b76a493524';
+import { SCRIPTS } from '../cards/index.js?v=20261121-2102-b76a493524';
 
 export const START_LP = 8000;
 export const START_HAND = 5;
@@ -31,6 +31,8 @@ export const ZONES = 5;
                 
                                                           
                                              
+                                                                                         
+                         
                                                 
                                                      
                                                         
@@ -724,7 +726,7 @@ export function release(s           , uids          , reason         = 'release'
 }
 export function banish(s           , uids          , reason        )       {
   const befores             = [];
-  for (const u of uids.filter(x => !(reason === 'effect' && isImmune(s, x)) && !gyCardLocked(s, x))) {
+  for (const u of uids.filter(x => !(reason === 'effect' && isImmune(s, x)) && !(gyCardLocked(s, x) && (noteValley(s), true)))) {
     const c = s.cards[u]; const from = c.zone; const before = cloneCard(c);
     moveCard(s, u, 'banished');
     emit(s, { type: 'banished', uid: u, from, reason });
@@ -791,7 +793,7 @@ export function destroy(s           , uids          , reason        , opt       
 }
 export function addToHand(s           , uids          , reason         = 'effect')       {
   const befores             = [];
-  uids = uids.filter(x => !(reason === 'effect' && isImmune(s, x)) && !(reason === 'effect' && gyCardLocked(s, x)));
+  uids = uids.filter(x => !(reason === 'effect' && isImmune(s, x)) && !(reason === 'effect' && gyCardLocked(s, x) && (noteValley(s), true)));
   for (const u of uids) {
     const c = s.cards[u]; const from = c.zone; const before = cloneCard(c);
     moveCard(s, u, 'hand');
@@ -821,6 +823,22 @@ export function effectDamage(s           , p          , amount        )       {
   log(s, `${pl(p)}に${amount}の効果ダメージ（LP ${s.players[p].lp}）`);
   checkLp(s);
 }
+/**
+ * 効果の処理中に、ネクロバレーで守られた墓地のカードへ及ぶ部分が無効になった時の記録（1つの処理につき1回）。
+ * 記録に「〜の効果はネクロバレーの効果で無効」、演出用に { kind:'negate', uid:処理中のカード, by:ネクロバレー }
+ */
+export function noteValley(s           )       {
+  const r = s.resolving;
+  if (!r) return;
+  // 同じ処理の中で2回目なら記録しない（s.resolving は前の盤面と共有されることがあるので、書きこまずに演出の記録で見分ける）
+  const anim = (s.anim ?? [])                                                 ;
+  let lastResolve = -1;
+  for (const a of anim) if (a.kind === 'resolve' && a.uid === r.uid) lastResolve = a.seq;
+  if (anim.some(a => a.kind === 'negate' && a.uid === r.uid && a.seq > lastResolve)) return;
+  const v = activeCards(s).find(u => scriptOf(s, u).necroValley) ?? null;
+  log(s, `「${defOf(s, r.uid).name}」の効果は、${v !== null ? `「${defOf(s, v).name}」` : 'ネクロバレー'}の効果で無効になった（墓地のカードへ及ぶ効果）`);
+  pushAnim(s, { kind: 'negate', uid: r.uid, by: v });
+}
 /** 発動の手続き中（コストを払う・対象を選ぶ間）か。効果の処理中は違う（処理の中でさらに発動の手続きはしない） */
 function inCost(s           )          { return s.activating !== null && s.activating !== undefined && !s.resolving; }
 /** 召喚の手順（混沌帝龍・グラファ①など）で払っている間（演出用の印 proc を付けるだけ。ルールには使わない） */
@@ -835,7 +853,9 @@ export function addLingering(s           , l           )       { s.lingering.pus
 /** 特殊召喚できるか（召喚条件・正規の召喚・置き場所） */
 export function canSpecialSummon(s           , uid        , p          , how            = 'special', released           = [], src                = s.resolving?.uid ?? null)          {
   const c = s.cards[uid], d = defOf(s, uid);
-  if (gyCardLocked(s, uid, src)) return false;
+  // ネクロバレー：墓地のモンスターを特殊召喚する効果も、発動はできる（発動の条件を見る時・コストや対象を選ぶ時は守られていない扱い）。
+  // 処理の時（resolving）に、墓地のカードへ及ぶ効果として無効になる（公式Q&A [10691] 炎王炎環・[9597]）
+  if (s.resolving && gyCardLocked(s, uid, src)) { noteValley(s); return false; }
   if (scriptOf(s, uid).uniqueOnField && monstersOf(s, p).some(u => s.cards[u].faceUp && s.cards[u].code === c.code)) return false;
   if (d.kind !== 'monster') return false;
   const sc = scriptOf(s, uid);
@@ -1251,7 +1271,9 @@ function triggerStillValid(s           , t             )          {
   if (!optAvailable(s, t.uid, eff, t.player)) return false;
   if (activationBlockedByName(s, t.uid, t.player)) return false;
   if (activationForbidden(s, t.uid, eff, t.player)) return false;
-  if (s.cards[t.uid].zone === 'gy' && gyLocked(s, s.cards[t.uid].owner, t.uid)) return false;
+  // ネクロバレー：墓地で発動する効果も発動はできる（処理の時に、墓地のカードへ及ぶ部分だけ無効。公式Q&A [14586]・[12869]・[23407]）。
+  // ただし、墓地のカードを除外するコストが要る効果は、除外できないので発動できない（[115]・[12764]）
+  if (eff.costBanishGy && s.cards[t.uid].zone === 'gy' && gyLocked(s, s.cards[t.uid].owner, t.uid)) return false;
   // ダメージステップには、ダメージステップでも発動できる効果しか発動できない（生還の宝札など）
   if (currentMode(s) === 'damage' && !eff.damageStep) return false;
   // 対象を取る効果などで発動の条件を満たさない場合は、強制効果でも発動しない（暗黒界の龍神 グラファ②：相手フィールドにカードが無い）
@@ -1329,7 +1351,8 @@ export function activatableList(s           , p          )                {
       if (c.controller !== p && !eff.anyPlayer) continue;
       if (eff.type === 'card' && d.kind === 'spell' && spellsBlocked) continue;
       if (activationForbidden(s, uid, eff, p)) continue;
-      if (c.zone === 'gy' && gyLocked(s, c.owner, uid)) continue;
+      // ネクロバレー：墓地で発動する効果も発動はできる。墓地のカードを除外するコストが要る効果だけ発動できない（公式Q&A [115]・[14586]）
+      if (eff.costBanishGy && c.zone === 'gy' && gyLocked(s, c.owner, uid)) continue;
       // 混沌帝龍の効果を発動したターンは、他の効果を発動できない／他の効果を発動したターンは、混沌帝龍の効果を発動できない
       if (s.lingering.some(l => l.type === 'onlyThisCard' && l.player === p && l.turn === s.turn && l.uid !== uid)) continue;
       if (scriptOf(s, uid).exclusive && s.activatedTurn?.[String(p)] === s.turn && !s.lingering.some(l => l.type === 'onlyThisCard' && l.player === p && l.uid === uid && l.turn === s.turn)) continue;
