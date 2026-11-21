@@ -541,6 +541,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .fan-car .pile-it:not(.on) .pile-face { filter: brightness(.82) }
 .fan-area.empty { display: none }
 .fan-layer > .fan-area:has(+ .fan-car) .card { opacity: .5 }
+/* 選べないカードの扇は後ろの飾りなので、高さを抑えて上に詰める（スマホで説明の最後の行まで、スクロールせずに読めるように） */
+.fan-layer > .fan-area:has(+ .fan-car) { height: min(26vh, 240px) !important; overflow: visible; z-index: 0 }
+.fan-layer > .fan-car { position: relative; z-index: 1 }
+@media (max-height: 760px) { .fan-layer > .fan-car { --pw: clamp(104px, 30vw, 170px); padding-top: 10px; padding-bottom: 14px } }
 @media (max-width: 860px) {
   .fan-layer > .fan-head { margin-top: 0 }
   .fan-layer > .fan-area { margin-bottom: auto }
@@ -1049,7 +1053,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-1527</p>
+    <p class="menu-note ver">版：20261121-1532</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
