@@ -4,10 +4,10 @@
 // - 部屋の部品（Room）は、サイトの room().join(name) と同じ形（presence・onPeers・leave）。
 //   本番ではサイトの Firestore の部屋を、試す時は下の「手元の部屋」を渡す
 // - 2台とも全部の情報を持つ作り（MASTERの決定）。相手の手札・伏せカードを画面で見せないのは画面の仕事
-import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261121-2155-ea481c675f';
-import { answerCandidates } from '../ai/cpu.js?v=20261121-2155-ea481c675f';
-import { CARD_POOL } from '../data/cardpool.js?v=20261121-2155-ea481c675f';
-import { DECKS } from '../data/decks.js?v=20261121-2155-ea481c675f';
+import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261121-2207-941c519a63';
+import { answerCandidates } from '../ai/cpu.js?v=20261121-2207-941c519a63';
+import { CARD_POOL } from '../data/cardpool.js?v=20261121-2207-941c519a63';
+import { DECKS } from '../data/decks.js?v=20261121-2207-941c519a63';
                                                                       
 
 /* ===================== 部屋（サイトの room() と同じ形） ===================== */
@@ -67,7 +67,7 @@ export function tabRoom(name        , uid        )       {
 
 /** お試し版・本番を作る時（scripts/build.mjs）に、できあがった .js ぜんぶの指紋をここに書きこむ（手元では 'dev'）。
  *  画面（app.js）にも同じ指紋が書かれるので、卓を開いた時に「app.js の指紋」とこれが同じか比べる（ちがえばページを読み直す） */
-export const BUILD_FP = '20261121-2155-ea481c675f';
+export const BUILD_FP = '20261121-2207-941c519a63';
 
 /* ===================== エンジンの指紋 ===================== */
 /**
@@ -91,6 +91,19 @@ export function engineFingerprint()         {
   for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
   fpCache = (h >>> 0).toString(36) + '-' + text.length.toString(36);
   return fpCache;
+}
+
+/**
+ * 盤面の印：盤面の大事な所（LP・手札・場・墓地・除外・番・フェイズ・乱数の位置・聞く相手 askZone）から作る短い文字。
+ * 2台が同じ数の操作を入れた時に、相手の印と比べて、ちがえばすぐ「ずれ」と分かる（ずれたまま対戦が進まないように）
+ */
+export function stateCheck(s           )         {
+  const pl = s.players.map(P => [P.lp, P.hand, P.deck.length, P.mzone, P.szone, P.fzone, P.gy, P.banished]);
+  const field = Object.values(s.cards).filter(c => c.zone === 'mzone' || c.zone === 'szone' || c.zone === 'fzone').map(c => [c.uid, c.code, c.faceUp, c.position, c.controller]);
+  const text = JSON.stringify([s.turn, s.turnPlayer, s.phase, s.rng, s.winner, s.askZone ?? null, s.chain.length, !!s.pending, pl, field]);
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
 }
 
 /* ===================== 対戦の通信 ===================== */
@@ -127,6 +140,8 @@ export function engineFingerprint()         {
                                                               
                        
               
+                                                  
+                                                
  
 
 /** 公式試合／練習（電卓と同じく親が決める） */
@@ -249,6 +264,7 @@ export class DuelLink {
           retry                                       = null;
           write() {
     if (this.stopped && !this.doc.end) return;
+    if (this.state) this.doc.chk = { round: this.round, n: this.doc.ops.length + this.applied, h: stateCheck(this.state) };
     let p                  ;
     try { p = this.o.room.presence(this.doc); } catch (e) { p = Promise.reject(e); }
     p.catch(() => {
@@ -341,6 +357,12 @@ export class DuelLink {
       try { this.state = applyAction(this.state, a); } catch (e) { this.o.on({ type: 'desync', detail: `相手の操作を入れられない：${(e         ).message}` }); return; }
       this.applied++;
       this.o.on({ type: 'remote', action: a, state: this.state });
+    }
+    // 盤面の印を比べる：同じ数の操作を入れたところで印がちがえば、すぐ「ずれ」（降参が入った時は順番が前後するので比べない）
+    const ck = them.chk;
+    if (ck && this.state && ck.round === this.round && ck.n === this.doc.ops.length + this.applied && ck.h !== stateCheck(this.state)
+      && !this.doc.ops.some(o => o.type === 'surrender') && !(them.ops ?? []).some(o => o.type === 'surrender')) {
+      this.o.on({ type: 'desync', detail: `盤面の印がちがう（${ck.n}手目）` }); this.stop(); return;
     }
     if (this.state && this.state.winner !== null) this.finish();
     // もう一度：相手が今の回を申し込んできたら知らせる。2人とも申し込んだら、親が始め直す

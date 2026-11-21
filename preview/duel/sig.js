@@ -1,6 +1,6 @@
 // カードごとの専用演出（キャンバスに描く）。強力な制限カードの発動を、カード名と効果に合わせて見せる。
 // playSignature() は演出が終わったら解決する Promise を返す。カードの位置は画面上の四角（getBoundingClientRect）で受け取る
-import { cardImg, backImg } from './fx.js?v=20261121-2155-ea481c675f';
+import { cardImg, backImg } from './fx.js?v=20261121-2207-941c519a63';
 const TAU = Math.PI * 2;
 /** カード名の帯を、消え始める前にそのまま見せる長さ（ミリ秒。MASTER：読み終われるだけ長く） */
 const TITLE_HOLD = 1600;
