@@ -4,10 +4,10 @@
 // - 部屋の部品（Room）は、サイトの room().join(name) と同じ形（presence・onPeers・leave）。
 //   本番ではサイトの Firestore の部屋を、試す時は下の「手元の部屋」を渡す
 // - 2台とも全部の情報を持つ作り（MASTERの決定）。相手の手札・伏せカードを画面で見せないのは画面の仕事
-import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261121-2106-6d2b18141d';
-import { answerCandidates } from '../ai/cpu.js?v=20261121-2106-6d2b18141d';
-import { CARD_POOL } from '../data/cardpool.js?v=20261121-2106-6d2b18141d';
-import { DECKS } from '../data/decks.js?v=20261121-2106-6d2b18141d';
+import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261121-2118-dc08c158a7';
+import { answerCandidates } from '../ai/cpu.js?v=20261121-2118-dc08c158a7';
+import { CARD_POOL } from '../data/cardpool.js?v=20261121-2118-dc08c158a7';
+import { DECKS } from '../data/decks.js?v=20261121-2118-dc08c158a7';
                                                                       
 
 /* ===================== 部屋（サイトの room() と同じ形） ===================== */
@@ -67,7 +67,7 @@ export function tabRoom(name        , uid        )       {
 
 /** お試し版・本番を作る時（scripts/build.mjs）に、できあがった .js ぜんぶの指紋をここに書きこむ（手元では 'dev'）。
  *  画面（app.js）にも同じ指紋が書かれるので、卓を開いた時に「app.js の指紋」とこれが同じか比べる（ちがえばページを読み直す） */
-export const BUILD_FP = '20261121-2106-6d2b18141d';
+export const BUILD_FP = '20261121-2118-dc08c158a7';
 
 /* ===================== エンジンの指紋 ===================== */
 /**
@@ -182,6 +182,7 @@ export class DuelLink {
           stopped = false;
           joined = false;
           beat                                        = null;
+          watch                                        = null;
           lastSeen = 0; // 相手の欄が最後に変わったのを、この端末が受け取った時刻（相手の端末の時計は使わない）
           seenKey = ''; // 相手の欄の中身の目じるし（変わったら lastSeen を今にする）
           initialKey                = null; // 入った時に部屋にあった相手の欄の目じるし（''＝無かった）
@@ -206,14 +207,29 @@ export class DuelLink {
     // いることを知らせる＋相手がいなくなっていないか見る
     this.beat = setInterval(() => this.heartbeat(), o.heartbeatMs ?? 30000);
     (this.beat                                     ).unref?.(); // テストでプログラムが終われなくならないように（画面では何もしない）
+    this.watch = setInterval(() => this.watchAway(), Math.min(1000, o.heartbeatMs ?? 30000));
+    (this.watch                                     ).unref?.();
   }
 
+  /** 30秒ごと：いることを自分の欄に書く */
           heartbeat() {
+    if (this.stopped || this.doc.end) return;
+    this.doc.at = Date.now();
+    this.write();
+  }
+
+  /** 1秒ごと：相手がいなくなっていないか・決める人が選ばないままでないかを見る（書きこみはしない）。
+   *  30秒ごとの書きこみとは分けて見るので、画面の「あと 0:00」と終わりの知らせがずれない（COLOの気づき：0:00から約8秒の間があった） */
+          watchAway() {
     if (this.stopped) return;
-    const now = Date.now(), iv = this.o.heartbeatMs ?? 30000;
+    const now = Date.now(), iv = Math.min(1000, this.o.heartbeatMs ?? 30000), away = this.o.awayMs ?? 180000;
+    // スマホが裏に回る・画面が暗くなるなどで、自分の時計が止まっていた時は、戻ったばかりで相手の新しい知らせがまだ届いていない。
+    // その時に「3分たった」と決めつけないよう、待ち時間を今から数え直す（接続が毎回切れる件の対策）
+    if (this.lastBeat && now - this.lastBeat > Math.max(iv * 2.5, 5000)) { this.lastSeen = now; if (this.chooserAt) this.chooserAt = now; }
+    this.lastBeat = now;
     // 先攻・後攻を決める人が、選ばないまま「いなくなった」と同じ時間（3分）たった：その対戦は始めずに終わる（記録しない）
     const waitingPick = this.o.chooseFirst && this.toldChooser === this.round + 1 && (!this.state || this.state.winner !== null);
-    if (waitingPick && this.chooserAt && now - this.chooserAt > (this.o.awayMs ?? 180000)) {
+    if (waitingPick && this.chooserAt && now - this.chooserAt > away) {
       this.doc.end = { winner: null, reason: 'nochoose' }; this.doc.round = this.round;
       this.write();
       this.o.on({ type: 'away', reason: 'nochoose' });
@@ -221,13 +237,7 @@ export class DuelLink {
       return;
     }
     if (this.doc.end) return;
-    // スマホが裏に回る・画面が暗くなるなどで、自分の時計（心拍）が止まっていた時は、戻ったばかりで相手の新しい知らせがまだ届いていない。
-    // その時に「3分たった」と決めつけないよう、待ち時間を今から数え直す（接続が毎回切れる件の対策）
-    if (this.lastBeat && now - this.lastBeat > iv * 2.5) this.lastSeen = now;
-    this.lastBeat = now;
-    this.doc.at = now;
-    this.write();
-    if (this.state && this.lastSeen && now - this.lastSeen > (this.o.awayMs ?? 180000)) {
+    if (this.state && this.lastSeen && now - this.lastSeen > away) {
       this.doc.end = { winner: null, reason: 'away' };
       this.write();
       this.o.on({ type: 'away' });
@@ -248,7 +258,7 @@ export class DuelLink {
     });
   }
 
-          stop() { if (this.retry) { clearTimeout(this.retry); this.retry = null; } this.stopped = true; if (this.beat) { clearInterval(this.beat); this.beat = null; } if (this.timer) { clearTimeout(this.timer); this.timer = null; } }
+          stop() { if (this.retry) { clearTimeout(this.retry); this.retry = null; } this.stopped = true; if (this.beat) { clearInterval(this.beat); this.beat = null; } if (this.watch) { clearInterval(this.watch); this.watch = null; } if (this.timer) { clearTimeout(this.timer); this.timer = null; } }
 
           onPeers(peers        ) {
     if (this.stopped) return;

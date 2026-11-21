@@ -6215,7 +6215,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       host.hidden=false;document.documentElement.style.overflow='hidden';
       var Yg=window.YGO||{},pv=location.pathname.indexOf('/preview/')>=0,rm=null;
       try{if(Yg.user&&Yg.db&&window.claude&&window.claude.use)rm=await window.claude.use('room');}catch(e){rm=null;}
-      m.mountDuel(host,{onClose:close,isOpen:function(){return !host.hidden;},storageKey:KEY,menuFirst:true,onResult:function(r){try{if(window.YGO&&YGO.app&&YGO.app.addCpu)YGO.app.addCpu(r,pv);}catch(e){console.warn(e);}},
+      m.mountDuel(host,{onClose:close,isOpen:function(){return !host.hidden;},/* ホーム画面の［📊 戦績］：卓を閉じて戦績の欄へ */onRecords:function(){close();setTimeout(function(){location.hash='#results';},0);},storageKey:KEY,menuFirst:true,onResult:function(r){try{if(window.YGO&&YGO.app&&YGO.app.addCpu)YGO.app.addCpu(r,pv);}catch(e){console.warn(e);}},
         /* オンライン対戦（人どうし）：ログインしている時だけ部屋とアカウントを渡す */room:rm,uid:Yg.user?Yg.user.uid:null,userName:(YGO.app&&YGO.app.pf&&YGO.app.pf().name)||'',
         onNetResult:function(r){try{if(YGO.app&&YGO.app.addNet)YGO.app.addNet(r,pv);}catch(e){console.warn(e);}},
         /* 👥 招待する：電卓の招待と同じしくみ（相手の画面に通知が出る）。kind:'table' でデュエル卓の招待と分かるようにする */inviteApi:Yg.user?{members:function(){var M=YGO.members||{},me=Yg.user.uid;return Object.keys(M).filter(function(u){return u!==me&&M[u].name;}).map(function(u){return {uid:u,name:String(M[u].name)};}).sort(function(a,b){return a.name.localeCompare(b.name,'ja');});},

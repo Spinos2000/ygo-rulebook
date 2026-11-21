@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-2106-6d2b18141d';
-import { fullThink } from './ai/levels.js?v=20261121-2106-6d2b18141d';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-2106-6d2b18141d';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-2106-6d2b18141d';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-2106-6d2b18141d';
-import { playSignature, sigKey } from './sig.js?v=20261121-2106-6d2b18141d';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-2106-6d2b18141d';
-import { firstEntrance } from './aces.js?v=20261121-2106-6d2b18141d';
-import { RULINGS } from './data/rulings.js?v=20261121-2106-6d2b18141d';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-2106-6d2b18141d';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-2106-6d2b18141d';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-2106-6d2b18141d';
-import { joinSiteRoom } from './net/site-room.js?v=20261121-2106-6d2b18141d';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-2118-dc08c158a7';
+import { fullThink } from './ai/levels.js?v=20261121-2118-dc08c158a7';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-2118-dc08c158a7';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-2118-dc08c158a7';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-2118-dc08c158a7';
+import { playSignature, sigKey } from './sig.js?v=20261121-2118-dc08c158a7';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-2118-dc08c158a7';
+import { firstEntrance } from './aces.js?v=20261121-2118-dc08c158a7';
+import { RULINGS } from './data/rulings.js?v=20261121-2118-dc08c158a7';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-2118-dc08c158a7';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-2118-dc08c158a7';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-2118-dc08c158a7';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-2118-dc08c158a7';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261121-2106-6d2b18141d';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-2106-6d2b18141d';
-import { DECKS } from './data/decks.js?v=20261121-2106-6d2b18141d';
-import { SCRIPTS } from './cards/index.js?v=20261121-2106-6d2b18141d';
+} from './engine/game.js?v=20261121-2118-dc08c158a7';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-2118-dc08c158a7';
+import { DECKS } from './data/decks.js?v=20261121-2118-dc08c158a7';
+import { SCRIPTS } from './cards/index.js?v=20261121-2118-dc08c158a7';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -261,7 +261,9 @@ function summonInfo(prev, next, x) {
   // 切り札：表側で出た時だけ（裏側のカードは中身が分かってしまうので、何も出さない）
   const a = !faceDown || x.how === 'flip' ? aceOf(next, x.uid) : null;
   const ace = a ? { cls: a.cls, fallback: a.fallback, big: firstEntrance(aceSeen, x.uid, a.fallback), side: NAME(c.controller) } : null;
-  return { uid: x.uid, how: x.how, faceDown: faceDown && x.how !== 'flip', d: defOf(next, x.uid), mats, from: x.from, fromRect: fromEl ? fromEl.getBoundingClientRect() : null, ace };
+  // No.14：反転召喚の前が裏側守備表示（盤面では横向き）だったか。演出は横向きから起き上がる形にする
+  const fromDef = x.how === 'flip' && !!pc && pc.position === 'def';
+  return { uid: x.uid, how: x.how, faceDown: faceDown && x.how !== 'flip', d: defOf(next, x.uid), mats, from: x.from, fromRect: fromEl ? fromEl.getBoundingClientRect() : null, ace, fromDef };
 }
 /** 画面を更新した後：召喚されたカードの場所で、召喚の演出を順に再生する */
 function playPendingSummons() {
@@ -393,7 +395,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261121-2106-6d2b18141d', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-2118-dc08c158a7', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -686,12 +688,15 @@ const themeOf = d => d.theme || d.name;
 const fmtTag = d => (d.format ? (d.format.kind === 'ryu' ? '🌏 留学生' : '🏫 在校生') : '');
 const setupOpen = () => { const el = $('#setup'); return !!el && !el.hidden; };
 let suKeep = null; // ⚙️（メニュー）を開いている間、準備画面で選んだ内容を覚えておく
-function openSetup(page = 'p0own') {
+/** ホーム画面のスイッチ（No.15。仕上がるまでは URL に ?home を付けた時だけ） */
+const HOME_ON = (() => { try { return new URLSearchParams(location.search).has('home'); } catch { return false; } })();
+function openSetup(page = HOME_ON ? 'home' : 'p0own') {
   let last = null; try { last = JSON.parse(localStorage.getItem('gx-duel-setup') || 'null'); } catch { /* 保存できない環境 */ }
   const d0 = DECKS[last?.p0] || DECKS[$('#deck0').value] || Object.values(DECKS)[0], d1 = DECKS[last?.p1] || DECKS[$('#deck1').value] || d0;
   SU = suKeep ? { ...suKeep, page } : { page, hist: [], p0own: ownerOf(d0), p0: d0.code, p1own: ownerOf(d1), p1: d1.code, rand: !!last?.rand, first: last?.first ?? $('#first').value, level: (SHOW_HARD ? ['easy', 'normal', 'hard'] : ['easy', 'normal']).includes(last?.level) ? last.level : 'normal' };
   suKeep = null;
   if (skipOwner() && SU.page === 'p0own') { SU.p0own = owners()[0]; SU.page = 'p0deck'; }
+  if (page === 'home') SU.hist = [];
   if (page === 'go') SU.hist = SU_PAGES.slice(0, -1).filter(x => !(skipOwner() && x.endsWith('own')));
   closeMenu();
   clearTimeout(cpuTimer); thinking = null; // 準備の間はCPUを止める
@@ -726,6 +731,17 @@ function renderSetup() {
   $('#suDots').innerHTML = SU_PAGES.map(x => `<i class="${x === p ? 'on' : SU_PAGES.indexOf(x) < SU_PAGES.indexOf(p) ? 'done' : ''}"></i>`).join('');
   const opt = (act, icon, title, sub, on) => `<button type="button" class="su-opt${on ? ' on' : ''}" data-su="${esc(act)}"><span>${icon}</span><b>${esc(title)}</b><small>${esc(sub)}</small></button>`;
   const deckBtn = (act, d, on) => `<button type="button" class="su-deck${on ? ' on' : ''}" data-su="${esc(act)}"><b>${esc(themeOf(d))}</b><small>${esc(fmtTag(d))}${d.theme && d.theme !== d.name ? `・${esc(d.name)}` : ''}</small></button>`;
+  $('#suTitle').textContent = p === 'home' ? '🏠 デュエル卓' : '⚔️ デュエルの準備';
+  $('#suDots').hidden = p === 'home';
+  if (p === 'home') {
+    el.innerHTML = '<p class="su-q">どちらで遊びますか？</p><div class="su-home">'
+      + '<button type="button" class="su-big cpu" data-su="cpu"><span>🤖</span><b>CPU対戦</b><small>全力のCPUと1人で練習</small></button>'
+      + (ONLINE ? '<button type="button" class="su-big net" data-su="net"><span>👥</span><b>オンライン対戦</b><small>キー番号・招待でほかの人と</small></button>' : '')
+      + '</div><div class="su-mini">'
+      + (OPTS.onRecords ? '<button type="button" class="btn small ghost" data-su="records">📊 戦績</button>' : '')
+      + '<button type="button" class="btn small ghost" data-su="guide">📖 遊び方</button></div>';
+    return;
+  }
   if (p === 'p0own' || p === 'p1own') {
     const me = p === 'p0own';
     el.innerHTML = `<p class="su-q">${me ? 'あなたが使うのは、だれのデッキ？' : 'CPUが使うのは、だれのデッキ？'}</p><div class="su-opts">`
@@ -758,7 +774,8 @@ function renderSetup() {
       + `<button type="button" class="su-start" data-su="start">▶ デュエル開始</button>`
       + `<button type="button" class="su-more" data-su="more">⚙️ 発動の聞き方・演出・CPUの速さ</button>`;
   }  // スイッチ ONLINE が入っている時だけ、最初のページに「👥 人と対戦」
-  if (ONLINE && (p === 'p0own' || (p === 'p0deck' && skipOwner()))) el.insertAdjacentHTML('afterbegin', '<button type="button" class="su-opt su-net" data-su="net"><span>👥</span><b>人と対戦（オンライン）</b><small>キー番号でつなぐ・電卓のリンク対戦と同じ</small></button>');
+  // オンライン対戦の入口：ホーム画面のスイッチが付いている時はホームに。付いていない時は今までどおり、最初のページに「👥 人と対戦」
+  if (!HOME_ON && ONLINE && (p === 'p0own' || (p === 'p0deck' && skipOwner()))) el.insertAdjacentHTML('afterbegin', '<button type="button" class="su-opt su-net" data-su="net"><span>👥</span><b>人と対戦（オンライン）</b><small>キー番号でつなぐ・電卓のリンク対戦と同じ</small></button>');
 }
 /** 準備画面の「🏫 在校生・🌏 留学生とは？」：2行の説明と、ルールブックの「🌏 留学生デッキ」への案内（サイトの中の時だけ） */
 function ryuHelp() {
@@ -771,6 +788,7 @@ function ryuHelp() {
 function suSwipeTarget(su, dir, skip = false) {
   if (dir > 0) return su.hist.length ? su.hist[su.hist.length - 1] : null;
   const p = su.page;
+  if (p === 'home') return null;
   if (p === 'p0own') return su.p0own ? 'p0deck' : null;
   if (p === 'p0deck') return su.p0 ? (skip ? 'p1deck' : 'p1own') : null;
   if (p === 'p1own') return su.rand ? 'first' : su.p1own ? 'p1deck' : null;
@@ -795,6 +813,9 @@ function setupClick(t) {
   const [k, v] = b.dataset.su.split(/:(.*)/);
   const me = SU.page === 'p0own' || SU.page === 'p0deck';
   if (k === 'net') { closeSetup(); openNet(); return true; }
+  if (k === 'cpu') { suGo(skipOwner() ? 'p0deck' : 'p0own'); if (skipOwner()) SU.p0own = owners()[0]; return true; }
+  if (k === 'guide') { closeSetup(); openGuide(0); return true; }
+  if (k === 'records') { try { OPTS.onRecords(); } catch (e) { console.error(e); } return true; }
   if (k === 'rand') { SU.rand = true; suGo('first'); return true; }
   if (k === 'own') { if (me) SU.p0own = v; else { SU.p1own = v; SU.rand = false; } suGo(me ? 'p0deck' : 'p1deck'); return true; }
   if (k === 'deck') { if (me) SU.p0 = v; else { SU.p1 = v; SU.rand = false; } suGo(me ? 'p1own' : 'first'); return true; }
@@ -1238,6 +1259,7 @@ function renderDock() {
   $('#stopBtn').textContent = stopNext ? '✋ 聞く予定' : '✋ 次は聞いて';
 
   const rb = $('#reviewBtn'); if (rb) rb.hidden = !(S.winner !== null && cpuMode() && trace.length > 1);
+  const hb = $('#homeBtn'); if (hb) hb.hidden = !(HOME_ON && S.winner !== null && OPTS.menuFirst); // 決着のあと：ホームへ戻れる（決着のあとに固まった時の逃げ道にも）
   if (S.winner !== null) {
     actor.textContent = resultText(S.winner, cpuMode() || netMode(), ME());
     hint.textContent = WHO(S.winReason);
@@ -1356,7 +1378,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261121-2106-6d2b18141d';
+const DUEL_BUILD = '20261121-2118-dc08c158a7';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -1519,6 +1541,8 @@ function netEvent(u, e) {
   } else if (e.type === 'remote') { if (net) { u.lastSeen = Date.now(); commit(e.state); render(); } }
   else if (e.type === 'end') { if (net) netEndNote(e.winner); }
   else if (e.type === 'rematchAsked') { if (net) net.oppAsked = true; if (net && S && S.winner !== null) renderDock(); if (net && S && S.winner !== null) netNote(`<b>${esc(net.oppName)}さんが、もう一度を申し込んでいます</b><button type="button" class="btn small primary" data-net="ask">受ける</button><button type="button" class="btn small ghost" data-net="quit">やめる</button>`); }
+  // 先攻・後攻を3分選ばなかった時（MEMEの reason: 'nochoose'）：決める人だった側と相手の側で言葉を分ける
+  else if (e.type === 'away' && e.reason === 'nochoose') netStop(u.choose && u.choose.me ? '先攻・後攻を3分以内に選ばなかったので、この対戦は始まりませんでした。' : `${u.peerName || '相手'}さんが先攻・後攻を選ばなかったので、この対戦は始まりませんでした。`);
   else if (e.type === 'away') netStop('相手がいなくなったので、この対戦は終わりです。戦績には残りません。');
   else if (e.type === 'version') netStop('相手と版がちがいます。2人ともページを読み直してください（新しい版が出た直後は、古い画面を覚えていることがあります）。', true);
   else if (e.type === 'desync') { console.warn('オンライン対戦のずれ', e.detail); netStop('2人の画面がずれてしまいました。この対戦は終わりです（戦績には残りません）。'); }
@@ -1534,7 +1558,8 @@ function netEndNote(winner) {
   }
   netNote(`<b>${winner === 'draw' ? '引き分け' : winner === ME() ? 'あなたの勝ち！' : 'あなたの負け…'}</b><span>${rec}</span>`
     + '<button type="button" class="btn small primary" data-net="ask">もう一度（同じ相手と）を申し込む</button>'
-    + '<button type="button" class="btn small ghost" data-net="quit">やめる</button>');
+    + '<button type="button" class="btn small ghost" data-net="quit">やめる</button>'
+    + (HOME_ON && OPTS.menuFirst ? '<button type="button" class="btn small ghost" data-net="home">🏠 ホームへ</button>' : ''));
 }
 function netStop(msg, reload) {
   netNote(`<b>${esc(msg)}</b>${reload ? '<button type="button" class="btn small primary" data-net="reload">読み直す</button>' : ''}<button type="button" class="btn small ghost" data-net="quit">準備に戻る</button>`);
@@ -1568,6 +1593,7 @@ function netClick(t) {
   if (k === 'mode') { netUi.mode = v; renderNet(); return true; }
   if (k === 'host') { netConnect(true); return true; }
   if (k === 'invlink') { netInviteLink(); return true; }
+  if (k === 'home' && HOME_ON) { netQuit(); setTimeout(() => { placeholder = true; openSetup('home'); }, 0); return true; }
   if (k === 'pick' && netUi && netUi.choose && netUi.choose.me && !netUi.choose.sent && netUi.link && netUi.link.chooseFirst) { netUi.choose.sent = v; netUi.link.chooseFirst(v === 'first'); renderNet(); return true; }
   if (k === 'invopen') { netUi.step = 'inv'; renderNet(); return true; }
   if (k === 'invback') { netUi.step = 'wait'; renderNet(); return true; }
@@ -1576,7 +1602,11 @@ function netClick(t) {
   if (k === 'join') { const i = $('[data-net-key]'); netUi.key = i ? i.value.trim() : ''; netConnect(false); return true; }
   if (k === 'ready') { netUi.ready = true; netUi.link && netUi.link.setReady(); renderNet(); return true; }
   // もう一度：親も子も、勝ち負けに関係なく申し込める。2人とも申し込むと始まる（相手の申し込みを［受ける］も同じ）
-  if (k === 'ask') { if (net && net.link && net.link.requestRematch() && S && S.winner !== null && (renderDock(), true)) netNote('<b>⏳ もう一度を申し込みました</b><span>相手が受けると始まります</span><button type="button" class="btn small ghost" data-net="quit">やめる</button>'); return true; }
+  if (k === 'ask') {
+    const accept = !!(net && net.oppAsked); // 相手の申し込みを受けた側か（言葉を分ける：MIMIの通し）
+    if (net && net.link && net.link.requestRematch() && S && S.winner !== null && (renderDock(), true)) netNote(accept ? '<b>⏳ 受けました</b><span>先攻・後攻を決める人を選んでいます…</span>' : '<b>⏳ もう一度を申し込みました</b><span>相手が受けると始まります</span><button type="button" class="btn small ghost" data-net="quit">やめる</button>');
+    return true;
+  }
   if (k === 'quit') { netQuit(); return true; }
   if (k === 'reload') { location.reload(); return true; }
   return false;
@@ -2531,7 +2561,7 @@ function renderZonePick() {
     const n = fp.min === fp.max ? `${fp.min}枚` : `${fp.min}〜${fp.max}枚`, ok = pick.length >= fp.min && pick.length <= fp.max;
     tip.innerHTML = `<b>${esc(WHO(fp.prompt))}</b><small>光っているカードを押して選ぶ（${n}）${fp.max > 1 ? `・選んだ数 ${pick.length}` : ''}</small>`
       + (fp.max > 1 || fp.min === 0 ? `<span class="fp-btns">${fp.min === 0 ? '<button type="button" class="btn small" data-fp="skip">選ばない</button>' : ''}${fp.max > 1 ? `<button type="button" class="btn small primary" data-fp="ok"${ok ? '' : ' disabled'}>決定</button>` : ''}</span>` : '');
-    placeTip(tip);
+    { const b = $('#board'); if (b) { const r = b.getBoundingClientRect(), h = tip.getBoundingClientRect().height; tip.style.top = Math.max(8, Math.min(r.bottom + 6, innerHeight - h - 8)) + 'px'; } } // 盤面のカードを隠さないように、盤面のすぐ下に出す
     return;
   }
   const zp = fxSoon() || fxN > 0 ? null : zonePick();
@@ -3431,6 +3461,7 @@ document.addEventListener('keydown', e => {
   }
 });
 $('#undo').onclick = undo;
+$('#homeBtn').onclick = () => { suReturn = false; placeholder = true; openSetup('home'); };
 $('#newDuel').onclick = () => { if (cpuMode()) { suReturn = false; openSetup(); } else newDuel(); };
 // 効果音：ブラウザは操作の後でないと音を出せないので、最初に触った時に準備する
 root.addEventListener('pointerdown', unlock, { passive: true });
