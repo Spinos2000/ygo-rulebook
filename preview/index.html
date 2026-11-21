@@ -6191,7 +6191,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   function close(){if(host.hidden)return;host.hidden=true;document.documentElement.style.overflow='';setTimeout(label,500);}
   label();
   /* デュエル卓の招待リンク（?vs=キー）：ログインを待ってから、卓を開いて子としてつなぐ */
-  var vsKey=(function(){try{var k=new URLSearchParams(location.search).get('vs');return /^d{4}$/.test(k||'')?k:null;}catch(e){return null;}})();
+  var vsKey=(function(){try{var k=new URLSearchParams(location.search).get('vs');return /^\d{4}$/.test(k||'')?k:null;}catch(e){return null;}})();
   if(vsKey&&window.YGO&&YGO.ready)YGO.ready.then(function(u){if(u)setTimeout(function(){btn.click();},300);});
   /* 招待の通知で［受ける］を押した時：卓を開いて、子としてつなぐ */
   window.YGO_openDuelVs=function(k){vsKey=k;if(!host.hidden&&window.__duel){close();}btn.click();};
