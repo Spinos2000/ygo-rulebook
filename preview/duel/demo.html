@@ -126,7 +126,7 @@ list.addEventListener('click', async e => {
   const b = e.target.closest('button.fx'); if (!b || busy) return;
   const [, , cls, kind] = LIST[b.dataset.g][2][b.dataset.i], d = card(LIST[b.dataset.g][2][b.dataset.i][1]);
   unlock(); setOpen(false); busy = true; openBtn.hidden = true;
-  const droot = root.querySelector('.droot'); droot.classList.add('fx-busy'); // 本物の卓と同じく、演出の間はどこも押せない
+  const droot = root.querySelector('.droot'); droot.classList.add('fx-busy', 'fx-stage'); // 本物の卓と同じく、演出の間はどこも押せない
   setAllies(kind === 'allies');
   await new Promise(r => setTimeout(r, 250)); // 欄が閉じて、盤面が描き直されてから
   const cpu = kind === 'cpu', rect = zoneRect(cpu ? '1:mz:2' : '0:mz:2');
@@ -139,7 +139,7 @@ list.addEventListener('click', async e => {
       onLand: () => { if (ace && ace.big) play([cls === 'god' ? 'aceGod' : cls === 'partner' ? 'aceBond' : 'aceLand']); else play([how === 'set' ? 'set' : how === 'special' ? 'special' : 'summon']); },
       mat: root.querySelector('.mat-skin'), speed: slow ? .5 : 1 });
   } catch (err) { console.error(err); }
-  droot.classList.remove('fx-busy'); busy = false; setOpen(true);
+  droot.classList.remove('fx-busy', 'fx-stage'); busy = false; setOpen(true);
 });
 setOpen(true);
 </script>

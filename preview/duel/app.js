@@ -118,6 +118,8 @@ function commit(next) {
 let fxN = 0;   // 再生中の演出の数（0 になった時だけ画面を更新する。演出が重なっても途中で描き直さない）
 /** 演出の間は、画面のどこを押しても何も起きないようにする（MASTER：途中で飛ばす操作もなし） */
 function fxBlock() { const r = ROOT && ROOT.querySelector('.droot'); if (r) r.classList.toggle('fx-busy', fxN > 0); }
+/** 召喚・攻撃・カードの演出の間（引く・手札に加える演出は除く）：スマホを横にした時は、盤面にかぶる手札を下へしまう */
+function fxStage(on) { const r = ROOT && ROOT.querySelector('.droot'); if (r) r.classList.toggle('fx-stage', on); }
 /** 演出の文字の帯を置いてよい範囲：上の帯の下から、手札・ボタン・チェーンの欄の上まで */
 function safeArea() {
   const vh = innerHeight; let top = 0, bottom = vh;
@@ -177,12 +179,14 @@ function queueBattleFx(prev, next) {
   fxN++; fxBlock();
   (async () => {
     for (const j of jobs) {
+      fxStage(true);
       const hide = j.hide.map(el => { el.style.visibility = 'hidden'; return el; });
       const brd = j.sig ? ROOT.querySelector('#board') : null; if (brd) brd.classList.add('skin-on');
       try { await (j.sig ? playSignature(ROOT, j.info) : playBattle(ROOT, j.info)); } catch (e) { console.error(e); }
       if (brd) brd.classList.remove('skin-on');
       hide.forEach(el => { el.style.visibility = ''; });
     }
+    fxStage(false);
     fxN = Math.max(0, fxN - 1); fxBlock();
     render();
   })();
@@ -220,6 +224,7 @@ function playPendingSummons() {
       if (j.handAdd) { try { await handAddFx(j); } catch (e) { console.error(e); } continue; }
       const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`);
       if (!el) continue;
+      fxStage(true);
       el.style.visibility = 'hidden';
       const flipFace = j.how === 'flip';
       try {
@@ -230,6 +235,7 @@ function playPendingSummons() {
       } catch (e) { console.error(e); }
       el.style.visibility = '';
     }
+    fxStage(false);
     fxN = Math.max(0, fxN - 1); fxBlock();
     render();
   })();
