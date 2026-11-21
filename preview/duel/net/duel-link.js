@@ -4,10 +4,10 @@
 // - 部屋の部品（Room）は、サイトの room().join(name) と同じ形（presence・onPeers・leave）。
 //   本番ではサイトの Firestore の部屋を、試す時は下の「手元の部屋」を渡す
 // - 2台とも全部の情報を持つ作り（MASTERの決定）。相手の手札・伏せカードを画面で見せないのは画面の仕事
-import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261121-2207-941c519a63';
-import { answerCandidates } from '../ai/cpu.js?v=20261121-2207-941c519a63';
-import { CARD_POOL } from '../data/cardpool.js?v=20261121-2207-941c519a63';
-import { DECKS } from '../data/decks.js?v=20261121-2207-941c519a63';
+import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261122-0155-75750bcf8a';
+import { answerCandidates } from '../ai/cpu.js?v=20261122-0155-75750bcf8a';
+import { CARD_POOL } from '../data/cardpool.js?v=20261122-0155-75750bcf8a';
+import { DECKS } from '../data/decks.js?v=20261122-0155-75750bcf8a';
                                                                       
 
 /* ===================== 部屋（サイトの room() と同じ形） ===================== */
@@ -46,7 +46,8 @@ export function tabRoom(name        , uid        )       {
   const tellAll = () => subs.forEach(f => f());
   ch.onmessage = (e              ) => {
     const m = e.data                                                                            ;
-    if (m.ask) { const mine = docs.get(uid); if (mine) ch.postMessage({ uid, p: mine.p, at: mine.updatedAt }); return; }
+    // 入ってきたタブに、知っている欄を全部送り返す（頼んできたタブ自身の前の欄も。読み直したタブが前の操作を取り戻せるように＝Firestore と同じ形。💜MIMIの頼み）
+    if (m.ask) { for (const [id, d] of docs) ch.postMessage({ uid: id, p: d.p, at: d.updatedAt }); return; }
     if (m.leave) docs.delete(m.uid); else docs.set(m.uid, { p: m.p, updatedAt: m.at });
     tellAll();
   };
@@ -58,8 +59,9 @@ export function tabRoom(name        , uid        )       {
     },
     onPeers: cb => {
       const f = () => cb({ peers: [...docs].map(([id, d]) => ({ uid: id, isMe: id === uid, presence: d.p, updatedAt: d.updatedAt })) });
-      subs.add(f); queueMicrotask(f);
-      return () => subs.delete(f);
+      // 最初の知らせは、ほかのタブからの送り返しを少し待ってから（読み直した時に、自分の前の欄が届いてから始めるため）
+      const first = setTimeout(() => { subs.add(f); f(); }, 200);
+      return () => { clearTimeout(first); subs.delete(f); };
     },
     leave: async () => { docs.delete(uid); ch.postMessage({ uid, leave: true, at: Date.now() }); ch.close(); },
   };
@@ -67,7 +69,7 @@ export function tabRoom(name        , uid        )       {
 
 /** お試し版・本番を作る時（scripts/build.mjs）に、できあがった .js ぜんぶの指紋をここに書きこむ（手元では 'dev'）。
  *  画面（app.js）にも同じ指紋が書かれるので、卓を開いた時に「app.js の指紋」とこれが同じか比べる（ちがえばページを読み直す） */
-export const BUILD_FP = '20261121-2207-941c519a63';
+export const BUILD_FP = '20261122-0155-75750bcf8a';
 
 /* ===================== エンジンの指紋 ===================== */
 /**
