@@ -55,12 +55,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   <div id="demoList"></div>
 </section>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261121-1642-73a6b6a22b';
-import { playSummon } from './fx.js?v=20261121-1642-73a6b6a22b';
-import { play, unlock } from './sound.js?v=20261121-1642-73a6b6a22b';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-1642-73a6b6a22b';
-import { createGame, legalActions } from './engine/game.js?v=20261121-1642-73a6b6a22b';
-import { answerCandidates } from './ai/cpu.js?v=20261121-1642-73a6b6a22b';
+import { mountDuel } from './embed.js?v=20261121-1721-fe605bd1fd';
+import { playSummon } from './fx.js?v=20261121-1721-fe605bd1fd';
+import { play, unlock } from './sound.js?v=20261121-1721-fe605bd1fd';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1721-fe605bd1fd';
+import { createGame, legalActions } from './engine/game.js?v=20261121-1721-fe605bd1fd';
+import { answerCandidates } from './ai/cpu.js?v=20261121-1721-fe605bd1fd';
 
 const host = document.getElementById('duel-host');
 mountDuel(host, { demo: true });
@@ -82,7 +82,7 @@ const LIST = [
     ['ブラック・マジシャン', 'ブラック・マジシャン', 'top', 'me', '闇'], ['青眼の白龍', '青眼の白龍', 'top', 'me', '光'], ['神獣王バルバロス', '神獣王バルバロス', 'top', 'me', '地']]],
   ['⭐ エース', '★3・約2秒', [
     ['人造人間－サイコ・ショッカー', '人造人間－サイコ・ショッカー', 'ace', 'me', '闇'], ['ユベル', 'ユベル', 'ace', 'me', '闇'], ['XYZ－ドラゴン・キャノン', 'XYZ－ドラゴン・キャノン', 'ace', 'me', '光'], ['バスター・ブレイダー', 'バスター・ブレイダー', 'ace', 'me', '地']]],
-  ['🤝 相棒（特別枠）', '約2秒', [
+  ['🤝 相棒（特別枠）', 'ふつうの召喚＋相棒の音・ひと言', [
     ['サイレント・マジシャン LV４', 'サイレント・マジシャン LV４', 'partner', 'me', '光'], ['黄泉ガエル', '黄泉ガエル', 'partner', 'me', '水'],
     ['サイバー・ダーク・エッジ', 'サイバー・ダーク・エッジ', 'partner', 'cpu', 'CPU側']]],
   ['🤖 CPU側で出た時', '', [
@@ -140,7 +140,8 @@ list.addEventListener('click', async e => {
   const slow = document.getElementById('demoSlow').checked;
   try {
     await playSummon(root, { rect, d, atk: d.atk, def: d.def, pos: 'atk', how, faceDown: how === 'set', mats: [], allies, ace, safe: safeArea(),
-      onLand: () => { if (ace && ace.big) play([cls === 'god' ? 'aceGod' : cls === 'partner' ? 'aceBond' : 'aceLand']); else play([how === 'set' ? 'set' : how === 'special' ? 'special' : 'summon']); },
+      // 相棒：2回目からも相棒の音（MASTERの決定：見た目はふつう、音とひと言で特別に。ひと言は初めての時だけ）
+      onLand: () => { if (cls === 'partner') play(['aceBond']); else if (ace && ace.big) play([cls === 'god' ? 'aceGod' : 'aceLand']); else play([how === 'set' ? 'set' : how === 'special' ? 'special' : 'summon']); },
       mat: root.querySelector('.mat-skin'), speed: slow ? .5 : 1 });
   } catch (err) { console.error(err); }
   droot.classList.remove('fx-busy', 'fx-stage'); busy = false; setOpen(true);
@@ -148,11 +149,12 @@ list.addEventListener('click', async e => {
 /* ---------- 順番の確かめ（No.7）：場面を作って、本物の対戦と同じ流れで発動まで進める ----------
  * 発動の演出 → チェーンの効果 → 結果の移動（墓地へ）の順に見えるかを、直す前と直した後で同じボタンで比べる。
  * 「自分が発動」＝下の人（P1）、「相手が発動」＝上の人（P2。CPU側と同じ見え方） */
-const C = { mirror: '4887', torrent: '5114', thunder: '5544', hole: '4342', vortex: '5217', pit: '5400', witch: '4580', a: '5503', b: '5504', c: '6471', d: '7193' };
+const C = { dmagic: '5752', bm: '4041', skilled: '5649', mirror: '4887', torrent: '5114', thunder: '5544', hole: '4342', vortex: '5217', pit: '5400', witch: '4580', a: '5503', b: '5504', c: '6471', d: '7193' };
 const SCENES = [
   ['ミラーフォース', '攻撃された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.mirror] }, mons: { [1 - p]: [C.a, C.b, C.c] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', a => a.type === 'attack', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.mirror] })],
   ['ミラーフォース（ウィッチ）', 'ウィッチの効果で選び待ち（No.7）', p => ({ tp: 1 - p, set: { [p]: [C.mirror] }, mons: { [1 - p]: [C.witch, C.b, C.c] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', (a, S) => a.type === 'attack' && S.cards[a.attacker].code !== C.witch, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.mirror] })],
   ['奈落の落とし穴', '専用演出なしの罠', p => ({ tp: 1 - p, set: { [p]: [C.pit] }, mons: { [1 - p]: [C.a] }, hand: { [1 - p]: [C.b] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.pit] })],
+  ['ディメンション・マジック', '処理でリリースして特殊召喚（見張りNo.）', p => ({ tp: p, hand: { [p]: [C.dmagic, C.bm] }, mons: { [p]: [C.skilled], [1 - p]: [C.b] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.dmagic] })],
   ['激流葬', '召喚された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.torrent] }, mons: { [1 - p]: [C.a, C.b] }, hand: { [1 - p]: [C.c] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.torrent] })],
   ['サンダー・ブレイク', '手札を1枚捨てて発動', p => ({ tp: p, set: { [p]: [C.thunder] }, hand: { [p]: [C.a] }, mons: { [1 - p]: [C.b, C.c] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.thunder] })],
   ['ブラック・ホール', '場のモンスターを全部破壊', p => ({ tp: p, hand: { [p]: [C.hole] }, mons: { [p]: [C.a], [1 - p]: [C.b, C.c, C.d] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.hole] })],

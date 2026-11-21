@@ -26,7 +26,7 @@ export function guideHtml(i, env = {}) {
   return `<div class="gd-card" data-gd-page="${k}"><div class="gd-icon" aria-hidden="true">${escH(p.icon)}</div><h3 class="gd-title">${escH(p.title)}</h3>`
     + p.lines.map(l => `<p class="gd-line">${escH(l)}</p>`).join('') + '</div>'
     + `<div class="gd-dots" aria-label="${k + 1} / ${n}">${pages.map((_, j) => `<i class="${j === k ? 'on' : ''}"></i>`).join('')}</div>`
-    + `<div class="gd-btns"><button type="button" class="btn ghost" data-gd="close">とじる</button>`
+    + `<div class="gd-btns"><button type="button" class="btn ghost" data-gd="close">閉じる</button>`
     + (k > 0 ? `<button type="button" class="btn ghost" data-gd="prev">← もどる</button>` : '')
     + (k < n - 1 ? `<button type="button" class="btn primary" data-gd="next">次へ →</button>` : `<button type="button" class="btn primary" data-gd="close">はじめる</button>`) + '</div>';
 }

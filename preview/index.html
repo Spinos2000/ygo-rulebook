@@ -420,7 +420,7 @@ button:active{transform:translateY(1px)}
 .bk-alt{display:flex;flex-direction:column;gap:6px}
 .bk-alt textarea,.bk-paste textarea{font:12px/1.5 ui-monospace,Menlo,monospace;width:100%;box-sizing:border-box;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px}
 .bk-paste{display:flex;flex-direction:column;gap:6px}
-.bk-paste summary{cursor:pointer;font-weight:700;color:var(--info);font-size:14px}
+.bk-paste summary{cursor:pointer;font-weight:700;color:var(--info);font-size:14px;padding:8px 0}
 .bk-paste[open]{display:flex}
 .who-pop{position:fixed;left:0;right:0;bottom:0;z-index:45;display:flex;justify-content:center;padding:0 max(12px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 12px) max(12px,env(safe-area-inset-left,0px))}
 .who-box{width:100%;max-width:520px;background:var(--surface);border:2px solid var(--ink);border-radius:18px;box-shadow:4px 4px 0 var(--gold);padding:16px;animation:updIn .35s ease-out}
@@ -1108,9 +1108,11 @@ body.rt:not(.has-sub){padding-bottom:calc(70px + env(safe-area-inset-bottom,0px)
 .news-list li.out{transform:translateY(-110%);opacity:0}
 .news-list .news-i{height:26px;padding:0!important}
 .news-list .news-empty{display:flex;align-items:center;padding:0}
-.news-dots{flex:none;display:flex;gap:4px}
-.news-dot{width:7px;height:7px;border-radius:50%;border:0;padding:0;background:var(--line);cursor:pointer}
-.news-dot.on{background:var(--osiris)}
+.news-dots{flex:none;display:flex;gap:0}
+/* ニュースの点：見た目は7pxの点のまま、押せる範囲は24px（指で押しやすく） */
+.news-dot{position:relative;width:24px;height:24px;border:0;padding:0;background:none;cursor:pointer}
+.news-dot::before{content:'';position:absolute;left:8.5px;top:8.5px;width:7px;height:7px;border-radius:50%;background:var(--line)}
+.news-dot.on::before{background:var(--osiris)}
 @media (prefers-reduced-motion: reduce){.news-list li{transition:none}}
 @media (max-height:740px){.news-list li:nth-child(n+4){display:block}}
 @media (max-height:700px){.news-list li:nth-child(n+3){display:block}}
@@ -1216,7 +1218,7 @@ body[data-kind="mo"] #allow .principles > span:nth-child(2),body[data-kind="st"]
 .news-head{display:flex;align-items:center;gap:8px}
 .news-head .news-ttl{flex:none}
 .news-head .news-dots{flex:1}
-.news-more{flex:none;font:inherit;font-size:12px;font-weight:700;color:var(--obelisk);background:transparent;border:0;padding:2px 4px;cursor:pointer}
+.news-more{flex:none;font:inherit;font-size:12px;font-weight:700;color:var(--obelisk);background:transparent;border:0;padding:2px 4px;min-height:36px;cursor:pointer}
 .news-list{height:46px!important;flex:none!important}
 .news-list .news-i,.news-all .news-i{height:auto!important;display:flex!important;flex-direction:column;align-items:stretch!important;gap:1px;text-decoration:none;color:var(--ink)}
 .news-top{display:flex;align-items:center;justify-content:space-between;gap:8px;line-height:1.3}
@@ -1852,7 +1854,7 @@ section#home-hub{border:0!important;box-shadow:none!important;padding:0!importan
 .subnav{border-bottom:1.5px solid var(--line)!important;margin-bottom:6px!important;padding-bottom:4px!important}
 .subnav .toc a{border:1.5px solid var(--line)!important;box-shadow:none!important;border-radius:999px!important;padding:5px 12px!important;font-size:12.5px!important;background:var(--surface)!important}
 .subnav .toc a.on{background:var(--edge)!important;color:#fff!important;border-color:var(--edge)!important}
-.hs-b{width:28px!important;height:28px!important;border-width:1.5px!important;font-size:15px!important}
+.hs-b{width:32px!important;height:32px!important;border-width:1.5px!important;font-size:15px!important}
 body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
 
 /* ---------- デュエル ---------- */
@@ -1922,7 +1924,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
 .pfi-up{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:var(--display);font-weight:900;font-size:14px;background:var(--obelisk);color:#fff;border:2px solid var(--edge);border-radius:var(--r2);box-shadow:var(--sh);padding:8px 14px}
 .pfi-up:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--edge)}
 .pfi-reset{font:inherit;font-size:12.5px;background:none;border:1.5px dashed var(--line);border-radius:var(--r3);color:var(--muted);padding:4px 10px;cursor:pointer}
-.pfi-emo{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:5px;margin-top:10px}
+.pfi-emo{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px;margin-top:10px} /* アイコン選び：1つ40px以上、入らない分は折り返す（320の幅でも押しやすく） */
 .pfi-emo button{font-size:20px;line-height:1;aspect-ratio:1;border:1.5px solid var(--line);background:var(--surface);border-radius:var(--r3);cursor:pointer;padding:0}
 .pfi-emo button[aria-pressed="true"]{border:2px solid var(--edge);background:var(--ra)}
 .pf-icon.off .pfi-up,.pf-icon.off .pfi-emo{opacity:.45;pointer-events:none}
@@ -2072,7 +2074,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     </nav>
   </div>
   <button type="button" class="tile big" data-go="duel-open"><span class="i">⚔️</span><span><b>デュエルを始める</b><em class="hub-tag">対面・電卓</em><br><small>対面の対戦用：ライフ計算・リンク対戦・先攻後攻の抽選</small></span></button>
-  <button type="button" class="tile big cpu" data-go="cpu-open"><span class="i">🤖</span><span><b>CPUと対戦する</b><em class="hub-tag">1人で練習</em><br><small>カードの効果を自動で処理する対戦卓で、1人で練習</small></span></button>
+  <button type="button" class="tile big cpu" data-go="cpu-open"><span class="i">🤖</span><span><b>CPUと対戦する</b><em class="hub-tag">1人で練習</em><br><small>カードの効果を自動で処理するデュエル卓で、1人で練習</small></span></button>
   <div class="srch" id="srch" role="search">
     <div class="srch-box"><button type="button" class="srch-back" id="srch-back" aria-label="1つ前のページに戻る" hidden>←</button><span aria-hidden="true">🔎</span><input type="search" id="srch-q" placeholder="カード・ルール・機能を検索" autocomplete="off" aria-label="ルールブック内を検索"><button type="button" id="srch-x" aria-label="検索をクリア" hidden>✕</button></div>
     <div class="srch-pop" id="srch-pop" hidden>
@@ -2205,7 +2207,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
 
 <!-- CPU対戦 -->
 <section id="cpu">
-  <div class="sec-h"><span>VS CPU</span><h2>🤖 CPU対戦</h2><p class="note">カードの効果を自動で処理する対戦卓。1人でCPUと練習できます</p></div>
+  <div class="sec-h"><span>VS CPU</span><h2>🤖 CPU対戦</h2><p class="note">カードの効果を自動で処理するデュエル卓。1人でCPUと練習できます</p></div>
 
   <button type="button" class="start-btn" id="cpu-open">🤖 CPUと対戦する</button>
   <p class="status" id="cpu-st" role="status"></p>
@@ -5500,7 +5502,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     if(st>0)f.appendChild(document.createTextNode('…'));f.appendChild(document.createTextNode(text.slice(st,a)));f.appendChild(el('mark','',text.slice(a,z)));f.appendChild(document.createTextNode(text.slice(z,en)));if(en<text.length)f.appendChild(document.createTextNode('…'));return f;}
   function flash(n){if(!n)return;requestAnimationFrame(function(){siv.call(n,{block:'center',behavior:reduce?'auto':'smooth'});n.classList.add('hit-flash');setTimeout(function(){n.classList.remove('hit-flash');},2200);});}
   /* 候補の集め方 */
-  var FEAT=[{t:'🤖 CPU対戦',s:'カードの効果を自動で処理する対戦卓で、CPUと1人で練習',k:'CPU 対戦 練習 1人 ひとり コンピューター 自動 エンジン 対戦卓',run:function(){go('cpu',{push:true});var c=$('cpu-open');if(c)c.click();}},{t:'📖 デッキの回し方',s:'人のデッキを借りて使うときの説明。自分のデッキの回し方も書ける',k:'回し方 デッキ 使い方 借りる 説明 コンボ 勝ち筋',run:function(){if(window.YGO_GUIDE)YGO_GUIDE.list();}},{t:'⚔️ デュエルを始める',s:'ライフ計算・リンク対戦・先攻後攻の抽選',k:'デュエル 開始 始める ライフ 計算 リンク 対戦 抽選 先攻 後攻 コイン サイコロ',run:function(){go('life',{push:true});var d=$('duel-open');if(d)d.click();}}];
+  var FEAT=[{t:'🤖 CPU対戦',s:'カードの効果を自動で処理するデュエル卓で、CPUと1人で練習',k:'CPU 対戦 練習 1人 ひとり コンピューター 自動 エンジン 対戦卓 デュエル卓',run:function(){go('cpu',{push:true});var c=$('cpu-open');if(c)c.click();}},{t:'📖 デッキの回し方',s:'人のデッキを借りて使うときの説明。自分のデッキの回し方も書ける',k:'回し方 デッキ 使い方 借りる 説明 コンボ 勝ち筋',run:function(){if(window.YGO_GUIDE)YGO_GUIDE.list();}},{t:'⚔️ デュエルを始める',s:'ライフ計算・リンク対戦・先攻後攻の抽選',k:'デュエル 開始 始める ライフ 計算 リンク 対戦 抽選 先攻 後攻 コイン サイコロ',run:function(){go('life',{push:true});var d=$('duel-open');if(d)d.click();}}];
   function collect(ws){var G={page:[],card:[],text:[]},listed={};
     FEAT.forEach(function(f){var m=hit(f.t+' '+f.k,ws);if(m)G.page.push({icon:'',title:f.t,sub:f.s,m:hit(f.t,ws),score:hit(f.t,ws)?2:1,run:f.run});});
     Object.keys(SEC).forEach(function(id){var s=$(id);if(!s||id==='home-hub'||(id==='admin'&&s.hidden))return;
@@ -6221,7 +6223,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
             await s.presence({app:'ygo',kind:'table',name:(YGO.app&&YGO.app.pf&&YGO.app.pf().name)||'',key:key,id:id,at:Date.now()});return {cancel:function(){try{un();}catch(e){}try{s.leave();}catch(e){}}};}}:null,
         /* 招待リンク（?vs=キー）で開いた時は、子としてすぐつなぐ。招待リンクの作り方もサイトのURLに合わせる */netJoin:vsKey||null,inviteUrl:function(k){return location.origin+location.pathname+'?vs='+k+(location.search.indexOf('online-test')>=0?'&online-test':'')+'#cpu';}});
       vsKey=null;
-    }catch(e){console.error(e);st.className='status err';st.textContent='対戦卓を読み込めませんでした。ページを開き直してください。';}
+    }catch(e){console.error(e);st.className='status err';st.textContent='デュエル卓を読み込めませんでした。ページを開き直してください。';}
     finally{busy=false;label();}
   });
   /* スマホの「戻る」で画面が切り替わったら、対戦卓を閉じる（途中のデュエルは残る） */

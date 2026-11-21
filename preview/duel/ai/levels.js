@@ -2,9 +2,9 @@
 // - やさしい：前のCPUの採点で候補を並べ、ときどき2番目・3番目の手を選ぶ（見えないカードは見ない）
 // - ふつう：理想のCPU（そのまま）
 // - 本気：理想のCPUに、考える量を約2倍・読む世界を多くして考えさせる。ロマンは無視して勝つことだけで手を選ぶ（見えないカードは推測のまま。ズルはしない）
-import { cpuDecide, scoreCandidates } from './cpu.js?v=20261121-1642-73a6b6a22b';
-import { idealThink,                                 } from './ideal.js?v=20261121-1642-73a6b6a22b';
-import { actorOf, opp, monstersOf, legalActions, currentStats, battleDamageZero, scriptOf, defOf, couldAttackNextBattle, fieldCards } from '../engine/game.js?v=20261121-1642-73a6b6a22b';
+import { cpuDecide, scoreCandidates } from './cpu.js?v=20261121-1721-fe605bd1fd';
+import { idealThink,                                 } from './ideal.js?v=20261121-1721-fe605bd1fd';
+import { actorOf, opp, monstersOf, legalActions, currentStats, battleDamageZero, scriptOf, defOf, couldAttackNextBattle, fieldCards, poolDef } from '../engine/game.js?v=20261121-1721-fe605bd1fd';
                                                             
 
                                                   
@@ -34,7 +34,7 @@ export function easyThink(s           , random               = Math.random)     
  * - 「このカードの攻撃で発生する戦闘ダメージは0」のモンスター（ボマー・ドラゴン）は数えない。足りない時は、手札から召喚して足りるかを
  *   ideal.ts のリーサルの総当たりが探す（MIMIの報告：ボマー・ドラゴンを数えて召喚せずにバトルへ入り、勝ちを逃した）
  */
-export function lethalNow(s           )                {
+export function lethalNow(s           , legacy = false)                {
   if (s.winner !== null || s.pending || s.window.kind !== 'open' || s.chain.length > 0) return null;
   const me = actorOf(s);
   if (s.turnPlayer !== me) return null;
@@ -47,6 +47,11 @@ export function lethalNow(s           )                {
   // 攻撃で相手に与えるダメージ（攻撃のダメージが0のモンスターは0）
   const power = (u        ) => (scriptOf(s, u).attackNoDamage ? 0 : currentStats(s, u).atk);
   const acts = legalActions(s);
+  // 相手に伏せカードがあって、こちらに手札から発動できる魔法・罠がある時（サイクロンなど）は、近道をせずに
+  // 「先に伏せを除いてから攻撃」も試すリーサルの総当たりに任せる（MEMEの見回り：伏せ1枚・LP1300で、サイクロンを使わずに攻撃して届かなかった）
+  const oppSet = s.players[o].szone.some(u => u !== null && !s.cards[u].faceUp);
+  const canClear = acts.some(a => a.type === 'activate' && s.cards[a.card]?.zone === 'hand' && s.cards[a.card] && poolDef(s.cards[a.card].code)?.kind !== 'monster');
+  if (oppSet && canClear && !legacy) return null;
   if (s.phase === 'battle') {
     const atks = acts.filter((a)                                           => a.type === 'attack');
     const dmg = (a                                     ) => {
@@ -76,6 +81,22 @@ export function lethalNow(s           )                {
   return null;
 }
 
+/**
+ * 相手のモンスターも伏せカードもいない時の、ただの直接攻撃（とどめでなくても、ダメージだけ得をする）。バトルフェイズで攻撃せずに終えるのを防ぐ
+ * （MEMEの見回り：相手の場が空なのに、サイレント・マジシャン LV4 で攻撃せずにターンを終えた・3体いて1体も攻撃しなかった）
+ */
+export function freeHit(s           )                {
+  if (s.winner !== null || s.pending || s.window.kind !== 'open' || s.chain.length > 0 || s.phase !== 'battle') return null;
+  const me = actorOf(s);
+  if (s.turnPlayer !== me) return null;
+  const o = opp(me);
+  if (monstersOf(s, o).length || s.players[o].szone.some(u => u !== null && !s.cards[u].faceUp) || battleDamageZero(s, o)) return null;
+  if ([...fieldCards(s, 0), ...fieldCards(s, 1)].some(u => s.cards[u].faceUp && scriptOf(s, u).damageZeroFor)) return null;
+  const direct = legalActions(s).filter((a)                                           => a.type === 'attack' && a.target === null && !scriptOf(s, a.attacker).attackNoDamage && currentStats(s, a.attacker).atk > 0);
+  if (!direct.length) return null;
+  return direct.reduce((x, y) => (currentStats(s, y.attacker).atk > currentStats(s, x.attacker).atk ? y : x));
+}
+
 /** 「全力」で考える（CPUはいつもこれ。MASTERの決定 2026-11-21：難易度の設定はなし。中身は前の「本気」＝ロマン0・とどめと守り最優先・考える量1.4倍） */
 export function fullThink(s           , opt               = {}, deckNames                   = ['', ''])          {
   return levelThink(s, 'hard', opt, deckNames);
@@ -83,8 +104,10 @@ export function fullThink(s           , opt               = {}, deckNames       
 
 /** 強さに合わせて考える（やさしい・ふつうは作りだけ残している。強さを測る道具やテストで使う） */
 export function levelThink(s           , level          , opt               = {}, deckNames                   = ['', ''])          {
-  const win = lethalNow(s);
+  const legacy = !!(opt                        ).legacy; // 比べる用（あとで消す）
+  const win = lethalNow(s, legacy);
   if (win) return { action: win, winRate: 1, bestRate: 1, romance: null, samples: 0, critical: true };
+  if (level !== 'easy' && !legacy) { const hit = freeHit(s); if (hit) return { action: hit, winRate: NaN, bestRate: NaN, romance: null, samples: 0, critical: false }; }
   if (level === 'easy') return easyThink(s, opt.random);
   if (level === 'hard') return idealThink(s, { ...HARD_OPTS, ...opt }, deckNames);
   return idealThink(s, opt, deckNames);

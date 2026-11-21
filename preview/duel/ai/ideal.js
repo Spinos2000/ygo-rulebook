@@ -2,13 +2,13 @@
 // 1. 見えないカード（相手の手札・伏せカード・デッキ、自分のデッキの順番）を、デッキリストからまだ見えていないカードで埋めた「ありえる世界」を何通りも作る
 // 2. それぞれの世界で、相手も手札・伏せカードを使って最善を尽くす前提で各候補を先読みし、盤面の点数を勝率に直して平均する
 // 3. 勝率が一番高い手を選ぶ。ただし、切り札を出す手・一気に大ダメージを与える手が最善手から10%以内なら、そちら（ロマン）を選ぶ
-import { actorOf, defOf, scriptOf, monstersOf, fieldCards, opp, isOnField, poolDef } from '../engine/game.js?v=20261121-1642-73a6b6a22b';
-import { cloneState } from '../engine/types.js?v=20261121-1642-73a6b6a22b';
+import { actorOf, defOf, scriptOf, monstersOf, fieldCards, opp, isOnField, poolDef } from '../engine/game.js?v=20261121-1721-fe605bd1fd';
+import { cloneState } from '../engine/types.js?v=20261121-1721-fe605bd1fd';
                                                                       
-import { scoreCandidates, cpuDecide, evaluate, answerCandidates,                                            } from './cpu.js?v=20261121-1642-73a6b6a22b';
-import { DECK_WEIGHTS } from './deck-weights.js?v=20261121-1642-73a6b6a22b';
-import { DECKS } from '../data/decks.js?v=20261121-1642-73a6b6a22b';
-import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js?v=20261121-1642-73a6b6a22b';
+import { scoreCandidates, cpuDecide, evaluate, answerCandidates,                                            } from './cpu.js?v=20261121-1721-fe605bd1fd';
+import { DECK_WEIGHTS } from './deck-weights.js?v=20261121-1721-fe605bd1fd';
+import { DECKS } from '../data/decks.js?v=20261121-1721-fe605bd1fd';
+import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js?v=20261121-1721-fe605bd1fd';
 
                                
                            
@@ -280,6 +280,9 @@ export function idealThink(s           , opt               = {}, deckNames      
     if (x.type !== 'attack' || x.target === null || !s.cards[x.target]) return false;
     const t = s.cards[x.target];
     if (!t.faceUp && !t.pub) return false;
+    // 表側のユベルのように「戦闘では破壊されず、自分への戦闘ダメージも0」のモンスターへの攻撃は、何も得られない（ユベルは攻撃力分のダメージを返してくる）。
+    // 中身が見えている時は、ほかに手があれば選ばない（No.9：全力がダメージ・ゲートで出たユベルに攻撃して1800返された）
+    if (t.faceUp) { const sc = scriptOf(s, x.target); if (sc.battleIndestructible && (sc.noSelfBattleDamage || sc.redirectBattleDamage)) return true; }
     const atk = currentStats(s, x.attacker).atk, st = currentStats(s, x.target);
     return t.position === 'def' ? atk < st.def : atk < st.atk;
   };

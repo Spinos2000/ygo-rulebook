@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1642-73a6b6a22b';
-import { fullThink } from './ai/levels.js?v=20261121-1642-73a6b6a22b';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1642-73a6b6a22b';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1642-73a6b6a22b';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1642-73a6b6a22b';
-import { playSignature, sigKey } from './sig.js?v=20261121-1642-73a6b6a22b';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1642-73a6b6a22b';
-import { firstEntrance } from './aces.js?v=20261121-1642-73a6b6a22b';
-import { RULINGS } from './data/rulings.js?v=20261121-1642-73a6b6a22b';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1642-73a6b6a22b';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1642-73a6b6a22b';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1642-73a6b6a22b';
-import { joinSiteRoom } from './net/site-room.js?v=20261121-1642-73a6b6a22b';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261121-1721-fe605bd1fd';
+import { fullThink } from './ai/levels.js?v=20261121-1721-fe605bd1fd';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261121-1721-fe605bd1fd';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261121-1721-fe605bd1fd';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261121-1721-fe605bd1fd';
+import { playSignature, sigKey } from './sig.js?v=20261121-1721-fe605bd1fd';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261121-1721-fe605bd1fd';
+import { firstEntrance } from './aces.js?v=20261121-1721-fe605bd1fd';
+import { RULINGS } from './data/rulings.js?v=20261121-1721-fe605bd1fd';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261121-1721-fe605bd1fd';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261121-1721-fe605bd1fd';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261121-1721-fe605bd1fd';
+import { joinSiteRoom } from './net/site-room.js?v=20261121-1721-fe605bd1fd';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261121-1642-73a6b6a22b';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-1642-73a6b6a22b';
-import { DECKS } from './data/decks.js?v=20261121-1642-73a6b6a22b';
-import { SCRIPTS } from './cards/index.js?v=20261121-1642-73a6b6a22b';
+} from './engine/game.js?v=20261121-1721-fe605bd1fd';
+import { CARD_POOL } from './data/cardpool.js?v=20261121-1721-fe605bd1fd';
+import { DECKS } from './data/decks.js?v=20261121-1721-fe605bd1fd';
+import { SCRIPTS } from './cards/index.js?v=20261121-1721-fe605bd1fd';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -281,7 +281,7 @@ function playPendingSummons() {
         // 相棒：場の仲間（同じ側の表側のモンスター）の位置を渡す（絆の光がそこから集まる）
         const allies = bigAce && j.ace.cls === 'partner' && S.cards[j.uid] ? [...ROOT.querySelectorAll('#board [data-uid]')].filter(e => { const u = Number(e.dataset.uid), c = S.cards[u]; return u !== j.uid && c && c.zone === 'mzone' && c.faceUp && c.controller === S.cards[j.uid].controller; }).map(e => e.getBoundingClientRect()) : [];
         fxRec('summon', j.uid);
-        await playSummon(ROOT, { rect: el.getBoundingClientRect(), track: () => el.isConnected ? el.getBoundingClientRect() : null, allies, onLand: () => { el.style.visibility = ''; if (bigAce) play([j.ace.cls === 'god' ? 'aceGod' : j.ace.cls === 'partner' ? 'aceBond' : 'aceLand']); }, d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), pos: S.cards[j.uid] && S.cards[j.uid].position, how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, from: j.from, fromRect: j.fromRect, ace: j.ace, safe: safeArea(), mat: matCanvas(), speed: fxMode() === 'short' ? 2 : 1 });
+        await playSummon(ROOT, { rect: el.getBoundingClientRect(), track: () => el.isConnected ? el.getBoundingClientRect() : null, allies, onLand: () => { el.style.visibility = ''; if (j.ace && j.ace.cls === 'partner' && !j.faceDown) play(['aceBond']); /* 相棒：2回目からも相棒の音（見た目はふつう、ひと言は初めてだけ） */ else if (bigAce) play([j.ace.cls === 'god' ? 'aceGod' : 'aceLand']); }, d: j.d, atk: currentAtk(S, j.uid), def: currentDef(S, j.uid), pos: S.cards[j.uid] && S.cards[j.uid].position, how: j.how, faceDown: j.faceDown || flipFace ? (flipFace ? true : j.faceDown) : false, mats: j.mats, from: j.from, fromRect: j.fromRect, ace: j.ace, safe: safeArea(), mat: matCanvas(), speed: fxMode() === 'short' ? 2 : 1 });
       } catch (e) { console.error(e); }
       el.style.visibility = '';
     }
@@ -391,7 +391,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261121-1642-73a6b6a22b', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261121-1721-fe605bd1fd', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1276,7 +1276,7 @@ function renderDock() {
   const me = S.turnPlayer;
   dock.classList.add('free');
   if (eb) eb.hidden = !legal.some(x => x.type === 'endTurn' || (x.type === 'nextPhase' && x.to === 'end'));
-  actor.textContent = `${cpuMode() ? 'あなた' : NAME(me)}の${PHASE_LABEL[S.phase]}`;
+  actor.innerHTML = `<span class="who">${esc(cpuMode() ? 'あなた' : NAME(me))}の</span>${esc(PHASE_LABEL[S.phase])}`; // 狭い画面（360以下）では「あなたの」を出さない（欠けて読めないので）
   hint.textContent = S.turn === 1 && S.phase === 'main1' ? '先攻1ターン目はバトルフェイズに入れません' : S.phase === 'battle' ? '攻撃するモンスターを押す' : 'カードを押すと、できる操作が出ます';
   const others = [];
   if (S.phase === 'main1') { others.push({ l: 'バトルへ', a: { type: 'nextPhase', to: 'battle' } }, { l: 'エンドへ', a: { type: 'nextPhase', to: 'end' } }); }
@@ -1351,7 +1351,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261121-1642-73a6b6a22b';
+const DUEL_BUILD = '20261121-1721-fe605bd1fd';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -1420,7 +1420,7 @@ function renderNet() {
     const ms = (OPTS.inviteApi && OPTS.inviteApi.members()) || [];
     body = `<p class="net-q">だれを招待しますか？</p><p class="net-none">招待した人が<strong>親</strong>になります。相手がこのサイトを開いていると、画面に通知が出ます。</p>`
       + (ms.length ? `<div class="net-lobby">${ms.map(m => `<button type="button" class="net-lb" data-net="inv:${esc(m.uid)}"><b>${esc(m.name)}</b><span></span><i>招待する ▶</i></button>`).join('')}</div>` : '<p class="net-none">まだほかのメンバーがいません。</p>')
-      + `<button type="button" class="btn ghost net-wide" data-net="invback">← もどる</button>`;
+      + `<button type="button" class="btn ghost net-wide" data-net="invback">← 戻る</button>`;
   } else if (u.step === 'wait' && u.stopped) {
     // 始まる前に止まった（版ちがいなど）：もう押せないボタンは出さず、何をすればよいかだけ
     body = `<p class="net-err">${esc(u.err)}</p>` + (u.stopped === 'reload' ? '<button type="button" class="btn primary net-wide" data-net="reload">ページを読み直す</button>' : '');
@@ -1500,7 +1500,7 @@ function netEndNote(winner) {
     + '<button type="button" class="btn small ghost" data-net="quit">やめる</button>');
 }
 function netStop(msg, reload) {
-  netNote(`<b>${esc(msg)}</b>${reload ? '<button type="button" class="btn small primary" data-net="reload">読み直す</button>' : ''}<button type="button" class="btn small ghost" data-net="quit">準備にもどる</button>`);
+  netNote(`<b>${esc(msg)}</b>${reload ? '<button type="button" class="btn small primary" data-net="reload">読み直す</button>' : ''}<button type="button" class="btn small ghost" data-net="quit">準備に戻る</button>`);
   if (net) net.stopped = true; // 止まった印：1秒ごとの見回りが「つながりが切れました」で上書きしないように（MIMIの気づき）
   if (net && net.link) { try { net.link.close(); } catch { /* もう閉じている */ } }
   if (netUi && !net) {
@@ -2499,6 +2499,17 @@ function setTray(open, auto = false) {
   const l = $('#trayLbl'); if (l) l.textContent = open ? '下にスワイプでしまう' : `上にスワイプで手札（${n}枚）`;
   measureBottom();
 }
+/** No.11（ボスの注文：プレイマットは全く動かない・伸び縮みしない）：下のボタンの欄は、チェーンの時などにボタンが増えて高くなる。
+ * 盤面の高さをその時々の高さで決めると、盤面が伸び縮みする。盤面の高さは、画面の大きさごとに最初に測ったボタンの欄の高さで決めて、あとは変えない。
+ * ボタンの欄がそれより高くなった時は、盤面の下の方に重なる（盤面は動かない） */
+let dockBase = null;
+/** 盤面の高さを決める時のボタンの欄の高さ。画面の大きさごとに、ふだんの時（チェーン・選ぶこと・決着が無い時）に最初に測った高さを使い、あとは変えない */
+function dockBaseFor(real, calm = true) {
+  const key = innerWidth + 'x' + innerHeight;
+  if (!dockBase || dockBase.key !== key) dockBase = { key, h: 0 };
+  if (!dockBase.h && calm && real > 0) dockBase.h = real;
+  return dockBase.h || real;
+}
 function measureBottom() {
   const r = $('.droot'), t = $('#tray'), d = $('#dock'); if (!r || !t || !d) return;
   const dh = Math.ceil(d.getBoundingClientRect().height);
@@ -2508,7 +2519,7 @@ function measureBottom() {
   const b = $('#board');
   if (b && narrow()) {
     const top = b.getBoundingClientRect().top - r.getBoundingClientRect().top;
-    r.style.setProperty('--board-h', Math.max(260, Math.floor(window.innerHeight - top - dh - 8)) + 'px');
+    r.style.setProperty('--board-h', Math.max(260, Math.floor(window.innerHeight - top - dockBaseFor(dh, !S || (!S.chain.length && !S.pending && S.winner === null)) - 8)) + 'px'); // No.11：盤面はボタンの欄の高さが変わっても伸び縮みしない
   } else if (b) {
     // マスの幅 × 86/59 がカードの高さ。段はその半分
     const w = b.clientWidth - 16, zw = (w - 6 * 5) / 6.48;

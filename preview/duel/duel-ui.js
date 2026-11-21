@@ -505,6 +505,12 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .pstrip .lp::before { font-size: 9px; margin-right: 2px }
   .pstrip .tag { font-size: 9px; padding: 0 5px }
   .pstrip .meta { width: 100%; margin-left: 0; text-align: left; font-size: 10px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  /* No.11（ボスの注文）：上の2つの欄は、中身が変わっても高さを変えない（「ターン中」「考え中…」が出たり消えたりして欄が伸び縮みし、盤面と手札が押されて動いていた）。
+     3段（名前とLP／ターン中と考え中／手札・デッキ）の決まった形にして、出ていない時も場所を空けておく */
+  .pstrip { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto 17px auto; grid-template-areas: 'who lp' 'tag think' 'meta meta'; align-items: center; align-content: center; row-gap: 1px }
+  .pstrip .who { grid-area: who } .pstrip .lp { grid-area: lp; justify-self: start } .pstrip .meta { grid-area: meta }
+  .pstrip .tag { grid-area: tag; justify-self: start; line-height: 15px } .pstrip .tag[hidden] { display: inline-block; visibility: hidden }
+  .pstrip .think { grid-area: think; justify-self: end; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 14px; padding-bottom: 3px; font-size: .66rem; letter-spacing: 0 }
   /* 手札のトレイ：画面の下に固定。上下のスワイプ（または取っ手）で開け閉め */
   .tray { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; background: var(--panel); border: 2px solid var(--edge); border-bottom: none; border-radius: 18px 18px 0 0;
     box-shadow: 0 -4px 14px rgba(0, 0, 0, .18); padding: 0 max(6px, env(safe-area-inset-right, 0px)) calc(4px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px));
@@ -961,6 +967,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
     transform-origin: 50% 170%; transform: rotate(var(--a)); pointer-events: none; box-shadow: 0 6px 14px rgba(0,0,0,.4); transition: transform .35s cubic-bezier(.2,.8,.3,1), bottom .35s }
 }
 @media (max-width: 380px) { .hand-hold { --hh-cw: 94px } }
+/* 点検⑥：とても狭い画面では、下の見出しを「メインフェイズ1」だけにする（「あなたのメインフェ…」と欠けないように） */
+@media (max-width: 360px) { .droot #actor .who { display: none } }
+/* 点検⑦：準備の最後の［デュエル開始］は、内容が長くて下に隠れないように、窓の下に貼りつける */
+#setup .su-box .su-start { position: sticky; bottom: 4px; z-index: 2; box-shadow: 0 -8px 16px var(--panel), 3px 3px 0 var(--edge) }
 /* 手札を閉じた時のボタン：フェイズの説明・ログ・ひとつ戻す・✋・エンド（2回押し）・次のフェイズへ（小さめ） */
 .mini-only { display: none }
 @media (max-width: 860px) {
@@ -969,7 +979,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .droot .dock.free #phaseBtns { display: none }
   .droot .dock { grid-template-areas: "st" "ex" "ph" "go"; row-gap: 6px; padding-top: 8px }
   .droot .dock-extra { gap: 5px }
-  .droot .dock-extra .btn { min-height: 30px; padding: 1px 9px; font-size: 12px; box-shadow: 1px 1px 0 var(--edge) }
+  .droot .dock-extra .btn { min-height: 36px; padding: 1px 10px; font-size: 12.5px; box-shadow: 1px 1px 0 var(--edge) } /* 押しやすい高さ（点検④。前は30px） */
   .droot #stopBtn { font-size: 0; padding: 1px 8px }
   .droot #stopBtn::before { content: "✋"; font-size: 15px }
   .droot #goBtn { min-height: 40px; font-size: 14px; padding: 2px 8px }
@@ -1053,7 +1063,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-1642</p>
+    <p class="menu-note ver">版：20261121-1721</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
