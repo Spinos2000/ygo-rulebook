@@ -44,6 +44,66 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 #demo button.fx:active { transform: translateY(1px) }
 #demo label { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 6px }
 #demo .guide-open { width: 100%; margin-top: 10px }
+/* ---------- t30：相手の発動の確認画面（DEMOだけ。本物の卓にはまだ入れない） ---------- */
+#demo .ack-set { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0 6px }
+#demo .ack-set label { margin-top: 0 }
+#ackLayer { position: fixed; inset: 0; z-index: 58; background: rgba(8, 14, 28, .38) }
+#ackLayer[hidden], #ackToast[hidden] { display: none }
+#ackArrows { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible }
+#ackArrows .ring { fill: none; stroke: var(--d-accent); stroke-width: 3; rx: 8; animation: ackPulse 1s ease-in-out infinite alternate }
+#ackArrows .line { fill: none; stroke: var(--d-accent); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 10 7; animation: ackDash .8s linear infinite }
+#ackArrows .head { fill: var(--d-accent) }
+@keyframes ackPulse { from { opacity: .55 } to { opacity: 1 } }
+@keyframes ackDash { to { stroke-dashoffset: -17 } }
+#ackPanel { position: absolute; left: 12px; right: 12px; max-width: 560px; margin: 0 auto; max-height: calc(100% - 24px); overflow-y: auto; background: var(--d-panel); color: var(--d-ink);
+  border: 2.5px solid var(--d-edge); border-radius: 16px; box-shadow: 5px 6px 0 var(--d-edge); padding: 12px 14px 14px; box-sizing: border-box }
+#ackPanel.at-top { top: calc(12px + env(safe-area-inset-top, 0px)) }
+#ackPanel.at-bottom { bottom: calc(12px + env(safe-area-inset-bottom, 0px)) }
+#ackPanel .who { display: flex; align-items: center; gap: 8px; font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: 14px; margin: 0 0 8px }
+#ackPanel .who .tag { background: var(--d-opp); color: #fff; border-radius: 999px; padding: 3px 10px; font-size: 13px }
+#ackPanel .who .tag.me { background: var(--d-me) }
+#ackPanel .who .chain { border: 1.5px solid var(--d-edge); border-radius: 999px; padding: 2px 10px; background: var(--d-accent); color: var(--d-accent-ink); font-family: Fredoka, inherit; font-size: 13px }
+#ackPanel .body { display: flex; gap: 12px; align-items: flex-start }
+#ackPanel .art { flex: none; width: 100px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, .25) }
+#ackPanel .txt { min-width: 0; flex: 1 }
+#ackPanel h3 { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: 19px; line-height: 1.3; margin: 0 0 2px }
+#ackPanel .kind { font-size: 12px; color: var(--d-sub); margin: 0 0 6px }
+#ackPanel .eff { font-size: 13.5px; line-height: 1.55; margin: 0; padding: 8px 10px; background: var(--d-panel-2); border: 1px solid var(--d-line); border-radius: 10px; max-height: 9.6em; overflow-y: auto; white-space: pre-wrap }
+#ackPanel .tgt { font-size: 13px; font-weight: 700; margin: 8px 0 0 }
+#ackPanel .tgt::before { content: "🎯 " }
+/* CODE 22:10（MASTERの決定）：［了承］はなし。［チェーンする］以外のどこをタップしても了承。［チェーンする］は大きめで、右上に離して置く */
+#ackPanel .chainBtn { margin-left: auto; min-width: 128px; min-height: 56px; border-radius: 12px; font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: 16px; line-height: 1.2; cursor: pointer; padding: 6px 12px; border: 2px solid var(--d-me); background: var(--d-panel); color: var(--d-me); box-shadow: 3px 3px 0 var(--d-me) }
+#ackPanel .chainBtn small { display: block; font-family: "M PLUS Rounded 1c", inherit; font-weight: 500; font-size: 11px }
+#ackPanel .chainBtn:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--d-me) }
+#ackLayer { cursor: pointer }
+#ackPanel .who .tag, #ackPanel .who .chain, #ackPanel .chainBtn small { white-space: nowrap }
+#ackPanel .chainBtn:disabled { border-color: var(--d-line); background: var(--d-panel-2); color: var(--d-sub); box-shadow: none; opacity: .75; cursor: not-allowed }
+#ackPanel .hint { font-size: 12px; color: var(--d-sub); margin: 10px 0 0; text-align: center; opacity: .35; transition: opacity .2s }
+#ackPanel.ready .hint { opacity: 1 }
+#ackPanel ol.res { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px }
+#ackPanel ol.res li { display: flex; align-items: center; gap: 8px; border: 1px solid var(--d-line); border-radius: 10px; padding: 8px 10px; font-size: 14px; background: var(--d-panel-2); transition: background .2s, border-color .2s }
+#ackPanel ol.res li b { font-family: Fredoka, inherit; min-width: 1.6em }
+#ackPanel ol.res li.now { border: 2px solid var(--d-edge); background: var(--d-accent); color: var(--d-accent-ink) }
+#ackPanel ol.res li.done { opacity: .55 }
+/* 止めない時：上に小さく出して、すぐ消える */
+#ackToast { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 58; max-width: calc(100% - 32px); box-sizing: border-box;
+  background: var(--d-panel); color: var(--d-ink); border: 2px solid var(--d-edge); border-radius: 12px; box-shadow: 3px 4px 0 var(--d-edge); padding: 8px 14px; font-weight: 700; font-size: 14px }
+/* 了承のあと、ログの行が光る（DEMOの見本のログ） */
+#ackLog { position: fixed; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 57; width: min(340px, calc(100% - 120px)); list-style: none; margin: 0; padding: 6px 8px;
+  background: var(--d-panel); color: var(--d-ink); border: 1.5px solid var(--d-edge); border-radius: 12px; font-size: 12px; box-shadow: var(--d-shadow) }
+#ackLog[hidden] { display: none }
+#ackLog li { padding: 3px 4px; border-radius: 6px }
+#ackLog li.lit { animation: ackLit 2.4s ease-out }
+@keyframes ackLit { 0%, 35% { background: var(--d-accent); color: var(--d-accent-ink) } 100% { background: transparent } }
+/* 横向き（スマホの横・パソコン）：確認の箱は、対象と反対の横に寄せる */
+@media (orientation: landscape) and (min-width: 640px) {
+  #ackPanel { left: auto; right: auto; width: min(440px, 46vw); margin: 0; top: 50%; bottom: auto; transform: translateY(-50%) }
+  #ackPanel.at-left { left: calc(12px + env(safe-area-inset-left, 0px)) }
+  #ackPanel.at-right { right: calc(12px + env(safe-area-inset-right, 0px)) }
+}
+@media (orientation: landscape) and (min-width: 640px) and (max-height: 500px) {
+  #ackPanel { padding: 8px 12px 10px } #ackPanel .art { width: 84px } #ackPanel h3 { font-size: 16px } #ackPanel .eff { font-size: 13px; max-height: 6.6em } #ackPanel .chainBtn { min-height: 46px }
+}
 </style>
 <div id="duel-host"></div>
 <button id="demoOpen" type="button">🎬 演出を選ぶ</button>
@@ -54,13 +114,16 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   <button type="button" class="fx guide-open" id="guideOpenDemo">📖 操作ガイドを開く<small>はじめて卓を開いた時に出る案内（何度でも開けます）</small></button>
   <div id="demoList"></div>
 </section>
+<div id="ackLayer" hidden><svg id="ackArrows" aria-hidden="true"></svg><div id="ackPanel" role="dialog" aria-modal="true" aria-labelledby="ackName"></div></div>
+<div id="ackToast" role="status" hidden></div>
+<ol id="ackLog" aria-label="ログ（見本）" hidden></ol>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261122-2155-b18fd5eab6';
-import { playSummon } from './fx.js?v=20261122-2155-b18fd5eab6';
-import { play, unlock } from './sound.js?v=20261122-2155-b18fd5eab6';
-import { CARD_POOL } from './data/cardpool.js?v=20261122-2155-b18fd5eab6';
-import { createGame, legalActions } from './engine/game.js?v=20261122-2155-b18fd5eab6';
-import { answerCandidates } from './ai/cpu.js?v=20261122-2155-b18fd5eab6';
+import { mountDuel } from './embed.js?v=20261122-2220-72a1e26965';
+import { playSummon, cardImg } from './fx.js?v=20261122-2220-72a1e26965';
+import { play, unlock } from './sound.js?v=20261122-2220-72a1e26965';
+import { CARD_POOL } from './data/cardpool.js?v=20261122-2220-72a1e26965';
+import { createGame, legalActions } from './engine/game.js?v=20261122-2220-72a1e26965';
+import { answerCandidates } from './ai/cpu.js?v=20261122-2220-72a1e26965';
 
 const host = document.getElementById('duel-host');
 mountDuel(host, { demo: true });
@@ -241,6 +304,163 @@ list.addEventListener('click', async e => {
     window.__duel.load(st);
   } catch (err) { console.error('場面を読みこめませんでした', s.file, err); setOpen(true); }
   busy = false;
+}, true);
+/* ---------- t30：相手の発動の確認画面（DEMOだけ。MASTERが使い心地を見てから本物の卓に入れる） ----------
+ * 相手がカード・効果を発動したら、カードの絵・名前・効果の文・対象への矢印を大きく出して、［了承］を押すまで待つ。
+ * ［チェーンする］はいつも出す（いまその場で発動できるカードが無い時は灰色で押せない。自分の画面だけの話なので、相手には分からない）。
+ * チェーン2・3が重なった時は1つずつ確認画面を出し、処理は逆の順（3→2→1）で見せる。了承したら、ログのその行が光る。
+ * DEMOなので、盤面のカードは動かない（ログと画面の流れだけ） */
+const ACKS = [
+  { name: '奈落の落とし穴', sub: 'あなたの召喚に・対象1体', tp: 0, card: C.pit, mons: { 0: [C.c] }, arrow: true,
+    targets: ['0:mz:0'], tgt: 'あなたの「V－タイガー・ジェット」を破壊して除外する' },
+  { name: '死者蘇生', sub: '墓地のカード1枚が対象', tp: 1, card: C.reborn, mons: { 0: [C.a] }, gy: { 0: [C.b] }, arrow: true,
+    targets: ['pile:0:gy'], tgt: 'あなたの墓地の「X－ヘッド・キャノン」を、相手の場に特殊召喚する' },
+  { name: '聖なるバリア －ミラーフォース－', sub: 'あなたの攻撃宣言に・対象をとらない', tp: 0, card: C.mirror, mons: { 0: [C.c, C.b, C.a] }, arrow: false,
+    targets: ['0:mz:0', '0:mz:1', '0:mz:2'], tgt: '対象はとらない：あなたの攻撃表示のモンスターを全部破壊する' },
+  { name: 'ブラック・ホール', sub: '手札から・場のモンスター全部', tp: 1, card: C.hole, mons: { 0: [C.c], 1: [C.b] }, arrow: false,
+    targets: ['0:mz:0', '1:mz:0'], tgt: '対象はとらない：場のモンスターを全部破壊する' },
+];
+const ACK_MODES = [['all', '毎回止める'], ['chain', 'チェーンできる時だけ止める'], ['none', '止めない（上に小さく出す）']];
+const ackGet = (k, v) => { try { return localStorage.getItem(k) ?? v; } catch { return v; } };
+const ackPut = (k, v) => { try { localStorage.setItem(k, v); } catch { /* 保存できなくても動く */ } };
+list.insertAdjacentHTML('beforeend', `<h2>🛑 相手の発動の確認画面 <small>t30・了承するまで待つ</small></h2>
+<p class="note">相手がカードを発動した場面になって、確認画面が出ます。［了承］で効果の処理へ、［チェーンする］で自分のカードを重ねます（DEMOなので盤面のカードは動きません）。</p>
+<div class="ack-set" role="radiogroup" aria-label="止め方">${ACK_MODES.map(([v, t]) => `<label><input type="radio" name="ackMode" value="${v}"${ackGet('demoAckMode', 'all') === v ? ' checked' : ''}> ${t}</label>`).join('')}</div>
+<p class="note" id="ackModeNote"></p>
+<label><input type="checkbox" id="ackMine"${ackGet('demoAckMine', '1') === '1' ? ' checked' : ''}> 自分の場に、伏せた「神の宣告」がある（チェーンできる）</label>
+<div class="row" style="margin-top:8px">${ACKS.map((a, i) => `<button class="fx" type="button" data-ack="${i}">${a.name}<small>相手が発動・${a.sub}</small></button>`).join('')}</div>`);
+const ackModeNote = () => {
+  const m = document.querySelector('input[name="ackMode"]:checked')?.value || 'all';
+  document.getElementById('ackModeNote').textContent = m === 'chain' ? '※「チェーンできる時だけ」：CPU戦だけで選べます（オンラインは伏せカードがばれないように「毎回」だけ。CODE 22:13 の決定）。' : m === 'none' ? '※止めない：確認画面は出さず、上に小さく出して進みます（ログの行は光ります）。' : '※毎回止める：チェーンできるカードが無い時も、同じ形（［チェーンする］は灰色）で待ちます。';
+};
+ackModeNote();
+list.addEventListener('change', e => {
+  if (e.target.name === 'ackMode') { ackPut('demoAckMode', e.target.value); ackModeNote(); }
+  if (e.target.id === 'ackMine') ackPut('demoAckMine', e.target.checked ? '1' : '0');
+});
+const ackLayer = document.getElementById('ackLayer'), ackPanel = document.getElementById('ackPanel'), ackSvg = document.getElementById('ackArrows'),
+  ackToast = document.getElementById('ackToast'), ackLogEl = document.getElementById('ackLog');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const KIND = d => (d.kind === 'monster' ? `モンスター（${d.race || ''}・★${d.level ?? '？'}）` : `${d.kind === 'spell' ? '魔法' : '罠'}カード（${d.subtype || '通常'}${d.kind === 'spell' ? '魔法' : '罠'}）`);
+const WHO_T = p => (p === 1 ? '相手' : 'あなた');
+/** ログに1行足す：本物の卓のログ（P1／P2 の形）と、DEMOの見本のログ（相手／あなた）の両方。光らせる時に使う番号を返す */
+function ackLogAdd(text, show) {
+  const D = window.__duel, S = D.state;
+  S.log.push({ turn: S.turn, text }); D.load(S);
+  ackLogEl.hidden = false;
+  ackLogEl.insertAdjacentHTML('beforeend', `<li>${esc(show)}</li>`);
+  while (ackLogEl.children.length > 4) ackLogEl.firstElementChild.remove();
+  return { li: ackLogEl.lastElementChild, n: S.log.length };
+}
+/** 了承したら、その行を光らせる（見本のログと、本物の卓のログの同じ行） */
+function ackLogLit(row) {
+  if (!row) return;
+  row.li.classList.remove('lit'); void row.li.offsetWidth; row.li.classList.add('lit');
+  const lis = root.querySelectorAll('#log li'), D = window.__duel, li = lis[lis.length - (D.state.log.length - row.n) - 1];
+  if (li && li.animate) li.animate([{ background: '#f1c95b', color: '#262b3a' }, { background: '#f1c95b', color: '#262b3a', offset: .35 }, { background: 'transparent' }], { duration: 2400, easing: 'ease-out' });
+}
+/** 対象のマス・山（墓地など）の位置 */
+const ackRect = k => (k.startsWith('pile:') ? root.querySelector(`#board [data-pile="${k.slice(5)}"]`) : root.querySelector(`#board [data-zone="${k}"]`))?.getBoundingClientRect();
+const wideMQ = matchMedia('(orientation: landscape) and (min-width: 640px)');
+/** 確認の箱を、対象と反対の側に置いて、箱の絵から対象へ矢印を引く */
+function ackPlace(link) {
+  const rs = (link.targets || []).map(ackRect).filter(r => r && r.width);
+  const cx = rs.length ? rs.reduce((s, r) => s + r.left + r.width / 2, 0) / rs.length : innerWidth / 2;
+  const cy = rs.length ? rs.reduce((s, r) => s + r.top + r.height / 2, 0) / rs.length : innerHeight;
+  ackPanel.className = (wideMQ.matches ? (cx > innerWidth / 2 ? 'at-left' : 'at-right') : (cy > innerHeight / 2 ? 'at-top' : 'at-bottom')) + (ackPanel.classList.contains('ready') ? ' ready' : '');
+  const art = ackPanel.querySelector('.art')?.getBoundingClientRect();
+  let svg = '<defs><marker id="ackHead" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker></defs>';
+  for (const r of rs) {
+    svg += `<rect class="ring" x="${r.left - 4}" y="${r.top - 4}" width="${r.width + 8}" height="${r.height + 8}"/>`;
+    if (!link.arrow || !art) continue;
+    const a = { x: art.left + art.width / 2, y: art.top + art.height / 2 }, b = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    // 箱の外に出るところから引き始め、対象の手前で止める
+    const pr = ackPanel.getBoundingClientRect(), dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+    let t0 = 0; for (let t = 0; t <= 1; t += .02) { const x = a.x + dx * t, y = a.y + dy * t; if (x < pr.left || x > pr.right || y < pr.top || y > pr.bottom) { t0 = t; break; } }
+    const s = { x: a.x + dx * t0, y: a.y + dy * t0 }, e = { x: b.x - dx / len * (Math.min(r.width, r.height) / 2 + 8), y: b.y - dy / len * (Math.min(r.width, r.height) / 2 + 8) };
+    const m = { x: (s.x + e.x) / 2 - dy / len * 30, y: (s.y + e.y) / 2 + dx / len * 30 };
+    svg += `<path class="line" marker-end="url(#ackHead)" d="M${s.x} ${s.y}Q${m.x} ${m.y} ${e.x} ${e.y}"/>`;
+  }
+  ackSvg.innerHTML = svg;
+}
+let ackNow = null;
+addEventListener('resize', () => { if (ackNow && !ackLayer.hidden) ackPlace(ackNow); });
+/** 確認画面を出して、押されたボタン（'ok'／'chain'）を返す */
+function ackAsk(link, canChain) {
+  const d = CARD_POOL[link.code];
+  ackPanel.innerHTML = `<p class="who"><span class="tag${link.p ? '' : ' me'}">${WHO_T(link.p)}が発動</span><span class="chain">チェーン${link.no}</span><button type="button" class="chainBtn"${canChain ? '' : ' disabled'}>チェーンする<small>${canChain ? '自分のカードを重ねる' : '今できるカードなし'}</small></button></p>
+<div class="body"><span class="artBox"></span><div class="txt"><h3 id="ackName">${esc(d.name)}</h3><p class="kind">${esc(KIND(d))}</p><p class="eff">${esc(d.text || '')}</p>${link.tgt ? `<p class="tgt">${esc(link.tgt)}</p>` : ''}</div></div>
+<p class="hint">👆 タップで進む（［チェーンする］以外のどこでも・Enter キーでも）</p>`;
+  const art = cardImg(d, d.atk, d.def, true); art.className = 'art'; art.setAttribute('role', 'img'); art.setAttribute('aria-label', d.name);
+  ackPanel.querySelector('.artBox').replaceWith(art);
+  ackPanel.classList.remove('ready'); ackLayer.hidden = false; ackNow = link; ackPlace(link);
+  return new Promise(res => {
+    const done = v => { removeEventListener('keydown', key); ackLayer.onclick = null; ackLayer.hidden = true; ackNow = null; res(v); };
+    const key = e => { if (e.key === 'Enter' && ready()) { e.preventDefault(); done('ok'); } };
+    addEventListener('keydown', key);
+    // 出てから0.6秒は、タップを受け付けない（続けてタップしていた指で、読まずに進まないように）
+    const t0 = performance.now(), ready = () => performance.now() - t0 >= 600;
+    setTimeout(() => ackPanel.classList.add('ready'), 600);
+    ackLayer.onclick = e => { if (e.target.closest('.chainBtn') || !ready()) return; done('ok'); };
+    ackPanel.querySelector('.chainBtn').onclick = e => { e.stopPropagation(); if (canChain && ready()) done('chain'); };
+  });
+}
+async function ackToastShow(text) { ackToast.textContent = text; ackToast.hidden = false; await sleep(1800); ackToast.hidden = true; }
+/** チェーンの処理を、逆の順（3→2→1）に1つずつ見せる */
+async function ackResolve(links) {
+  ackPanel.className = wideMQ.matches ? 'at-right' : 'at-top'; ackSvg.innerHTML = '';
+  ackPanel.innerHTML = `<p class="who"><span class="chain" style="margin-left:0">チェーンの処理</span>あとから発動したほうから（${links.map(l => l.no).reverse().join('→')}）</p>
+<ol class="res">${[...links].reverse().map(l => `<li data-no="${l.no}"><b>${l.no}</b>${WHO_T(l.p)}の「${esc(CARD_POOL[l.code].name)}」</li>`).join('')}</ol>
+<p class="hint">DEMOなので、盤面のカードは動きません</p>`;
+  ackLayer.hidden = false;
+  // 神の宣告は、すぐ前のチェーンの発動を無効にする（無効にされた神の宣告は、何もしない）
+  const negated = new Set();
+  for (const l of [...links].reverse()) if (l.code === C.judge && !negated.has(l.no) && l.no > 1) negated.add(l.no - 1);
+  for (const l of [...links].reverse()) {
+    const li = ackPanel.querySelector(`li[data-no="${l.no}"]`); li.classList.add('now');
+    const n = CARD_POOL[l.code].name, neg = negated.has(l.no);
+    ackLogLit(ackLogAdd(`チェーン${l.no}：${n}の効果を処理${neg ? '（発動は無効）' : ''}`, `チェーン${l.no}：${n}の効果を処理${neg ? '（発動は無効）' : ''}`));
+    await sleep(1300); li.classList.remove('now'); li.classList.add('done');
+  }
+  await sleep(500); ackLayer.hidden = true;
+}
+async function runAck(a) {
+  const mine = document.getElementById('ackMine').checked, mode = document.querySelector('input[name="ackMode"]:checked')?.value || 'all';
+  // 盤面：相手は発動したカード（表）と、伏せた神の宣告。自分は伏せた神の宣告（チェックがある時）
+  const s = sceneState({ tp: a.tp, set: { 0: mine ? [C.judge] : [], 1: [a.card, C.judge] }, mons: a.mons, gy: a.gy });
+  const up = s.players[1].szone[0]; Object.assign(s.cards[up], { faceUp: true });
+  window.__duel.load(s); ackLogEl.innerHTML = '';
+  await sleep(350);
+  let my = mine; // 自分の神の宣告を、まだ使っていない
+  const links = [];
+  const act = async (p, code, tgt, targets, arrow) => {
+    const link = { p, code, no: links.length + 1, tgt, targets, arrow }; links.push(link);
+    const n = CARD_POOL[code].name;
+    const row = ackLogAdd(`P${p + 1}：${n}を発動（チェーン${link.no}）`, `${WHO_T(p)}：${n}を発動（チェーン${link.no}）`);
+    if (p === 0) { const S = window.__duel.state, u = S.players[0].szone[0]; if (u != null) { S.cards[u].faceUp = true; window.__duel.load(S); } ackLogLit(row); return 'ok'; } // 自分の発動は確かめない
+    const canChain = my;
+    if (mode === 'none' || (mode === 'chain' && !canChain)) { ackLogLit(row); await ackToastShow(`${WHO_T(p)}が「${n}」を発動（チェーン${link.no}）`); return 'ok'; }
+    const v = await ackAsk(link, canChain); ackLogLit(row); return v;
+  };
+  let v = await act(1, a.card, a.tgt, a.targets, a.arrow);
+  if (v === 'chain') {
+    my = false;
+    await act(0, C.judge, '', [], false);
+    await sleep(500);
+    // 相手が、自分の神の宣告にさらに神の宣告を重ねる（チェーン3）
+    const S = window.__duel.state, u = S.players[1].szone[1]; if (u != null) { S.cards[u].faceUp = true; window.__duel.load(S); }
+    await act(1, C.judge, 'あなたの「神の宣告」（チェーン2）の発動を無効にして破壊する', ['0:st:0'], true);
+  }
+  if (mode === 'none' && links.length === 1) { const n = CARD_POOL[a.card].name; ackLogLit(ackLogAdd(`チェーン1：${n}の効果を処理`, `チェーン1：${n}の効果を処理`)); await sleep(600); return; } // 止めない時は、処理の箱も出さない
+  await ackResolve(links);
+}
+sheet.addEventListener('click', e => { if (e.target.closest('button.fx') && !e.target.closest('button[data-ack]')) ackLogEl.hidden = true; }, true);
+list.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-ack]'); if (!b || busy) return;
+  e.stopImmediatePropagation();
+  unlock(); setAllies(false); setOpen(false); openBtn.hidden = true; busy = true;
+  try { await runAck(ACKS[b.dataset.ack]); } catch (err) { console.error(err); ackLayer.hidden = true; }
+  busy = false; setOpen(true);
 }, true);
 document.getElementById('guideOpenDemo').onclick =() => { setOpen(false); window.__duel.openGuide(0); const g = root.querySelector('#guideDlg'); const back = new MutationObserver(() => { if (g.hidden) { back.disconnect(); setOpen(true); } }); back.observe(g, { attributes: true, attributeFilter: ['hidden'] }); };
 // ?guide を付けて開いた時は、はじめから操作ガイドを開く
