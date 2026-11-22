@@ -4,10 +4,10 @@
 // - 部屋の部品（Room）は、サイトの room().join(name) と同じ形（presence・onPeers・leave）。
 //   本番ではサイトの Firestore の部屋を、試す時は下の「手元の部屋」を渡す
 // - 2台とも全部の情報を持つ作り（MASTERの決定）。相手の手札・伏せカードを画面で見せないのは画面の仕事
-import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261122-1808-d4789700f5';
-import { answerCandidates } from '../ai/cpu.js?v=20261122-1808-d4789700f5';
-import { CARD_POOL } from '../data/cardpool.js?v=20261122-1808-d4789700f5';
-import { DECKS } from '../data/decks.js?v=20261122-1808-d4789700f5';
+import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261122-1851-06d3fbbe57';
+import { answerCandidates } from '../ai/cpu.js?v=20261122-1851-06d3fbbe57';
+import { CARD_POOL } from '../data/cardpool.js?v=20261122-1851-06d3fbbe57';
+import { DECKS } from '../data/decks.js?v=20261122-1851-06d3fbbe57';
                                                                       
 
 /* ===================== 部屋（サイトの room() と同じ形） ===================== */
@@ -44,14 +44,23 @@ export function tabRoom(name        , uid        )       {
   const docs = new Map                                           ();
   const subs = new Set            ();
   const tellAll = () => subs.forEach(f => f());
+  // 「部屋の様子を教えて」（ask）の聞き直し（t12）：①答えが来るまで、少しずつ聞き直す（相手のタブが裏で眠っていて、最初の1回を聞きのがすことがある）
+  // ②知らないタブ（戻ってきた相手）から知らせが来たら、1回聞き直す（自分の前の欄を、そのタブが持っているかもしれない）
+  const ask = () => { try { ch.postMessage({ uid, ask: true, at: Date.now() }); } catch { /* 閉じたあと */ } };
+  const known = new Set        ();
+  let answered = false, tries = 0, ready                      = null;
+  const again = setInterval(() => { if (answered || ++tries > 10) { clearInterval(again); return; } ask(); }, 1000);
+  (again                                     ).unref?.();
   ch.onmessage = (e              ) => {
     const m = e.data                                                                            ;
+    if (m.uid !== uid && !m.ask && !m.leave) { if (!known.has(m.uid)) { known.add(m.uid); if (answered) ask(); } if (!answered) { answered = true; clearInterval(again); const f = ready; ready = null; if (f) setTimeout(f, 50); } }
+    if (m.leave) known.delete(m.uid);
     // 入ってきたタブに、知っている欄を全部送り返す（頼んできたタブ自身の前の欄も。読み直したタブが前の操作を取り戻せるように＝Firestore と同じ形。💜MIMIの頼み）
-    if (m.ask) { for (const [id, d] of docs) ch.postMessage({ uid: id, p: d.p, at: d.updatedAt }); return; }
+    if (m.ask) { for (const [id, d] of docs) ch.postMessage({ uid: id, p: d.p, at: d.updatedAt }); if (m.uid !== uid && ready) { const f = ready; ready = null; setTimeout(f, 200); } return; } // 同じ時に開いたタブ（まだ欄が無い）がいる：待たずに始める
     if (m.leave) docs.delete(m.uid); else docs.set(m.uid, { p: m.p, updatedAt: m.at });
     tellAll();
   };
-  ch.postMessage({ uid, ask: true, at: Date.now() }); // 先にいる人に、今の中身をもう一度送ってもらう
+  ask(); // 先にいる人に、今の中身をもう一度送ってもらう
   return {
     presence: async p => {
       const d = { p: JSON.parse(JSON.stringify(p ?? {})), updatedAt: Date.now() };
@@ -60,16 +69,20 @@ export function tabRoom(name        , uid        )       {
     onPeers: cb => {
       const f = () => cb({ peers: [...docs].map(([id, d]) => ({ uid: id, isMe: id === uid, presence: d.p, updatedAt: d.updatedAt })) });
       // 最初の知らせは、ほかのタブからの送り返しを少し待ってから（読み直した時に、自分の前の欄が届いてから始めるため）
-      const first = setTimeout(() => { subs.add(f); f(); }, 200);
-      return () => { clearTimeout(first); subs.delete(f); };
+      // 答えが来たら少しあとに、来なければ1.2秒で始める（だれもいない部屋に初めて入った時は、待たせすぎない）
+      let started = false;
+      const go = () => { if (started) return; started = true; clearTimeout(first); subs.add(f); f(); };
+      const first = setTimeout(go, answered ? 200 : 1200);
+      if (!answered) ready = go;
+      return () => { started = true; clearTimeout(first); subs.delete(f); };
     },
-    leave: async () => { docs.delete(uid); ch.postMessage({ uid, leave: true, at: Date.now() }); ch.close(); },
+    leave: async () => { clearInterval(again); docs.delete(uid); ch.postMessage({ uid, leave: true, at: Date.now() }); ch.close(); },
   };
 }
 
 /** お試し版・本番を作る時（scripts/build.mjs）に、できあがった .js ぜんぶの指紋をここに書きこむ（手元では 'dev'）。
  *  画面（app.js）にも同じ指紋が書かれるので、卓を開いた時に「app.js の指紋」とこれが同じか比べる（ちがえばページを読み直す） */
-export const BUILD_FP = '20261122-1808-d4789700f5';
+export const BUILD_FP = '20261122-1851-06d3fbbe57';
 
 /* ===================== エンジンの指紋 ===================== */
 /**
