@@ -80,6 +80,23 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 #ackPanel .chainBtn:disabled { border-color: var(--d-line); background: var(--d-panel-2); color: var(--d-sub); box-shadow: none; opacity: .75; cursor: not-allowed }
 #ackPanel .hint { font-size: 12px; color: var(--d-sub); margin: 10px 0 0; text-align: center; opacity: .35; transition: opacity .2s }
 #ackPanel.ready .hint { opacity: 1 }
+/* CODE 23:17（先輩の注文）：確認画面は画面いっぱい。縦は上半分にカードの絵・下半分に文、横は左半分に絵・右半分に文。矢印はやめて、了承のあと盤面で対象を一瞬光らせる */
+#ackPanel.full { inset: 0; top: 0; right: 0; bottom: 0; left: 0; width: auto; max-width: none; max-height: none; margin: 0; transform: none; border: 0; border-radius: 0; box-shadow: none; overflow: hidden;
+  display: grid; grid-template-rows: 1fr 1fr; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px) }
+#ackPanel.full .artArea { position: relative; min-height: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 45%, var(--d-panel) 0%, var(--d-panel-2) 75%) }
+#ackPanel.full .who { position: absolute; top: 10px; left: 12px; right: 12px; margin: 0; z-index: 1 }
+#ackPanel.full .art { border-radius: 12px; box-shadow: 0 10px 28px rgba(0, 0, 0, .3) }
+#ackPanel.full .info { min-height: 0; display: flex; flex-direction: column; padding: 14px 16px 14px; border-top: 2.5px solid var(--d-edge) }
+#ackPanel.full .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain }
+#ackPanel.full h3 { font-size: 22px }
+#ackPanel.full .kind { font-size: 13px }
+#ackPanel.full .eff { font-size: 15px; line-height: 1.65; max-height: none; overflow: visible }
+#ackPanel.full .tgt { font-size: 14px }
+#ackPanel.full .hint { margin: 8px 0 0 }
+#ackPanel.full .chainBtn { margin: 8px 0 0; width: 100%; min-height: 60px; font-size: 18px }
+#ackFlash { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 57; pointer-events: none; overflow: visible }
+#ackFlash .ring { fill: rgba(241, 201, 91, .28); stroke: var(--d-accent); stroke-width: 4; animation: ackBlink .32s ease-in-out 4 alternate }
+@keyframes ackBlink { from { opacity: .2 } to { opacity: 1 } }
 #ackPanel ol.res { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px }
 #ackPanel ol.res li { display: flex; align-items: center; gap: 8px; border: 1px solid var(--d-line); border-radius: 10px; padding: 8px 10px; font-size: 14px; background: var(--d-panel-2); transition: background .2s, border-color .2s }
 #ackPanel ol.res li b { font-family: Fredoka, inherit; min-width: 1.6em }
@@ -101,7 +118,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   #ackPanel.at-left { left: calc(12px + env(safe-area-inset-left, 0px)) }
   #ackPanel.at-right { right: calc(12px + env(safe-area-inset-right, 0px)) }
 }
+@media (orientation: landscape) and (min-width: 640px) {
+  #ackPanel.full { grid-template-rows: none; grid-template-columns: 1fr 1fr }
+  #ackPanel.full .info { border-top: 0; border-left: 2.5px solid var(--d-edge) }
+}
 @media (orientation: landscape) and (min-width: 640px) and (max-height: 500px) {
+  #ackPanel.full h3 { font-size: 19px } #ackPanel.full .eff { font-size: 14px } #ackPanel.full .chainBtn { min-height: 50px; font-size: 16px }
   #ackPanel { padding: 8px 12px 10px } #ackPanel .art { width: 84px } #ackPanel h3 { font-size: 16px } #ackPanel .eff { font-size: 13px; max-height: 6.6em } #ackPanel .chainBtn { min-height: 46px }
 }
 </style>
@@ -115,15 +137,16 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   <div id="demoList"></div>
 </section>
 <div id="ackLayer" hidden><svg id="ackArrows" aria-hidden="true"></svg><div id="ackPanel" role="dialog" aria-modal="true" aria-labelledby="ackName"></div></div>
+<svg id="ackFlash" aria-hidden="true"></svg>
 <div id="ackToast" role="status" hidden></div>
 <ol id="ackLog" aria-label="ログ（見本）" hidden></ol>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261122-2220-72a1e26965';
-import { playSummon, cardImg } from './fx.js?v=20261122-2220-72a1e26965';
-import { play, unlock } from './sound.js?v=20261122-2220-72a1e26965';
-import { CARD_POOL } from './data/cardpool.js?v=20261122-2220-72a1e26965';
-import { createGame, legalActions } from './engine/game.js?v=20261122-2220-72a1e26965';
-import { answerCandidates } from './ai/cpu.js?v=20261122-2220-72a1e26965';
+import { mountDuel } from './embed.js?v=20261123-0026-e7d955d14b';
+import { playSummon, cardImg } from './fx.js?v=20261123-0026-e7d955d14b';
+import { play, unlock } from './sound.js?v=20261123-0026-e7d955d14b';
+import { CARD_POOL } from './data/cardpool.js?v=20261123-0026-e7d955d14b';
+import { createGame, legalActions } from './engine/game.js?v=20261123-0026-e7d955d14b';
+import { answerCandidates } from './ai/cpu.js?v=20261123-0026-e7d955d14b';
 
 const host = document.getElementById('duel-host');
 mountDuel(host, { demo: true });
@@ -362,38 +385,33 @@ function ackLogLit(row) {
 /** 対象のマス・山（墓地など）の位置 */
 const ackRect = k => (k.startsWith('pile:') ? root.querySelector(`#board [data-pile="${k.slice(5)}"]`) : root.querySelector(`#board [data-zone="${k}"]`))?.getBoundingClientRect();
 const wideMQ = matchMedia('(orientation: landscape) and (min-width: 640px)');
-/** 確認の箱を、対象と反対の側に置いて、箱の絵から対象へ矢印を引く */
-function ackPlace(link) {
-  const rs = (link.targets || []).map(ackRect).filter(r => r && r.width);
-  const cx = rs.length ? rs.reduce((s, r) => s + r.left + r.width / 2, 0) / rs.length : innerWidth / 2;
-  const cy = rs.length ? rs.reduce((s, r) => s + r.top + r.height / 2, 0) / rs.length : innerHeight;
-  ackPanel.className = (wideMQ.matches ? (cx > innerWidth / 2 ? 'at-left' : 'at-right') : (cy > innerHeight / 2 ? 'at-top' : 'at-bottom')) + (ackPanel.classList.contains('ready') ? ' ready' : '');
-  const art = ackPanel.querySelector('.art')?.getBoundingClientRect();
-  let svg = '<defs><marker id="ackHead" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker></defs>';
-  for (const r of rs) {
-    svg += `<rect class="ring" x="${r.left - 4}" y="${r.top - 4}" width="${r.width + 8}" height="${r.height + 8}"/>`;
-    if (!link.arrow || !art) continue;
-    const a = { x: art.left + art.width / 2, y: art.top + art.height / 2 }, b = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-    // 箱の外に出るところから引き始め、対象の手前で止める
-    const pr = ackPanel.getBoundingClientRect(), dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
-    let t0 = 0; for (let t = 0; t <= 1; t += .02) { const x = a.x + dx * t, y = a.y + dy * t; if (x < pr.left || x > pr.right || y < pr.top || y > pr.bottom) { t0 = t; break; } }
-    const s = { x: a.x + dx * t0, y: a.y + dy * t0 }, e = { x: b.x - dx / len * (Math.min(r.width, r.height) / 2 + 8), y: b.y - dy / len * (Math.min(r.width, r.height) / 2 + 8) };
-    const m = { x: (s.x + e.x) / 2 - dy / len * 30, y: (s.y + e.y) / 2 + dx / len * 30 };
-    svg += `<path class="line" marker-end="url(#ackHead)" d="M${s.x} ${s.y}Q${m.x} ${m.y} ${e.x} ${e.y}"/>`;
-  }
-  ackSvg.innerHTML = svg;
+/** 確認画面の絵を、上半分（横の時は左半分）にちょうど入る大きさにする */
+function ackFit() {
+  const box = ackPanel.querySelector('.artArea'), art = ackPanel.querySelector('.art'); if (!box || !art) return;
+  const r = box.getBoundingClientRect(), k = art.width / art.height, top = 44; // 上の「相手が発動」の帯の分をあける
+  let h = r.height - top - 12, w = h * k; if (w > r.width - 24) { w = r.width - 24; h = w / k; }
+  art.style.width = `${Math.max(40, w)}px`; art.style.height = `${Math.max(58, h)}px`; art.style.marginTop = `${top - 12}px`;
+}
+/** 了承のあと、盤面の対象を一瞬光らせる（確認画面は画面いっぱいで盤面が隠れるので、矢印のかわり） */
+const ackFlashEl = document.getElementById('ackFlash');
+async function ackFlash(targets) {
+  const rs = (targets || []).map(ackRect).filter(r => r && r.width); if (!rs.length) return;
+  ackFlashEl.innerHTML = rs.map(r => `<rect class="ring" rx="10" x="${r.left - 5}" y="${r.top - 5}" width="${r.width + 10}" height="${r.height + 10}"/>`).join('');
+  await sleep(1300); ackFlashEl.innerHTML = '';
 }
 let ackNow = null;
-addEventListener('resize', () => { if (ackNow && !ackLayer.hidden) ackPlace(ackNow); });
+addEventListener('resize', () => { if (ackNow && !ackLayer.hidden) ackFit(); });
 /** 確認画面を出して、押されたボタン（'ok'／'chain'）を返す */
 function ackAsk(link, canChain) {
   const d = CARD_POOL[link.code];
-  ackPanel.innerHTML = `<p class="who"><span class="tag${link.p ? '' : ' me'}">${WHO_T(link.p)}が発動</span><span class="chain">チェーン${link.no}</span><button type="button" class="chainBtn"${canChain ? '' : ' disabled'}>チェーンする<small>${canChain ? '自分のカードを重ねる' : '今できるカードなし'}</small></button></p>
-<div class="body"><span class="artBox"></span><div class="txt"><h3 id="ackName">${esc(d.name)}</h3><p class="kind">${esc(KIND(d))}</p><p class="eff">${esc(d.text || '')}</p>${link.tgt ? `<p class="tgt">${esc(link.tgt)}</p>` : ''}</div></div>
-<p class="hint">👆 タップで進む（［チェーンする］以外のどこでも・Enter キーでも）</p>`;
+  ackPanel.className = 'full'; ackSvg.innerHTML = '';
+  ackPanel.innerHTML = `<div class="artArea"><p class="who"><span class="tag${link.p ? '' : ' me'}">${WHO_T(link.p)}が発動</span><span class="chain">チェーン${link.no}</span></p><span class="artBox"></span></div>
+<div class="info"><div class="scroll"><h3 id="ackName">${esc(d.name)}</h3><p class="kind">${esc(KIND(d))}</p><p class="eff">${esc(d.text || '')}</p>${link.tgt ? `<p class="tgt">${esc(link.tgt)}</p>` : ''}</div>
+<p class="hint">👆 タップで進む（［チェーンする］以外のどこでも・Enter キーでも）</p>
+<button type="button" class="chainBtn"${canChain ? '' : ' disabled'}>チェーンする<small>${canChain ? '自分のカードを重ねる' : '今できるカードなし'}</small></button></div>`;
   const art = cardImg(d, d.atk, d.def, true); art.className = 'art'; art.setAttribute('role', 'img'); art.setAttribute('aria-label', d.name);
   ackPanel.querySelector('.artBox').replaceWith(art);
-  ackPanel.classList.remove('ready'); ackLayer.hidden = false; ackNow = link; ackPlace(link);
+  ackLayer.hidden = false; ackNow = link; ackFit();
   return new Promise(res => {
     const done = v => { removeEventListener('keydown', key); ackLayer.onclick = null; ackLayer.hidden = true; ackNow = null; res(v); };
     const key = e => { if (e.key === 'Enter' && ready()) { e.preventDefault(); done('ok'); } };
@@ -439,8 +457,8 @@ async function runAck(a) {
     const row = ackLogAdd(`P${p + 1}：${n}を発動（チェーン${link.no}）`, `${WHO_T(p)}：${n}を発動（チェーン${link.no}）`);
     if (p === 0) { const S = window.__duel.state, u = S.players[0].szone[0]; if (u != null) { S.cards[u].faceUp = true; window.__duel.load(S); } ackLogLit(row); return 'ok'; } // 自分の発動は確かめない
     const canChain = my;
-    if (mode === 'none' || (mode === 'chain' && !canChain)) { ackLogLit(row); await ackToastShow(`${WHO_T(p)}が「${n}」を発動（チェーン${link.no}）`); return 'ok'; }
-    const v = await ackAsk(link, canChain); ackLogLit(row); return v;
+    if (mode === 'none' || (mode === 'chain' && !canChain)) { ackLogLit(row); ackFlash(targets); await ackToastShow(`${WHO_T(p)}が「${n}」を発動（チェーン${link.no}）`); return 'ok'; }
+    const v = await ackAsk(link, canChain); ackLogLit(row); if (v === 'ok') await ackFlash(targets); return v;
   };
   let v = await act(1, a.card, a.tgt, a.targets, a.arrow);
   if (v === 'chain') {
