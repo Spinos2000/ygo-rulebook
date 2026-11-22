@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261122-1617-0de5ac141a';
-import { fullThink } from './ai/levels.js?v=20261122-1617-0de5ac141a';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261122-1617-0de5ac141a';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261122-1617-0de5ac141a';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261122-1617-0de5ac141a';
-import { playSignature, sigKey } from './sig.js?v=20261122-1617-0de5ac141a';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261122-1617-0de5ac141a';
-import { firstEntrance } from './aces.js?v=20261122-1617-0de5ac141a';
-import { RULINGS } from './data/rulings.js?v=20261122-1617-0de5ac141a';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261122-1617-0de5ac141a';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261122-1617-0de5ac141a';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261122-1617-0de5ac141a';
-import { joinSiteRoom } from './net/site-room.js?v=20261122-1617-0de5ac141a';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261122-1744-0c6031987f';
+import { fullThink } from './ai/levels.js?v=20261122-1744-0c6031987f';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261122-1744-0c6031987f';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261122-1744-0c6031987f';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261122-1744-0c6031987f';
+import { playSignature, sigKey } from './sig.js?v=20261122-1744-0c6031987f';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261122-1744-0c6031987f';
+import { firstEntrance } from './aces.js?v=20261122-1744-0c6031987f';
+import { RULINGS } from './data/rulings.js?v=20261122-1744-0c6031987f';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261122-1744-0c6031987f';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261122-1744-0c6031987f';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261122-1744-0c6031987f';
+import { joinSiteRoom } from './net/site-room.js?v=20261122-1744-0c6031987f';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261122-1617-0de5ac141a';
-import { CARD_POOL } from './data/cardpool.js?v=20261122-1617-0de5ac141a';
-import { DECKS } from './data/decks.js?v=20261122-1617-0de5ac141a';
-import { SCRIPTS } from './cards/index.js?v=20261122-1617-0de5ac141a';
+} from './engine/game.js?v=20261122-1744-0c6031987f';
+import { CARD_POOL } from './data/cardpool.js?v=20261122-1744-0c6031987f';
+import { DECKS } from './data/decks.js?v=20261122-1744-0c6031987f';
+import { SCRIPTS } from './cards/index.js?v=20261122-1744-0c6031987f';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -397,7 +397,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261122-1617-0de5ac141a', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261122-1744-0c6031987f', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1389,7 +1389,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261122-1617-0de5ac141a';
+const DUEL_BUILD = '20261122-1744-0c6031987f';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -1517,6 +1517,7 @@ function openNet() {
 function closeNet() { if (netUi && netUi.inv) { try { netUi.inv.cancel(); } catch { /* */ } } if (netUi) clearTimeout(netUi.invT); if (netUi && netUi.link && !netMode()) { try { netUi.link.close(); } catch { /* もう閉じている */ } } lobbyClose(); netUi = null; $('#netDlg').hidden = true; }
 function renderNet() {
   const u = netUi; if (!u) return;
+  { const ki = $('[data-net-key]'); if (ki && u.step === 'key') u.key = ki.value.trim(); } // No.21：作り直しても、入れかけのキー番号を消さない
   const deckOpts = Object.values(DECKS).map(d => `<option value="${esc(d.code)}"${d.code === u.deck ? ' selected' : ''}>${esc(themeOf(d))}（${esc(ownerOf(d))}）</option>`).join('');
   let body = '';
   if (u.step === 'key') {
@@ -1556,13 +1557,19 @@ function renderNet() {
     body = `<p class="net-st">⏳ ${u.host ? `相手を待っています（キー ${u.myKey}）` : esc(u.status || 'つないでいます…')}</p>`
       + (u.host && OPTS.inviteApi ? `<button type="button" class="btn net-wide" data-net="invopen">👥 招待する</button>` : '')
       + (u.host ? `<button type="button" class="btn net-wide" data-net="invlink">🔗 招待リンクを送る</button>${u.invSt ? `<p class="net-q">${esc(u.invSt)}</p>` : ''}` : '')
-      + (!u.host && u.link && !u.ready ? `<p class="net-q">${esc(u.peerName || '親')}さんの部屋につながりました。準備ができたら押してください。</p><button type="button" class="btn primary net-wide" data-net="ready">準備OK</button>` : '')
-      + (!u.host && u.ready ? `<p class="net-q">⏳ ${esc(u.peerName || '親')}さんが始めるのを待っています…</p>` : '');
+      // No.22：相手の名前が届く前は「相手」と呼ぶ（前は「親さん」と出ていた）
+      + (!u.host && u.link && !u.ready ? `<p class="net-q">${esc(u.peerName || '相手')}さんの部屋につながりました。準備ができたら押してください。</p><button type="button" class="btn primary net-wide" data-net="ready">準備OK</button>` : '')
+      + (!u.host && u.ready ? `<p class="net-q">⏳ ${esc(u.peerName || '相手')}さんが始めるのを待っています…</p>` : '');
   }
   if (u.err && !(u.step === 'wait' && u.stopped)) body += `<p class="net-err">${esc(u.err)}</p>`;
   // 対戦に戻っている間・「戻りますか？」の窓：見出しを変え、上の「やめる」は出さない（やめる道は［やめてCPU戦へ］の1つ。CODE 02:19・02:31）
   const back = u.step === 'wait' && u.resuming && !u.stopped ? '📡 対戦に戻っています' : u.step === 'resumeAsk' && u.saved ? '📡 さっきの対戦の続き' : '';
-  $('#netBox').innerHTML = `<div class="box-head"><h3>${back || '👥 人と対戦の準備'}</h3>${back ? '' : '<button type="button" class="btn small ghost" data-net="close">やめる</button>'}</div>${body}`;
+  const html = `<div class="box-head"><h3>${back || '👥 人と対戦の準備'}</h3>${back ? '' : '<button type="button" class="btn small ghost" data-net="close">やめる</button>'}</div>${body}`;
+  // No.21：待合室の知らせ（1分ごと）などで中身が同じまま作り直すと、押している途中のボタンが入れかわって押しが消える。
+  // 書きこむ中身の全部が前と同じ時は書きかえない（一部だけ比べると、戻っている間などの小さな文言の変化が残らないので、全部で比べる。MEME 16:43）
+  const box = $('#netBox');
+  if (box.innerHTML !== '' && box.dataset.netHtml === html) return;
+  box.dataset.netHtml = html; box.innerHTML = html;
 }
 async function netConnect(host) {
   const u = netUi; if (!u) return;
@@ -1656,7 +1663,8 @@ function netRecord(res) { if (res && OPTS.onNetResult) try { OPTS.onNetResult(re
 /** 降参を送ったまま、決着を受け取らずに抜けた時（読み直して［やめてCPU戦へ］・3分たった・降参の待ちで［やめてCPU戦へ］）：覚えておいた負けを戦績に書く（💜MIMIの見つけた穴：わざと負けを残さずに抜けられた） */
 function netRecordGiveUp(r) { if (r && r.giveUp) netRecord(r.giveUp); }
 function netEndNote(winner) {
-  const rec = net && net.mode === 'practice' ? '📝 練習なので記録しません' : OPTS.onNetResult ? '🏆 公式試合として戦績に記録しました' : '（この画面では戦績に記録しません）';
+  // t21：サイトのお試し版（OPTS.netTrial）は戦績に書かない作り（サイトの addNet）。書かない時に「記録しました」と出さない
+  const rec = net && net.mode === 'practice' ? '📝 練習なので記録しません' : OPTS.netTrial ? '📝 お試し版なので戦績には記録しません' : OPTS.onNetResult ?'🏆 公式試合として戦績に記録しました' : '（この画面では戦績に記録しません）';
   netRecord(netResultOf(winner));
   if (net && net.ui) net.ui.giveUp = null;
   netNote(`<b>${winner === 'draw' ? '引き分け' : winner === ME() ? 'あなたの勝ち！' : 'あなたの負け…'}</b><span>${rec}</span>`

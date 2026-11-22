@@ -2027,11 +2027,12 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
       return Promise.resolve({
         presence:function(p){setRoom(u.uid,String(name),true);return me.set({p:JSON.parse(JSON.stringify(p||{})),updatedAt:Date.now()});},
         onPeers:function(cb,err){
-          return col.onSnapshot(function(s){
+          /* 端末の覚え（enablePersistence）から来た知らせかも渡す。読み直した直後の古い覚えで、対戦の続きを取りちがえないように（t22） */
+          return col.onSnapshot({includeMetadataChanges:true},function(s){
             var now=Date.now(),peers=[];
             s.docs.forEach(function(d){var x=d.data()||{};if(now-(Number(x.updatedAt)||0)>6*3600e3)return;
               peers.push({uid:d.id,isMe:d.id===u.uid,presence:x.p||null,updatedAt:Number(x.updatedAt)||0});});
-            cb({peers:peers});
+            cb({peers:peers,fromCache:!!(s.metadata&&s.metadata.fromCache)});
           },function(e){if(err)err(e);});
         },
         leave:function(){return me.delete().then(function(){setRoom(u.uid,String(name),false);}).catch(function(){});}
@@ -6260,7 +6261,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
       try{if(Yg.user&&Yg.db&&window.claude&&window.claude.use)rm=await window.claude.use('room');}catch(e){rm=null;}
       m.mountDuel(host,{onClose:close,isOpen:function(){return !host.hidden;},/* ホーム画面の［📊 戦績］：卓を閉じて戦績の欄へ */onRecords:function(){close();setTimeout(function(){location.hash='#results';},0);},storageKey:KEY,menuFirst:true,onResult:function(r){try{if(window.YGO&&YGO.app&&YGO.app.addCpu)YGO.app.addCpu(r,pv);}catch(e){console.warn(e);}},
         /* オンライン対戦（人どうし）：ログインしている時だけ部屋とアカウントを渡す */room:rm,uid:Yg.user?Yg.user.uid:null,userName:(YGO.app&&YGO.app.pf&&YGO.app.pf().name)||'',
-        onNetResult:function(r){try{if(YGO.app&&YGO.app.addNet)YGO.app.addNet(r,pv);}catch(e){console.warn(e);}},
+        onNetResult:function(r){try{if(YGO.app&&YGO.app.addNet)YGO.app.addNet(r,pv);}catch(e){console.warn(e);}},/* お試し版は addNet が戦績に書かないので、卓の決着の文も「記録しません」にする（t21） */netTrial:pv,
         /* 👥 招待する：電卓の招待と同じしくみ（相手の画面に通知が出る）。kind:'table' でデュエル卓の招待と分かるようにする */inviteApi:Yg.user?{members:function(){var M=YGO.members||{},me=Yg.user.uid;return Object.keys(M).filter(function(u){return u!==me&&M[u].name;}).map(function(u){return {uid:u,name:String(M[u].name)};}).sort(function(a,b){return a.name.localeCompare(b.name,'ja');});},
           send:async function(uid,key,onDecline){var room=rm||await window.claude.use('room');var s=await room.join('ygo2-inv-'+uid),id=Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);var un=s.onPeers(function(ch){if(ch.peers.some(function(q){return q.uid===uid&&q.presence&&q.presence.decline===id;})&&onDecline)onDecline();},function(){});
             await s.presence({app:'ygo',kind:'table',name:(YGO.app&&YGO.app.pf&&YGO.app.pf().name)||'',key:key,id:id,at:Date.now()});return {cancel:function(){try{un();}catch(e){}try{s.leave();}catch(e){}}};}}:null,

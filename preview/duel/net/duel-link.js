@@ -4,17 +4,17 @@
 // - 部屋の部品（Room）は、サイトの room().join(name) と同じ形（presence・onPeers・leave）。
 //   本番ではサイトの Firestore の部屋を、試す時は下の「手元の部屋」を渡す
 // - 2台とも全部の情報を持つ作り（MASTERの決定）。相手の手札・伏せカードを画面で見せないのは画面の仕事
-import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261122-1617-0de5ac141a';
-import { answerCandidates } from '../ai/cpu.js?v=20261122-1617-0de5ac141a';
-import { CARD_POOL } from '../data/cardpool.js?v=20261122-1617-0de5ac141a';
-import { DECKS } from '../data/decks.js?v=20261122-1617-0de5ac141a';
+import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261122-1744-0c6031987f';
+import { answerCandidates } from '../ai/cpu.js?v=20261122-1744-0c6031987f';
+import { CARD_POOL } from '../data/cardpool.js?v=20261122-1744-0c6031987f';
+import { DECKS } from '../data/decks.js?v=20261122-1744-0c6031987f';
                                                                       
 
 /* ===================== 部屋（サイトの room() と同じ形） ===================== */
                                                                                           
                        
                                          
-                                                                                       
+                                                                                                            
                             
  
 
@@ -69,7 +69,7 @@ export function tabRoom(name        , uid        )       {
 
 /** お試し版・本番を作る時（scripts/build.mjs）に、できあがった .js ぜんぶの指紋をここに書きこむ（手元では 'dev'）。
  *  画面（app.js）にも同じ指紋が書かれるので、卓を開いた時に「app.js の指紋」とこれが同じか比べる（ちがえばページを読み直す） */
-export const BUILD_FP = '20261122-1617-0de5ac141a';
+export const BUILD_FP = '20261122-1744-0c6031987f';
 
 /* ===================== エンジンの指紋 ===================== */
 /**
@@ -220,6 +220,8 @@ export class DuelLink {
           initialKey                = null; // 入った時に部屋にあった相手の欄の目じるし（''＝無かった）
           lastJ = ''; // 返事をした相手の合図
           live = false; // 相手の欄が、入った後に一度でも変わったか（＝今そこにいる相手か）
+          staleAt = 0; // 自分の欄が古いと気づいた時刻（t22）
+          staleTimer                                       = null;
           lastHeard = 0; // 部屋の知らせ（onPeers）を最後に受け取った時刻
           relistenAt = 0; // 最後に聞き直した時刻
           lastBeat = 0; // 自分の心拍が最後に動いた時刻（スマホが裏に回って止まっていたかを見る）
@@ -253,7 +255,7 @@ export class DuelLink {
   /** 部屋を聞く。聞くのがエラーで止まったら、3秒後に聞き直す（Firestore の Listen は、エラーのあとは二度と知らせてこない） */
           listen()             {
     this.lastHeard = Date.now();
-    return this.o.room.onPeers(ch => { this.lastHeard = Date.now(); this.onPeers(ch.peers); }, () => {
+    return this.o.room.onPeers(ch => { this.lastHeard = Date.now(); this.onPeers(ch.peers, !!ch.fromCache); }, () => {
       if (this.stopped) return;
       const t = setTimeout(() => this.relisten(), 3000); (t                                     ).unref?.();
     });
@@ -333,10 +335,13 @@ export class DuelLink {
     this.stop();
   }
 
-          stop() { if (this.retry) { clearTimeout(this.retry); this.retry = null; } this.stopped = true; if (this.beat) { clearInterval(this.beat); this.beat = null; } if (this.watch) { clearInterval(this.watch); this.watch = null; } if (this.timer) { clearTimeout(this.timer); this.timer = null; } }
+          stop() { if (this.retry) { clearTimeout(this.retry); this.retry = null; } this.stopped = true; if (this.beat) { clearInterval(this.beat); this.beat = null; } if (this.watch) { clearInterval(this.watch); this.watch = null; } if (this.timer) { clearTimeout(this.timer); this.timer = null; } if (this.staleTimer) { clearTimeout(this.staleTimer); this.staleTimer = null; } }
 
-          onPeers(peers        ) {
+          onPeers(peers        , fromCache = false) {
     if (this.stopped) return;
+    // t22：サイトは Firestore の「端末に覚えておく機能」を使うので、読み直した直後の最初の知らせは、端末に覚えていた古い中身のことがある。
+    // 古い自分の欄を「続き」として引きついで書きもどすと、相手の側では操作が減って見えて「ずれ」になる。入る時は、サーバーからの知らせを待つ
+    if (!this.joined && fromCache) return;
     const keyOf = (d         ) => [d.at, d.ops?.length, d.ready, d.rematchAsk, d.start?.round, d.round, d.end ? JSON.stringify(d.end) : ''].join('|');
     if (!this.joined) {
       const o0 = peers.find(p => !p.isMe && (p.presence                  )?.app === 'ygo-duel');
@@ -346,6 +351,13 @@ export class DuelLink {
       const mine = peers.find(p => p.isMe)?.presence                       ;
       // ただし、古い欄（いなくなったと決まる時間より前に書かれたもの）は前の対戦の残りなので引きつがない
       const fresh = (d          ) => !!d && Date.now() - (d.at ?? 0) < (this.o.awayMs ?? 180000);
+      // 自分の欄が古い（相手は、自分の欄にあるより多くの自分の操作を、もう入れている）時は、まだ入らずに新しい知らせを待つ（10秒まで。聞き直して取り直す）
+      const t0 = o0?.presence                       ;
+      if (mine && t0?.chk && t0.chk.round === mine.round && t0.chk.n - (t0.ops?.length ?? 0) > (mine.ops?.length ?? 0) && Date.now() - (this.staleAt ||= Date.now()) < 10000) {
+        this.joined = false;
+        if (!this.staleTimer) { this.staleTimer = setTimeout(() => { this.staleTimer = null; this.relisten(); }, 1500); (this.staleTimer                                     ).unref?.(); }
+        return;
+      }
       if (mine && mine.app === 'ygo-duel' && mine.v === this.o.version && mine.end?.reason !== 'away' && mine.end?.reason !== 'nochoose' && mine.end?.reason !== 'desync' && (mine.start || mine.ops?.length) && fresh(mine)) this.doc = { ...mine, ops: [...(mine.ops ?? [])], j: this.doc.j };
       this.doc.at = Date.now();
       this.lastBeat = Date.now();
