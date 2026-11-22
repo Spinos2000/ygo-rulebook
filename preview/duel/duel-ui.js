@@ -1100,7 +1100,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261123-0746</p>
+    <p class="menu-note ver">版：20261123-0758</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

@@ -1,6 +1,6 @@
 // 攻撃の演出（キャンバスに描く）。種族ごとの攻撃・命中・カードの壊れ方と、神（幻神獣族・創造神族）の特別な演出。
 // playBattle() は演出が終わったら解決する Promise を返す。カードの位置は画面上の四角（getBoundingClientRect）で受け取る
-import { partnerLine } from './lines.js?v=20261123-0746-c2f549fe14';
+import { partnerLine } from './lines.js?v=20261123-0758-09661226b7';
 const TAU = Math.PI * 2;
 
 /* ---------- 相棒のひと言：着地したカードのそばに、短い吹き出しを2.4秒ほど出す ---------- */
@@ -714,6 +714,7 @@ export function playSummon(root, info) {
       speed: (info.speed || 1) * (window.__fxSlow || 1), L: SUMMON_LAND[how] || 600, hit: false, bolt: null, done: false,
       mats: (info.mats || []).map(m => ({ x: m.rect.left + m.rect.width / 2, y: m.rect.top + m.rect.height / 2, w: m.rect.width, h: m.rect.height, img: cardImg(m.d, m.atk, m.def), a: 1, s: 1 })) };
     S.fromDef = !!info.fromDef; // No.14：反転召喚の前が裏側守備表示（横向き）だった
+    S.side = info.pos === 'def' && r.width > r.height; // No.27：守備表示で出た（盤面のカードは横向き）
     S.end = S.L + (how === 'god' ? 900 : how === 'ace' ? 1100 : how === 'partner' ? 1100 : how === 'set' ? 250 : 650);
     if (A && big) {
       S.plate = { label: A.label, side: A.side || '' };
@@ -864,7 +865,8 @@ function fusionTick(S) {
   }
   S.dark = Math.min(.6, t / 500);
 }
-function sImg(S, img, x, y, s, a, sx) { ctx.save(); ctx.translate(x, y); ctx.scale(s * (sx == null ? 1 : sx), s); ctx.globalAlpha = Math.max(0, Math.min(1, a)); ctx.drawImage(img, -S.w / 2, -S.h / 2, S.w, S.h); ctx.restore(); }
+// No.27：守備表示のカードは盤面で横向き（右へ90度）。場所の箱（S.w×S.h）は横長なので、縦の絵をそのまま入れると縮んで見える。回して縦横を入れ替えて描く
+function sImg(S, img, x, y, s, a, sx) { ctx.save(); ctx.translate(x, y); if (S.side) ctx.rotate(Math.PI / 2); ctx.scale(s * (sx == null ? 1 : sx), s); ctx.globalAlpha = Math.max(0, Math.min(1, a)); if (S.side) ctx.drawImage(img, -S.h / 2, -S.w / 2, S.h, S.w); else ctx.drawImage(img, -S.w / 2, -S.h / 2, S.w, S.h); ctx.restore(); }
 /** 名前の帯の高さ：盤面のうち、手札・ボタン・チェーンの欄に隠れていない所（safe）の、出てきたカードと反対側の半分の真ん中 */
 function plateY(S) {
   let top = clipR ? clipR.top : 0, bot = clipR ? clipR.bottom : H;
@@ -959,8 +961,8 @@ function summonDraw(S) {
   else if (k === 'flip') {
     // No.14（ボスの報告：反転召喚の時にカードがずれる）：裏側守備表示のカードは盤面で横向き。演出も横向きの裏から始めて、裏返りながら縦に起き上がる
     const p = Math.min(1, t / L), sx = Math.cos(p * Math.PI), s = 1 + .15 * Math.sin(p * Math.PI);
-    ctx.save(); ctx.translate(x, y - 10 * Math.sin(p * Math.PI)); if (S.fromDef) ctx.rotate(Math.PI / 2 * (1 - ease(p))); // 盤面の守備表示と同じ向き（右へ90度）から
-    ctx.scale(s * Math.abs(sx), s); ctx.drawImage(sx > 0 ? backImg() : img, -S.w / 2, -S.h / 2, S.w, S.h); ctx.restore();
+    ctx.save(); ctx.translate(x, y - 10 * Math.sin(p * Math.PI)); if (S.side) ctx.rotate(Math.PI / 2); else if (S.fromDef) ctx.rotate(Math.PI / 2 * (1 - ease(p))); // 盤面の守備表示と同じ向き（右へ90度）から
+    ctx.scale(s * Math.abs(sx), s); if (S.side) ctx.drawImage(sx > 0 ? backImg() : img, -S.h / 2, -S.w / 2, S.h, S.w); else ctx.drawImage(sx > 0 ? backImg() : img, -S.w / 2, -S.h / 2, S.w, S.h); ctx.restore();
   }
   else if (k === 'ritual') { if (t > L * .5) { const p = Math.min(1, (t - L * .5) / (L * .5)); sImg(S, img, x, y - 40 * U * (1 - ease(p)), .6 + .4 * ease(p), p); } }
   else if (k === 'fusion') {
