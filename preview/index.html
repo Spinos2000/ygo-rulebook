@@ -2019,7 +2019,7 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
   function myRooms(){try{return JSON.parse(localStorage.getItem(RKEY))||{};}catch(e){return {};}}
   function setRoom(uid,name,on){try{var m=myRooms(),k=uid+'|'+name;if(on)m[k]=Date.now();else delete m[k];localStorage.setItem(RKEY,JSON.stringify(m));}catch(e){}}
   function cleanRooms(u){var m=myRooms(),keep=null;try{var d=JSON.parse(localStorage.getItem('ygo-duel-v1'));if(d&&d.phase==='play'&&d.linkKey)keep='ygo2-'+d.linkKey;}catch(e){}
-    Object.keys(m).forEach(function(k){var i=k.indexOf('|'),uid=k.slice(0,i),name=k.slice(i+1);if(uid!==u.uid||name===keep||m[k]>=LOADT)return;
+    Object.keys(m).forEach(function(k){var i=k.indexOf('|'),uid=k.slice(0,i),name=k.slice(i+1);if(uid!==u.uid||name===keep||m[k]>=LOADT)return;/* オンライン対戦の部屋（ygo-duel-）は、読み直した時に続きへ戻るので、6時間（部屋の欄を見る長さ）までは消さない（t25） */if(name.indexOf('ygo-duel-')===0&&Date.now()-m[k]<6*3600e3)return;
       Y.db.collection('rooms').doc(name).collection('peers').doc(uid).delete().then(function(){setRoom(uid,name,false);},function(){});});}
   function room(){
     return {join:function(name){

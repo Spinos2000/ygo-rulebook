@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261122-1744-0c6031987f';
-import { fullThink } from './ai/levels.js?v=20261122-1744-0c6031987f';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261122-1744-0c6031987f';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261122-1744-0c6031987f';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261122-1744-0c6031987f';
-import { playSignature, sigKey } from './sig.js?v=20261122-1744-0c6031987f';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261122-1744-0c6031987f';
-import { firstEntrance } from './aces.js?v=20261122-1744-0c6031987f';
-import { RULINGS } from './data/rulings.js?v=20261122-1744-0c6031987f';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261122-1744-0c6031987f';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261122-1744-0c6031987f';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261122-1744-0c6031987f';
-import { joinSiteRoom } from './net/site-room.js?v=20261122-1744-0c6031987f';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261122-1808-d4789700f5';
+import { fullThink } from './ai/levels.js?v=20261122-1808-d4789700f5';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261122-1808-d4789700f5';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261122-1808-d4789700f5';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261122-1808-d4789700f5';
+import { playSignature, sigKey } from './sig.js?v=20261122-1808-d4789700f5';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261122-1808-d4789700f5';
+import { firstEntrance } from './aces.js?v=20261122-1808-d4789700f5';
+import { RULINGS } from './data/rulings.js?v=20261122-1808-d4789700f5';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261122-1808-d4789700f5';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261122-1808-d4789700f5';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261122-1808-d4789700f5';
+import { joinSiteRoom } from './net/site-room.js?v=20261122-1808-d4789700f5';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261122-1744-0c6031987f';
-import { CARD_POOL } from './data/cardpool.js?v=20261122-1744-0c6031987f';
-import { DECKS } from './data/decks.js?v=20261122-1744-0c6031987f';
-import { SCRIPTS } from './cards/index.js?v=20261122-1744-0c6031987f';
+} from './engine/game.js?v=20261122-1808-d4789700f5';
+import { CARD_POOL } from './data/cardpool.js?v=20261122-1808-d4789700f5';
+import { DECKS } from './data/decks.js?v=20261122-1808-d4789700f5';
+import { SCRIPTS } from './cards/index.js?v=20261122-1808-d4789700f5';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -397,7 +397,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261122-1744-0c6031987f', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261122-1808-d4789700f5', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -693,6 +693,7 @@ let suKeep = null; // ⚙️（メニュー）を開いている間、準備画�
 /** ホーム画面のスイッチ（No.15。お試し版（URLに /preview/）ではふだんから出す。本番は URL に ?home を付けた時だけ。MASTER 11-22 10:04） */
 const HOME_ON = (() => { try { return new URLSearchParams(location.search).has('home') || location.pathname.indexOf('/preview/') >= 0; } catch { return false; } })();
 function openSetup(page = HOME_ON ? 'home' : 'p0own') {
+  if (netMode()) return; // t26：オンライン対戦の最中・再戦の間は、準備画面（ホーム画面）を開かない。抜ける時は netQuit が net を空にしてから開く
   let last = null; try { last = JSON.parse(localStorage.getItem('gx-duel-setup') || 'null'); } catch { /* 保存できない環境 */ }
   const d0 = DECKS[last?.p0] || DECKS[$('#deck0').value] || Object.values(DECKS)[0], d1 = DECKS[last?.p1] || DECKS[$('#deck1').value] || d0;
   SU = suKeep ? { ...suKeep, page } : { page, hist: [], p0own: ownerOf(d0), p0: d0.code, p1own: ownerOf(d1), p1: d1.code, rand: !!last?.rand, first: last?.first ?? $('#first').value, level: (SHOW_HARD ? ['easy', 'normal', 'hard'] : ['easy', 'normal']).includes(last?.level) ? last.level : 'normal' };
@@ -1268,7 +1269,7 @@ function renderDock() {
   $('#stopBtn').textContent = stopNext ? '✋ 聞く予定' : '✋ 次は聞いて';
 
   const rb = $('#reviewBtn'); if (rb) rb.hidden = !(S.winner !== null && cpuMode() && trace.length > 1);
-  const hb = $('#homeBtn'); if (hb) hb.hidden = !(HOME_ON && S.winner !== null && OPTS.menuFirst); // 決着のあと：ホームへ戻れる（決着のあとに固まった時の逃げ道にも）
+  const hb = $('#homeBtn'); if (hb) hb.hidden = !(HOME_ON && S.winner !== null && OPTS.menuFirst && !netMode()); // t26：オンラインは窓の中の「🏠 ホームへ」（対戦を抜けてから開く）を使う。決着のあと：ホームへ戻れる（決着のあとに固まった時の逃げ道にも）
   if (S.winner !== null) {
     actor.textContent = resultText(S.winner, cpuMode() || netMode(), ME());
     hint.textContent = WHO(S.winReason);
@@ -1389,7 +1390,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261122-1744-0c6031987f';
+const DUEL_BUILD = '20261122-1808-d4789700f5';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -1612,6 +1613,7 @@ function netChooser(u, e) {
   const me = e.me != null ? !!e.me : e.chooser === mySeatOf(u);
   u.choose = { me, lit: 'me', done: false, sent: null, round: e.round || 1 };
   u.step = 'choose'; $('#netDlg').hidden = false; netNote('');
+  if (setupOpen()) { $('#setup').hidden = true; SU = null; } // t26：再戦の先攻・後攻を選ぶ時に、準備画面（ホーム画面）が開いていたら閉じる
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const gaps = reduce ? [] : [90, 90, 100, 110, 120, 140, 160, 190, 230, 280, 340];
   let k = 0; const c = u.choose;
@@ -1630,6 +1632,7 @@ function netEvent(u, e) {
   if (e.type === 'start') {
     u.choose = null; clearTimeout(u.chooseT); u.resuming = false; u.resumeSlow = false;
     $('#netDlg').hidden = true; lobbyClose(); // 始まったら、待合室からは消える
+    if (setupOpen()) { $('#setup').hidden = true; SU = null; } // t26：始まった時（再戦も）に、準備画面（ホーム画面）が開いていたら閉じる
     netRemember(u); // 読み直した時に、同じ部屋・同じ側で戻れるように覚える
     if (u.inv) { try { u.inv.cancel(); } catch { /* */ } u.inv = null; } clearTimeout(u.invT);
     mySeat = e.seat; net = { link: u.link, oppName: u.peerName || '相手', mode: e.mode, ui: u };
@@ -2154,13 +2157,14 @@ async function handAddFx(j) {
   let handGeo = null;
   if (j.p === 0 && narrow() && hand) {
     const tr = $('#tray');
-    if (!trayOpen && tr) {
+    // No.24：しまっている手札を開くのは、自分のターンで返事待ちが無い時だけ（相手のターンなどで開くと、すぐ返事待ちで自動で閉じて、開く→閉じるをくり返していた）
+    if (!trayOpen && tr && trayMayOpen()) {
       const els0 = [tr, hand];
       els0.forEach(e => { e.style.transition = 'none'; });
       setTray(true); void tr.offsetWidth;
       requestAnimationFrame(() => requestAnimationFrame(() => els0.forEach(e => { e.style.transition = ''; })));
     }
-    handGeo = { hr: rectOf(hand), hw: parseFloat(getComputedStyle(hand).getPropertyValue('--cw')) || 104 };
+    if (trayOpen) handGeo = { hr: rectOf(hand), hw: parseFloat(getComputedStyle(hand).getPropertyValue('--cw')) || 104 };
   }
   const cw = handGeo ? handGeo.hw : narrow() ? 78 : 100, ch = cw * 86 / 59;
   const cx = W / 2, cy = H * .5;
@@ -2223,7 +2227,9 @@ async function handAddFx(j) {
     setTimeout(() => { layer.remove(); $('.droot').classList.remove('hand-lifted'); }, 80);
     return;
   }
-  const hr = rectOf(hand), to = { x: hr.left + hr.width / 2 - sr.left, y: hr.top + hr.height / 2 - sr.top, r: 0 };
+  // No.24：手札をしまったままの時は、左下のしまった手札（扇）へ降ろす
+  const hold = j.p === 0 && narrow() && !trayOpen ? $('#handHold') : null;
+  const hr = rectOf(hold || hand), to = { x: hr.left + hr.width / 2 - sr.left, y: hr.top + hr.height / 2 - sr.top, r: 0 };
   await Promise.all(sorted.map((u, i) => anim(els.get(u), tf(fanPos(i, n), 360), tf({ x: to.x + (i - n / 2) * 10, y: to.y, r: 0 }, 360, .6), 360, Math.min(i * 16, 160), 'cubic-bezier(.5,0,.75,.4)')));
   layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T(160), fill: 'forwards' });
   await wait(160);
@@ -2773,10 +2779,15 @@ function turnTray() {
   }
   if (trayWantOpen && !isRemote(S.turnPlayer) && S.phase === 'main1' && humanActing() && !S.pending && S.window.kind === 'open') { trayWantOpen = false; if (!trayOpen) setTray(true); }
 }
+/** 返事が要る時（決着・選ぶ・チェーンの確認）。この時は手札をしまってボタンを見せる */
+const trayNeedsReply = () => S.winner !== null || (humanActing() && (S.pending || (S.window.kind === 'priority' && activatableList(S, actorOf(S)).length)));
+/** No.24：演出（手札に入る・シャカパチ）が、しまっている手札を自動で開いてよい時：自分のターンで、返事待ちが無く、
+ * 返事のために自動でしまった手札でもない時だけ（No.11の決定②と同じ。サーチ→選ぶ→手札に入る→また選ぶ、で開く→閉じるをくり返さない） */
+const trayMayOpen = () => !!S && S.turnPlayer === ME() && !isRemote(S.turnPlayer) && !trayNeedsReply() && !trayAuto;
 function autoTray() {
   turnTray();
   if (!narrow() || !S) return;
-  const needs = S.winner !== null || (humanActing() && (S.pending || (S.window.kind === 'priority' && activatableList(S, actorOf(S)).length)));
+  const needs = trayNeedsReply();
   if (needs && trayOpen) setTray(false, true);
   // No.11（ボスの決定②）：返事のために自動でしまった手札は、返事が終わってもすぐには開き直さない（しまう→開くを何度もくり返してピクピク動いていた）。
   // 開くのは、自分のターンが来た時の1回だけ（turnTray）。それまでに使いたい時は、押すか上に払えば開く
@@ -2824,7 +2835,7 @@ function checkPachi() {
     fresh.forEach(u => { const c = el.querySelector(`.card[data-uid="${u}"]`); if (c) { c.classList.add('newtrap'); setTimeout(() => c.classList.remove('newtrap'), 1400); } });
     el.classList.remove('pachi'); void el.offsetWidth; el.classList.add('pachi');
     setTimeout(() => el.classList.remove('pachi'), 900);
-    if (narrow() && !trayOpen) setTray(true);
+    if (narrow() && !trayOpen && trayMayOpen()) setTray(true); // No.24：開くのは自分のターンで返事待ちが無い時だけ（開かない時は、しまった手札の扇が跳ねる）
     play(['pachi']);
   }, 450);
 }
