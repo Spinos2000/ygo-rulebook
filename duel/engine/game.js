@@ -5,8 +5,8 @@
                                                                                                                           
                                                                
                     
-import { RuleError, cloneCard, cloneState } from './types.js?v=20261121-1423-9eb0780fdd';
-import { SCRIPTS } from '../cards/index.js?v=20261121-1423-9eb0780fdd';
+import { RuleError, cloneCard, cloneState } from './types.js?v=20261122-0953-df31350498';
+import { SCRIPTS } from '../cards/index.js?v=20261122-0953-df31350498';
 
 export const START_LP = 8000;
 export const START_HAND = 5;
@@ -31,6 +31,8 @@ export const ZONES = 5;
                 
                                                           
                                              
+                                                                                         
+                         
                                                 
                                                      
                                                         
@@ -370,6 +372,7 @@ export function moveCard(s           , uid        , to          , opt          =
   c.controller = ctl;
   c.zone = to;
   c.serial += 1;
+  delete c.lastUp; // 前に表だった時の攻守は、動くと分からなくなる
   if (!toField || !fromField) { c.counters = {}; }
   if (to === 'gy') c.counters.gyTurn = s.turn; // 墓地へ送られたターン（D-HERO ディスクガイ：そのターンは墓地から特殊召喚できない）
   c.equippedTo = null; c.equipSerial = null; c.equipBy = null; c.link = null; c.linkSerial = null;
@@ -694,7 +697,11 @@ export function sendToGy(s           , uids          , reason        , by       
     if (reason === 'release') emit(s, { type: 'released', uid: u, from, reason });
     emit(s, { type: 'toGy', uid: u, from, reason, by: who });
     // 演出用：手札から墓地へ（手札が開く演出）。融合素材・リリースは召喚の演出で見せるので除く
-    if (from === 'hand' && reason !== 'material' && reason !== 'release') pushAnim(s, { kind: 'discard', uid: u, player: c.owner });
+    // cost：発動の手続き中（コスト）に捨てた。効果で捨てた（手札断殺・暗黒界の取引）と画面で見分けるため
+    const cost = inCost(s);
+    if (from === 'hand' && reason !== 'material' && reason !== 'release') pushAnim(s, { kind: 'discard', uid: u, player: c.owner, ...(cost ? { cost: true } : {}), ...(cost && procPaying ? { proc: true } : {}) });
+    // 演出用：発動のコストで、手札を捨てる以外の動き（リリース・場やデッキから墓地へ送る）
+    else if (cost) pushAnim(s, { kind: 'cost', uid: u, player: c.owner, from, to: 'gy', reason, ...(procPaying ? { proc: true } : {}) });
     if (FIELD_ZONES.includes(from)) { emit(s, { type: 'leftField', uid: u, from, reason, wasFaceUp: before.faceUp }); befores.push(before); }
   }
   if (befores.length) leaveCleanup(s, befores, reason);
@@ -720,10 +727,11 @@ export function release(s           , uids          , reason         = 'release'
 }
 export function banish(s           , uids          , reason        )       {
   const befores             = [];
-  for (const u of uids.filter(x => !(reason === 'effect' && isImmune(s, x)) && !gyCardLocked(s, x))) {
+  for (const u of uids.filter(x => !(reason === 'effect' && isImmune(s, x)) && !(gyCardLocked(s, x) && (noteValley(s), true)))) {
     const c = s.cards[u]; const from = c.zone; const before = cloneCard(c);
     moveCard(s, u, 'banished');
     emit(s, { type: 'banished', uid: u, from, reason });
+    if (inCost(s)) pushAnim(s, { kind: 'cost', uid: u, player: c.owner, from, to: 'banished', reason, ...(procPaying ? { proc: true } : {}) }); // 演出用：発動のコストで除外
     if (FIELD_ZONES.includes(from)) { emit(s, { type: 'leftField', uid: u, from, reason, wasFaceUp: before.faceUp }); befores.push(before); }
   }
   if (befores.length) leaveCleanup(s, befores, reason);
@@ -786,7 +794,7 @@ export function destroy(s           , uids          , reason        , opt       
 }
 export function addToHand(s           , uids          , reason         = 'effect')       {
   const befores             = [];
-  uids = uids.filter(x => !(reason === 'effect' && isImmune(s, x)) && !(reason === 'effect' && gyCardLocked(s, x)));
+  uids = uids.filter(x => !(reason === 'effect' && isImmune(s, x)) && !(reason === 'effect' && gyCardLocked(s, x) && (noteValley(s), true)));
   for (const u of uids) {
     const c = s.cards[u]; const from = c.zone; const before = cloneCard(c);
     moveCard(s, u, 'hand');
@@ -800,6 +808,7 @@ export function addToHand(s           , uids          , reason         = 'effect
 export function payLp(s           , p          , amount        )       {
   s.players[p].lp = Math.max(0, s.players[p].lp - amount);
   log(s, `${pl(p)}：${amount}LPを払う（LP ${s.players[p].lp}）`);
+  pushAnim(s, { kind: 'lp', player: p, amount, cost: inCost(s), ...(inCost(s) && procPaying ? { proc: true } : {}) }); // 演出用：LPを払った
   checkLp(s);
 }
 export function gainLp(s           , p          , amount        )       {
@@ -815,6 +824,26 @@ export function effectDamage(s           , p          , amount        )       {
   log(s, `${pl(p)}に${amount}の効果ダメージ（LP ${s.players[p].lp}）`);
   checkLp(s);
 }
+/**
+ * 効果の処理中に、ネクロバレーで守られた墓地のカードへ及ぶ部分が無効になった時の記録（1つの処理につき1回）。
+ * 記録に「〜の効果はネクロバレーの効果で無効」、演出用に { kind:'negate', uid:処理中のカード, by:ネクロバレー }
+ */
+export function noteValley(s           )       {
+  const r = s.resolving;
+  if (!r) return;
+  // 同じ処理の中で2回目なら記録しない（s.resolving は前の盤面と共有されることがあるので、書きこまずに演出の記録で見分ける）
+  const anim = (s.anim ?? [])                                                 ;
+  let lastResolve = -1;
+  for (const a of anim) if (a.kind === 'resolve' && a.uid === r.uid) lastResolve = a.seq;
+  if (anim.some(a => a.kind === 'negate' && a.uid === r.uid && a.seq > lastResolve)) return;
+  const v = activeCards(s).find(u => scriptOf(s, u).necroValley) ?? null;
+  log(s, `「${defOf(s, r.uid).name}」の効果は、${v !== null ? `「${defOf(s, v).name}」` : 'ネクロバレー'}の効果で無効になった（墓地のカードへ及ぶ効果）`);
+  pushAnim(s, { kind: 'negate', uid: r.uid, by: v });
+}
+/** 発動の手続き中（コストを払う・対象を選ぶ間）か。効果の処理中は違う（処理の中でさらに発動の手続きはしない） */
+function inCost(s           )          { return s.activating !== null && s.activating !== undefined && !s.resolving; }
+/** 召喚の手順（混沌帝龍・グラファ①など）で払っている間（演出用の印 proc を付けるだけ。ルールには使わない） */
+let procPaying = false;
 /** 画面の演出用の記録を足す（ルールの処理には使わない） */
 export function pushAnim(s           , a                         )       {
   (s.anim ??= []).push({ ...(a          ), seq: (s.animSeq = (s.animSeq ?? 0) + 1) }         );
@@ -825,7 +854,9 @@ export function addLingering(s           , l           )       { s.lingering.pus
 /** 特殊召喚できるか（召喚条件・正規の召喚・置き場所） */
 export function canSpecialSummon(s           , uid        , p          , how            = 'special', released           = [], src                = s.resolving?.uid ?? null)          {
   const c = s.cards[uid], d = defOf(s, uid);
-  if (gyCardLocked(s, uid, src)) return false;
+  // ネクロバレー：墓地のモンスターを特殊召喚する効果も、発動はできる（発動の条件を見る時・コストや対象を選ぶ時は守られていない扱い）。
+  // 処理の時（resolving）に、墓地のカードへ及ぶ効果として無効になる（公式Q&A [10691] 炎王炎環・[9597]）
+  if (s.resolving && gyCardLocked(s, uid, src)) { noteValley(s); return false; }
   if (scriptOf(s, uid).uniqueOnField && monstersOf(s, p).some(u => s.cards[u].faceUp && s.cards[u].code === c.code)) return false;
   if (d.kind !== 'monster') return false;
   const sc = scriptOf(s, uid);
@@ -906,7 +937,7 @@ export function setFaceDown(s           , uids          )           {
   for (const u of uids) {
     const c = s.cards[u];
     if (!isMonsterZone(c) || (!c.faceUp && c.position === 'def') || isImmune(s, u)) continue;
-    if (c.faceUp) c.pub = true; // 表側の間にカード名は見られている（裏側にしても相手は中身を知っている）
+    if (c.faceUp) { c.pub = true; c.lastUp = currentStats(s, u); } // 表側の間にカード名と攻守は見られている（裏側にしても相手は中身を知っている）
     c.faceUp = false; c.position = 'def'; c.mods = []; c.counters = {};
     done.push(u);
   }
@@ -1126,8 +1157,8 @@ function doProcSummon(s           , p          , uid        )       {
   const sc = scriptOf(s, uid).procSummon ;
   const x = ctxOf(s, uid, p, null);
   newStep(s);
-  s.activating = p;
-  try { sc.pay(x); } finally { s.activating = null; }
+  s.activating = p; procPaying = true;
+  try { sc.pay(x); } finally { s.activating = null; procPaying = false; }
   const fromExtra = s.cards[uid].zone === 'extra';
   if (fromExtra) s.opt[`${p}:extraAny`] = s.turn;
   const ez = fromExtra ? extraSummonZone(s, p) : null;
@@ -1241,7 +1272,9 @@ function triggerStillValid(s           , t             )          {
   if (!optAvailable(s, t.uid, eff, t.player)) return false;
   if (activationBlockedByName(s, t.uid, t.player)) return false;
   if (activationForbidden(s, t.uid, eff, t.player)) return false;
-  if (s.cards[t.uid].zone === 'gy' && gyLocked(s, s.cards[t.uid].owner, t.uid)) return false;
+  // ネクロバレー：墓地で発動する効果も発動はできる（処理の時に、墓地のカードへ及ぶ部分だけ無効。公式Q&A [14586]・[12869]・[23407]）。
+  // ただし、墓地のカードを除外するコストが要る効果は、除外できないので発動できない（[115]・[12764]）
+  if (eff.costBanishGy && s.cards[t.uid].zone === 'gy' && gyLocked(s, s.cards[t.uid].owner, t.uid)) return false;
   // ダメージステップには、ダメージステップでも発動できる効果しか発動できない（生還の宝札など）
   if (currentMode(s) === 'damage' && !eff.damageStep) return false;
   // 対象を取る効果などで発動の条件を満たさない場合は、強制効果でも発動しない（暗黒界の龍神 グラファ②：相手フィールドにカードが無い）
@@ -1319,7 +1352,8 @@ export function activatableList(s           , p          )                {
       if (c.controller !== p && !eff.anyPlayer) continue;
       if (eff.type === 'card' && d.kind === 'spell' && spellsBlocked) continue;
       if (activationForbidden(s, uid, eff, p)) continue;
-      if (c.zone === 'gy' && gyLocked(s, c.owner, uid)) continue;
+      // ネクロバレー：墓地で発動する効果も発動はできる。墓地のカードを除外するコストが要る効果だけ発動できない（公式Q&A [115]・[14586]）
+      if (eff.costBanishGy && c.zone === 'gy' && gyLocked(s, c.owner, uid)) continue;
       // 混沌帝龍の効果を発動したターンは、他の効果を発動できない／他の効果を発動したターンは、混沌帝龍の効果を発動できない
       if (s.lingering.some(l => l.type === 'onlyThisCard' && l.player === p && l.turn === s.turn && l.uid !== uid)) continue;
       if (scriptOf(s, uid).exclusive && s.activatedTurn?.[String(p)] === s.turn && !s.lingering.some(l => l.type === 'onlyThisCard' && l.player === p && l.uid === uid && l.turn === s.turn)) continue;
@@ -1432,6 +1466,8 @@ function activateEffect(s           , p          , uid        , effectId        
   if (zone !== undefined && !(eff.type === 'card' && !dg)) link.data.zone = zone;
   if (eff.opt || eff.hardOpt) s.opt[`${p}:${optKey(s, uid, eff)}`] = s.turn;
   log(s, `${pl(p)}：${nameOf(s, uid)}${eff.type === 'card' && !dg ? 'を発動' : `の効果を発動`}（チェーン${s.chain.length + 1}）`);
+  // 演出用：発動の手続きを始めた（このあとコスト・対象。画面は「元の場所で光る → コストのカードが動く」の順に見せる）
+  pushAnim(s, { kind: 'activate', uid, player: p, card: eff.type === 'card' && !dg });
   // このターンに効果を発動した記録（混沌帝龍：「このカードの効果を発動するターン、自分は他の効果を発動できない」）
   (s.activatedTurn ??= {})[String(p)] = s.turn;
   if (s.activatedFirst?.[String(p)]?.turn !== s.turn) (s.activatedFirst ??= {})[String(p)] = { turn: s.turn, uid };

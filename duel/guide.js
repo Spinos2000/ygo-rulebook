@@ -11,7 +11,7 @@ export function guidePages(env = {}) {
   return [
     { icon: '🃏', title: '置く', lines: [`手札のカードを押して選び、置きたいマスへ${drag}。`, '横に払うと「召喚⇔セット」「発動⇔セット」が切りかわり、下に払うとやめます。'] },
     { icon: '⚔️', title: '攻撃', lines: [`自分のモンスターを、相手のモンスター（いなければ相手の帯）へ${drag}。`, '引っ張っている間、勝ち負けの見込みが出ます。'] },
-    { icon: '✨', title: '発動・効果を見る', lines: ['カードを2回押すと効果が読めます。光っているカードは、今発動できます。', '相手が発動した時は「対抗して発動しますか？」と聞かれます。✋「次は聞いて」で、次は必ず聞きます。'] },
+    { icon: '✨', title: '発動・効果を見る', lines: [`${env.touch ? 'カードを長押しすると' : 'カードを押すと'}効果が読めます。光っているカードは、今発動できます。`, '相手が発動した時は「対抗して発動しますか？」と聞かれます。✋「次は聞いて」で、次は必ず聞きます。'] },
     { icon: '⏭️', title: 'フェイズを進める', lines: ['下の大きいボタン（バトルへ・エンドへ）で次へ。上の帯のフェイズを押しても移れます。', 'ターンを終える「エンド」は、押し間違えないように2回押しです。'] },
     { icon: '↶', title: 'ひとつ戻す・記録', lines: ['「↶ ひとつ戻す」で、自分の操作を1つずつ戻せます（戻した勝ちは実績に数えません）。', '「記録」でここまでの流れ、墓地・除外・EXデッキの枠を押すと中身が見られます。'] },
     { icon: '☰', title: 'メニュー', lines: ['発動の聞き方・演出・CPUの速さの設定、降参、新しいデュエル、この操作ガイドがあります。', hand || 'カード名に下線がある時は、押すと公式Q&Aが読めます。'] },
@@ -26,7 +26,7 @@ export function guideHtml(i, env = {}) {
   return `<div class="gd-card" data-gd-page="${k}"><div class="gd-icon" aria-hidden="true">${escH(p.icon)}</div><h3 class="gd-title">${escH(p.title)}</h3>`
     + p.lines.map(l => `<p class="gd-line">${escH(l)}</p>`).join('') + '</div>'
     + `<div class="gd-dots" aria-label="${k + 1} / ${n}">${pages.map((_, j) => `<i class="${j === k ? 'on' : ''}"></i>`).join('')}</div>`
-    + `<div class="gd-btns"><button type="button" class="btn ghost" data-gd="close">とじる</button>`
+    + `<div class="gd-btns"><button type="button" class="btn ghost" data-gd="close">閉じる</button>`
     + (k > 0 ? `<button type="button" class="btn ghost" data-gd="prev">← もどる</button>` : '')
     + (k < n - 1 ? `<button type="button" class="btn primary" data-gd="next">次へ →</button>` : `<button type="button" class="btn primary" data-gd="close">はじめる</button>`) + '</div>';
 }

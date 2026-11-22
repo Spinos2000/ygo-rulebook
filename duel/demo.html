@@ -55,10 +55,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   <div id="demoList"></div>
 </section>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261121-1423-9eb0780fdd';
-import { playSummon } from './fx.js?v=20261121-1423-9eb0780fdd';
-import { play, unlock } from './sound.js?v=20261121-1423-9eb0780fdd';
-import { CARD_POOL } from './data/cardpool.js?v=20261121-1423-9eb0780fdd';
+import { mountDuel } from './embed.js?v=20261122-0953-df31350498';
+import { playSummon } from './fx.js?v=20261122-0953-df31350498';
+import { play, unlock } from './sound.js?v=20261122-0953-df31350498';
+import { CARD_POOL } from './data/cardpool.js?v=20261122-0953-df31350498';
+import { createGame, legalActions } from './engine/game.js?v=20261122-0953-df31350498';
+import { answerCandidates } from './ai/cpu.js?v=20261122-0953-df31350498';
 
 const host = document.getElementById('duel-host');
 mountDuel(host, { demo: true });
@@ -80,7 +82,7 @@ const LIST = [
     ['ブラック・マジシャン', 'ブラック・マジシャン', 'top', 'me', '闇'], ['青眼の白龍', '青眼の白龍', 'top', 'me', '光'], ['神獣王バルバロス', '神獣王バルバロス', 'top', 'me', '地']]],
   ['⭐ エース', '★3・約2秒', [
     ['人造人間－サイコ・ショッカー', '人造人間－サイコ・ショッカー', 'ace', 'me', '闇'], ['ユベル', 'ユベル', 'ace', 'me', '闇'], ['XYZ－ドラゴン・キャノン', 'XYZ－ドラゴン・キャノン', 'ace', 'me', '光'], ['バスター・ブレイダー', 'バスター・ブレイダー', 'ace', 'me', '地']]],
-  ['🤝 相棒（特別枠）', '約2秒', [
+  ['🤝 相棒（特別枠）', 'ふつうの召喚＋相棒の音・ひと言', [
     ['サイレント・マジシャン LV４', 'サイレント・マジシャン LV４', 'partner', 'me', '光'], ['黄泉ガエル', '黄泉ガエル', 'partner', 'me', '水'],
     ['サイバー・ダーク・エッジ', 'サイバー・ダーク・エッジ', 'partner', 'cpu', 'CPU側']]],
   ['🤖 CPU側で出た時', '', [
@@ -138,11 +140,79 @@ list.addEventListener('click', async e => {
   const slow = document.getElementById('demoSlow').checked;
   try {
     await playSummon(root, { rect, d, atk: d.atk, def: d.def, pos: 'atk', how, faceDown: how === 'set', mats: [], allies, ace, safe: safeArea(),
-      onLand: () => { if (ace && ace.big) play([cls === 'god' ? 'aceGod' : cls === 'partner' ? 'aceBond' : 'aceLand']); else play([how === 'set' ? 'set' : how === 'special' ? 'special' : 'summon']); },
+      // 相棒：2回目からも相棒の音（MASTERの決定：見た目はふつう、音とひと言で特別に。ひと言は初めての時だけ）
+      onLand: () => { if (cls === 'partner') play(['aceBond']); else if (ace && ace.big) play([cls === 'god' ? 'aceGod' : 'aceLand']); else play([how === 'set' ? 'set' : how === 'special' ? 'special' : 'summon']); },
       mat: root.querySelector('.mat-skin'), speed: slow ? .5 : 1 });
   } catch (err) { console.error(err); }
   droot.classList.remove('fx-busy', 'fx-stage'); busy = false; setOpen(true);
 });
+/* ---------- 順番の確かめ（No.7）：場面を作って、本物の対戦と同じ流れで発動まで進める ----------
+ * 発動の演出 → チェーンの効果 → 結果の移動（墓地へ）の順に見えるかを、直す前と直した後で同じボタンで比べる。
+ * 「自分が発動」＝下の人（P1）、「相手が発動」＝上の人（P2。CPU側と同じ見え方） */
+const C = { judge: '4861', warn: '9008', valley: '5533', reborn: '4842', bomber: '7094', dmagic: '5752', bm: '4041', skilled: '5649', mirror: '4887', torrent: '5114', thunder: '5544', hole: '4342', vortex: '5217', pit: '5400', witch: '4580', a: '5503', b: '5504', c: '6471', d: '7193' };
+const SCENES = [
+  ['ミラーフォース', '攻撃された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.mirror] }, mons: { [1 - p]: [C.a, C.b, C.c] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', a => a.type === 'attack', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.mirror] })],
+  ['ミラーフォース（ウィッチ）', 'ウィッチの効果で選び待ち（No.7）', p => ({ tp: 1 - p, set: { [p]: [C.mirror] }, mons: { [1 - p]: [C.witch, C.b, C.c] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', (a, S) => a.type === 'attack' && S.cards[a.attacker].code !== C.witch, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.mirror] })],
+  ['奈落の落とし穴', '専用演出なしの罠', p => ({ tp: 1 - p, set: { [p]: [C.pit] }, mons: { [1 - p]: [C.a] }, hand: { [1 - p]: [C.b] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.pit] })],
+  ['ディメンション・マジック', '処理でリリースして特殊召喚（見張りNo.）', p => ({ tp: p, hand: { [p]: [C.dmagic, C.bm] }, mons: { [p]: [C.skilled], [1 - p]: [C.b] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.dmagic] })],
+  ['ボマー・ドラゴン', '戦闘で破壊→墓地で発動して相手を破壊', p => ({ tp: 1 - p, mons: { [p]: [C.bomber], [1 - p]: [C.b] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', (a, S) => a.type === 'attack' && a.target !== null] })],
+  ['神の宣告にチェーンして神の宣告', 'チェーン2のカウンター罠（召喚は通る）', p => ({ tp: p, hand: { [p]: [C.c] }, set: { [p]: [C.judge], [1 - p]: [C.judge] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.judge && S.cards[a.card].controller === 1 - p, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.judge && S.cards[a.card].controller === p] })],
+  ['神の警告にチェーンして神の宣告', 'チェーン2のカウンター罠（召喚は通る）', p => ({ tp: p, hand: { [p]: [C.c] }, set: { [p]: [C.judge], [1 - p]: [C.warn] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.warn, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.judge] })],
+  ['反転召喚（裏側守備から）', '横向きの裏から起き上がる（No.14）', p => ({ tp: p, setMons: { [p]: [C.c] }, steps: [(a, S) => a.type === 'flipSummon'] })],
+  ['死者蘇生（ネクロバレー）', '発動できて、処理で無効（No.10）', p => ({ tp: p, hand: { [p]: [C.reborn] }, field: { [1 - p]: C.valley }, gy: { [p]: [C.b] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.reborn] })],
+  ['激流葬', '召喚された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.torrent] }, mons: { [1 - p]: [C.a, C.b] }, hand: { [1 - p]: [C.c] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.torrent] })],
+  ['サンダー・ブレイク', '手札を1枚捨てて発動', p => ({ tp: p, set: { [p]: [C.thunder] }, hand: { [p]: [C.a] }, mons: { [1 - p]: [C.b, C.c] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.thunder] })],
+  ['ブラック・ホール', '場のモンスターを全部破壊', p => ({ tp: p, hand: { [p]: [C.hole] }, mons: { [p]: [C.a], [1 - p]: [C.b, C.c, C.d] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.hole] })],
+  ['ライトニング・ボルテックス', '手札を1枚捨てて発動', p => ({ tp: p, hand: { [p]: [C.vortex, C.a] }, mons: { [1 - p]: [C.b, C.c, C.d] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.vortex] })],
+];
+/** 場面の盤面を作る：決まったカードを手札・場に置き、3ターン目の tp のメインフェイズ1から始める */
+function sceneState(sc) {
+  const need = p => [...(sc.setMons?.[p] || []), ...(sc.set?.[p] || []), ...(sc.hand?.[p] || []), ...(sc.mons?.[p] || []), ...(sc.field?.[p] ? [sc.field[p]] : []), ...(sc.gy?.[p] || [])];
+  const fill = Array(20).fill(C.a);
+  const s = createGame({ pool: CARD_POOL, decks: [0, 1].map(p => ({ main: [...fill, ...need(p)], extra: [] })), seed: 7, firstPlayer: sc.tp, shuffle: false });
+  for (const p of [0, 1]) { const P = s.players[p]; for (const u of P.hand) Object.assign(s.cards[u], { zone: 'deck', faceUp: false }); P.deck.push(...P.hand); P.hand = []; P.normalSummonUsed = false; }
+  const take = (p, code) => { const P = s.players[p], u = P.deck.find(x => s.cards[x].code === code); P.deck = P.deck.filter(x => x !== u); return u; };
+  for (const p of [0, 1]) {
+    const P = s.players[p];
+    (sc.mons?.[p] || []).forEach((code, i) => { const u = take(p, code); P.mzone[i] = u; Object.assign(s.cards[u], { zone: 'mzone', index: i, faceUp: true, position: 'atk', controller: p, enteredTurn: 1, summonedTurn: 1 }); });
+    (sc.setMons?.[p] || []).forEach((code, i) => { const u = take(p, code); P.mzone[2 + i] = u; Object.assign(s.cards[u], { zone: 'mzone', index: 2 + i, faceUp: false, position: 'def', controller: p, enteredTurn: 1, summonedTurn: 1 }); });
+    (sc.set?.[p] || []).forEach((code, i) => { const u = take(p, code); P.szone[i] = u; Object.assign(s.cards[u], { zone: 'szone', index: i, faceUp: false, position: null, controller: p, enteredTurn: 1 }); });
+    (sc.hand?.[p] || []).forEach(code => { const u = take(p, code); P.hand.push(u); Object.assign(s.cards[u], { zone: 'hand', index: P.hand.length - 1, faceUp: false }); });
+    if (sc.field?.[p]) { const u = take(p, sc.field[p]); P.fzone = u; Object.assign(s.cards[u], { zone: 'fzone', index: 0, faceUp: true, controller: p, enteredTurn: 1 }); }
+    (sc.gy?.[p] || []).forEach(code => { const u = take(p, code); P.gy.push(u); Object.assign(s.cards[u], { zone: 'gy', index: P.gy.length - 1, faceUp: true }); });
+    P.deck.forEach((u, i) => { s.cards[u].index = i; });
+  }
+  Object.assign(s, { turn: 3, turnPlayer: sc.tp, phase: 'main1', window: { kind: 'open', respondDue: false }, chain: [], pending: null, battle: null });
+  return s;
+}
+const fxIdle = async () => { let calm = 0; for (let i = 0; i < 300 && calm < 3; i++) { await new Promise(r => setTimeout(r, 120)); calm = root.querySelector('.droot.fx-busy') ? 0 : calm + 1; } };
+/** 決めた手順どおりに進める。手順の間の答え（捨てるカード・対象など）は1つ目を選び、聞かれたら「発動しない」 */
+async function driveScene(sc) {
+  const D = window.__duel; let k = 0;
+  for (let guard = 0; guard < 60; guard++) {
+    await fxIdle();
+    const S = D.state; if (!S || S.winner !== null) return;
+    if (k >= sc.steps.length && !S.chain.length && !S.pending) return; // 発動して、チェーンが全部解決したら終わり
+    const L = legalActions(S);
+    let a = k < sc.steps.length ? L.find(x => sc.steps[k](x, S)) : null;
+    if (a) k++;
+    else if (S.pending) { const c = answerCandidates(S, S.pending.request, 4); a = c.length ? { type: 'answer', value: c[0] } : null; }
+    else if (S.window && S.window.respondDue && !S.chain.length) a = { type: 'offer' }; // 召喚の後：相手に応答の機会を渡す（本物の卓は約0.5秒後に自動で渡す）
+    else a = L.find(x => x.type === 'offer') || L.find(x => x.type === 'pass');
+    if (!a) return;
+    try { D.act(a); } catch (err) { console.warn('場面の手順を進められませんでした', a, err); return; }
+    await new Promise(r => setTimeout(r, 350));
+  }
+}
+list.insertAdjacentHTML('beforeend', `<h2>🧭 順番の確かめ <small>発動 → 効果 → 墓地へ</small></h2><p class="note">押すと場面ができて、発動まで自動で進みます（本物の対戦と同じ流れ）。演出の順番を見る用です。</p><div class="row">${SCENES.map(([n, sub], i) => [0, 1].map(p => `<button class="fx" type="button" data-scene="${i}" data-p="${p}">${n}<small>${p ? '相手（上）が発動' : '自分（下）が発動'}・${sub}</small></button>`).join('')).join('')}</div>`);
+list.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-scene]'); if (!b || busy) return;
+  e.stopImmediatePropagation();
+  unlock(); setOpen(false); busy = true;
+  const sc = SCENES[b.dataset.scene][2](Number(b.dataset.p));
+  try { window.__duel.load(sceneState(sc)); await driveScene(sc); await fxIdle(); } catch (err) { console.error(err); }
+  busy = false; setOpen(true);
+}, true);
 document.getElementById('guideOpenDemo').onclick = () => { setOpen(false); window.__duel.openGuide(0); const g = root.querySelector('#guideDlg'); const back = new MutationObserver(() => { if (g.hidden) { back.disconnect(); setOpen(true); } }); back.observe(g, { attributes: true, attributeFilter: ['hidden'] }); };
 // ?guide を付けて開いた時は、はじめから操作ガイドを開く
 if (new URLSearchParams(location.search).has('guide')) setTimeout(() => document.getElementById('guideOpenDemo').click(), 300); else setOpen(true);

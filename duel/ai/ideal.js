@@ -2,13 +2,13 @@
 // 1. 見えないカード（相手の手札・伏せカード・デッキ、自分のデッキの順番）を、デッキリストからまだ見えていないカードで埋めた「ありえる世界」を何通りも作る
 // 2. それぞれの世界で、相手も手札・伏せカードを使って最善を尽くす前提で各候補を先読みし、盤面の点数を勝率に直して平均する
 // 3. 勝率が一番高い手を選ぶ。ただし、切り札を出す手・一気に大ダメージを与える手が最善手から10%以内なら、そちら（ロマン）を選ぶ
-import { actorOf, defOf, scriptOf, monstersOf, fieldCards, opp, isOnField, poolDef } from '../engine/game.js?v=20261121-1423-9eb0780fdd';
-import { cloneState } from '../engine/types.js?v=20261121-1423-9eb0780fdd';
+import { actorOf, defOf, scriptOf, monstersOf, fieldCards, opp, isOnField, poolDef } from '../engine/game.js?v=20261122-0953-df31350498';
+import { cloneState } from '../engine/types.js?v=20261122-0953-df31350498';
                                                                       
-import { scoreCandidates, cpuDecide, evaluate, answerCandidates,                                            } from './cpu.js?v=20261121-1423-9eb0780fdd';
-import { DECK_WEIGHTS } from './deck-weights.js?v=20261121-1423-9eb0780fdd';
-import { DECKS } from '../data/decks.js?v=20261121-1423-9eb0780fdd';
-import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js?v=20261121-1423-9eb0780fdd';
+import { scoreCandidates, cpuDecide, evaluate, answerCandidates,                                            } from './cpu.js?v=20261122-0953-df31350498';
+import { DECK_WEIGHTS } from './deck-weights.js?v=20261122-0953-df31350498';
+import { DECKS } from '../data/decks.js?v=20261122-0953-df31350498';
+import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js?v=20261122-0953-df31350498';
 
                                
                            
@@ -280,6 +280,9 @@ export function idealThink(s           , opt               = {}, deckNames      
     if (x.type !== 'attack' || x.target === null || !s.cards[x.target]) return false;
     const t = s.cards[x.target];
     if (!t.faceUp && !t.pub) return false;
+    // 表側のユベルのように「戦闘では破壊されず、自分への戦闘ダメージも0」のモンスターへの攻撃は、何も得られない（ユベルは攻撃力分のダメージを返してくる）。
+    // 中身が見えている時は、ほかに手があれば選ばない（No.9：全力がダメージ・ゲートで出たユベルに攻撃して1800返された）
+    if (t.faceUp) { const sc = scriptOf(s, x.target); if (sc.battleIndestructible && (sc.noSelfBattleDamage || sc.redirectBattleDamage)) return true; }
     const atk = currentStats(s, x.attacker).atk, st = currentStats(s, x.target);
     return t.position === 'def' ? atk < st.def : atk < st.atk;
   };
@@ -326,21 +329,25 @@ export function idealThink(s           , opt               = {}, deckNames      
   }
   // リーサル：このターンに勝てる手順を総当たりで探す。見つかった最初の手は、その世界の割合だけ勝てるとみなす
   // 自分のターンの選択の途中（チキンレースのどの効果を選ぶか など）も、勝ち筋を探す
-  const myChoice = !!s.pending && s.turnPlayer === me && s.chain.length === 0;
+  // （チェーンを組んでいる途中の選択＝発動した時にどの効果を選ぶか、も入れる）
+  const myChoice = !!s.pending && s.turnPlayer === me;
   if ((free || myChoice) && (s.phase === 'main1' || s.phase === 'battle') && lethalPossible(s, me)) {
     const LW = critical ? 3 : 2;
     const found = new Map                ();
     for (let i = 0; i < LW; i++) {
       tell(0.9 + 0.09 * i / LW);
       const w = opt.noDeterminize ? s : determinize(s, me, rnd);
-      const left = Math.max(150, Math.floor((budget * 1.5 - (WORK.n - w0start)) / (LW - i)));
+      const left = Math.max(400, Math.floor((budget * 1.5 - (WORK.n - w0start)) / (LW - i)));
       const a = findLethal(w, me, Math.min(opt.lethalNodes ?? 600, left));
       if (a) found.set(keyOf(a), (found.get(keyOf(a)) ?? 0) + 1);
     }
     for (const c of list) { const n = found.get(keyOf(c.action)); if (n) c.rate = Math.max(c.rate, n / LW); }
     for (const [k, n] of found) if (!list.some(c => keyOf(c.action) === k)) list.push({ action: JSON.parse(k), p: 0, n: 1, romance: 0, burst: 0, base: false, rate: n / LW });
     // どの世界でもこのターンに勝てる手順が見つかった時は、ロマンや引き分けの乱数に関係なく、その手を選ぶ（MASTERの決定#60：勝てるのに見送らない）
-    const sure = [...found].find(([, n]) => n === LW);
+    // どの世界でも見つかった手、無ければ半分より多くの世界で見つかった手のうち一番多い手（ほかの手より多い時）を、とどめの手として選ぶ
+    // （MEMEの見回り：チキンレースの「破壊」が3世界中2で勝ち、「ドロー」が1で勝ち → 勝率がどちらも100%に見えて、ドローを選んでいた）
+    const ranked = [...found].sort((x, y) => y[1] - x[1]);
+    const sure = ranked.find(([, n]) => n === LW) ?? (ranked[0] && ranked[0][1] * 2 > LW && (ranked.length < 2 || ranked[0][1] > ranked[1][1]) ? ranked[0] : undefined);
     if (sure) {
       const c = list.find(x => keyOf(x.action) === sure[0]) ;
       return { action: c.action, winRate: 1, bestRate: 1, romance: null, samples: N, critical, alts: [...list].sort((x, y) => y.rate - x.rate).slice(0, 5).map(a => ({ action: a.action, rate: a.rate })) };
@@ -439,11 +446,18 @@ export function findLethal(s0           , me          , nodeLimit        )      
   const s = settle(s0);
   if (s !== s0 && s.winner === me) return null;
   const acts           = s.pending ? answerCandidates(s, s.pending.request, 8).map(value => ({ type: 'answer', value })          ) : legalActions(s).filter(a => a.type !== 'endTurn' && !(a.type === 'nextPhase' && a.to !== 'battle'));
+  // 浅い読みから順に深くする（1つ目の手の下を深く読みすぎて、量の上限で2つ目以降の手を試せないのを防ぐ。
+  // 例：チキンレースで「ドロー」を先に深く読んで、「破壊してから攻撃」を見つける前に上限が来ていた）
+  const firsts                                = [];
   for (const a of order(s, acts)) {
-    let n           ;
-    try { n = settle(applyAction(s, a)); } catch { continue; }
-    if (dfs(n, 6)) return a;
+    try { firsts.push({ a, n: settle(applyAction(s, a)) }); } catch { /* 入れられない手 */ }
     if (WORK.n - start > nodeLimit) break;
+  }
+  for (const depth of [3, 6]) {
+    for (const f of firsts) {
+      if (f.n.winner === me || dfs(f.n, depth)) return f.a;
+      if (WORK.n - start > nodeLimit) return null;
+    }
   }
   return null;
 }

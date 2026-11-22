@@ -147,7 +147,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .pile { border-style: solid; padding: 0; cursor: pointer }
 /* 長押し：スマホの長押しメニューや文字選択を出さず、押している間はリングが満ちていく */
 .pile { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation }
-.pile.pressing::after { content: ""; position: absolute; inset: -3px; border-radius: 9px; border: 3px solid var(--accent); clip-path: inset(0 100% 0 0); animation: pressFill .45s linear forwards; pointer-events: none }
+.pile.pressing::after { content: ""; position: absolute; inset: -3px; border-radius: 9px; border: 3px solid var(--accent); clip-path: inset(0 100% 0 0); animation: pressFill .3s linear forwards; pointer-events: none }
 @keyframes pressFill { to { clip-path: inset(0 0 0 0) } }
 .pile .pl { position: absolute; bottom: 2px; left: 0; right: 0 }
 .pile .cnt { position: absolute; top: -6px; right: -4px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; font-size: 10px; padding: 0 5px; font-variant-numeric: tabular-nums }
@@ -212,6 +212,9 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* 裏面：面全体の渦と、中央の黒い楕円 */
 .card.back { background: var(--back-img) center / 100% 100% no-repeat, #5e3517; color: #f0dcc4; border-color: #24150b }
 .card.back .bn { margin-top: auto; background: rgba(15,9,5,.75); border-radius: 3px; padding: 1px 2px; font-size: .85em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-all }
+.card.back .bn.pu { opacity: .85; font-size: .75em; -webkit-line-clamp: 2; border: 1px dashed rgba(255,255,255,.5) }
+.pu-note { margin: 6px 0 0; padding: 6px 8px; border: 1px dashed var(--line, #999); border-radius: 10px; font-size: 13px }
+.pu-note small { display: block; color: var(--muted, #666); font-size: 11px }
 .card.mini { width: 60%; pointer-events: none }
 .badge { position: absolute; top: 1px; right: 1px; background: var(--accent); color: var(--accent-ink); border-radius: 4px; font-size: 9px; padding: 0 3px; font-weight: 700; z-index: 1 }
 .badge.eq { top: auto; bottom: 1px; background: #2f5f8f; color: #fff }
@@ -395,6 +398,12 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .net-none { font-size: 12px; color: var(--sub); margin: 0 }
 .net-note { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 56px); transform: translateX(-50%); z-index: 40; width: min(92vw, 520px); display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: center; background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 10px 12px; box-shadow: var(--shadow); font-size: 13px; text-align: center }
 .net-note[hidden] { display: none }
+/* 先攻・後攻を決める人のルーレット（No.16） */
+.net-roul { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0 10px }
+.net-roul .nr { display: grid; place-items: center; min-height: 56px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel-2); font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--sub); transition: background .08s, color .08s, transform .08s }
+.net-roul .nr.on { border-color: var(--edge); background: var(--accent); color: var(--accent-ink, var(--ink)); transform: scale(1.04) }
+.net-roul.done .nr.on { box-shadow: 0 0 0 3px var(--accent), 3px 3px 0 var(--edge) }
+.net-note .btn { min-height: 40px } /* 終わりの帯・つながりの帯のボタン：スマホで押しやすく */
 .droot.net-on #undo, .droot.net-on #undoMini, .droot.net-on label[for="cpuSpeed"], .droot.net-on label[for="mode"], .droot.net-on label[for="deck0"], .droot.net-on label[for="deck1"], .droot.net-on label[for="first"], .droot.net-on #newDuel { display: none !important }
 .su-net { margin-bottom: 10px; border-style: dashed }
 .droot.fx-busy::after { content: ""; position: fixed; inset: 0; z-index: 90; touch-action: none; cursor: default }
@@ -505,6 +514,12 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .pstrip .lp::before { font-size: 9px; margin-right: 2px }
   .pstrip .tag { font-size: 9px; padding: 0 5px }
   .pstrip .meta { width: 100%; margin-left: 0; text-align: left; font-size: 10px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  /* No.11（ボスの注文）：上の2つの欄は、中身が変わっても高さを変えない（「ターン中」「考え中…」が出たり消えたりして欄が伸び縮みし、盤面と手札が押されて動いていた）。
+     3段（名前とLP／ターン中と考え中／手札・デッキ）の決まった形にして、出ていない時も場所を空けておく */
+  .pstrip { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto 17px auto; grid-template-areas: 'who lp' 'tag think' 'meta meta'; align-items: center; align-content: center; row-gap: 1px }
+  .pstrip .who { grid-area: who } .pstrip .lp { grid-area: lp; justify-self: start } .pstrip .meta { grid-area: meta }
+  .pstrip .tag { grid-area: tag; justify-self: start; line-height: 15px } .pstrip .tag[hidden] { display: inline-block; visibility: hidden }
+  .pstrip .think { grid-area: think; justify-self: end; min-width: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 14px; padding-bottom: 3px; font-size: .66rem; letter-spacing: 0 }
   /* 手札のトレイ：画面の下に固定。上下のスワイプ（または取っ手）で開け閉め */
   .tray { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; background: var(--panel); border: 2px solid var(--edge); border-bottom: none; border-radius: 18px 18px 0 0;
     box-shadow: 0 -4px 14px rgba(0, 0, 0, .18); padding: 0 max(6px, env(safe-area-inset-right, 0px)) calc(4px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px));
@@ -534,6 +549,17 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .fan-info small { color: var(--sub); font-size: 11px }
 .fan-info p { margin: 2px 0 0; font-size: 12px; line-height: 1.55; max-height: 7.8em; overflow: auto }
 .fan-info .fan-hint { font-size: 11px; font-weight: 700; color: var(--me) }
+/* サーチ（デッキから選ぶ）：墓地と同じ扇の左右スクロール（No.4）。真ん中のカードを押すと選ぶ。選べないカードは後ろの扇に薄く */
+.fan-layer > .fan-car { flex: none; width: 100%; margin: 0; padding-top: 18px; padding-bottom: 22px; --pw: clamp(120px, 38vw, 190px) }
+.fan-car .pile-it { cursor: pointer }
+.fan-car .pile-face.picked { box-shadow: 0 0 0 4px var(--accent), 0 0 22px 6px color-mix(in srgb, var(--accent) 70%, transparent) }
+.fan-car .pile-it:not(.on) .pile-face { filter: brightness(.82) }
+.fan-area.empty { display: none }
+.fan-layer > .fan-area:has(+ .fan-car) .card { opacity: .5 }
+/* 選べないカードの扇は後ろの飾りなので、高さを抑えて上に詰める（スマホで説明の最後の行まで、スクロールせずに読めるように） */
+.fan-layer > .fan-area:has(+ .fan-car) { height: min(26vh, 240px) !important; overflow: visible; z-index: 0 }
+.fan-layer > .fan-car { position: relative; z-index: 1 }
+@media (max-height: 760px) { .fan-layer > .fan-car { --pw: clamp(104px, 30vw, 170px); padding-top: 10px; padding-bottom: 14px } }
 @media (max-width: 860px) {
   .fan-layer > .fan-head { margin-top: 0 }
   .fan-layer > .fan-area { margin-bottom: auto }
@@ -814,6 +840,11 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 #board .zone.zone-pick { outline: 3px dashed var(--accent); outline-offset: -3px; box-shadow: 0 0 16px 4px color-mix(in srgb, var(--accent) 60%, transparent); animation: zonePick 1s ease-in-out infinite; cursor: pointer }
 @keyframes zonePick { 0%, 100% { filter: brightness(1) } 50% { filter: brightness(1.35) } }
 .zone-tip { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 96px); transform: translateX(-50%); z-index: 36; background: rgba(10,14,20,.88); color: #fff; font-weight: 800; font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 2px solid var(--accent); white-space: normal; max-width: calc(100vw - 24px); width: max-content; text-align: center; display: grid; gap: 1px; pointer-events: none }
+/* No.19：盤面の上で直接選ぶカード（光る・選んだら色が変わる） */
+#board .fp-on { outline: 3px dashed var(--accent); outline-offset: 2px; box-shadow: 0 0 14px 4px color-mix(in srgb, var(--accent) 60%, transparent); animation: zonePick 1s ease-in-out infinite; cursor: pointer }
+#board .fp-sel { outline: 3px solid var(--me); outline-offset: 2px; box-shadow: 0 0 16px 5px color-mix(in srgb, var(--me) 70%, transparent) }
+.zone-tip .fp-btns { display: flex; gap: 8px; justify-content: center; margin-top: 6px }
+.zone-tip .fp-btns .btn { min-height: 36px; pointer-events: auto }
 .zone-tip b { font-size: 14px } .zone-tip small { font-size: 11px; font-weight: 600; opacity: .85; overflow-wrap: anywhere }
 .mill-layer { position: fixed; inset: 0; z-index: 30; background: rgba(6,14,10,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; pointer-events: none }
 .mill-head { display: grid; justify-items: center; gap: 2px; color: #fff; text-align: center }
@@ -832,7 +863,7 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .pile-info b { font-family: var(--display); font-size: 16px } .pile-info small { color: var(--sub); font-size: 12px } .pile-info p { margin: 4px 0 0; font-size: 13px; line-height: 1.6 }
 .pile-tip { margin: 0 }
 .fx-banner.with-draw { position: fixed; top: 20%; z-index: 40; pointer-events: none }
-#setup .su-box { width: min(94vw, 520px); max-height: 88vh; overflow-y: auto }
+#setup .su-box { width: min(94vw, 520px); max-height: 88vh; overflow-y: auto; touch-action: pan-y } /* 横に払うとページを移る（No.5）：横の動きはブラウザに取られないように */
 .su-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px }
 .su-head b { font-family: var(--display); font-size: 15px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .su-x { width: 36px; height: 36px; border-radius: 10px; border: 1.5px solid var(--line); background: transparent; color: var(--ink); font-size: 18px; cursor: pointer; flex: none }
@@ -848,6 +879,16 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .su-help p { margin: 6px 0 }
 .su-help .btn { margin-top: 4px }
 .su-opts { display: grid; gap: 10px }
+/* No.15 ホーム画面：大きいボタン2つ（CPU対戦・オンライン対戦）、下に小さく戦績・遊び方 */
+.su-home { display: grid; gap: 12px; margin: 6px 0 12px }
+.su-big { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; align-items: center; text-align: left; padding: 18px 16px; border-radius: 18px; border: 2px solid var(--edge); box-shadow: 3px 3px 0 var(--edge); cursor: pointer; font: inherit; color: #fff }
+.su-big span { grid-row: span 2; font-size: 34px; line-height: 1 }
+.su-big b { font-family: var(--display); font-size: 20px; letter-spacing: .04em }
+.su-big small { font-size: 12.5px; opacity: .92 }
+.su-big.cpu { background: var(--me) } .su-big.net { background: var(--opp) }
+.su-big:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--edge) }
+.su-mini { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap }
+.su-mini .btn { min-height: 40px }
 .su-opt { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; text-align: left; padding: 12px 14px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; cursor: pointer }
 .su-opt span { grid-row: span 2; font-size: 26px }
 .su-opt b { font-family: var(--display); font-size: 16px }
@@ -873,8 +914,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* 準備画面の⚙️から開いた時は、対戦の設定（チェーンの確認・演出・CPUの速さ）だけ */
 #menu.from-setup label[for="deck0"], #menu.from-setup label[for="deck1"], #menu.from-setup label[for="mode"], #menu.from-setup label[for="first"], #menu.from-setup #hideOppRow, #menu.from-setup .menu-row, #menu.from-setup .menu-note:not(.ver) { display: none }
 @media (max-width: 860px) {
-  .droot #chain:not([hidden]) { position: fixed; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 150px); z-index: 31; max-height: 30vh; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,.45); padding: 8px 10px; pointer-events: none }
+  .droot #chain:not([hidden]) { position: fixed; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 6px); z-index: 31; max-height: var(--chain-max, 150px); overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,.45); padding: 8px 10px; pointer-events: none }
   .droot #chain h3 { font-size: 12px } .droot #chain li { font-size: 12px }
+  /* No.20（ボスの報告：チェーンの欄が盤面にかぶって、サイクロンの対象が隠れた）：チェーンの欄は盤面の上（LPの欄のあたり）に出して、盤面にはかぶせない。高さは盤面の上の端まで（--chain-max は画面が決める） */
+  .droot #chain h3 { margin-bottom: 3px } .droot #chain ol { gap: 2px } .droot #chain .tg { font-size: 11px }
 }
 .place-chip { position: fixed; transform: translateX(-50%); background: var(--panel); color: var(--ink); border: 2px solid var(--edge); border-radius: 12px; padding: 6px 34px 6px 12px; display: grid; gap: 1px; text-align: center; white-space: normal; width: max-content; max-width: min(calc(100vw - 24px), 360px) }
 .place-chip small { line-height: 1.45 }
@@ -950,6 +993,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
     transform-origin: 50% 170%; transform: rotate(var(--a)); pointer-events: none; box-shadow: 0 6px 14px rgba(0,0,0,.4); transition: transform .35s cubic-bezier(.2,.8,.3,1), bottom .35s }
 }
 @media (max-width: 380px) { .hand-hold { --hh-cw: 94px } }
+/* 点検⑥：とても狭い画面では、下の見出しを「メインフェイズ1」だけにする（「あなたのメインフェ…」と欠けないように） */
+@media (max-width: 360px) { .droot #actor .who { display: none } }
+/* 点検⑦：準備の最後の［デュエル開始］は、内容が長くて下に隠れないように、窓の下に貼りつける */
+#setup .su-box .su-start { position: sticky; bottom: 4px; z-index: 2; box-shadow: 0 -8px 16px var(--panel), 3px 3px 0 var(--edge) }
 /* 手札を閉じた時のボタン：フェイズの説明・ログ・ひとつ戻す・✋・エンド（2回押し）・次のフェイズへ（小さめ） */
 .mini-only { display: none }
 @media (max-width: 860px) {
@@ -958,13 +1005,24 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .droot .dock.free #phaseBtns { display: none }
   .droot .dock { grid-template-areas: "st" "ex" "ph" "go"; row-gap: 6px; padding-top: 8px }
   .droot .dock-extra { gap: 5px }
-  .droot .dock-extra .btn { min-height: 30px; padding: 1px 9px; font-size: 12px; box-shadow: 1px 1px 0 var(--edge) }
+  .droot .dock-extra .btn { min-height: 36px; padding: 1px 10px; font-size: 12.5px; box-shadow: 1px 1px 0 var(--edge) } /* 押しやすい高さ（点検④。前は30px） */
   .droot #stopBtn { font-size: 0; padding: 1px 8px }
   .droot #stopBtn::before { content: "✋"; font-size: 15px }
   .droot #goBtn { min-height: 40px; font-size: 14px; padding: 2px 8px }
   .droot #goBtn small { display: none }
   .end-btn { background: color-mix(in srgb, var(--opp) 20%, var(--panel)); width: 5.6em; justify-content: center; flex: none } /* 2回押しの間に幅が変わってボタンの並びがずれないように固定 */
   .end-btn.armed { background: var(--opp); color: #fff }
+}
+/* No.13（ボスの報告：サイクロンの対象が下のボタンに隠れた）：下のボタンの欄は、どの場面でも同じ高さにする。
+   盤面の高さはこの欄のふだんの高さで決めて動かさない（No.11）ので、欄が伸びると盤面の下の段（自分の魔法・罠）が隠れてしまう。
+   ボタンの段はそれぞれ1行にまとめて、入りきらない時は横に流す。発動の選択（phaseBtns）の段は、出ていない時も場所を空けておく */
+@media (max-width: 860px) {
+  .droot .dock-extra, .droot #phaseBtns { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; min-width: 0; max-width: 100% }
+  .droot .dock-extra::-webkit-scrollbar, .droot #phaseBtns::-webkit-scrollbar { display: none }
+  .droot .dock-extra .btn, .droot #phaseBtns .btn { flex: none; white-space: nowrap }
+  .droot #phaseBtns, .droot #phaseBtns:empty, .droot .dock.free #phaseBtns { display: flex; min-height: 34px; height: 34px }
+  .droot #phaseBtns:empty, .droot .dock.free #phaseBtns { visibility: hidden }
+  .droot .dock-status { min-height: 1.4em; max-height: 2.8em; overflow: hidden }
 }
 /* スマホ：対戦画面の上下に払う操作を、ページのスクロールにしない（手札の開け閉めに使う） */
 @media (max-width: 860px) { .table, #board, .dock, .hand-hold { touch-action: none; overscroll-behavior: contain } }
@@ -1002,7 +1060,7 @@ export const MARKUP = `
     <div class="pstrip me" id="side0"><span class="who"></span><span class="lp" title="LP（ライフポイント）：0になると負け"></span><span class="tag" hidden></span><span class="meta"></span></div>
     <div class="dock" id="dock">
       <div class="dock-status"><span id="actor"></span><span id="actorHint"></span><span id="oppInfo"></span></div>
-      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できる時、自動で進めずに必ず聞きます">✋ 次は聞いて</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">記録</button><button class="btn small mini-only" id="undoMini" type="button">↶ ひとつ戻す</button><button class="btn small mini-only end-btn" id="endBtn" type="button" hidden>エンド</button></div>
+      <div class="dock-extra"><button class="btn small" id="stopBtn" aria-pressed="false" hidden title="次に発動できる時、自動で進めずに必ず聞きます">✋ 次は聞いて</button><button class="btn small" id="reviewBtn" hidden>📈 勝率の振り返り</button><button class="btn small" id="logBtn">記録</button><button class="btn small" id="homeBtn" type="button" hidden>🏠 ホームへ</button><button class="btn small mini-only" id="undoMini" type="button">↶ ひとつ戻す</button><button class="btn small mini-only end-btn" id="endBtn" type="button" hidden>エンド</button></div>
       <div class="dock-acts"><div id="phaseBtns"></div><button class="btn primary go" id="goBtn"></button></div>
     </div>
   </main>
@@ -1042,7 +1100,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261121-1423</p>
+    <p class="menu-note ver">版：20261122-0953</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

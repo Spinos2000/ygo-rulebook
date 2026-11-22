@@ -7,12 +7,12 @@ import {
   negateActivation, negateSummon, targetValid, addLingering, newStep, log, pl, currentAtk, FIELD_ZONES, sameCard,
   placeCounters, scriptOf, removeCounters, counterHolders, counterRoom, addStatMod, drawCards, gainLp, effectDamage, negateAttack,
   banish, isOnField, isImmune, emit, millTop, randomOf, freeMZones, moveCard, currentDef, targetable, swapControl, advanceSummonNow, pushAnim, pickMZone, releasable, paysCost, normalSummonNow, createTokens, takeControl, setFaceDown, changePositionByEffect, isToken, summonedThisTurn, shuffleDeck, specialSummonedThisTurn, tributesFor, freeSZones, advanceTributeSets, extraSummonedThisTurn,
-} from '../engine/game.js?v=20261121-1423-9eb0780fdd';
+} from '../engine/game.js?v=20261122-0953-df31350498';
                                                               
 import {
   target, countDragons, ritualCan, ritualSummon, fusionCan, fusionSummon, isNormal, isRitualMonster, level, deckOf, handOf, gyOf, oppMonsters,
   deckMaterialSet, sendDeckMaterials,
-} from './common.js?v=20261121-1423-9eb0780fdd';
+} from './common.js?v=20261122-0953-df31350498';
                                               
 
 /* ---------- サクリファイス系：相手モンスターを装備する ---------- */
@@ -1567,7 +1567,7 @@ export const SCRIPTS                             = {
   /* D-HERO ディアボリックガイ */
   '6949': {
     effects: [{
-      id: 'e1', label: '①：墓地のこのカードを除外し、デッキから「D-HERO ディアボリックガイ」を特殊召喚', type: 'ignition', ss: 1, zones: ['gy'],
+      id: 'e1', label: '①：墓地のこのカードを除外し、デッキから「D-HERO ディアボリックガイ」を特殊召喚', type: 'ignition', ss: 1, zones: ['gy'], costBanishGy: true,
       can: x => deckOf(x.s, x.player).some(u => defOf(x.s, u).name === 'D-HERO ディアボリックガイ' && canSpecialSummon(x.s, u, x.player, 'special', [], x.self)),
       activate: x => { log(x.s, `${pl(x.player)}：${nameOf(x.s, x.self)}を除外`); banish(x.s, [x.self], 'cost'); },
       resolve: x => {
