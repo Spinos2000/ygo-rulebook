@@ -7,12 +7,12 @@ import {
   negateActivation, negateSummon, targetValid, addLingering, newStep, log, pl, currentAtk, FIELD_ZONES, sameCard,
   placeCounters, scriptOf, removeCounters, counterHolders, counterRoom, addStatMod, drawCards, gainLp, effectDamage, negateAttack,
   banish, isOnField, isImmune, emit, millTop, randomOf, freeMZones, moveCard, currentDef, targetable, swapControl, advanceSummonNow, pushAnim, pickMZone, releasable, paysCost, normalSummonNow, createTokens, takeControl, setFaceDown, changePositionByEffect, isToken, summonedThisTurn, shuffleDeck, specialSummonedThisTurn, tributesFor, freeSZones, advanceTributeSets, extraSummonedThisTurn,
-} from '../engine/game.js?v=20261123-0758-09661226b7';
+} from '../engine/game.js?v=20261123-0815-8112b9c813';
                                                               
 import {
   target, countDragons, ritualCan, ritualSummon, fusionCan, fusionSummon, isNormal, isRitualMonster, level, deckOf, handOf, gyOf, oppMonsters,
   deckMaterialSet, sendDeckMaterials,
-} from './common.js?v=20261123-0758-09661226b7';
+} from './common.js?v=20261123-0815-8112b9c813';
                                               
 
 /* ---------- サクリファイス系：相手モンスターを装備する ---------- */
@@ -2707,7 +2707,8 @@ export const SCRIPTS                             = {
     effects: [{
       id: 'e1', label: '「メタルデビル・トークン」1体を特殊召喚', type: 'card', ss: 1,
       can: x => freeMZones(x.s, x.player).length > 0,
-      resolve: x => { for (const u of createTokens(x, 'token:metaldevil', 1, 'atk')) x.s.cards[u].noAttack = true; },
+      // No.29（ボスの報告）：カードの文に表示形式の指定が無いので、表側攻撃表示か表側守備表示を選ぶ（指定のあるスケープ・ゴートは守備表示のまま）
+      resolve: x => { const pos = choose(x, { kind: 'option', prompt: '「メタルデビル・トークン」の表示形式', options: ['表側攻撃表示', '表側守備表示'] }) === 0 ? 'atk' : 'def'; for (const u of createTokens(x, 'token:metaldevil', 1, pos)) x.s.cards[u].noAttack = true; },
     }],
   },
   /* メタルデビル・トークン：攻撃できず、戦闘で発生するコントローラーへの戦闘ダメージは代わりに相手が受ける。自分スタンバイフェイズ毎に1000LPを払うか破壊 */

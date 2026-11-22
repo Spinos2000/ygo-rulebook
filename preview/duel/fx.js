@@ -1,19 +1,28 @@
 // 攻撃の演出（キャンバスに描く）。種族ごとの攻撃・命中・カードの壊れ方と、神（幻神獣族・創造神族）の特別な演出。
 // playBattle() は演出が終わったら解決する Promise を返す。カードの位置は画面上の四角（getBoundingClientRect）で受け取る
-import { partnerLine } from './lines.js?v=20261123-0758-09661226b7';
+import { partnerLine } from './lines.js?v=20261123-0815-8112b9c813';
 const TAU = Math.PI * 2;
 
 /* ---------- 相棒のひと言：着地したカードのそばに、短い吹き出しを2.4秒ほど出す ---------- */
+/** No.28：デュエル卓（.droot）の背景と文字の色を組で読む。読めない時は明るい組（明るい背景に濃い字） */
+function duelPalette(root) {
+  const dr = root && root.querySelector && root.querySelector('.droot');
+  const cs = dr ? getComputedStyle(dr) : null;
+  const bg = cs && cs.getPropertyValue('--panel').trim(), ink = cs && cs.getPropertyValue('--ink').trim();
+  return bg && ink ? { bg, ink } : { bg: '#fffdf8', ink: '#262b3a' };
+}
 function partnerSay(root, info, partner) {
   const r = (info.track && info.track()) || info.rect; if (!r) return;
   root.querySelectorAll('.partner-say').forEach(x => x.remove()); // 前の吹き出しが残っていたら消す（続けて出た時に重ならないように）
   const b = document.createElement('div');
   b.className = 'partner-say';
   b.setAttribute('role', 'status');
+  // No.28：吹き出しはデュエル卓の色の外（root の直下）に置くので、var(--ink) だとサイトの文字の色（暗い見た目では白）を拾い、背景は明るいまま→白い字が読めなかった。卓の色を読んで、背景と文字を組で使う
+  const pal = duelPalette(root);
   const vw = innerWidth, w = Math.min(240, vw - 24), cx = r.left + r.width / 2;
   const left = Math.max(12, Math.min(vw - w - 12, cx - w / 2)), above = r.top > 120;
   Object.assign(b.style, { position: 'fixed', left: left + 'px', width: w + 'px', zIndex: 60, pointerEvents: 'none', boxSizing: 'border-box',
-    background: 'var(--panel, #fffdf8)', color: 'var(--ink, #262b3a)', border: '2px solid #ffb35c', borderRadius: '14px', padding: '6px 10px',
+    background: pal.bg, color: pal.ink, border: '2px solid #ffb35c', borderRadius: '14px', padding: '6px 10px',
     boxShadow: '0 6px 18px rgba(0,0,0,.35)', font: '700 13px/1.45 var(--display, sans-serif)', textAlign: 'center' });
   if (above) b.style.bottom = (innerHeight - r.top + 8) + 'px'; else b.style.top = (r.bottom + 8) + 'px';
   const who = document.createElement('small');
