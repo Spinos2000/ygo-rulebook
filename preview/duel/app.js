@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261122-0240-e8afb3d7b2';
-import { fullThink } from './ai/levels.js?v=20261122-0240-e8afb3d7b2';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261122-0240-e8afb3d7b2';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261122-0240-e8afb3d7b2';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261122-0240-e8afb3d7b2';
-import { playSignature, sigKey } from './sig.js?v=20261122-0240-e8afb3d7b2';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261122-0240-e8afb3d7b2';
-import { firstEntrance } from './aces.js?v=20261122-0240-e8afb3d7b2';
-import { RULINGS } from './data/rulings.js?v=20261122-0240-e8afb3d7b2';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261122-0240-e8afb3d7b2';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261122-0240-e8afb3d7b2';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261122-0240-e8afb3d7b2';
-import { joinSiteRoom } from './net/site-room.js?v=20261122-0240-e8afb3d7b2';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261122-0953-df31350498';
+import { fullThink } from './ai/levels.js?v=20261122-0953-df31350498';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261122-0953-df31350498';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261122-0953-df31350498';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261122-0953-df31350498';
+import { playSignature, sigKey } from './sig.js?v=20261122-0953-df31350498';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261122-0953-df31350498';
+import { firstEntrance } from './aces.js?v=20261122-0953-df31350498';
+import { RULINGS } from './data/rulings.js?v=20261122-0953-df31350498';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261122-0953-df31350498';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261122-0953-df31350498';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261122-0953-df31350498';
+import { joinSiteRoom } from './net/site-room.js?v=20261122-0953-df31350498';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261122-0240-e8afb3d7b2';
-import { CARD_POOL } from './data/cardpool.js?v=20261122-0240-e8afb3d7b2';
-import { DECKS } from './data/decks.js?v=20261122-0240-e8afb3d7b2';
-import { SCRIPTS } from './cards/index.js?v=20261122-0240-e8afb3d7b2';
+} from './engine/game.js?v=20261122-0953-df31350498';
+import { CARD_POOL } from './data/cardpool.js?v=20261122-0953-df31350498';
+import { DECKS } from './data/decks.js?v=20261122-0953-df31350498';
+import { SCRIPTS } from './cards/index.js?v=20261122-0953-df31350498';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -397,7 +397,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261122-0240-e8afb3d7b2', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261122-0953-df31350498', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -977,8 +977,8 @@ function frameOf(d) { return d.kind === 'spell' ? 'spell' : d.kind === 'trap' ? 
 let canAct = new Set();
 /** No.18：相手のフィールドの裏側のモンスターで、前に表側でいたことがある（エンジンの lastUp。サーチして手札から伏せたカードには付かない。2台で同じ・読み直しても残る）。攻守はカードに書いてある元々の攻守。手札に戻ったカードには出さない */
 const prevUp = uid => { const c = S.cards[uid]; return !!c && !!c.lastUp && !c.faceUp && (c.zone === 'mzone' || c.zone === 'emz') && isRemote(c.controller); };
-/** No.18：裏にする直前に見えていた攻守（CODE 01:59）。元々の攻守とちがう時は、元々の攻守を小さく添える（CODE 02:10） */
-const prevUpText = (name, up, d) => `前に表だった時：「${name}」（攻${up.atk}／守${up.def}${up.atk !== d.atk || up.def !== d.def ? `<small class="pu-base">元々は攻${d.atk}／守${d.def}</small>` : ''}）`;
+/** No.18：攻守はカードに書いてある元の数字（MASTERの答え 11-22 朝。裏にする直前の数字は使わない） */
+const prevUpText = (name, d) => `前に表だった時：「${name}」（攻${d.atk}／守${d.def}）`;
 function cardHtml(uid, { hidden = false, field = false, style = '' } = {}) {
   const c = S.cards[uid];
   const st = style ? ` style="${style}"` : '';
@@ -1389,7 +1389,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261122-0240-e8afb3d7b2';
+const DUEL_BUILD = '20261122-0953-df31350498';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -1741,7 +1741,7 @@ function maybeGuide() { if (OPTS.demo || OPTS.quick) return; let seen = false; t
 function describe(uid) {
   const c = S.cards[uid], d = defOf(S, uid);
   if (isRemote(c.controller) && (c.zone === 'hand' || ((c.zone === 'mzone' || c.zone === 'szone') && !c.faceUp))) {
-    const pu = prevUp(uid) ? `<p class="pu-note">${prevUpText(esc(d.name), c.lastUp, d)}<small>（今は裏側。この情報は公開されていない）</small></p>` : '';
+    const pu = prevUp(uid) ? `<p class="pu-note">${prevUpText(esc(d.name), d)}<small>（今は裏側。この情報は公開されていない）</small></p>` : '';
     return { head: `<h3>裏側のカード</h3><p class="tl">${NAME(c.controller)}の${c.zone === 'hand' ? '手札' : 'フィールド'}のカードです。中身は見えません。</p>${pu}`, text: '' };
   }
   const typeLine = d.kind === 'monster'

@@ -215,7 +215,6 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 .card.back .bn.pu { opacity: .85; font-size: .75em; -webkit-line-clamp: 2; border: 1px dashed rgba(255,255,255,.5) }
 .pu-note { margin: 6px 0 0; padding: 6px 8px; border: 1px dashed var(--line, #999); border-radius: 10px; font-size: 13px }
 .pu-note small { display: block; color: var(--muted, #666); font-size: 11px }
-.pu-note small.pu-base { display: inline; margin-left: 4px; font-size: 11px }
 .card.mini { width: 60%; pointer-events: none }
 .badge { position: absolute; top: 1px; right: 1px; background: var(--accent); color: var(--accent-ink); border-radius: 4px; font-size: 9px; padding: 0 3px; font-weight: 700; z-index: 1 }
 .badge.eq { top: auto; bottom: 1px; background: #2f5f8f; color: #fff }
@@ -1101,7 +1100,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261122-0240</p>
+    <p class="menu-note ver">版：20261122-0953</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

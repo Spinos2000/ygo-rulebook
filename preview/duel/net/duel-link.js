@@ -4,10 +4,10 @@
 // - 部屋の部品（Room）は、サイトの room().join(name) と同じ形（presence・onPeers・leave）。
 //   本番ではサイトの Firestore の部屋を、試す時は下の「手元の部屋」を渡す
 // - 2台とも全部の情報を持つ作り（MASTERの決定）。相手の手札・伏せカードを画面で見せないのは画面の仕事
-import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261122-0240-e8afb3d7b2';
-import { answerCandidates } from '../ai/cpu.js?v=20261122-0240-e8afb3d7b2';
-import { CARD_POOL } from '../data/cardpool.js?v=20261122-0240-e8afb3d7b2';
-import { DECKS } from '../data/decks.js?v=20261122-0240-e8afb3d7b2';
+import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261122-0953-df31350498';
+import { answerCandidates } from '../ai/cpu.js?v=20261122-0953-df31350498';
+import { CARD_POOL } from '../data/cardpool.js?v=20261122-0953-df31350498';
+import { DECKS } from '../data/decks.js?v=20261122-0953-df31350498';
                                                                       
 
 /* ===================== 部屋（サイトの room() と同じ形） ===================== */
@@ -69,7 +69,7 @@ export function tabRoom(name        , uid        )       {
 
 /** お試し版・本番を作る時（scripts/build.mjs）に、できあがった .js ぜんぶの指紋をここに書きこむ（手元では 'dev'）。
  *  画面（app.js）にも同じ指紋が書かれるので、卓を開いた時に「app.js の指紋」とこれが同じか比べる（ちがえばページを読み直す） */
-export const BUILD_FP = '20261122-0240-e8afb3d7b2';
+export const BUILD_FP = '20261122-0953-df31350498';
 
 /* ===================== エンジンの指紋 ===================== */
 /**
