@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261123-0735-589f568ea6';
-import { fullThink } from './ai/levels.js?v=20261123-0735-589f568ea6';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261123-0735-589f568ea6';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261123-0735-589f568ea6';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261123-0735-589f568ea6';
-import { playSignature, sigKey } from './sig.js?v=20261123-0735-589f568ea6';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261123-0735-589f568ea6';
-import { firstEntrance } from './aces.js?v=20261123-0735-589f568ea6';
-import { RULINGS } from './data/rulings.js?v=20261123-0735-589f568ea6';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261123-0735-589f568ea6';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261123-0735-589f568ea6';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261123-0735-589f568ea6';
-import { joinSiteRoom } from './net/site-room.js?v=20261123-0735-589f568ea6';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261123-0746-c2f549fe14';
+import { fullThink } from './ai/levels.js?v=20261123-0746-c2f549fe14';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261123-0746-c2f549fe14';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261123-0746-c2f549fe14';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261123-0746-c2f549fe14';
+import { playSignature, sigKey } from './sig.js?v=20261123-0746-c2f549fe14';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261123-0746-c2f549fe14';
+import { firstEntrance } from './aces.js?v=20261123-0746-c2f549fe14';
+import { RULINGS } from './data/rulings.js?v=20261123-0746-c2f549fe14';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261123-0746-c2f549fe14';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261123-0746-c2f549fe14';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261123-0746-c2f549fe14';
+import { joinSiteRoom } from './net/site-room.js?v=20261123-0746-c2f549fe14';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261123-0735-589f568ea6';
-import { CARD_POOL } from './data/cardpool.js?v=20261123-0735-589f568ea6';
-import { DECKS } from './data/decks.js?v=20261123-0735-589f568ea6';
-import { SCRIPTS } from './cards/index.js?v=20261123-0735-589f568ea6';
+} from './engine/game.js?v=20261123-0746-c2f549fe14';
+import { CARD_POOL } from './data/cardpool.js?v=20261123-0746-c2f549fe14';
+import { DECKS } from './data/decks.js?v=20261123-0746-c2f549fe14';
+import { SCRIPTS } from './cards/index.js?v=20261123-0746-c2f549fe14';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -146,6 +146,20 @@ function fxBlock() { const r = ROOT && ROOT.querySelector('.droot'); if (r) r.cl
  */
 const fxLog = [];
 function fxRec(kind, uid, extra) { fxLog.push({ t: performance.now(), kind, uid: uid ?? null, ...(extra || {}) }); if (fxLog.length > 2000) fxLog.splice(0, fxLog.length - 2000); }
+/** No.26：専用演出の場所は、発動した時に測っておく。演出が始まるまでに盤面が動いた（手札が閉じた等）時は、カードの写しが元のマスからずれて見えるので、盤面が動いた分だけ全部の場所をずらす */
+function followBoard(info) {
+  const b = ROOT && ROOT.querySelector('#board'); if (!b || !info || !info.board) return;
+  const r = b.getBoundingClientRect(), dx = r.left - info.board.left, dy = r.top - info.board.top;
+  if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+  const seen = new Set();
+  const card = c => { if (!c || !c.rect || seen.has(c)) return; seen.add(c); const q = c.rect; c.rect = { left: q.left + dx, top: q.top + dy, right: q.right + dx, bottom: q.bottom + dy, width: q.width, height: q.height, x: q.left + dx, y: q.top + dy }; };
+  const pt = o => { if (o && typeof o.x === 'number' && typeof o.y === 'number' && !seen.has(o)) { seen.add(o); o.x += dx; o.y += dy; } };
+  [info.self, info.att, info.target].forEach(card);
+  [info.dest, info.opp, info.mons, info.traps].forEach(list => (list || []).forEach(card));
+  [info.land, info.deck, info.gy, info.hand].forEach(pt);
+  const B = info.board;
+  info.board = { ...B, left: B.left + dx, right: B.right + dx, cx: B.cx + dx, top: B.top + dy, bottom: B.bottom + dy, cy: B.cy + dy, myMonY: B.myMonY + dy, oppMonY: B.oppMonY + dy, myStY: B.myStY + dy };
+}
 function fxStage(on) { const r = ROOT && ROOT.querySelector('.droot'); if (r) r.classList.toggle('fx-stage', on); }
 /** 演出の文字の帯を置いてよい範囲：上の帯の下から、手札・ボタン・チェーンの欄の上まで */
 function safeArea() {
@@ -235,6 +249,7 @@ function queueBattleFx(prev, next) {
       const hide = j.hide.map(el => { el.style.visibility = 'hidden'; return el; });
       const brd = j.sig ? ROOT.querySelector('#board') : null; if (brd) brd.classList.add('skin-on');
       if (j.sig) fxRec('sig', j.glow ? j.glow.uid : j.info.self ? j.info.self.uid : null, { key: j.info.key, dest: (j.info.dest || []).map(c => c.uid) }); else fxRec('battle', null);
+      if (j.sig) followBoard(j.info); // No.26：場所を測った後に盤面が動いていたら、その分だけ写しの場所をずらす
       try { await (j.sig ? playSignature(ROOT, j.info) : playBattle(ROOT, j.info)); } catch (e) { console.error(e); }
       if (brd) brd.classList.remove('skin-on');
       hide.forEach(el => { el.style.visibility = ''; });
@@ -397,7 +412,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261123-0735-589f568ea6', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261123-0746-c2f549fe14', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -578,10 +593,14 @@ function playPendingCues() {
 }
 
 /* ---------- 対象の矢印：チェーン中のカードが対象にしたカードへ、点線の矢印を出す ---------- */
+let tgFollowT = null;
 function renderTargets() {
+  clearTimeout(tgFollowT);
   let layer = $('.tg-layer');
   const links = S.chain.filter(l => l.targets.length);
   if (!links.length) { if (layer) layer.remove(); return; }
+  // No.26：盤面が動いても（手札の開け閉め・画面のスクロールなど）、対象の枠と矢印がカードからずれないように、出ている間は測り直し続ける
+  tgFollowT = setTimeout(() => { if (S && ROOT && ROOT.querySelector('.droot')) renderTargets(); }, 250);
   if (!layer) { layer = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); layer.setAttribute('class', 'tg-layer'); layer.setAttribute('aria-hidden', 'true'); $('.droot').appendChild(layer); }
   const mid = r => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
   let paths = '';
@@ -600,6 +619,8 @@ function renderTargets() {
       }
     }
   }
+  if (layer.dataset.paths === paths) return; // 場所が同じなら書きかえない（点線の動きが止まらないように）
+  layer.dataset.paths = paths;
   layer.innerHTML = `<defs>${['opp', 'me'].map(c => `<marker id="tgHead${c}" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path class="tg-head ${c}" d="M0,0 L10,5 L0,10 z"/></marker>`).join('')}</defs>${paths}`;
 }
 
@@ -1391,7 +1412,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261123-0735-589f568ea6';
+const DUEL_BUILD = '20261123-0746-c2f549fe14';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');

@@ -141,12 +141,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 <div id="ackToast" role="status" hidden></div>
 <ol id="ackLog" aria-label="ログ（見本）" hidden></ol>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261123-0735-589f568ea6';
-import { playSummon, cardImg } from './fx.js?v=20261123-0735-589f568ea6';
-import { play, unlock } from './sound.js?v=20261123-0735-589f568ea6';
-import { CARD_POOL } from './data/cardpool.js?v=20261123-0735-589f568ea6';
-import { createGame, legalActions } from './engine/game.js?v=20261123-0735-589f568ea6';
-import { answerCandidates } from './ai/cpu.js?v=20261123-0735-589f568ea6';
+import { mountDuel } from './embed.js?v=20261123-0746-c2f549fe14';
+import { playSummon, cardImg } from './fx.js?v=20261123-0746-c2f549fe14';
+import { play, unlock } from './sound.js?v=20261123-0746-c2f549fe14';
+import { CARD_POOL } from './data/cardpool.js?v=20261123-0746-c2f549fe14';
+import { createGame, legalActions } from './engine/game.js?v=20261123-0746-c2f549fe14';
+import { answerCandidates } from './ai/cpu.js?v=20261123-0746-c2f549fe14';
 
 const host = document.getElementById('duel-host');
 mountDuel(host, { demo: true });
@@ -486,8 +486,9 @@ const ACK_FX = [
   { hand: { 1: [C.hole] }, set1: [C.judge, C.judge], pre: [] },
 ];
 /** 光らせるマス：対象をとる時はその対象。とらない時は、効果を受けるモンスター（奈落・ミラーフォースは自分のモンスター、ブラック・ホールは全部） */
+const ackKeyOf = (S, u) => { const c = S.cards[u]; if (!c) return null; if (c.zone === 'mzone') return `${c.controller}:mz:${c.index}`; if (c.zone === 'szone') return `${c.controller}:st:${c.index}`; if (c.zone === 'gy') return `pile:${c.owner}:gy`; return null; };
 function ackKeys(S, L, code) {
-  const key = u => { const c = S.cards[u]; if (!c) return null; if (c.zone === 'mzone') return `${c.controller}:mz:${c.index}`; if (c.zone === 'szone') return `${c.controller}:st:${c.index}`; if (c.zone === 'gy') return `pile:${c.owner}:gy`; return null; };
+  const key = u => ackKeyOf(S, u);
   if (L.targets && L.targets.length) return L.targets.map(key).filter(Boolean);
   if (code === C.judge) { const prev = S.chain[S.chain.length - 2]; return prev ? [key(prev.uid)].filter(Boolean) : []; }
   const mons = p => S.players[p].mzone.filter(u => u != null && S.cards[u].faceUp && (code !== C.mirror || S.cards[u].position === 'atk'));
@@ -502,7 +503,9 @@ async function runAckFx(a, fx) {
   // 卓の「発動するか聞くタイミング」を、流している間だけ「いつも」にする（何もできない人の自動のパスで、チェーン3が確認画面より先に処理されないように）。終わったら元に戻す
   const cm = root.querySelector('#chainMode'), cm0 = cm ? cm.value : null;
   if (cm) cm.value = 'always';
-  try { await ackFxFlow(a, fx); } finally { if (cm) cm.value = cm0; }
+  // 流している間は、卓のふだんの「〇〇を発動／発動しない」の帯を隠す（聞き方が2つ続けて出ないように。CODE 07:40）
+  const hide = document.createElement('style'); hide.id = 'ackHideDock'; hide.textContent = '#dock { visibility: hidden !important }'; root.appendChild(hide);
+  try { await ackFxFlow(a, fx); } finally { if (cm) cm.value = cm0; hide.remove(); }
 }
 async function ackFxFlow(a, fx) {
   const D = window.__duel, mine = document.getElementById('ackMine').checked, mode = document.querySelector('input[name="ackMode"]:checked')?.value || 'all';
@@ -519,7 +522,7 @@ async function ackFxFlow(a, fx) {
       if (L.player === 1) {
         const canChain = legalActions(S).some(x => x.type === 'activate' && S.cards[x.card]?.controller === 0);
         const keys = ackKeys(S, L, code), tgt = no === 1 ? a.tgt : 'あなたの「神の宣告」（チェーン2）の発動を無効にして破壊する';
-        if (no === 1) flash = keys;
+        if (no === 1) flash = L.targets && L.targets.length ? L.targets.map(u => [u, ackKeyOf(S, u)]) : keys.map(x => [null, x]); // 対象をとる時は、カードを覚えておく
         let v = 'ok';
         if (mode === 'none' || (mode === 'chain' && !canChain)) { ackLitReal(no); ackToastShow(`相手が「${CARD_POOL[code].name}」を発動（チェーン${no}）`); }
         else { v = await ackAsk({ p: 1, code, no, tgt }, canChain); ackLitReal(no); }
@@ -542,7 +545,8 @@ async function ackFxFlow(a, fx) {
     await new Promise(r => setTimeout(r, 350));
   }
   await fxIdle();
-  await ackFlash(flash); // 効果の演出のあと、対象（効果を受けたマス）が黄色く光る
+  // 対象のカードが動いた時（死者蘇生で相手の場へ、など）は、いまの場所を光らせる。場から離れた時（除外など）は、元のマス
+  await ackFlash(flash.map(([u, x]) => (u != null && ackKeyOf(D.state, u)) || x)); // 効果の演出のあと、対象（効果を受けたマス）が黄色く光る
 }
 sheet.addEventListener('click', e => { if (e.target.closest('button.fx') && !e.target.closest('button[data-ack]')) ackLogEl.hidden = true; }, true);
 list.addEventListener('click', async e => {
