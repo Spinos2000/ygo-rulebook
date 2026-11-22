@@ -2289,7 +2289,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
 
 <!-- 実績 -->
 <section id="ach">
-  <div class="sec-h"><span>ACHIEVEMENTS</span><h2>🏆 実績</h2><p class="note">デュエルを重ねると解除されます。みんなに公開されます。🤖の実績はCPU戦で、「ひとつ戻す」を使って勝った対戦とお試し版の対戦は数えません（戻して負けた対戦は負けとして数えます）</p></div>
+  <div class="sec-h"><span>ACHIEVEMENTS</span><h2>🏆 実績</h2><p class="note">デュエルを重ねると解除されます。みんなに公開されます。🤖の実績はCPU戦で、「ひとつ戻す」を使って勝った対戦と試作版の対戦は数えません（戻して負けた対戦は負けとして数えます）</p></div>
   <div class="ach-sum"><b id="ach-n">0</b><span>/ <span id="ach-total">30</span> 解除</span></div>
   <div class="ach-legend"><span><i style="background:var(--osiris)"></i>オシリス・レッド級</span><span><i style="background:var(--ra)"></i>ラー・イエロー級</span><span><i style="background:var(--obelisk)"></i>オベリスク・ブルー級</span></div>
   <div class="ach-grid" id="ach-grid"></div>
@@ -3789,7 +3789,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
   function renderCpu(){var box=$('rl-cpu');box.innerHTML='';var L=(pf.cpuLog||[]).slice().sort(function(a,b){return (b.at||0)-(a.at||0);});
     var cnt=function(arr){var w=0,l=0,d=0;arr.forEach(function(r){if(r.result==='win')w++;else if(r.result==='lose')l++;else d++;});return {n:arr.length,w:w,l:l,d:d};};
     var c=cnt(L),st=el('div','stats');[['戦',c.n],['勝',c.w],['敗',c.l],['勝率',c.n?Math.round(c.w/c.n*100)+'%':'-']].forEach(function(x){var b=el('div','stat');b.appendChild(el('b','',String(x[1])));b.appendChild(el('span','',x[0]));st.appendChild(b);});box.appendChild(st);
-    if(L.some(function(r){return r.preview;}))box.appendChild(el('p','note','🧪 お試し版での対戦は、この画面にだけ表示しています（アカウントには保存しません）。'));
+    if(L.some(function(r){return r.preview;}))box.appendChild(el('p','note','🧪 試作版での対戦は、この画面にだけ表示しています（アカウントには保存しません）。'));
     if(!L.length){box.appendChild(el('div','al-empty','まだCPU戦の記録はありません。🤖 CPUと対戦すると、ここに残ります（「ひとつ戻す」を使った対戦は「↶戻すあり」の印が付き、実績には数えません）。'));return;}
     /* CPUの強さ：今はいつも「全力」（hard として記録）。やさしい・ふつうは、強さを選べたころの記録を読むために残す */
     var LV={easy:'🐣 やさしい',normal:'🤖 ふつう',hard:'💪 全力'};
@@ -3801,7 +3801,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     var blk=el('div','block cpu-blk');blk.appendChild(el('h3','','📜 最近のCPU戦'));var ul=el('ul','rl-list');
     L.slice(0,30).forEach(function(r){var li=el('li','rl-item cpu-item');var d=new Date(r.at||0);
       li.appendChild(el('b','',(r.result==='win'?'🏆 勝ち':r.result==='lose'?(r.surrender?'🏳️ 降参':'💀 負け'):'🤝 引き分け')+'　'+(r.myDeck||'')+' vs '+(r.cpuDeck||'')));
-      var tags=[(d.getMonth()+1)+'/'+d.getDate(),LV[r.level]||'',r.first?'先攻':'後攻','T'+(r.turn||0),'あなたLP '+(r.myLp!=null?r.myLp:'-')+'／CPU LP '+(r.cpuLp!=null?r.cpuLp:'-')];if(r.aceFinish)tags.push('👑 切り札でとどめ');if(r.undo)tags.push('↶ 戻すあり');if(r.preview)tags.push('🧪 お試し版');
+      var tags=[(d.getMonth()+1)+'/'+d.getDate(),LV[r.level]||'',r.first?'先攻':'後攻','T'+(r.turn||0),'あなたLP '+(r.myLp!=null?r.myLp:'-')+'／CPU LP '+(r.cpuLp!=null?r.cpuLp:'-')];if(r.aceFinish)tags.push('👑 切り札でとどめ');if(r.undo)tags.push('↶ 戻すあり');if(r.preview)tags.push('🧪 試作版');
       li.appendChild(el('small','',tags.filter(Boolean).join('　')));ul.appendChild(li);});blk.appendChild(ul);box.appendChild(blk);}
   function logsF(){return pf.log.filter(function(r){return (r.fmt==='bo3')===(fmtView==='bo3');});}
   function matchesOf(list){var M={},order=[];list.forEach(function(r){if(!r.matchId)return;var m=M[r.matchId];if(!m){m=M[r.matchId]={id:r.matchId,w:0,l:0,d:0,n:0,done:false,res:null,at:r.at,theme:r.myTheme,opp:r.oppName};order.push(m);}

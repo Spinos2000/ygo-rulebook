@@ -141,12 +141,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 <div id="ackToast" role="status" hidden></div>
 <ol id="ackLog" aria-label="ログ（見本）" hidden></ol>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261123-0815-8112b9c813';
-import { playSummon, cardImg } from './fx.js?v=20261123-0815-8112b9c813';
-import { play, unlock } from './sound.js?v=20261123-0815-8112b9c813';
-import { CARD_POOL } from './data/cardpool.js?v=20261123-0815-8112b9c813';
-import { createGame, legalActions } from './engine/game.js?v=20261123-0815-8112b9c813';
-import { answerCandidates } from './ai/cpu.js?v=20261123-0815-8112b9c813';
+import { mountDuel } from './embed.js?v=20261123-0838-30c7db42b4';
+import { playSummon, cardImg } from './fx.js?v=20261123-0838-30c7db42b4';
+import { play, unlock } from './sound.js?v=20261123-0838-30c7db42b4';
+import { CARD_POOL } from './data/cardpool.js?v=20261123-0838-30c7db42b4';
+import { createGame, legalActions } from './engine/game.js?v=20261123-0838-30c7db42b4';
+import { answerCandidates } from './ai/cpu.js?v=20261123-0838-30c7db42b4';
 
 const host = document.getElementById('duel-host');
 mountDuel(host, { demo: true });
