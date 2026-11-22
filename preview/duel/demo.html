@@ -55,12 +55,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   <div id="demoList"></div>
 </section>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261122-0953-df31350498';
-import { playSummon } from './fx.js?v=20261122-0953-df31350498';
-import { play, unlock } from './sound.js?v=20261122-0953-df31350498';
-import { CARD_POOL } from './data/cardpool.js?v=20261122-0953-df31350498';
-import { createGame, legalActions } from './engine/game.js?v=20261122-0953-df31350498';
-import { answerCandidates } from './ai/cpu.js?v=20261122-0953-df31350498';
+import { mountDuel } from './embed.js?v=20261122-1617-0de5ac141a';
+import { playSummon } from './fx.js?v=20261122-1617-0de5ac141a';
+import { play, unlock } from './sound.js?v=20261122-1617-0de5ac141a';
+import { CARD_POOL } from './data/cardpool.js?v=20261122-1617-0de5ac141a';
+import { createGame, legalActions } from './engine/game.js?v=20261122-1617-0de5ac141a';
+import { answerCandidates } from './ai/cpu.js?v=20261122-1617-0de5ac141a';
 
 const host = document.getElementById('duel-host');
 mountDuel(host, { demo: true });
@@ -213,7 +213,36 @@ list.addEventListener('click', async e => {
   try { window.__duel.load(sceneState(sc)); await driveScene(sc); await fxIdle(); } catch (err) { console.error(err); }
   busy = false; setOpen(true);
 }, true);
-document.getElementById('guideOpenDemo').onclick = () => { setOpen(false); window.__duel.openGuide(0); const g = root.querySelector('#guideDlg'); const back = new MutationObserver(() => { if (g.hidden) { back.disconnect(); setOpen(true); } }); back.observe(g, { attributes: true, attributeFilter: ['hidden'] }); };
+/* ---------- 不具合の番号ごとの場面（t19。MEMEの test/fixtures/scenes/ を、作る時に fixtures/scenes/ に写す） ----------
+ * 押すと、その不具合が起きた時と同じ盤面になる（見る用。席は場面の seat の人。相手のカードの見え方も本物と同じ）。
+ * オンラインの場面は、通信の続きは再生しないので「盤面だけ」。他の演出のボタンを押すと、ふだんの見え方に戻る */
+const SCENE_DIR = './fixtures/scenes/';
+let fixScenes = [];
+const sceneSeatOff = () => { if (fixScenes.on) { fixScenes.on = false; window.__duel.previewSeat(null); } };
+sheet.addEventListener('click', e => { if (e.target.closest('button.fx') && !e.target.closest('button[data-fix]')) sceneSeatOff(); }, true); // 欄（list の外側）で先に受ける：順番の確かめのボタンも止める前に戻す
+fetch(SCENE_DIR + 'index.json').then(r => (r.ok ? r.json() : [])).then(idx => {
+  fixScenes = Array.isArray(idx) ? idx : [];
+  if (!fixScenes.length) return;
+  const label = s => (/^\d/.test(String(s.no)) ? `No.${s.no}` : String(s.no));
+  list.insertAdjacentHTML('beforeend', `<h2>🐞 不具合の場面 <small>No.〇の場面</small></h2><p class="note">押すと、その不具合が起きた時と同じ盤面になります（見る用）。オンラインの場面は盤面だけです。</p><div class="row">${fixScenes.map((s, i) => `<button class="fx" type="button" data-fix="${i}" title="${esc(s.note || '')}">${esc(label(s))}の場面<small>${esc(s.title || '')}${s.online ? '・盤面だけ' : ''}</small></button>`).join('')}</div>`);
+}).catch(() => { /* 場面のファイルが無い時（作る前の手元など）は、ボタンを出さない */ });
+function esc(t) { return String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+list.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-fix]'); if (!b || busy) return;
+  e.stopImmediatePropagation();
+  const s = fixScenes[b.dataset.fix]; if (!s) return;
+  busy = true;
+  try {
+    const sc = await (await fetch(SCENE_DIR + s.file)).json();
+    const st = structuredClone(sc.state);
+    st.askZone = [0, 1]; // 見る用の席（previewSeat）はオンラインと同じ形なので、マスを聞く相手も2人
+    setAllies(false); setOpen(false);
+    window.__duel.previewSeat(Number(sc.seat) || 0, sc.online ? '相手' : 'CPU'); fixScenes.on = true;
+    window.__duel.load(st);
+  } catch (err) { console.error('場面を読みこめませんでした', s.file, err); setOpen(true); }
+  busy = false;
+}, true);
+document.getElementById('guideOpenDemo').onclick =() => { setOpen(false); window.__duel.openGuide(0); const g = root.querySelector('#guideDlg'); const back = new MutationObserver(() => { if (g.hidden) { back.disconnect(); setOpen(true); } }); back.observe(g, { attributes: true, attributeFilter: ['hidden'] }); };
 // ?guide を付けて開いた時は、はじめから操作ガイドを開く
 if (new URLSearchParams(location.search).has('guide')) setTimeout(() => document.getElementById('guideOpenDemo').click(), 300); else setOpen(true);
 </script>

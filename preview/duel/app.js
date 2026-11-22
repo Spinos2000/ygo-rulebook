@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261122-0953-df31350498';
-import { fullThink } from './ai/levels.js?v=20261122-0953-df31350498';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261122-0953-df31350498';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261122-0953-df31350498';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261122-0953-df31350498';
-import { playSignature, sigKey } from './sig.js?v=20261122-0953-df31350498';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261122-0953-df31350498';
-import { firstEntrance } from './aces.js?v=20261122-0953-df31350498';
-import { RULINGS } from './data/rulings.js?v=20261122-0953-df31350498';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261122-0953-df31350498';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261122-0953-df31350498';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261122-0953-df31350498';
-import { joinSiteRoom } from './net/site-room.js?v=20261122-0953-df31350498';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261122-1617-0de5ac141a';
+import { fullThink } from './ai/levels.js?v=20261122-1617-0de5ac141a';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261122-1617-0de5ac141a';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261122-1617-0de5ac141a';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261122-1617-0de5ac141a';
+import { playSignature, sigKey } from './sig.js?v=20261122-1617-0de5ac141a';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261122-1617-0de5ac141a';
+import { firstEntrance } from './aces.js?v=20261122-1617-0de5ac141a';
+import { RULINGS } from './data/rulings.js?v=20261122-1617-0de5ac141a';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261122-1617-0de5ac141a';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261122-1617-0de5ac141a';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261122-1617-0de5ac141a';
+import { joinSiteRoom } from './net/site-room.js?v=20261122-1617-0de5ac141a';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261122-0953-df31350498';
-import { CARD_POOL } from './data/cardpool.js?v=20261122-0953-df31350498';
-import { DECKS } from './data/decks.js?v=20261122-0953-df31350498';
-import { SCRIPTS } from './cards/index.js?v=20261122-0953-df31350498';
+} from './engine/game.js?v=20261122-1617-0de5ac141a';
+import { CARD_POOL } from './data/cardpool.js?v=20261122-1617-0de5ac141a';
+import { DECKS } from './data/decks.js?v=20261122-1617-0de5ac141a';
+import { SCRIPTS } from './cards/index.js?v=20261122-1617-0de5ac141a';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -397,7 +397,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261122-0953-df31350498', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261122-1617-0de5ac141a', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -690,8 +690,8 @@ const themeOf = d => d.theme || d.name;
 const fmtTag = d => (d.format ? (d.format.kind === 'ryu' ? '🌏 留学生' : '🏫 在校生') : '');
 const setupOpen = () => { const el = $('#setup'); return !!el && !el.hidden; };
 let suKeep = null; // ⚙️（メニュー）を開いている間、準備画面で選んだ内容を覚えておく
-/** ホーム画面のスイッチ（No.15。仕上がるまでは URL に ?home を付けた時だけ） */
-const HOME_ON = (() => { try { return new URLSearchParams(location.search).has('home'); } catch { return false; } })();
+/** ホーム画面のスイッチ（No.15。お試し版（URLに /preview/）ではふだんから出す。本番は URL に ?home を付けた時だけ。MASTER 11-22 10:04） */
+const HOME_ON = (() => { try { return new URLSearchParams(location.search).has('home') || location.pathname.indexOf('/preview/') >= 0; } catch { return false; } })();
 function openSetup(page = HOME_ON ? 'home' : 'p0own') {
   let last = null; try { last = JSON.parse(localStorage.getItem('gx-duel-setup') || 'null'); } catch { /* 保存できない環境 */ }
   const d0 = DECKS[last?.p0] || DECKS[$('#deck0').value] || Object.values(DECKS)[0], d1 = DECKS[last?.p1] || DECKS[$('#deck1').value] || d0;
@@ -1389,7 +1389,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261122-0953-df31350498';
+const DUEL_BUILD = '20261122-1617-0de5ac141a';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
