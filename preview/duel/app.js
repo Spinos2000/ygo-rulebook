@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261122-1851-06d3fbbe57';
-import { fullThink } from './ai/levels.js?v=20261122-1851-06d3fbbe57';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261122-1851-06d3fbbe57';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261122-1851-06d3fbbe57';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261122-1851-06d3fbbe57';
-import { playSignature, sigKey } from './sig.js?v=20261122-1851-06d3fbbe57';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261122-1851-06d3fbbe57';
-import { firstEntrance } from './aces.js?v=20261122-1851-06d3fbbe57';
-import { RULINGS } from './data/rulings.js?v=20261122-1851-06d3fbbe57';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261122-1851-06d3fbbe57';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261122-1851-06d3fbbe57';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261122-1851-06d3fbbe57';
-import { joinSiteRoom } from './net/site-room.js?v=20261122-1851-06d3fbbe57';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261122-2155-b18fd5eab6';
+import { fullThink } from './ai/levels.js?v=20261122-2155-b18fd5eab6';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261122-2155-b18fd5eab6';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261122-2155-b18fd5eab6';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261122-2155-b18fd5eab6';
+import { playSignature, sigKey } from './sig.js?v=20261122-2155-b18fd5eab6';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261122-2155-b18fd5eab6';
+import { firstEntrance } from './aces.js?v=20261122-2155-b18fd5eab6';
+import { RULINGS } from './data/rulings.js?v=20261122-2155-b18fd5eab6';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261122-2155-b18fd5eab6';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261122-2155-b18fd5eab6';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261122-2155-b18fd5eab6';
+import { joinSiteRoom } from './net/site-room.js?v=20261122-2155-b18fd5eab6';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261122-1851-06d3fbbe57';
-import { CARD_POOL } from './data/cardpool.js?v=20261122-1851-06d3fbbe57';
-import { DECKS } from './data/decks.js?v=20261122-1851-06d3fbbe57';
-import { SCRIPTS } from './cards/index.js?v=20261122-1851-06d3fbbe57';
+} from './engine/game.js?v=20261122-2155-b18fd5eab6';
+import { CARD_POOL } from './data/cardpool.js?v=20261122-2155-b18fd5eab6';
+import { DECKS } from './data/decks.js?v=20261122-2155-b18fd5eab6';
+import { SCRIPTS } from './cards/index.js?v=20261122-2155-b18fd5eab6';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -397,7 +397,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261122-1851-06d3fbbe57', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261122-2155-b18fd5eab6', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -433,7 +433,8 @@ let thinking = null; // 考えている最中の状態（同じ状態で2回考�
 function setThinking(on) { const el = $('#cpuThink'); if (!el) return; if (on) { el.textContent = '考え中…'; el.classList.remove('deep'); el.style.setProperty('--p', '0'); } else el.style.setProperty('--p', '1'); el.hidden = !on; }
 /** CPUが考えている途中の知らせ：進み具合（0〜1）を線で、勝負所の時は「じっくり考え中…」。どのカードを使うかの手がかりは出さない */
 function thinkProgress(frac, critical) { const el = $('#cpuThink'); if (!el) return; el.style.setProperty('--p', String(Math.max(0, Math.min(1, Number(frac) || 0)))); const t = critical ? 'じっくり考え中…' : '考え中…'; if (el.textContent !== t) el.textContent = t; el.classList.toggle('deep', !!critical); }
-const pausedUi = () => setupOpen() || ($('#menu') && !$('#menu').hidden) || ($('#guideDlg') && !$('#guideDlg').hidden);
+const logPaused = () => narrow() && sheet === 'log'; // No.25：スマホでログを開いている間は、デュエルを止める（閉じたら続きから）
+const pausedUi = () => setupOpen() || ($('#menu') && !$('#menu').hidden) || ($('#guideDlg') && !$('#guideDlg').hidden) || logPaused();
 function scheduleCpu() {
   clearTimeout(cpuTimer);
   if (pausedUi()) return;
@@ -1390,7 +1391,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261122-1851-06d3fbbe57';
+const DUEL_BUILD = '20261122-2155-b18fd5eab6';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -3514,7 +3515,7 @@ root.addEventListener('click', e => {
   if (t.closest('#closeDuel')) { clearTimeout(cpuTimer); OPTS.onClose?.(); return; }
   if (t.closest('#reopen')) { peek = false; render(); return; }
   if (t.closest('[data-close]') || t.id === 'scrim') { closeSheets(); return; }
-  if (t.closest('#logBtn')) { sheet = sheet === 'log' ? null : 'log'; renderSheets(); return; }
+  if (t.closest('#logBtn')) { sheet = sheet === 'log' ? null : 'log'; renderSheets(); if (logPaused()) clearTimeout(cpuTimer); else if (S && !pausedUi()) scheduleCpu(); return; }
   if (t.closest('#menuBtn')) { openMenu(); return; }
   if (t.closest('#menuClose') || t.id === 'menu') { closeMenu(); if (suReturn) { suReturn = false; openSetup('go'); } return; }
   if (t.closest('#surrender')) { surrender(); return; }
