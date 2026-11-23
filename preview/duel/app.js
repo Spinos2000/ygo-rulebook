@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261123-0909-d5c525952d';
-import { fullThink } from './ai/levels.js?v=20261123-0909-d5c525952d';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261123-0909-d5c525952d';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261123-0909-d5c525952d';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261123-0909-d5c525952d';
-import { playSignature, sigKey } from './sig.js?v=20261123-0909-d5c525952d';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261123-0909-d5c525952d';
-import { firstEntrance } from './aces.js?v=20261123-0909-d5c525952d';
-import { RULINGS } from './data/rulings.js?v=20261123-0909-d5c525952d';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261123-0909-d5c525952d';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261123-0909-d5c525952d';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261123-0909-d5c525952d';
-import { joinSiteRoom } from './net/site-room.js?v=20261123-0909-d5c525952d';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261123-0927-23ddb85dd2';
+import { fullThink } from './ai/levels.js?v=20261123-0927-23ddb85dd2';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261123-0927-23ddb85dd2';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261123-0927-23ddb85dd2';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261123-0927-23ddb85dd2';
+import { playSignature, sigKey } from './sig.js?v=20261123-0927-23ddb85dd2';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261123-0927-23ddb85dd2';
+import { firstEntrance } from './aces.js?v=20261123-0927-23ddb85dd2';
+import { RULINGS } from './data/rulings.js?v=20261123-0927-23ddb85dd2';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261123-0927-23ddb85dd2';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261123-0927-23ddb85dd2';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261123-0927-23ddb85dd2';
+import { joinSiteRoom } from './net/site-room.js?v=20261123-0927-23ddb85dd2';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261123-0909-d5c525952d';
-import { CARD_POOL } from './data/cardpool.js?v=20261123-0909-d5c525952d';
-import { DECKS } from './data/decks.js?v=20261123-0909-d5c525952d';
-import { SCRIPTS } from './cards/index.js?v=20261123-0909-d5c525952d';
+} from './engine/game.js?v=20261123-0927-23ddb85dd2';
+import { CARD_POOL } from './data/cardpool.js?v=20261123-0927-23ddb85dd2';
+import { DECKS } from './data/decks.js?v=20261123-0927-23ddb85dd2';
+import { SCRIPTS } from './cards/index.js?v=20261123-0927-23ddb85dd2';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -121,6 +121,63 @@ function reportResult(prev, next) {
     undo: undoUsed, aceFinish, persona, surrender: /サレンダー/.test(next.winReason || ''), aces: acesNamesOf(next),
   };
   try { OPTS.onResult(rec); } catch (e) { console.warn('戦績に渡せませんでした', e); }
+}
+/* ---------- 結果の窓（No.32。先輩 11/23 09:15）：CPU戦で決着したら、勝ち負け・残りのLP・ターン数を大きく出す ----------
+ * ボタンは［🏠 ホームへ］［🔁 もう一度（同じデッキで）］［📋 盤面を見る］。盤面を見る時は窓を閉じるだけ（下の欄から戻れる）。
+ * オンライン対戦は今の終わり方のまま（出さない）。決着の演出（真ん中の帯）が終わってから出す */
+let endShown = false, endDlgT = null;
+const END_CSS = `.end-dlg{position:absolute;inset:0;z-index:80;display:grid;place-items:center;padding:16px;background:rgba(8,14,28,.45);box-sizing:border-box}
+.end-dlg[hidden]{display:none}
+.end-card{width:min(420px,100%);max-height:100%;overflow-y:auto;box-sizing:border-box;background:var(--panel);color:var(--ink);border:2.5px solid var(--edge);border-radius:16px;box-shadow:5px 6px 0 var(--edge);padding:16px 16px 14px;text-align:center}
+.end-k{margin:0;font-size:12px;color:var(--sub)}
+.end-card h2{margin:2px 0 4px;font-family:var(--display),inherit;font-weight:700;font-size:30px;line-height:1.25}
+.end-card.win h2{color:var(--me)}.end-card.lose h2{color:var(--opp)}
+.end-why{margin:0 0 10px;font-size:13px;color:var(--sub)}
+.end-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px}
+.end-stats div{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:8px 4px}
+.end-stats dt{font-size:11px;color:var(--sub)}.end-stats dd{margin:2px 0 0;font-family:var(--num),inherit;font-weight:600;font-size:24px;line-height:1.1}
+.end-btns{display:grid;gap:8px}
+.end-btns button{min-height:52px;font-size:17px;font-weight:700}
+.end-btns button{min-width:0;white-space:normal}.end-btns button small{display:block;font-size:11px;font-weight:500;opacity:.8}
+@media (orientation:landscape) and (max-height:500px){.end-card{width:min(640px,100%);padding:10px 14px}.end-card h2{font-size:24px}.end-stats{margin-bottom:8px}.end-stats dd{font-size:20px}.end-btns{grid-template-columns:repeat(3,minmax(0,1fr))}.end-btns button{min-height:48px;font-size:15px}}`;
+function endDlgEl() {
+  let el = $('#endDlg'); if (el) return el;
+  const st = document.createElement('style'); st.textContent = END_CSS; ROOT.appendChild(st);
+  el = document.createElement('div'); el.id = 'endDlg'; el.className = 'end-dlg'; el.hidden = true;
+  el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'endTitle');
+  ($('.droot') || ROOT).appendChild(el);
+  el.addEventListener('click', e => { const b = e.target.closest('[data-end]'); if (b) endAct(b.dataset.end); });
+  return el;
+}
+function endDlgHide() { clearTimeout(endDlgT); const el = $('#endDlg'); if (el) el.hidden = true; }
+/** 決着した時に1回だけ、演出が終わるのを待ってから窓を出す（元に戻すで決着が消えたら、また出せるようにする） */
+function maybeEndDlg() {
+  if (!S || S.winner === null) { if (endShown) { endShown = false; endDlgHide(); } return; }
+  if (endShown || !cpuMode() || netMode() || placeholder) return;
+  endShown = true; clearTimeout(endDlgT);
+  const wait = () => { if (!S || S.winner === null) return; if ($('.droot.fx-busy')) { endDlgT = setTimeout(wait, 300); return; } endDlgT = setTimeout(showEndDlg, 2600); }; // 真ん中の「あなたの勝ち」の帯を見てから
+  wait();
+}
+function showEndDlg() {
+  if (!S || S.winner === null || !cpuMode() || netMode()) return;
+  const me = ME(), res = S.winner === me ? 'win' : S.winner === 1 - me ? 'lose' : 'draw';
+  const el = endDlgEl();
+  el.innerHTML = `<div class="end-card ${res}"><p class="end-k">デュエル終了</p><h2 id="endTitle">${esc(resultText(S.winner, true, me))}</h2><p class="end-why">${esc(WHO(S.winReason || ''))}</p>
+<dl class="end-stats"><div><dt>あなたのLP</dt><dd>${S.players[me].lp}</dd></div><div><dt>CPUのLP</dt><dd>${S.players[1 - me].lp}</dd></div><div><dt>ターン</dt><dd>${S.turn}</dd></div></dl>
+<div class="end-btns"><button type="button" class="btn" data-end="home">🏠 ホームへ</button><button type="button" class="btn primary" data-end="again">🔁 もう一度<small>同じデッキで</small></button><button type="button" class="btn ghost" data-end="board">📋 盤面を見る<small>${HOME_ON && OPTS.menuFirst ? '下の欄の［🏠 ホーム］で戻れます' : '下の欄の［新しいデュエル］で続けられます'}</small></button></div></div>`;
+  el.hidden = false;
+  el.querySelector('[data-end="again"]').focus({ preventScroll: true });
+}
+function endAct(k) {
+  endDlgHide();
+  if (k === 'again') { newDuel(); return; } // 準備画面のデッキ（#deck0／#deck1）はそのまま＝同じデッキ
+  if (k === 'home') {
+    if (HOME_ON && OPTS.menuFirst) { suReturn = false; placeholder = true; openSetup('home'); }
+    else if (OPTS.menuFirst) { placeholder = true; openSetup(); }
+    else if (OPTS.onClose) { clearTimeout(cpuTimer); OPTS.onClose(); }
+    else openSetup();
+  }
+  // board：窓を閉じて盤面を見る
 }
 function commit(next) {
   const prev = S;
@@ -412,7 +469,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261123-0909-d5c525952d', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261123-0927-23ddb85dd2', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -909,7 +966,7 @@ function newDuel(quiet = false) {
   history = []; selected = null; pick = []; sheet = null; peek = false; lastLp = [S.players[0].lp, S.players[1].lp]; glowDone.clear(); costShown.clear(); heldAnims = []; trace = []; thinking = null; aceSeen = new Set();
   closeMenu();
   render();
-  newPersona(); moodTurn = -1; undoUsed = false; resultSent = false;
+  newPersona(); moodTurn = -1; undoUsed = false; resultSent = false; endShown = false; endDlgHide();
   if (cpuMode() && !quiet && !setupOpen() && $('#menu').hidden) startCue();
 }
 
@@ -1412,7 +1469,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261123-0909-d5c525952d';
+const DUEL_BUILD = '20261123-0927-23ddb85dd2';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -2873,6 +2930,7 @@ function render() {
   for (const j of pendingSummons) if (j && j.uid != null && !j.search && !j.handOpen && !j.handAdd) { const el = ROOT.querySelector(`#board [data-uid="${j.uid}"]`); if (el) el.style.visibility = 'hidden'; }
   $('#result').hidden = S.winner === null;
   if (S.winner !== null) $('#result').textContent = `${resultText(S.winner, cpuMode() || netMode(), ME())}：${WHO(S.winReason)}`;
+  maybeEndDlg(); // No.32：CPU戦の決着で結果の窓
   // カードの移動・召喚の演出があれば、それが終わるまでCPUの手番と自動パスを待つ
   if (playPendingMoves()) { saveSoon(); return; }
   if (playPendingSummons()) { saveSoon(); return; }
@@ -3536,6 +3594,7 @@ root.addEventListener('click', e => {
   if (t.closest('#closeDuel')) { clearTimeout(cpuTimer); OPTS.onClose?.(); return; }
   if (t.closest('#reopen')) { peek = false; render(); return; }
   if (t.closest('[data-close]') || t.id === 'scrim') { closeSheets(); return; }
+  if (t.closest('#menuLog')) { sheet = 'log'; closeMenu(); renderSheets(); clearTimeout(cpuTimer); return; } // No.31：スマホの対戦中は☰メニューから記録を開く（開いている間はCPUを止める＝No.25）
   if (t.closest('#logBtn')) { sheet = sheet === 'log' ? null : 'log'; renderSheets(); if (logPaused()) clearTimeout(cpuTimer); else if (S && !pausedUi()) scheduleCpu(); return; }
   if (t.closest('#menuBtn')) { openMenu(); return; }
   if (t.closest('#menuClose') || t.id === 'menu') { closeMenu(); if (suReturn) { suReturn = false; openSetup('go'); } return; }

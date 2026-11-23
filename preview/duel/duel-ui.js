@@ -1008,11 +1008,22 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
   .droot .dock-extra .btn { min-height: 36px; padding: 1px 10px; font-size: 12.5px; box-shadow: 1px 1px 0 var(--edge) } /* 押しやすい高さ（点検④。前は30px） */
   .droot #stopBtn { font-size: 0; padding: 1px 8px }
   .droot #stopBtn::before { content: "✋"; font-size: 15px }
+  /* No.30（決着のあと［記録］［🏠 ホームへ］［↶ ひとつ戻す］が右にはみ出して3つ目が切れた）：下の欄は2段にしない（No.13）ので、ボタンを詰める。↶ は ✋ と同じく記号だけ（上の帯にも ↶ がある）、ホームは「🏠ホーム」 */
+  .droot .dock-extra { gap: 4px }
+  .droot .dock-extra .btn { padding: 1px 7px }
+  .droot #undoMini { font-size: 0; padding: 1px 9px }
+  .droot #undoMini::before { content: "↶"; font-size: 16px }
+  .droot #homeBtn { font-size: 0 }
+  .droot #homeBtn::before { content: "🏠ホーム"; font-size: 12.5px }
   .droot #goBtn { min-height: 40px; font-size: 14px; padding: 2px 8px }
   .droot #goBtn small { display: none }
   .end-btn { background: color-mix(in srgb, var(--opp) 20%, var(--panel)); width: 5.6em; justify-content: center; flex: none } /* 2回押しの間に幅が変わってボタンの並びがずれないように固定 */
   .end-btn.armed { background: var(--opp); color: #fff }
 }
+/* No.31（対戦中の下の欄で［エンド］がはみ出した。CODEの決定 09:16）：スマホの対戦中は［記録］を下の欄に出さず、☰メニューの［📜 記録］から開く。決着のあと（#result が出ている時）は今までどおり下の欄に出す */
+@media (max-width: 860px) { .droot:has(#result[hidden]) #logBtn { display: none } }
+/* No.30：375より細い画面では、文字も少し小さくして3つとも入れる */
+@media (max-width: 380px) { .droot .dock-extra .btn, .droot #homeBtn::before { font-size: 12px } .droot #undoMini { font-size: 0 } }
 /* No.13（ボスの報告：サイクロンの対象が下のボタンに隠れた）：下のボタンの欄は、どの場面でも同じ高さにする。
    盤面の高さはこの欄のふだんの高さで決めて動かさない（No.11）ので、欄が伸びると盤面の下の段（自分の魔法・罠）が隠れてしまう。
    ボタンの段はそれぞれ1行にまとめて、入りきらない時は横に流す。発動の選択（phaseBtns）の段は、出ていない時も場所を空けておく */
@@ -1095,12 +1106,13 @@ export const MARKUP = `
     <div class="menu-row">
       <button class="btn primary" id="newDuel">新しいデュエル</button>
       <button class="btn ghost" id="guideOpen">📖 操作ガイド</button>
+      <button class="btn ghost mini-only" id="menuLog" type="button">📜 記録</button>
     </div>
     <div class="menu-row">
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261123-0909</p>
+    <p class="menu-note ver">版：20261123-0927</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">
