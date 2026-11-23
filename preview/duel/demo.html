@@ -52,6 +52,7 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 /* ---------- t30：相手の発動の確認画面（DEMOだけ。本物の卓にはまだ入れない） ---------- */
 #demo .ack-set { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0 6px }
 #demo .ack-set label { margin-top: 0 }
+#demo h3.ack-h { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: 13px; margin: 10px 0 4px; color: var(--d-sub) }
 #ackLayer { position: fixed; inset: 0; z-index: 58; background: rgba(8, 14, 28, .38) }
 #ackLayer[hidden], #ackToast[hidden] { display: none }
 #ackArrows { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible }
@@ -170,12 +171,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 <div id="ackToast" role="status" hidden></div>
 <ol id="ackLog" aria-label="ログ（見本）" hidden></ol>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261123-0950-189a897d65';
-import { playSummon, cardImg, ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261123-0950-189a897d65';
-import { play, unlock } from './sound.js?v=20261123-0950-189a897d65';
-import { CARD_POOL } from './data/cardpool.js?v=20261123-0950-189a897d65';
-import { createGame, legalActions } from './engine/game.js?v=20261123-0950-189a897d65';
-import { answerCandidates } from './ai/cpu.js?v=20261123-0950-189a897d65';
+import { mountDuel } from './embed.js?v=20261123-1239-0835efb5cf';
+import { playSummon, cardImg, ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261123-1239-0835efb5cf';
+import { play, unlock } from './sound.js?v=20261123-1239-0835efb5cf';
+import { CARD_POOL } from './data/cardpool.js?v=20261123-1239-0835efb5cf';
+import { createGame, legalActions } from './engine/game.js?v=20261123-1239-0835efb5cf';
+import { answerCandidates } from './ai/cpu.js?v=20261123-1239-0835efb5cf';
 
 const host = document.getElementById('duel-host');
 // 名札の帯：試作版（/preview/）の時だけ出す。版の名前は version.json（作る時に書く）から読む
@@ -376,7 +377,15 @@ const ACKS = [
     targets: ['0:mz:0', '0:mz:1', '0:mz:2'], tgt: '対象はとらない：あなたの攻撃表示のモンスターを全部破壊する' },
   { name: 'ブラック・ホール', sub: '手札から・場のモンスター全部', tp: 1, card: C.hole, mons: { 0: [C.c], 1: [C.b] }, arrow: false,
     targets: ['0:mz:0', '1:mz:0'], tgt: '対象はとらない：場のモンスターを全部破壊する' },
+  // ここから下は、本物の流れ（演出と合わせて流す）だけで動く場面（fxOnly）
+  { name: 'サイクロン', sub: '速攻魔法・あなたの召喚に・伏せカード1枚が対象', tp: 0, card: '4909', fxOnly: true, tgt: 'あなたの伏せカード1枚を破壊する' },
+  { name: '早すぎた埋葬', sub: '装備魔法・墓地のモンスター1体が対象', tp: 1, card: '4966', fxOnly: true, gy: { 1: [C.b] }, tgt: '相手の墓地の「X－ヘッド・キャノン」を特殊召喚して、このカードを装備する' },
+  { name: 'D-HERO デビルガイ', sub: '起動効果・あなたのモンスター1体が対象', tp: 1, card: '6658', fxOnly: true, mons: { 0: [C.c], 1: ['6658'] }, tgt: 'あなたの「V－タイガー・ジェット」を、2回目の相手のスタンバイフェイズまで除外する' },
+  { name: '墓守の番兵', sub: 'リバース効果・反転召喚で表になって発動', tp: 1, card: '5511', fxOnly: true, mons: { 0: [C.c] }, tgt: 'あなたの「V－タイガー・ジェット」を手札に戻す' },
+  { name: '暗黒ブラキ', sub: '誘発効果・召喚に成功した時', tp: 1, card: '10924', fxOnly: true, mons: { 0: [C.c] }, tgt: 'あなたの「V－タイガー・ジェット」を表側守備表示にする' },
 ];
+/* 場面の見出し（ACKS の番号） */
+const ACK_GROUPS = [['🪤 罠', [0, 2]], ['✨ 魔法', [1, 3, 4, 5]], ['👹 モンスター効果', [6, 7, 8]]];
 const ACK_MODES = [['all', '毎回止める'], ['chain', 'チェーンできる時だけ止める'], ['none', '止めない（上に小さく出す）']];
 const ackGet = (k, v) => { try { return localStorage.getItem(k) ?? v; } catch { return v; } };
 const ackPut = (k, v) => { try { localStorage.setItem(k, v); } catch { /* 保存できなくても動く */ } };
@@ -384,10 +393,10 @@ list.insertAdjacentHTML('beforeend', `<h2>🛑 相手の発動の確認画面 <s
 <p class="note">相手がカードを発動した場面になって、確認画面が出ます。［了承］で効果の処理へ、［チェーンする］で自分のカードを重ねます（DEMOなので盤面のカードは動きません）。</p>
 <div class="ack-set" role="radiogroup" aria-label="止め方">${ACK_MODES.map(([v, t]) => `<label><input type="radio" name="ackMode" value="${v}"${ackGet('demoAckMode', 'all') === v ? ' checked' : ''}> ${t}</label>`).join('')}</div>
 <p class="note" id="ackModeNote"></p>
-<label><input type="checkbox" id="ackMine"${ackGet('demoAckMine', '1') === '1' ? ' checked' : ''}> 自分の場に、伏せた「神の宣告」がある（チェーンできる）</label>
+<label><input type="checkbox" id="ackMine"${ackGet('demoAckMine', '1') === '1' ? ' checked' : ''}> 自分の場に、伏せた「神の宣告」がある（チェーンできる。罠の場面と、死者蘇生・ブラック・ホールだけ）</label>
 <label><input type="checkbox" id="ackFx"${ackGet('demoAckFx', '1') === '1' ? ' checked' : ''}> 演出と合わせて流す（本物の卓と同じ順：発動の演出 → 確認画面 → 効果の演出）</label>
 <label><input type="checkbox" id="ackBig"${ackGet('demoAckBig', '1') === '1' ? ' checked' : ''}> カード風の大きなカード（外すと、前の形：卓のカードの絵をそのまま大きく）</label>
-<div class="row" style="margin-top:8px">${ACKS.map((a, i) => `<button class="fx" type="button" data-ack="${i}">${a.name}<small>相手が発動・${a.sub}</small></button>`).join('')}</div>`);
+${ACK_GROUPS.map(([h, ids]) => `<h3 class="ack-h">${h}</h3><div class="row">${ids.map(i => { const a = ACKS[i]; return `<button class="fx" type="button" data-ack="${i}">${a.name}<small>相手が発動・${a.sub}</small></button>`; }).join('')}</div>`).join('')}`);
 const ackModeNote = () => {
   const m = document.querySelector('input[name="ackMode"]:checked')?.value || 'all';
   document.getElementById('ackModeNote').textContent = m === 'chain' ? '※「チェーンできる時だけ」：CPU戦だけで選べます（オンラインは伏せカードがばれないように「毎回」だけ。CODE 22:13 の決定）。' : m === 'none' ? '※止めない：確認画面は出さず、上に小さく出して進みます（ログの行は光ります）。' : '※毎回止める：チェーンできるカードが無い時も、同じ形（［チェーンする］は灰色）で待ちます。';
@@ -537,11 +546,24 @@ async function runAck(a) {
  * 相手のカードの発動の演出 → 確認画面 → タップで了承 → 効果の演出 → 対象が黄色く光る。
  * ［チェーンする］：自分の神の宣告の発動の演出 → 相手のチェーン3の発動の演出と確認画面 → 処理 3→2→1（それぞれの効果の演出）
  * 相手の伏せカードに神の宣告をもう1枚置く：だれも重ねられない時、エンジンは発動と同時にチェーンを処理するので、チェーン3の確認画面を出す間がなくなるため（本物の卓では t31 で、了承まで処理を止める） */
+/** カード名 → 番号（ログの「〇〇を発動」の行から、どのカードかを知る） */
+const CODE_OF = Object.fromEntries(Object.entries(CARD_POOL).map(([c, d]) => [d.name, c]));
 const ACK_FX = [
   { hand: { 0: [C.c] }, set1: [C.pit, C.judge, C.judge], pre: [a => a.type === 'normalSummon'] },
   { hand: { 1: [C.reborn] }, set1: [C.judge, C.judge], pre: [] },
   { set1: [C.mirror, C.judge, C.judge], pre: [a => a.type === 'nextPhase' && a.to === 'battle', a => a.type === 'attack'] },
   { hand: { 1: [C.hole] }, set1: [C.judge, C.judge], pre: [] },
+  // サイクロン：あなたが召喚した時 → 相手が伏せたサイクロンを発動（あなたのターン）。あなたの伏せカード（激流葬）が対象
+  { hand: { 0: [C.c] }, set1: ['4909', C.judge, C.judge], set0: [C.torrent], pre: [a => a.type === 'normalSummon'] },
+  // 早すぎた埋葬：相手のターンに、手札から発動。相手の墓地のモンスターが対象
+  { hand: { 1: ['4966'] }, set1: [C.judge, C.judge], pre: [] },
+  // デビルガイ：相手のメインフェイズに、起動効果を発動。あなたのモンスターが対象（モンスターの効果なので、神の宣告ではチェーンできない＝灰色）
+  { set1: [C.judge, C.judge, '4909'], pre: [] },
+  // 墓守の番兵：相手が反転召喚 → リバース効果（必ず発動）。発動はエンジンが自分でチェーンに積む
+  { setMons1: ['5511'], set1: [C.judge, C.judge, '4909'], pre: [a => a.type === 'flipSummon'], auto: true },
+  // 暗黒ブラキ：相手が通常召喚 → 召喚に成功した時の誘発効果
+  { hand: { 1: ['10924'] }, set1: [C.judge, C.judge, '4909'], pre: [a => a.type === 'normalSummon'] },
+  // モンスター効果の3つは、相手の伏せカードにサイクロンも置く：だれも重ねられないと、エンジンが発動と同時に効果まで処理してしまい、確認画面が効果のあとになるため
 ];
 /** 光らせるマス：対象をとる時はその対象。とらない時は、効果を受けるモンスター（奈落・ミラーフォースは自分のモンスター、ブラック・ホールは全部） */
 const ackKeyOf = (S, u) => { const c = S.cards[u]; if (!c) return null; if (c.zone === 'mzone') return `${c.controller}:mz:${c.index}`; if (c.zone === 'szone') return `${c.controller}:st:${c.index}`; if (c.zone === 'gy') return `pile:${c.owner}:gy`; return null; };
@@ -565,44 +587,56 @@ async function runAckFx(a, fx) {
   const hide = document.createElement('style'); hide.id = 'ackHideDock'; hide.textContent = '#dock { visibility: hidden !important }'; root.appendChild(hide);
   try { await ackFxFlow(a, fx); } finally { if (cm) cm.value = cm0; hide.remove(); }
 }
+/** 演出が終わるのを待つ（ふだんは最長1.2秒。卓の「演出中」の印が残ったままになる場面があるので、待ちすぎない） */
+const ackIdle = async (n = 10) => { let calm = 0; for (let i = 0; i < n && calm < 3; i++) { await new Promise(r => setTimeout(r, 120)); calm = root.querySelector('.droot.fx-busy') ? 0 : calm + 1; } };
 async function ackFxFlow(a, fx) {
-  const D = window.__duel, mine = document.getElementById('ackMine').checked, mode = document.querySelector('input[name="ackMode"]:checked')?.value || 'all';
-  D.load(sceneState({ tp: a.tp, hand: fx.hand, set: { 0: mine ? [C.judge] : [], 1: fx.set1 }, mons: a.mons, gy: a.gy }));
+  // 足した場面（fxOnly）では、自分の伏せた神の宣告は置かない（対象を選ぶ途中で重ねると、卓の演出が止まることがあるため。チェーンは罠の場面で試せる）
+  const D = window.__duel, mine = document.getElementById('ackMine').checked && !a.fxOnly, mode = document.querySelector('input[name="ackMode"]:checked')?.value || 'all';
+  D.load(sceneState({ tp: a.tp, hand: fx.hand, set: { 0: [...(mine ? [C.judge] : []), ...(fx.set0 || [])], 1: fx.set1 }, setMons: fx.setMons1 ? { 1: fx.setMons1 } : undefined, mons: a.mons, gy: a.gy }));
   ackLogEl.hidden = true;
-  const steps = [...fx.pre, (x, S) => x.type === 'activate' && S.cards[x.card].code === a.card && S.cards[x.card].controller === 1];
+  const steps = [...fx.pre, ...(fx.auto ? [] : [(x, S) => x.type === 'activate' && S.cards[x.card].code === a.card && S.cards[x.card].controller === 1])]; // auto：必ず発動する効果（エンジンが自分で積む）
   const judgeOf = (L, S, p) => L.find(x => x.type === 'activate' && S.cards[x.card].code === C.judge && S.cards[x.card].controller === p);
-  let k = 0, seen = 0, plan = '', flash = [];
+  let k = 0, seen = 0, plan = '', flash = [], logAt = D.state.log.length, myLeft = mine, firstPick = null;
   for (let guard = 0; guard < 90; guard++) {
-    await fxIdle(); // 発動・効果の演出が終わるまで待つ
+    // 発動・効果の演出が終わるまで待つ。ただし、選ぶ欄が出ている間（対象を選ぶなど）は卓が演出中の印を出したままなので、待たずに先に答える
+    if (D.state && D.state.pending) await new Promise(r => setTimeout(r, 300)); else await ackIdle();
     let S = D.state; if (!S || S.winner !== null) break;
-    if (S.chain.length > seen) { // チェーンが1つ増えた（発動の演出のあと）
-      seen = S.chain.length; const L = S.chain[S.chain.length - 1], code = S.cards[L.uid].code, no = S.chain.length;
-      if (L.player === 1) {
-        const canChain = legalActions(S).some(x => x.type === 'activate' && S.cards[x.card]?.controller === 0);
-        const keys = ackKeys(S, L, code), tgt = no === 1 ? a.tgt : 'あなたの「神の宣告」（チェーン2）の発動を無効にして破壊する';
-        if (no === 1) flash = L.targets && L.targets.length ? L.targets.map(u => [u, ackKeyOf(S, u)]) : keys.map(x => [null, x]); // 対象をとる時は、カードを覚えておく
-        let v = 'ok';
-        if (mode === 'none' || (mode === 'chain' && !canChain)) { ackLitReal(no); ackToastShow(`相手が「${CARD_POOL[code].name}」を発動（チェーン${no}）`); }
-        else { v = await ackAsk({ p: 1, code, no, tgt }, canChain); ackLitReal(no); }
-        if (v === 'chain') plan = 'mine';
-        if (no > 1 && v === 'ok') await ackFlash(keys); // チェーン3：何を無効にするのかを、盤面で光らせる
-      } else ackLitReal(no);
-      S = D.state;
+    // 新しい「〇〇を発動（チェーンN）」のログの行を見て、確認画面を出す。対象を選ぶ前でも出す
+    // （だれも重ねられない時、エンジンは対象を選んだのと同じ一手でチェーンを処理まで進めるので、チェーンが増えるのを待つと間に合わない）
+    const fresh = S.log.slice(logAt); logAt = S.log.length;
+    for (const ln of fresh) {
+      const m = /^P([12])：「(.+?)」(?:の効果)?を発動（チェーン(\d+)）/.exec(ln.text); if (!m) continue;
+      const p = Number(m[1]) - 1, no = Number(m[3]), code = CODE_OF[m[2]] || a.card; seen = Math.max(seen, no);
+      if (p !== 1) { ackLitReal(no); continue; }
+      const L = S.chain[no - 1] && S.cards[S.chain[no - 1].uid].code === code ? S.chain[no - 1] : null;
+      // 重ねられるか：選ぶ欄が出ている間は、伏せた神の宣告が残っていて、魔法・罠の発動の時だけ（神の宣告はモンスターの効果は無効にできない）
+      const canChain = S.pending ? (myLeft && CARD_POOL[code].kind !== 'monster') : legalActions(S).some(x => x.type === 'activate' && S.cards[x.card]?.controller === 0);
+      const keys = L ? ackKeys(S, L, code) : [], tgt = no === 1 ? a.tgt : 'あなたの「神の宣告」（チェーン2）の発動を無効にして破壊する';
+      if (no === 1 && L) flash = L.targets && L.targets.length ? L.targets.map(u => [u, ackKeyOf(S, u)]) : keys.map(x => [null, x]); // 対象をとる時は、カードを覚えておく
+      let v = 'ok';
+      if (mode === 'none' || (mode === 'chain' && !canChain)) { ackLitReal(no); ackToastShow(`相手が「${CARD_POOL[code].name}」を発動（チェーン${no}）`); }
+      else { v = await ackAsk({ p: 1, code, no, tgt }, canChain); ackLitReal(no); }
+      if (v === 'chain') plan = 'mine';
+      if (no > 1 && v === 'ok' && keys.length) await ackFlash(keys); // チェーン3：何を無効にするのかを、盤面で光らせる
     }
+    S = D.state;
+    // 確認画面の時にまだチェーンに積まれていなかった（対象を選ぶ前だった）時は、積まれたあとで光らせる対象を覚える
+    if (!flash.length && S.chain[0] && S.chain[0].player === 1) { const L0 = S.chain[0]; flash = L0.targets && L0.targets.length ? L0.targets.map(u => [u, ackKeyOf(S, u)]) : ackKeys(S, L0, S.cards[L0.uid].code).map(x => [null, x]); }
     if (k >= steps.length && seen && !S.chain.length && !S.pending) break; // チェーンが全部処理された
     const L = legalActions(S);
     let act = k < steps.length ? L.find(x => steps[k](x, S)) : null;
     if (act) k++;
-    else if (plan === 'mine' && (act = judgeOf(L, S, 0))) plan = 'opp';      // 自分の神の宣告（チェーン2）
+    else if (plan === 'mine' && (act = judgeOf(L, S, 0))) { plan = 'opp'; myLeft = false; }      // 自分の神の宣告（チェーン2）
     else if (plan === 'opp' && (act = judgeOf(L, S, 1))) plan = 'done';     // 相手がさらに神の宣告（チェーン3）
-    else if (S.pending) { const c = answerCandidates(S, S.pending.request, 4); act = c.length ? { type: 'answer', value: c[0] } : null; }
+    else if (S.pending) { const c = answerCandidates(S, S.pending.request, 4), mineOf = v => { const u = Array.isArray(v) ? v[0] : v; return typeof u === 'number' && S.cards[u] && S.cards[u].controller === 0; }; const v = S.pending.request.player === 1 ? (c.find(mineOf) ?? c[0]) : c[0]; act = c.length ? { type: 'answer', value: v } : null; if (act && S.pending.request.player === 1 && !firstPick) firstPick = [].concat(v).filter(u => typeof u === 'number' && S.cards[u]).map(u => [u, ackKeyOf(S, u)]); } // 相手が最初に選んだもの（対象）を覚えておく
     else if (S.window && S.window.respondDue && !S.chain.length) act = { type: 'offer' };
     else act = L.find(x => x.type === 'offer') || L.find(x => x.type === 'pass');
     if (!act) break;
     try { D.act(act); } catch (err) { console.warn('確認画面の場面を進められませんでした', act, err); break; }
     await new Promise(r => setTimeout(r, 350));
   }
-  await fxIdle();
+  await ackIdle(50); // 効果の演出（最長6秒）
+  if (!flash.length && firstPick) flash = firstPick; // チェーンがすぐ処理された時は、相手が選んだ対象を光らせる
   // 対象のカードが動いた時（死者蘇生で相手の場へ、など）は、いまの場所を光らせる。場から離れた時（除外など）は、元のマス
   await ackFlash(flash.map(([u, x]) => (u != null && ackKeyOf(D.state, u)) || x)); // 効果の演出のあと、対象（効果を受けたマス）が黄色く光る
 }
@@ -611,7 +645,7 @@ list.addEventListener('click', async e => {
   const b = e.target.closest('button[data-ack]'); if (!b || busy) return;
   e.stopImmediatePropagation();
   unlock(); setAllies(false); setOpen(false); openBtn.hidden = true; busy = true;
-  try { if (document.getElementById('ackFx').checked) await runAckFx(ACKS[b.dataset.ack], ACK_FX[b.dataset.ack]); else await runAck(ACKS[b.dataset.ack]); } catch (err) { console.error(err); ackLayer.hidden = true; }
+  try { if (document.getElementById('ackFx').checked || ACKS[b.dataset.ack].fxOnly) await runAckFx(ACKS[b.dataset.ack], ACK_FX[b.dataset.ack]); else await runAck(ACKS[b.dataset.ack]); } catch (err) { console.error(err); ackLayer.hidden = true; }
   busy = false; setOpen(true);
 }, true);
 document.getElementById('guideOpenDemo').onclick =() => { setOpen(false); window.__duel.openGuide(0); const g = root.querySelector('#guideDlg'); const back = new MutationObserver(() => { if (g.hidden) { back.disconnect(); setOpen(true); } }); back.observe(g, { attributes: true, attributeFilter: ['hidden'] }); };
