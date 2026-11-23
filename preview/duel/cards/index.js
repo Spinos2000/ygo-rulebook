@@ -7,12 +7,12 @@ import {
   negateActivation, negateSummon, targetValid, addLingering, newStep, log, pl, currentAtk, FIELD_ZONES, sameCard,
   placeCounters, scriptOf, removeCounters, counterHolders, counterRoom, addStatMod, drawCards, gainLp, effectDamage, negateAttack,
   banish, isOnField, isImmune, emit, millTop, randomOf, freeMZones, moveCard, currentDef, targetable, swapControl, advanceSummonNow, pushAnim, pickMZone, releasable, paysCost, normalSummonNow, createTokens, takeControl, setFaceDown, changePositionByEffect, isToken, summonedThisTurn, shuffleDeck, specialSummonedThisTurn, tributesFor, freeSZones, advanceTributeSets, extraSummonedThisTurn,
-} from '../engine/game.js?v=20261123-0927-23ddb85dd2';
+} from '../engine/game.js?v=20261123-0937-e0425ab9c8';
                                                               
 import {
   target, countDragons, ritualCan, ritualSummon, fusionCan, fusionSummon, isNormal, isRitualMonster, level, deckOf, handOf, gyOf, oppMonsters,
   deckMaterialSet, sendDeckMaterials,
-} from './common.js?v=20261123-0927-23ddb85dd2';
+} from './common.js?v=20261123-0937-e0425ab9c8';
                                               
 
 /* ---------- サクリファイス系：相手モンスターを装備する ---------- */
