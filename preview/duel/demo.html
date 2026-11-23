@@ -44,6 +44,11 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 #demo button.fx:active { transform: translateY(1px) }
 #demo label { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 6px }
 #demo .guide-open { width: 100%; margin-top: 10px }
+/* 名札の帯（先輩 11/23 08:56）：試作版（/preview/）で開いた時だけ、いちばん上に細く出す */
+.pv-band { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 12px; padding: 5px 12px; background: #fde9a8; color: #3a2f12; border-bottom: 1.5px solid #c9a646; font: 700 13px/1.4 "Zen Maru Gothic", "M PLUS Rounded 1c", sans-serif }
+.pv-band[hidden] { display: none }
+.pv-band b { font-family: Fredoka, "M PLUS Rounded 1c", sans-serif; font-weight: 600 }
+.pv-band a { color: #3a2f12; background: #fff7dc; border: 1.5px solid #c9a646; border-radius: 999px; padding: 2px 10px; text-decoration: none; white-space: nowrap }
 /* ---------- t30：相手の発動の確認画面（DEMOだけ。本物の卓にはまだ入れない） ---------- */
 #demo .ack-set { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0 6px }
 #demo .ack-set label { margin-top: 0 }
@@ -94,6 +99,29 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 #ackPanel.full .tgt { font-size: 14px }
 #ackPanel.full .hint { margin: 8px 0 0 }
 #ackPanel.full .chainBtn { margin: 8px 0 0; width: 100%; min-height: 60px; font-size: 18px }
+/* 先輩 11/23 08:56：確認画面のカードを「カード風に大きく」。種類ごとの枠の色・大きな名前・属性とレベルの星／種類・大きな印・文の枠・攻撃力と守備力。
+   大きさは --u（カードの幅の1%）で決めるので、縦でも横でも同じ形のまま縮む。外の画像は使わない */
+#ackPanel .bc { --u: 2.4px; position: relative; box-sizing: border-box; display: flex; flex-direction: column; gap: calc(var(--u) * 1.6); padding: calc(var(--u) * 4.2);
+  border-radius: calc(var(--u) * 4.5); border: calc(var(--u) * 1.1) solid #24150b; background: linear-gradient(160deg, var(--bc1), var(--bc2)); color: #1b1b1b; overflow: hidden;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .3); font-family: "Zen Maru Gothic", "M PLUS Rounded 1c", sans-serif; line-height: 1.2 }
+#ackPanel .bc::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, rgba(0,0,0,.04) 0 calc(var(--u) * 1), transparent calc(var(--u) * 1) calc(var(--u) * 3)); pointer-events: none }
+#ackPanel .bc.f-normal { --bc1: #ecc97c; --bc2: #c99d4c; --bcBox: #f6ead0; --bcMark: #ffd36b }
+#ackPanel .bc.f-effect { --bc1: #e29a5e; --bc2: #b4652e; --bcBox: #f4e3cd; --bcMark: #ffab5e }
+#ackPanel .bc.f-fusion { --bc1: #b597de; --bc2: #7a5aac; --bcBox: #eee7f6; --bcMark: #d3a8ff }
+#ackPanel .bc.f-ritual { --bc1: #94c0ee; --bc2: #4f86c6; --bcBox: #e6eef8; --bcMark: #8fd0ff }
+#ackPanel .bc.f-spell { --bc1: #3cc0a2; --bc2: #127a64; --bcBox: #e3f3ec; --bcMark: #14f0bd }
+#ackPanel .bc.f-trap { --bc1: #d071a1; --bc2: #963f6c; --bcBox: #f6e4ec; --bcMark: #ff5fb8 }
+#ackPanel .bc-top { position: relative; display: flex; align-items: center; gap: calc(var(--u) * 2); padding: calc(var(--u) * 1.6) calc(var(--u) * 2.4); background: rgba(255,255,255,.55); border: calc(var(--u) * .5) solid rgba(0,0,0,.35); border-radius: calc(var(--u) * 1.6) }
+#ackPanel .bc-name { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1b1b1b }
+#ackPanel .bc-attr { flex: none; width: calc(var(--u) * 10); height: calc(var(--u) * 10); border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: calc(var(--u) * 5.4); border: calc(var(--u) * .5) solid rgba(0,0,0,.4) }
+#ackPanel .bc-sub { position: relative; min-height: calc(var(--u) * 6); display: flex; justify-content: flex-end; align-items: center; gap: calc(var(--u) * .6); font-weight: 700; font-size: calc(var(--u) * 5); color: #1b1b1b }
+#ackPanel .bc-sub i { width: calc(var(--u) * 5.4); height: calc(var(--u) * 5.4); border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffc27a, #d0451c); border: calc(var(--u) * .3) solid rgba(0,0,0,.3); flex: none }
+#ackPanel .bc-art { position: relative; flex: none; align-self: center; width: calc(var(--u) * 82); height: calc(var(--u) * 66); display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, #3e4560, #161a27 75%); border: calc(var(--u) * .8) solid rgba(0,0,0,.6); box-shadow: inset 0 0 0 calc(var(--u) * .6) rgba(255,255,255,.3) }
+#ackPanel .bc-art span { font-size: calc(var(--u) * 40); line-height: 1; color: var(--bcMark); text-shadow: 0 0 calc(var(--u) * 5) var(--bcMark), 0 0 calc(var(--u) * 12) var(--bcMark); font-family: "Zen Maru Gothic", sans-serif; font-weight: 700 }
+#ackPanel .bc-box { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: calc(var(--u) * 2) calc(var(--u) * 2.6); background: var(--bcBox); border: calc(var(--u) * .5) solid rgba(0,0,0,.4); border-radius: calc(var(--u) * 1) }
+#ackPanel .bc-type { margin: 0 0 calc(var(--u) * 1); font-weight: 700; font-size: calc(var(--u) * 4.4) }
+#ackPanel .bc-text { flex: 1; min-height: 0; margin: 0; overflow: hidden; font-family: "M PLUS Rounded 1c", sans-serif; font-size: calc(var(--u) * 4.1); line-height: 1.35; -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent) }
+#ackPanel .bc-stat { margin: calc(var(--u) * 1) 0 0; padding-top: calc(var(--u) * .8); border-top: calc(var(--u) * .4) solid rgba(0,0,0,.55); text-align: right; font-family: Fredoka, sans-serif; font-weight: 600; font-size: calc(var(--u) * 5.2) }
 #ackFlash { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 57; pointer-events: none; overflow: visible }
 #ackFlash .ring { fill: rgba(241, 201, 91, .28); stroke: var(--d-accent); stroke-width: 4; animation: ackBlink .32s ease-in-out 4 alternate }
 @keyframes ackBlink { from { opacity: .2 } to { opacity: 1 } }
@@ -127,6 +155,7 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   #ackPanel { padding: 8px 12px 10px } #ackPanel .art { width: 84px } #ackPanel h3 { font-size: 16px } #ackPanel .eff { font-size: 13px; max-height: 6.6em } #ackPanel .chainBtn { min-height: 46px }
 }
 </style>
+<div class="pv-band" id="pv-band" role="note" hidden>🎬 デモ版（演出の見本）<b id="pv-ver"></b><a href="../">🧪 試作版に戻る</a></div>
 <div id="duel-host"></div>
 <button id="demoOpen" type="button">🎬 演出を選ぶ</button>
 <section id="demo" aria-label="演出を選ぶ">
@@ -141,14 +170,19 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 <div id="ackToast" role="status" hidden></div>
 <ol id="ackLog" aria-label="ログ（見本）" hidden></ol>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261123-0838-30c7db42b4';
-import { playSummon, cardImg } from './fx.js?v=20261123-0838-30c7db42b4';
-import { play, unlock } from './sound.js?v=20261123-0838-30c7db42b4';
-import { CARD_POOL } from './data/cardpool.js?v=20261123-0838-30c7db42b4';
-import { createGame, legalActions } from './engine/game.js?v=20261123-0838-30c7db42b4';
-import { answerCandidates } from './ai/cpu.js?v=20261123-0838-30c7db42b4';
+import { mountDuel } from './embed.js?v=20261123-0909-d5c525952d';
+import { playSummon, cardImg, ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261123-0909-d5c525952d';
+import { play, unlock } from './sound.js?v=20261123-0909-d5c525952d';
+import { CARD_POOL } from './data/cardpool.js?v=20261123-0909-d5c525952d';
+import { createGame, legalActions } from './engine/game.js?v=20261123-0909-d5c525952d';
+import { answerCandidates } from './ai/cpu.js?v=20261123-0909-d5c525952d';
 
 const host = document.getElementById('duel-host');
+// 名札の帯：試作版（/preview/）の時だけ出す。版の名前は version.json（作る時に書く）から読む
+if (location.pathname.indexOf('/preview/') >= 0) {
+  document.getElementById('pv-band').hidden = false;
+  fetch('./version.json', { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).then(v => { if (v && v.ver) document.getElementById('pv-ver').textContent = `版${String(v.ver).slice(-4)}`; }).catch(() => {});
+}
 mountDuel(host, { demo: true });
 const root = host.shadowRoot;
 
@@ -352,6 +386,7 @@ list.insertAdjacentHTML('beforeend', `<h2>🛑 相手の発動の確認画面 <s
 <p class="note" id="ackModeNote"></p>
 <label><input type="checkbox" id="ackMine"${ackGet('demoAckMine', '1') === '1' ? ' checked' : ''}> 自分の場に、伏せた「神の宣告」がある（チェーンできる）</label>
 <label><input type="checkbox" id="ackFx"${ackGet('demoAckFx', '1') === '1' ? ' checked' : ''}> 演出と合わせて流す（本物の卓と同じ順：発動の演出 → 確認画面 → 効果の演出）</label>
+<label><input type="checkbox" id="ackBig"${ackGet('demoAckBig', '1') === '1' ? ' checked' : ''}> カード風の大きなカード（外すと、前の形：卓のカードの絵をそのまま大きく）</label>
 <div class="row" style="margin-top:8px">${ACKS.map((a, i) => `<button class="fx" type="button" data-ack="${i}">${a.name}<small>相手が発動・${a.sub}</small></button>`).join('')}</div>`);
 const ackModeNote = () => {
   const m = document.querySelector('input[name="ackMode"]:checked')?.value || 'all';
@@ -362,6 +397,7 @@ list.addEventListener('change', e => {
   if (e.target.name === 'ackMode') { ackPut('demoAckMode', e.target.value); ackModeNote(); }
   if (e.target.id === 'ackMine') ackPut('demoAckMine', e.target.checked ? '1' : '0');
   if (e.target.id === 'ackFx') ackPut('demoAckFx', e.target.checked ? '1' : '0');
+  if (e.target.id === 'ackBig') ackPut('demoAckBig', e.target.checked ? '1' : '0');
 });
 const ackLayer = document.getElementById('ackLayer'), ackPanel = document.getElementById('ackPanel'), ackSvg = document.getElementById('ackArrows'),
   ackToast = document.getElementById('ackToast'), ackLogEl = document.getElementById('ackLog');
@@ -387,12 +423,32 @@ function ackLogLit(row) {
 /** 対象のマス・山（墓地など）の位置 */
 const ackRect = k => (k.startsWith('pile:') ? root.querySelector(`#board [data-pile="${k.slice(5)}"]`) : root.querySelector(`#board [data-zone="${k}"]`))?.getBoundingClientRect();
 const wideMQ = matchMedia('(orientation: landscape) and (min-width: 640px)');
+/** カード風の大きなカード（HTMLで描くので、大きくしても文字がにじまない）。幅：高さ＝100：146 */
+const BC_RATIO = 100 / 146;
+function bigCard(d) {
+  const kind = d.kind || 'monster', mon = kind === 'monster', frame = mon ? (d.frame || 'effect') : kind;
+  const el = document.createElement('div'); el.className = `art bc f-${frame}`; el.setAttribute('role', 'img'); el.setAttribute('aria-label', d.name);
+  const attrCol = mon ? (ATTR[d.attribute] || '#6a6e7e') : kind === 'spell' ? '#0f6e56' : '#993556';
+  const mark = mon ? (RACE_CHAR[d.race] || String(d.race || '？').charAt(0)) : ((kind === 'spell' ? SPELL_MARK : TRAP_MARK)[d.subtype] || (kind === 'spell' ? '✦' : '◆'));
+  const sub = mon ? Array.from({ length: Math.min(12, d.level ?? 0) }, () => '<i></i>').join('') : `【${kind === 'spell' ? '魔法' : '罠'}カード】${esc((kind === 'spell' ? SPELL_MARK : TRAP_MARK)[d.subtype] || '')}`;
+  const type = mon ? `【${esc(d.race || '')}／${esc(FRAME_NAME[d.frame] || '効果')}】` : '';
+  el.innerHTML = `<div class="bc-top"><span class="bc-name">${esc(d.name)}</span><span class="bc-attr" style="background:${attrCol}">${esc(mon ? (d.attribute || '？') : kind === 'spell' ? '魔' : '罠')}</span></div>
+<div class="bc-sub">${sub}</div><div class="bc-art"><span>${esc(mark)}</span></div>
+<div class="bc-box">${type ? `<p class="bc-type">${type}</p>` : ''}<p class="bc-text">${esc(d.text || '')}</p>${mon ? `<p class="bc-stat">ATK/${d.atk ?? 0}　DEF/${d.def ?? 0}</p>` : ''}</div>`;
+  return el;
+}
 /** 確認画面の絵を、上半分（横の時は左半分）にちょうど入る大きさにする */
 function ackFit() {
   const box = ackPanel.querySelector('.artArea'), art = ackPanel.querySelector('.art'); if (!box || !art) return;
-  const r = box.getBoundingClientRect(), k = art.width / art.height, top = 44; // 上の「相手が発動」の帯の分をあける
+  const r = box.getBoundingClientRect(), k = art.classList.contains('bc') ? BC_RATIO : art.width / art.height, top = 44; // 上の「相手が発動」の帯の分をあける
   let h = r.height - top - 12, w = h * k; if (w > r.width - 24) { w = r.width - 24; h = w / k; }
   art.style.width = `${Math.max(40, w)}px`; art.style.height = `${Math.max(58, h)}px`; art.style.marginTop = `${top - 12}px`;
+  if (art.classList.contains('bc')) {
+    art.style.setProperty('--u', `${Math.max(40, w) / 100}px`);
+    // 名前：大きい字（カードの幅の8%）から始めて、1行に入るまで小さくする（長い名前も切れないように）
+    const n = art.querySelector('.bc-name'); let f = 8; n.style.fontSize = `calc(var(--u) * ${f})`;
+    while (n.scrollWidth > n.clientWidth + 1 && f > 3) { f -= .25; n.style.fontSize = `calc(var(--u) * ${f})`; }
+  }
 }
 /** 了承のあと、盤面の対象を一瞬光らせる（確認画面は画面いっぱいで盤面が隠れるので、矢印のかわり） */
 const ackFlashEl = document.getElementById('ackFlash');
@@ -411,7 +467,9 @@ function ackAsk(link, canChain) {
 <div class="info"><div class="scroll"><h3 id="ackName">${esc(d.name)}</h3><p class="kind">${esc(KIND(d))}</p><p class="eff">${esc(d.text || '')}</p>${link.tgt ? `<p class="tgt">${esc(link.tgt)}</p>` : ''}</div>
 <p class="hint">👆 タップで進む（［チェーンする］以外のどこでも・Enter キーでも）</p>
 <button type="button" class="chainBtn"${canChain ? '' : ' disabled'}>チェーンする<small>${canChain ? '自分のカードを重ねる' : '今できるカードなし'}</small></button></div>`;
-  const art = cardImg(d, d.atk, d.def, true); art.className = 'art'; art.setAttribute('role', 'img'); art.setAttribute('aria-label', d.name);
+  let art;
+  if (document.getElementById('ackBig')?.checked !== false) art = bigCard(d); // カード風の大きなカード（ふだん）
+  else { art = cardImg(d, d.atk, d.def, true); art.className = 'art'; art.setAttribute('role', 'img'); art.setAttribute('aria-label', d.name); } // 前の形（卓のカードの絵をそのまま大きく）
   ackPanel.querySelector('.artBox').replaceWith(art);
   ackLayer.hidden = false; ackNow = link; ackFit();
   return new Promise(res => {

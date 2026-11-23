@@ -1963,6 +1963,21 @@ body.rt.has-sub{padding-bottom:calc(128px + env(safe-area-inset-bottom,0px))}
 </style>
 </head>
 <body>
+<!-- 名札の帯（先輩 11/23 08:56）：試作版（/preview/）の時だけ出す。版の名前は duel/version.json（作る時に書く）から読む。本番には出さない -->
+<style>
+.pv-band{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:4px 12px;padding:5px 12px;background:#fde9a8;color:#3a2f12;border-bottom:1.5px solid #c9a646;font:700 13px/1.4 "Zen Maru Gothic","M PLUS Rounded 1c",sans-serif}
+.pv-band[hidden]{display:none}
+.pv-band b{font-family:Fredoka,"M PLUS Rounded 1c",sans-serif;font-weight:600}
+.pv-band a{color:#3a2f12;background:#fff7dc;border:1.5px solid #c9a646;border-radius:999px;padding:2px 10px;text-decoration:none;white-space:nowrap}
+.pv-demo{display:block;margin:2px 0 0;text-align:center;font:700 14px/1.4 "Zen Maru Gothic","M PLUS Rounded 1c",sans-serif;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-decoration:none}
+.pv-demo[hidden]{display:none}
+</style>
+<div class="pv-band" id="pv-band" role="note" hidden>🧪 試作版<b id="pv-ver"></b><a href="./duel/demo.html">🎬 デモ版を開く</a></div>
+<script>
+(function(){if(location.pathname.indexOf('/preview/')<0)return;var b=document.getElementById('pv-band');b.hidden=false;
+fetch('./duel/version.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(v){if(v&&v.ver)document.getElementById('pv-ver').textContent='版'+String(v.ver).slice(-4);}).catch(function(){});
+document.addEventListener('DOMContentLoaded',function(){var d=document.getElementById('pv-demo');if(d)d.hidden=false;});})();
+</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
@@ -2087,6 +2102,7 @@ window.YGO_AV=function(m,size,box){m=m||{};var e=box||document.createElement('sp
     </nav>
   </div>
   <button type="button" class="tile big" data-go="duel-open"><span class="i">⚔️</span><span><b>デュエルを始める</b><em class="hub-tag">対面・電卓</em><br><small>対面の対戦用：ライフ計算・リンク対戦・先攻後攻の抽選</small></span></button>
+  <a class="pv-demo" id="pv-demo" href="./duel/demo.html" hidden>🎬 デモ版を開く<small>（演出の見本・試作版だけ）</small></a>
   <button type="button" class="tile big cpu" data-go="cpu-open"><span class="i">🤖</span><span><b>CPUと対戦する</b><em class="hub-tag">1人で練習</em><br><small>カードの効果を自動で処理するデュエル卓で、1人で練習</small></span></button>
   <div class="srch" id="srch" role="search">
     <div class="srch-box"><button type="button" class="srch-back" id="srch-back" aria-label="1つ前のページに戻る" hidden>←</button><span aria-hidden="true">🔎</span><input type="search" id="srch-q" placeholder="カード・ルール・機能を検索" autocomplete="off" aria-label="ルールブック内を検索"><button type="button" id="srch-x" aria-label="検索をクリア" hidden>✕</button></div>
