@@ -132,6 +132,10 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 #ackPanel ol.res li.now { border: 2px solid var(--d-edge); background: var(--d-accent); color: var(--d-accent-ink) }
 #ackPanel ol.res li.done { opacity: .55 }
 /* 止めない時：上に小さく出して、すぐ消える */
+/* 先輩 11/23 18:02：相手がチェーンを重ねる前の「間」の札 */
+#ackThink { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 59; background: var(--d-panel); color: var(--d-ink); border: 1.5px solid var(--d-edge); border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 13px; box-shadow: 2px 3px 0 var(--d-edge); animation: ackThinkBlink 1s ease-in-out infinite alternate }
+#ackThink[hidden] { display: none }
+@keyframes ackThinkBlink { from { opacity: .65 } to { opacity: 1 } }
 #ackToast { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 58; max-width: calc(100% - 32px); box-sizing: border-box;
   background: var(--d-panel); color: var(--d-ink); border: 2px solid var(--d-edge); border-radius: 12px; box-shadow: 3px 4px 0 var(--d-edge); padding: 8px 14px; font-weight: 700; font-size: 14px }
 /* 了承のあと、ログの行が光る（DEMOの見本のログ） */
@@ -169,14 +173,15 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 <div id="ackLayer" hidden><svg id="ackArrows" aria-hidden="true"></svg><div id="ackPanel" role="dialog" aria-modal="true" aria-labelledby="ackName"></div></div>
 <svg id="ackFlash" aria-hidden="true"></svg>
 <div id="ackToast" role="status" hidden></div>
+<div id="ackThink" role="status" hidden>🤔 相手が考えています…</div>
 <ol id="ackLog" aria-label="ログ（見本）" hidden></ol>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261123-1239-0835efb5cf';
-import { playSummon, cardImg, ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261123-1239-0835efb5cf';
-import { play, unlock } from './sound.js?v=20261123-1239-0835efb5cf';
-import { CARD_POOL } from './data/cardpool.js?v=20261123-1239-0835efb5cf';
-import { createGame, legalActions } from './engine/game.js?v=20261123-1239-0835efb5cf';
-import { answerCandidates } from './ai/cpu.js?v=20261123-1239-0835efb5cf';
+import { mountDuel } from './embed.js?v=20261123-1810-6db36a2771';
+import { playSummon, cardImg, ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261123-1810-6db36a2771';
+import { play, unlock } from './sound.js?v=20261123-1810-6db36a2771';
+import { CARD_POOL } from './data/cardpool.js?v=20261123-1810-6db36a2771';
+import { createGame, legalActions } from './engine/game.js?v=20261123-1810-6db36a2771';
+import { answerCandidates } from './ai/cpu.js?v=20261123-1810-6db36a2771';
 
 const host = document.getElementById('duel-host');
 // 名札の帯：試作版（/preview/）の時だけ出す。版の名前は version.json（作る時に書く）から読む
@@ -386,6 +391,10 @@ const ACKS = [
 ];
 /* 場面の見出し（ACKS の番号） */
 const ACK_GROUPS = [['🪤 罠', [0, 2]], ['✨ 魔法', [1, 3, 4, 5]], ['👹 モンスター効果', [6, 7, 8]]];
+/** 相手（CPU）がチェーンを重ねる前の「間」（ミリ秒）。先輩 11/23 18:02「ワンテンポおいてから」。本物の卓（t31・t33）も同じ長さにする */
+const OPP_THINK_MS = 1200;
+/** 相手がチェーンを重ねる前に、間をおいて「相手が考えています…」と出す */
+async function ackThink() { const el = document.getElementById('ackThink'); el.hidden = false; await new Promise(r => setTimeout(r, OPP_THINK_MS)); el.hidden = true; }
 const ACK_MODES = [['all', '毎回止める'], ['chain', 'チェーンできる時だけ止める'], ['none', '止めない（上に小さく出す）']];
 const ackGet = (k, v) => { try { return localStorage.getItem(k) ?? v; } catch { return v; } };
 const ackPut = (k, v) => { try { localStorage.setItem(k, v); } catch { /* 保存できなくても動く */ } };
@@ -533,7 +542,7 @@ async function runAck(a) {
   if (v === 'chain') {
     my = false;
     await act(0, C.judge, '', [], false);
-    await sleep(500);
+    await ackThink(); // 相手がチェーンを重ねる前の「間」
     // 相手が、自分の神の宣告にさらに神の宣告を重ねる（チェーン3）
     const S = window.__duel.state, u = S.players[1].szone[1]; if (u != null) { S.cards[u].faceUp = true; window.__duel.load(S); }
     await act(1, C.judge, 'あなたの「神の宣告」（チェーン2）の発動を無効にして破壊する', ['0:st:0'], true);
@@ -596,7 +605,7 @@ async function ackFxFlow(a, fx) {
   ackLogEl.hidden = true;
   const steps = [...fx.pre, ...(fx.auto ? [] : [(x, S) => x.type === 'activate' && S.cards[x.card].code === a.card && S.cards[x.card].controller === 1])]; // auto：必ず発動する効果（エンジンが自分で積む）
   const judgeOf = (L, S, p) => L.find(x => x.type === 'activate' && S.cards[x.card].code === C.judge && S.cards[x.card].controller === p);
-  let k = 0, seen = 0, plan = '', flash = [], logAt = D.state.log.length, myLeft = mine, firstPick = null;
+  let think = false, k = 0, seen = 0, plan = '', flash = [], logAt = D.state.log.length, myLeft = mine, firstPick = null;
   for (let guard = 0; guard < 90; guard++) {
     // 発動・効果の演出が終わるまで待つ。ただし、選ぶ欄が出ている間（対象を選ぶなど）は卓が演出中の印を出したままなので、待たずに先に答える
     if (D.state && D.state.pending) await new Promise(r => setTimeout(r, 300)); else await ackIdle();
@@ -627,11 +636,12 @@ async function ackFxFlow(a, fx) {
     let act = k < steps.length ? L.find(x => steps[k](x, S)) : null;
     if (act) k++;
     else if (plan === 'mine' && (act = judgeOf(L, S, 0))) { plan = 'opp'; myLeft = false; }      // 自分の神の宣告（チェーン2）
-    else if (plan === 'opp' && (act = judgeOf(L, S, 1))) plan = 'done';     // 相手がさらに神の宣告（チェーン3）
+    else if (plan === 'opp' && (act = judgeOf(L, S, 1))) { plan = 'done'; think = true; } // 相手がさらに神の宣告（チェーン3）。重ねる前に間をおく
     else if (S.pending) { const c = answerCandidates(S, S.pending.request, 4), mineOf = v => { const u = Array.isArray(v) ? v[0] : v; return typeof u === 'number' && S.cards[u] && S.cards[u].controller === 0; }; const v = S.pending.request.player === 1 ? (c.find(mineOf) ?? c[0]) : c[0]; act = c.length ? { type: 'answer', value: v } : null; if (act && S.pending.request.player === 1 && !firstPick) firstPick = [].concat(v).filter(u => typeof u === 'number' && S.cards[u]).map(u => [u, ackKeyOf(S, u)]); } // 相手が最初に選んだもの（対象）を覚えておく
     else if (S.window && S.window.respondDue && !S.chain.length) act = { type: 'offer' };
     else act = L.find(x => x.type === 'offer') || L.find(x => x.type === 'pass');
     if (!act) break;
+    if (think) { think = false; await ackThink(); } // 相手がチェーンを重ねる前の「間」
     try { D.act(act); } catch (err) { console.warn('確認画面の場面を進められませんでした', act, err); break; }
     await new Promise(r => setTimeout(r, 350));
   }
