@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261123-0937-e0425ab9c8';
-import { fullThink } from './ai/levels.js?v=20261123-0937-e0425ab9c8';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261123-0937-e0425ab9c8';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261123-0937-e0425ab9c8';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261123-0937-e0425ab9c8';
-import { playSignature, sigKey } from './sig.js?v=20261123-0937-e0425ab9c8';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261123-0937-e0425ab9c8';
-import { firstEntrance } from './aces.js?v=20261123-0937-e0425ab9c8';
-import { RULINGS } from './data/rulings.js?v=20261123-0937-e0425ab9c8';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261123-0937-e0425ab9c8';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261123-0937-e0425ab9c8';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261123-0937-e0425ab9c8';
-import { joinSiteRoom } from './net/site-room.js?v=20261123-0937-e0425ab9c8';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261123-0950-189a897d65';
+import { fullThink } from './ai/levels.js?v=20261123-0950-189a897d65';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261123-0950-189a897d65';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261123-0950-189a897d65';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261123-0950-189a897d65';
+import { playSignature, sigKey } from './sig.js?v=20261123-0950-189a897d65';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261123-0950-189a897d65';
+import { firstEntrance } from './aces.js?v=20261123-0950-189a897d65';
+import { RULINGS } from './data/rulings.js?v=20261123-0950-189a897d65';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261123-0950-189a897d65';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261123-0950-189a897d65';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261123-0950-189a897d65';
+import { joinSiteRoom } from './net/site-room.js?v=20261123-0950-189a897d65';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261123-0937-e0425ab9c8';
-import { CARD_POOL } from './data/cardpool.js?v=20261123-0937-e0425ab9c8';
-import { DECKS } from './data/decks.js?v=20261123-0937-e0425ab9c8';
-import { SCRIPTS } from './cards/index.js?v=20261123-0937-e0425ab9c8';
+} from './engine/game.js?v=20261123-0950-189a897d65';
+import { CARD_POOL } from './data/cardpool.js?v=20261123-0950-189a897d65';
+import { DECKS } from './data/decks.js?v=20261123-0950-189a897d65';
+import { SCRIPTS } from './cards/index.js?v=20261123-0950-189a897d65';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -137,8 +137,8 @@ const END_CSS = `.end-dlg{position:absolute;inset:0;z-index:80;display:grid;plac
 .end-stats div{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:8px 4px}
 .end-stats dt{font-size:11px;color:var(--sub)}.end-stats dd{margin:2px 0 0;font-family:var(--num),inherit;font-weight:600;font-size:24px;line-height:1.1}
 .end-btns{display:grid;gap:8px}
-.end-btns button{min-height:52px;font-size:17px;font-weight:700}
-.end-btns button{min-width:0;white-space:normal}.end-btns button small{display:block;font-size:11px;font-weight:500;opacity:.8}
+#endDlg .end-btns button{min-height:52px;font-size:17px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.25;white-space:normal}
+#endDlg .end-btns button{min-width:0}#endDlg .end-btns button small{display:block;font-size:11px;font-weight:500;opacity:.8;white-space:normal}
 @media (orientation:landscape) and (max-height:500px){.end-card{width:min(640px,100%);padding:10px 14px}.end-card h2{font-size:24px}.end-stats{margin-bottom:8px}.end-stats dd{font-size:20px}.end-btns{grid-template-columns:repeat(3,minmax(0,1fr))}.end-btns button{min-height:48px;font-size:15px}}`;
 function endDlgEl() {
   let el = $('#endDlg'); if (el) return el;
@@ -469,7 +469,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261123-0937-e0425ab9c8', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261123-0950-189a897d65', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1469,7 +1469,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261123-0937-e0425ab9c8';
+const DUEL_BUILD = '20261123-0950-189a897d65';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -3747,8 +3747,6 @@ export function boot(root, opts = {}) {
     $('#hideOppRow').hidden = cpuMode();
     showDeckFmt();
     if (data && data.S && (data.v === 4 || data.v === SAVE_V)) {
-      // No.32：保存していた対戦の続きは本物の対戦。前に開いた時の「準備画面の裏の仮の対戦」の印（placeholder）が残っていると、結果の窓も戦績も出ないので外す
-      placeholder = false; endShown = false; endDlgHide();
       try { S = data.S; if (!S.askZone) S.askZone = netMode() ? [0, 1] : cpuMode() ? [0] : [0, 1]; history = data.history || []; trace = Array.isArray(data.trace) ? data.trace : []; lastLp = [S.players[0].lp, S.players[1].lp]; render(); joinVs(); return; } // 途中のCPU対戦があっても、招待は受ける（CPU対戦は保存されたまま）
       catch (e) { console.warn('保存していたデュエルを開けませんでした', e); }
     }
