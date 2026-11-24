@@ -136,11 +136,13 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
   color: #fff; transform: skewY(-4deg); animation: ackCutIn .28s cubic-bezier(.2, .9, .3, 1.1) both }
 #ackCut .band.stay { animation: none }
 #ackCut.out .band { animation: ackCutOut .22s ease-in both }
-#ackCut .in { transform: skewY(4deg); max-width: 640px; margin: 0 auto; display: grid; gap: 6px }
+#ackCut .in { transform: skewY(4deg); max-width: 640px; margin: 0 auto; display: grid; gap: 6px; text-align: center; min-width: 0 }
+/* 先輩 11/24 16:28：文字はすべて真ん中そろえ。セリフ帳の改行の所だけで改行し、ほかでは折り返さない（入りきらない時は ackFitCut で文字を小さくする） */
+#ackCut .in > p { margin: 0; min-width: 0; white-space: pre; word-break: keep-all; overflow-wrap: normal; overflow: hidden }
 #ackCut .who { font-size: 12px; font-weight: 700; opacity: .85; letter-spacing: .04em }
 #ackCut .who b { background: var(--d-opp); color: #fff; border-radius: 999px; padding: 2px 10px; margin-right: 6px }
 #ackCut .call { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: clamp(22px, 7vw, 34px); line-height: 1.2; color: var(--d-accent); text-shadow: 0 2px 0 rgba(0, 0, 0, .5) }
-#ackCut .line { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: clamp(17px, 5vw, 24px); line-height: 1.45; white-space: pre-line }
+#ackCut .line { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: clamp(17px, 5vw, 24px); line-height: 1.45 }
 #ackCut .card { font-size: 12px; opacity: .8 }
 #ackCut.neg .band { border-color: var(--d-bad); background: linear-gradient(100deg, rgba(60, 14, 20, .95), rgba(96, 26, 34, .95)) }
 #ackCut.neg .call { color: #fff; font-size: clamp(30px, 10vw, 48px) }
@@ -187,12 +189,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 <div id="ackThink" role="status" hidden>🤔 相手が考えています…</div>
 <div id="ackCut" role="status" aria-live="assertive" hidden></div>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261124-1623-500bce8790';
-import { ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261124-1623-500bce8790';
-import { unlock } from './sound.js?v=20261124-1623-500bce8790';
-import { CARD_POOL } from './data/cardpool.js?v=20261124-1623-500bce8790';
-import { createGame, legalActions } from './engine/game.js?v=20261124-1623-500bce8790';
-import { answerCandidates } from './ai/cpu.js?v=20261124-1623-500bce8790';
+import { mountDuel } from './embed.js?v=20261124-1641-779a78829e';
+import { ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261124-1641-779a78829e';
+import { unlock } from './sound.js?v=20261124-1641-779a78829e';
+import { CARD_POOL } from './data/cardpool.js?v=20261124-1641-779a78829e';
+import { createGame, legalActions } from './engine/game.js?v=20261124-1641-779a78829e';
+import { answerCandidates } from './ai/cpu.js?v=20261124-1641-779a78829e';
 
 const host = document.getElementById('duel-host');
 // 名札の帯：試作版（/preview/）の時だけ出す。版の名前は version.json（作る時に書く）から読む
@@ -333,6 +335,13 @@ function cutKind(S, code) {
   const onField = Object.values(S.cards).some(x => x.code === code && x.controller === 1 && (x.zone === 'mzone' || x.zone === 'hand'));
   return c && !onField ? 'grave' : 'monster';
 }
+/** カットインの各行が帯の幅に入りきらない時は、入るまで文字を小さくする（行の途中で折り返さないため） */
+function ackFitCut(el) {
+  for (const p of el.querySelectorAll('.in > p')) {
+    p.style.fontSize = ''; let fs = parseFloat(getComputedStyle(p).fontSize);
+    while (p.scrollWidth > p.clientWidth + 1 && fs > 10) { fs -= 1; p.style.fontSize = `${fs}px`; }
+  }
+}
 /** カットインを出して、終わるまで待つ。neg＝無効にされた時の「なにっ！？」 */
 async function ackCutin(S, code, neg = false) {
   const el = document.getElementById('ackCut'), per = personaGet(), P = CUTIN.personas.find(x => x.key === per), name = CARD_POOL[code].name;
@@ -340,7 +349,7 @@ async function ackCutin(S, code, neg = false) {
   const call = neg ? CUTIN.negated[per] : CUTIN.calls[cutKind(S, code)][per];
   // セリフ（改行どおり）→ 掛け声 の順に出す（CODE 11:51）。セリフ帳にないカードは掛け声だけ
   let shown = false;
-  const show = (big, small) => { el.innerHTML = `<div class="band${shown ? ' stay' : ''}"><div class="in"><p class="who"><b>CPU</b>${esc(P.label)}</p>${big}<p class="card">${small}</p></div></div>`; shown = true; }; // 2回目（セリフ→掛け声）は、帯は動かさず中身だけ替える
+  const show = (big, small) => { el.innerHTML = `<div class="band${shown ? ' stay' : ''}"><div class="in"><p class="who"><b>CPU</b>${esc(P.label)}</p>${big}<p class="card">${small}</p></div></div>`; shown = true; ackFitCut(el); }; // 2回目（セリフ→掛け声）は、帯は動かさず中身だけ替える
   el.className = neg ? 'neg' : ''; el.hidden = false;
   if (neg) { show(`<p class="call">${esc(call)}</p>`, `「${esc(name)}」の発動が無効になった`); await new Promise(r => setTimeout(r, CUTIN_MS.neg)); }
   else {
@@ -351,6 +360,8 @@ async function ackCutin(S, code, neg = false) {
 }
 /** 相手（CPU）がチェーンを重ねる前の「間」（ミリ秒）。先輩 11/23 18:02「ワンテンポおいてから」。本物の卓（t31・t33）も同じ長さにする */
 const OPP_THINK_MS = 1200;
+/* 確かめ用：カットインだけを出す（window.__demoCutin(カード番号, 無効か)） */
+window.__demoCutin = (code, neg = false) => ackCutin(window.__duel.state, code, neg);
 /** 相手がチェーンを重ねる前に、間をおいて「相手が考えています…」と出す */
 async function ackThink() { const el = document.getElementById('ackThink'); el.hidden = false; await new Promise(r => setTimeout(r, OPP_THINK_MS)); el.hidden = true; }
 const ACK_MODES = [['all', '毎回止める'], ['chain', 'チェーンできる時だけ止める'], ['none', '止めない（上に小さく出す）']];
