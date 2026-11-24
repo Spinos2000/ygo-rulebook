@@ -44,6 +44,8 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 #demo button.fx:active { transform: translateY(1px) }
 #demo label { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 6px }
 #demo .guide-open { width: 100%; margin-top: 10px }
+#demo details.dev { margin-top: 18px; border-top: 1px solid var(--d-line); padding-top: 8px }
+#demo details.dev summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--d-sub); min-height: 32px }
 /* 名札の帯（先輩 11/23 08:56）：試作版（/preview/）で開いた時だけ、いちばん上に細く出す */
 .pv-band { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 12px; padding: 5px 12px; background: #fde9a8; color: #3a2f12; border-bottom: 1.5px solid #c9a646; font: 700 13px/1.4 "Zen Maru Gothic", "M PLUS Rounded 1c", sans-serif }
 .pv-band[hidden] { display: none }
@@ -126,11 +128,6 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 #ackFlash { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 57; pointer-events: none; overflow: visible }
 #ackFlash .ring { fill: rgba(241, 201, 91, .28); stroke: var(--d-accent); stroke-width: 4; animation: ackBlink .32s ease-in-out 4 alternate }
 @keyframes ackBlink { from { opacity: .2 } to { opacity: 1 } }
-#ackPanel ol.res { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px }
-#ackPanel ol.res li { display: flex; align-items: center; gap: 8px; border: 1px solid var(--d-line); border-radius: 10px; padding: 8px 10px; font-size: 14px; background: var(--d-panel-2); transition: background .2s, border-color .2s }
-#ackPanel ol.res li b { font-family: Fredoka, inherit; min-width: 1.6em }
-#ackPanel ol.res li.now { border: 2px solid var(--d-edge); background: var(--d-accent); color: var(--d-accent-ink) }
-#ackPanel ol.res li.done { opacity: .55 }
 /* 止めない時：上に小さく出して、すぐ消える */
 /* t53（先輩 11/24）：カットイン。相手の発動の演出のあと、確認画面の前に、性格ごとの掛け声とセリフを画面の真ん中の帯で出す。無効にされた時は「なにっ！？」 */
 #ackCut { position: fixed; inset: 0; z-index: 59; display: grid; place-items: center; pointer-events: none; overflow: hidden }
@@ -158,13 +155,7 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 @keyframes ackThinkBlink { from { opacity: .65 } to { opacity: 1 } }
 #ackToast { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 58; max-width: calc(100% - 32px); box-sizing: border-box;
   background: var(--d-panel); color: var(--d-ink); border: 2px solid var(--d-edge); border-radius: 12px; box-shadow: 3px 4px 0 var(--d-edge); padding: 8px 14px; font-weight: 700; font-size: 14px }
-/* 了承のあと、ログの行が光る（DEMOの見本のログ） */
-#ackLog { position: fixed; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 57; width: min(340px, calc(100% - 120px)); list-style: none; margin: 0; padding: 6px 8px;
   background: var(--d-panel); color: var(--d-ink); border: 1.5px solid var(--d-edge); border-radius: 12px; font-size: 12px; box-shadow: var(--d-shadow) }
-#ackLog[hidden] { display: none }
-#ackLog li { padding: 3px 4px; border-radius: 6px }
-#ackLog li.lit { animation: ackLit 2.4s ease-out }
-@keyframes ackLit { 0%, 35% { background: var(--d-accent); color: var(--d-accent-ink) } 100% { background: transparent } }
 /* 横向き（スマホの横・パソコン）：確認の箱は、対象と反対の横に寄せる */
 @media (orientation: landscape) and (min-width: 640px) {
   #ackPanel { left: auto; right: auto; width: min(440px, 46vw); margin: 0; top: 50%; bottom: auto; transform: translateY(-50%) }
@@ -185,24 +176,23 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 <button id="demoOpen" type="button">🎬 演出を選ぶ</button>
 <section id="demo" aria-label="演出を選ぶ">
   <header><h1>🎬 演出DEMO</h1><button class="close" type="button" id="demoClose">閉じる</button></header>
-  <p class="note">ボタンを押すと、すぐその演出が出ます。対戦は進めなくて大丈夫です。</p>
-  <label><input type="checkbox" id="demoSlow"> ゆっくり再生（半分の速さ）</label>
-  <button type="button" class="fx guide-open" id="guideOpenDemo">📖 操作ガイドを開く<small>はじめて卓を開いた時に出る案内（何度でも開けます）</small></button>
-  <div id="demoList"></div>
+  <p class="note">ボタンを押すと、すぐその場面が始まります。対戦は進めなくて大丈夫です。</p>
+  <div id="demoList"><div id="secAck"></div><div id="secLook"></div>
+    <details id="secDev" class="dev"><summary>🔧 そのほか（開発用）</summary><button type="button" class="fx guide-open" id="guideOpenDemo">📖 操作ガイドを開く<small>はじめて卓を開いた時に出る案内（何度でも開けます）</small></button></details>
+  </div>
 </section>
 <div id="ackLayer" hidden><svg id="ackArrows" aria-hidden="true"></svg><div id="ackPanel" role="dialog" aria-modal="true" aria-labelledby="ackName"></div></div>
 <svg id="ackFlash" aria-hidden="true"></svg>
 <div id="ackToast" role="status" hidden></div>
 <div id="ackThink" role="status" hidden>🤔 相手が考えています…</div>
 <div id="ackCut" role="status" aria-live="assertive" hidden></div>
-<ol id="ackLog" aria-label="ログ（見本）" hidden></ol>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261124-1610-5d1799f6f2';
-import { playSummon, cardImg, ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261124-1610-5d1799f6f2';
-import { play, unlock } from './sound.js?v=20261124-1610-5d1799f6f2';
-import { CARD_POOL } from './data/cardpool.js?v=20261124-1610-5d1799f6f2';
-import { createGame, legalActions } from './engine/game.js?v=20261124-1610-5d1799f6f2';
-import { answerCandidates } from './ai/cpu.js?v=20261124-1610-5d1799f6f2';
+import { mountDuel } from './embed.js?v=20261124-1623-500bce8790';
+import { ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261124-1623-500bce8790';
+import { unlock } from './sound.js?v=20261124-1623-500bce8790';
+import { CARD_POOL } from './data/cardpool.js?v=20261124-1623-500bce8790';
+import { createGame, legalActions } from './engine/game.js?v=20261124-1623-500bce8790';
+import { answerCandidates } from './ai/cpu.js?v=20261124-1623-500bce8790';
 
 const host = document.getElementById('duel-host');
 // 名札の帯：試作版（/preview/）の時だけ出す。版の名前は version.json（作る時に書く）から読む
@@ -213,104 +203,19 @@ if (location.pathname.indexOf('/preview/') >= 0) {
 mountDuel(host, { demo: true });
 const root = host.shadowRoot;
 
-/* カード：本物のカードのデータ（名前で探す）。ラーの翼神竜は今のデッキに入っていないので、見た目用の仮のデータ */
-const byName = Object.fromEntries(Object.values(CARD_POOL).map(d => [d.name, d]));
-const RA = { name: 'ラーの翼神竜', kind: 'monster', frame: 'effect', level: 10, attribute: '神', race: '幻神獣族', atk: 0, def: 0, text: '' };
-const card = n => (n === RA.name ? RA : byName[n]);
-
-/* 並べる演出：[見出し, [ボタンの名前, カード名, 分類, 形]] 形＝ me（自分）／cpu（CPU側）／short（2回目）／allies（仲間あり）／alone（仲間なし）／how:◯◯（ふつうの召喚） */
-const LIST = [
-  ['👑 神・レベル10以上', '★5・約4秒', [
-    ['オシリスの天空竜', 'オシリスの天空竜', 'god', 'me', '赤'], ['オベリスクの巨神兵', 'オベリスクの巨神兵', 'god', 'me', '青'], ['ラーの翼神竜', RA.name, 'god', 'me', '金'],
-    ['邪神アバター', '邪神アバター', 'god', 'me', '闇・Lv10'], ['F・G・D', 'F・G・D', 'god', 'me', '闇・Lv12'], ['ユベル－Das Extremer Traurig Drachen', 'ユベル－Das Extremer Traurig Drachen', 'god', 'me', '闇・Lv12']]],
-  ['🌟 ロマンエース', '★4・約3秒', [
-    ['マジシャン・オブ・ブラックカオス', 'マジシャン・オブ・ブラックカオス', 'roman', 'me', '闇'], ['青眼の究極竜', '青眼の究極竜', 'roman', 'me', '光'], ['究極恐獣', '究極恐獣', 'roman', 'me', '地']]],
-  ['🏆 トップエース', '★4・約3秒', [
-    ['ブラック・マジシャン', 'ブラック・マジシャン', 'top', 'me', '闇'], ['青眼の白龍', '青眼の白龍', 'top', 'me', '光'], ['神獣王バルバロス', '神獣王バルバロス', 'top', 'me', '地']]],
-  ['⭐ エース', '★3・約2秒', [
-    ['人造人間－サイコ・ショッカー', '人造人間－サイコ・ショッカー', 'ace', 'me', '闇'], ['ユベル', 'ユベル', 'ace', 'me', '闇'], ['XYZ－ドラゴン・キャノン', 'XYZ－ドラゴン・キャノン', 'ace', 'me', '光'], ['バスター・ブレイダー', 'バスター・ブレイダー', 'ace', 'me', '地']]],
-  ['🤝 相棒（特別枠）', 'ふつうの召喚＋相棒の音・ひと言', [
-    ['サイレント・マジシャン LV４', 'サイレント・マジシャン LV４', 'partner', 'me', '光'], ['黄泉ガエル', '黄泉ガエル', 'partner', 'me', '水'],
-    ['サイバー・ダーク・エッジ', 'サイバー・ダーク・エッジ', 'partner', 'cpu', 'CPU側']]],
-  ['🤖 CPU側で出た時', '', [
-    ['人造人間－サイコ・ショッカー', '人造人間－サイコ・ショッカー', 'ace', 'cpu', 'エース・CPU'], ['青眼の白龍', '青眼の白龍', 'top', 'cpu', 'トップエース・CPU']]],
-  ['🔁 2回目から（短い演出）', '約0.8秒', [
-    ['ブラック・マジシャン', 'ブラック・マジシャン', 'top', 'short', '2回目'], ['サイレント・マジシャン LV４', 'サイレント・マジシャン LV４', 'partner', 'short', '2回目']]],
-  ['🃏 ふつうの召喚（切り札でない）', '', [
-    ['通常召喚', 'クィーンズ・ナイト', '', 'how:normal', 'クィーンズ・ナイト'], ['特殊召喚', 'クィーンズ・ナイト', '', 'how:special', 'クィーンズ・ナイト'],
-    ['セット', 'クィーンズ・ナイト', '', 'how:set', '裏側'], ['反転召喚', 'クィーンズ・ナイト', '', 'how:flip', 'クィーンズ・ナイト']]],
-];
-
-const list = document.getElementById('demoList');
-list.innerHTML = LIST.map(([h, sub, items], gi) => `<h2>${h} <small>${sub}</small></h2><div class="row">${items.map((it, i) => card(it[1]) ? `<button class="fx" type="button" data-g="${gi}" data-i="${i}">${it[0]}<small>${it[4]}</small></button>` : '').join('')}</div>`).join('');
-
+/* デモ版（先輩 11/24 16:11 に整理）：いちばん上に「🛑 相手の発動の確認画面」（全部入り）、次に「先輩に見てほしい見本」、下に開発用をたたむ */
+const list = document.getElementById('demoList'), secAck = document.getElementById('secAck'), secLook = document.getElementById('secLook'), secDev = document.getElementById('secDev');
 const sheet = document.getElementById('demo'), openBtn = document.getElementById('demoOpen');
 const setOpen = on => { sheet.hidden = !on; openBtn.hidden = on; };
 document.getElementById('demoClose').onclick = () => setOpen(false);
 openBtn.onclick = () => setOpen(true);
-
-/* 相棒の「仲間あり」：自分のデッキのモンスター2枚を、場の左右のマスに表側で並べる（見た目だけ。DEMOの盤面の中だけの話） */
-let alliesOn = [];
-function setAllies(on) {
-  const D = window.__duel, S = D && D.state; if (!S) return;
-  const P = S.players[0];
-  if (on && !alliesOn.length) {
-    const mons = P.deck.map(u => S.cards[u]).filter(c => CARD_POOL[c.code]?.kind === 'monster').slice(0, 2);
-    mons.forEach((c, k) => { const i = k ? 4 : 0; P.deck = P.deck.filter(u => u !== c.uid); P.mzone[i] = c.uid; Object.assign(c, { zone: 'mzone', index: i, faceUp: true, position: 'atk', controller: 0 }); alliesOn.push([c.uid, i]); });
-  } else if (!on && alliesOn.length) {
-    alliesOn.forEach(([u, i]) => { const c = S.cards[u]; P.mzone[i] = null; P.deck.push(u); Object.assign(c, { zone: 'deck', index: 0, faceUp: false }); });
-    alliesOn = [];
-  } else return;
-  D.load(S);
-}
-/* 帯を置いてよい範囲（本物の卓と同じ決め方：上の帯の下から、手札・ボタンの上まで） */
-function safeArea() {
-  const vh = innerHeight; let top = 0, bottom = vh;
-  const tb = root.querySelector('.top'); if (tb) top = Math.max(top, tb.getBoundingClientRect().bottom);
-  for (const q of ['#dock', '#tray', '#chain']) { const e = root.querySelector(q); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.height && r.top > vh * .35 && r.top < vh) bottom = Math.min(bottom, r.top); }
-  return { top, bottom };
-}
-/* 盤面のマス（自分の真ん中・CPUの真ん中）と、仲間の位置 */
-const zoneRect = key => root.querySelector(`#board [data-zone="${key}"]`)?.getBoundingClientRect();
 let busy = false;
-list.addEventListener('click', async e => {
-  const b = e.target.closest('button.fx'); if (!b || busy) return;
-  const [, , cls, kind] = LIST[b.dataset.g][2][b.dataset.i], d = card(LIST[b.dataset.g][2][b.dataset.i][1]);
-  unlock(); setOpen(false); busy = true; openBtn.hidden = true;
-  const droot = root.querySelector('.droot'); droot.classList.add('fx-busy', 'fx-stage'); // 本物の卓と同じく、演出の間はどこも押せない
-  setAllies(kind === 'allies');
-  await new Promise(r => setTimeout(r, 250)); // 欄が閉じて、盤面が描き直されてから
-  const cpu = kind === 'cpu', rect = zoneRect(cpu ? '1:mz:2' : '0:mz:2');
-  const how = kind.startsWith('how:') ? kind.slice(4) : 'normal';
-  const allies = kind === 'allies' ? [zoneRect('0:mz:0'), zoneRect('0:mz:4')].filter(Boolean) : [];
-  const ace = cls ? { cls, big: kind !== 'short', fallback: false, side: cpu ? 'CPU' : 'あなた' } : null;
-  const slow = document.getElementById('demoSlow').checked;
-  try {
-    await playSummon(root, { rect, d, atk: d.atk, def: d.def, pos: 'atk', how, faceDown: how === 'set', mats: [], allies, ace, safe: safeArea(),
-      // 相棒：2回目からも相棒の音（MASTERの決定：見た目はふつう、音とひと言で特別に。ひと言は初めての時だけ）
-      onLand: () => { if (cls === 'partner') play(['aceBond']); else if (ace && ace.big) play([cls === 'god' ? 'aceGod' : 'aceLand']); else play([how === 'set' ? 'set' : how === 'special' ? 'special' : 'summon']); },
-      mat: root.querySelector('.mat-skin'), speed: slow ? .5 : 1 });
-  } catch (err) { console.error(err); }
-  droot.classList.remove('fx-busy', 'fx-stage'); busy = false; setOpen(true);
-});
 /* ---------- 順番の確かめ（No.7）：場面を作って、本物の対戦と同じ流れで発動まで進める ----------
  * 発動の演出 → チェーンの効果 → 結果の移動（墓地へ）の順に見えるかを、直す前と直した後で同じボタンで比べる。
  * 「自分が発動」＝下の人（P1）、「相手が発動」＝上の人（P2。CPU側と同じ見え方） */
 const C = { judge: '4861', warn: '9008', valley: '5533', reborn: '4842', bomber: '7094', dmagic: '5752', bm: '4041', skilled: '5649', mirror: '4887', torrent: '5114', thunder: '5544', hole: '4342', vortex: '5217', pit: '5400', witch: '4580', a: '5503', b: '5504', c: '6471', d: '7193' };
 const SCENES = [
-  ['ミラーフォース', '攻撃された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.mirror] }, mons: { [1 - p]: [C.a, C.b, C.c] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', a => a.type === 'attack', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.mirror] })],
-  ['ミラーフォース（ウィッチ）', 'ウィッチの効果で選び待ち（No.7）', p => ({ tp: 1 - p, set: { [p]: [C.mirror] }, mons: { [1 - p]: [C.witch, C.b, C.c] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', (a, S) => a.type === 'attack' && S.cards[a.attacker].code !== C.witch, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.mirror] })],
-  ['奈落の落とし穴', '専用演出なしの罠', p => ({ tp: 1 - p, set: { [p]: [C.pit] }, mons: { [1 - p]: [C.a] }, hand: { [1 - p]: [C.b] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.pit] })],
-  ['ディメンション・マジック', '処理でリリースして特殊召喚（見張りNo.）', p => ({ tp: p, hand: { [p]: [C.dmagic, C.bm] }, mons: { [p]: [C.skilled], [1 - p]: [C.b] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.dmagic] })],
-  ['ボマー・ドラゴン', '戦闘で破壊→墓地で発動して相手を破壊', p => ({ tp: 1 - p, mons: { [p]: [C.bomber], [1 - p]: [C.b] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', (a, S) => a.type === 'attack' && a.target !== null] })],
-  ['神の宣告にチェーンして神の宣告', 'チェーン2のカウンター罠（召喚は通る）', p => ({ tp: p, hand: { [p]: [C.c] }, set: { [p]: [C.judge], [1 - p]: [C.judge] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.judge && S.cards[a.card].controller === 1 - p, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.judge && S.cards[a.card].controller === p] })],
-  ['神の警告にチェーンして神の宣告', 'チェーン2のカウンター罠（召喚は通る）', p => ({ tp: p, hand: { [p]: [C.c] }, set: { [p]: [C.judge], [1 - p]: [C.warn] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.warn, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.judge] })],
   ['反転召喚（裏側守備から）', '横向きの裏から起き上がる（No.14）', p => ({ tp: p, setMons: { [p]: [C.c] }, steps: [(a, S) => a.type === 'flipSummon'] })],
-  ['死者蘇生（ネクロバレー）', '発動できて、処理で無効（No.10）', p => ({ tp: p, hand: { [p]: [C.reborn] }, field: { [1 - p]: C.valley }, gy: { [p]: [C.b] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.reborn] })],
-  ['激流葬', '召喚された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.torrent] }, mons: { [1 - p]: [C.a, C.b] }, hand: { [1 - p]: [C.c] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.torrent] })],
-  ['サンダー・ブレイク', '手札を1枚捨てて発動', p => ({ tp: p, set: { [p]: [C.thunder] }, hand: { [p]: [C.a] }, mons: { [1 - p]: [C.b, C.c] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.thunder] })],
-  ['ブラック・ホール', '場のモンスターを全部破壊', p => ({ tp: p, hand: { [p]: [C.hole] }, mons: { [p]: [C.a], [1 - p]: [C.b, C.c, C.d] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.hole] })],
-  ['ライトニング・ボルテックス', '手札を1枚捨てて発動', p => ({ tp: p, hand: { [p]: [C.vortex, C.a] }, mons: { [1 - p]: [C.b, C.c, C.d] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.vortex] })],
 ];
 /** 場面の盤面を作る：決まったカードを手札・場に置き、3ターン目の tp のメインフェイズ1から始める */
 function sceneState(sc) {
@@ -351,7 +256,7 @@ async function driveScene(sc) {
     await new Promise(r => setTimeout(r, 350));
   }
 }
-list.insertAdjacentHTML('beforeend', `<h2>🧭 順番の確かめ <small>発動 → 効果 → 墓地へ</small></h2><p class="note">押すと場面ができて、発動まで自動で進みます（本物の対戦と同じ流れ）。演出の順番を見る用です。</p><div class="row">${SCENES.map(([n, sub], i) => [0, 1].map(p => `<button class="fx" type="button" data-scene="${i}" data-p="${p}">${n}<small>${p ? '相手（上）が発動' : '自分（下）が発動'}・${sub}</small></button>`).join('')).join('')}</div>`);
+secLook.insertAdjacentHTML('beforeend', `<h2>🔍 先輩に見てほしい見本 <small>まだ確かめていないもの</small></h2><p class="note">押すと場面ができて、本物の対戦と同じ流れで進みます。</p><div class="row">${SCENES.map(([n, sub], i) => [0, 1].map(p => `<button class="fx" type="button" data-scene="${i}" data-p="${p}">${n}<small>${p ? '相手（上）が発動' : '自分（下）が発動'}・${sub}</small></button>`).join('')).join('')}</div>`);
 list.addEventListener('click', async e => {
   const b = e.target.closest('button[data-scene]'); if (!b || busy) return;
   e.stopImmediatePropagation();
@@ -368,10 +273,10 @@ let fixScenes = [];
 const sceneSeatOff = () => { if (fixScenes.on) { fixScenes.on = false; window.__duel.previewSeat(null); } };
 sheet.addEventListener('click', e => { if (e.target.closest('button.fx') && !e.target.closest('button[data-fix]')) sceneSeatOff(); }, true); // 欄（list の外側）で先に受ける：順番の確かめのボタンも止める前に戻す
 fetch(SCENE_DIR + 'index.json').then(r => (r.ok ? r.json() : [])).then(idx => {
-  fixScenes = Array.isArray(idx) ? idx : [];
+  fixScenes = (Array.isArray(idx) ? idx : []).filter(s => s.online); // No.10・No.18 は済み。オンラインの場面（開発用）だけ残す
   if (!fixScenes.length) return;
   const label = s => (/^\d/.test(String(s.no)) ? `No.${s.no}` : String(s.no));
-  list.insertAdjacentHTML('beforeend', `<h2>🐞 不具合の場面 <small>No.〇の場面</small></h2><p class="note">押すと、その不具合が起きた時と同じ盤面になります（見る用）。オンラインの場面は盤面だけです。</p><div class="row">${fixScenes.map((s, i) => `<button class="fx" type="button" data-fix="${i}" title="${esc(s.note || '')}">${esc(label(s))}の場面<small>${esc(s.title || '')}${s.online ? '・盤面だけ' : ''}</small></button>`).join('')}</div>`);
+  secDev.insertAdjacentHTML('beforeend', `<h2>🌐 オンラインの場面 <small>開発用・盤面だけ</small></h2><p class="note">押すと、その時と同じ盤面になります（通信の続きは再生しません）。</p><div class="row">${fixScenes.map((s, i) => `<button class="fx" type="button" data-fix="${i}" title="${esc(s.note || '')}">${esc(label(s))}の場面<small>${esc(s.title || '')}${s.online ? '・盤面だけ' : ''}</small></button>`).join('')}</div>`);
 }).catch(() => { /* 場面のファイルが無い時（作る前の手元など）は、ボタンを出さない */ });
 function esc(t) { return String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 list.addEventListener('click', async e => {
@@ -383,7 +288,7 @@ list.addEventListener('click', async e => {
     const sc = await (await fetch(SCENE_DIR + s.file)).json();
     const st = structuredClone(sc.state);
     st.askZone = [0, 1]; // 見る用の席（previewSeat）はオンラインと同じ形なので、マスを聞く相手も2人
-    setAllies(false); setOpen(false);
+    setOpen(false);
     window.__duel.previewSeat(Number(sc.seat) || 0, sc.online ? '相手' : 'CPU'); fixScenes.on = true;
     window.__duel.load(st);
   } catch (err) { console.error('場面を読みこめませんでした', s.file, err); setOpen(true); }
@@ -451,15 +356,13 @@ async function ackThink() { const el = document.getElementById('ackThink'); el.h
 const ACK_MODES = [['all', '毎回止める'], ['chain', 'チェーンできる時だけ止める'], ['none', '止めない（上に小さく出す）']];
 const ackGet = (k, v) => { try { return localStorage.getItem(k) ?? v; } catch { return v; } };
 const ackPut = (k, v) => { try { localStorage.setItem(k, v); } catch { /* 保存できなくても動く */ } };
-list.insertAdjacentHTML('beforeend', `<h2>🛑 相手の発動の確認画面 <small>t30・了承するまで待つ</small></h2>
+secAck.insertAdjacentHTML('beforeend', `<h2>🛑 相手の発動の確認画面 <small>カットイン・確認画面・チェーン・演出（全部入り）</small></h2>
 <p class="note">相手がカードを発動した場面になって、確認画面が出ます。［了承］で効果の処理へ、［チェーンする］で自分のカードを重ねます（DEMOなので盤面のカードは動きません）。</p>
 <p class="note">相手（CPU）の性格：カットインのセリフと掛け声が変わります。</p>
 <div class="ack-persona" role="group" aria-label="相手の性格">${CUTIN.personas.map(x => `<button type="button" data-persona="${x.key}" aria-pressed="${personaGet() === x.key}">${esc(x.label)}</button>`).join('')}</div>
 <div class="ack-set" role="radiogroup" aria-label="止め方">${ACK_MODES.map(([v, t]) => `<label><input type="radio" name="ackMode" value="${v}"${ackGet('demoAckMode', 'all') === v ? ' checked' : ''}> ${t}</label>`).join('')}</div>
 <p class="note" id="ackModeNote"></p>
 <label><input type="checkbox" id="ackMine"${ackGet('demoAckMine', '1') === '1' ? ' checked' : ''}> 自分の場に、伏せた「神の宣告」がある（チェーンできる。罠の場面と、死者蘇生・ブラック・ホールだけ）</label>
-<label><input type="checkbox" id="ackFx"${ackGet('demoAckFx', '1') === '1' ? ' checked' : ''}> 演出と合わせて流す（本物の卓と同じ順：発動の演出 → 確認画面 → 効果の演出）</label>
-<label><input type="checkbox" id="ackBig"${ackGet('demoAckBig', '1') === '1' ? ' checked' : ''}> カード風の大きなカード（外すと、前の形：卓のカードの絵をそのまま大きく）</label>
 ${ACK_GROUPS.map(([h, ids]) => `<h3 class="ack-h">${h}</h3><div class="row">${ids.map(i => { const a = ACKS[i]; return `<button class="fx" type="button" data-ack="${i}">${a.name}<small>相手が発動・${a.sub}</small></button>`; }).join('')}</div>`).join('')}`);
 const ackModeNote = () => {
   const m = document.querySelector('input[name="ackMode"]:checked')?.value || 'all';
@@ -474,30 +377,12 @@ list.addEventListener('click', e => {
 list.addEventListener('change', e => {
   if (e.target.name === 'ackMode') { ackPut('demoAckMode', e.target.value); ackModeNote(); }
   if (e.target.id === 'ackMine') ackPut('demoAckMine', e.target.checked ? '1' : '0');
-  if (e.target.id === 'ackFx') ackPut('demoAckFx', e.target.checked ? '1' : '0');
-  if (e.target.id === 'ackBig') ackPut('demoAckBig', e.target.checked ? '1' : '0');
 });
 const ackLayer = document.getElementById('ackLayer'), ackPanel = document.getElementById('ackPanel'), ackSvg = document.getElementById('ackArrows'),
-  ackToast = document.getElementById('ackToast'), ackLogEl = document.getElementById('ackLog');
+  ackToast = document.getElementById('ackToast');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const KIND = d => (d.kind === 'monster' ? `モンスター（${d.race || ''}・★${d.level ?? '？'}）` : `${d.kind === 'spell' ? '魔法' : '罠'}カード（${d.subtype || '通常'}${d.kind === 'spell' ? '魔法' : '罠'}）`);
 const WHO_T = p => (p === 1 ? '相手' : 'あなた');
-/** ログに1行足す：本物の卓のログ（P1／P2 の形）と、DEMOの見本のログ（相手／あなた）の両方。光らせる時に使う番号を返す */
-function ackLogAdd(text, show) {
-  const D = window.__duel, S = D.state;
-  S.log.push({ turn: S.turn, text }); D.load(S);
-  ackLogEl.hidden = false;
-  ackLogEl.insertAdjacentHTML('beforeend', `<li>${esc(show)}</li>`);
-  while (ackLogEl.children.length > 4) ackLogEl.firstElementChild.remove();
-  return { li: ackLogEl.lastElementChild, n: S.log.length };
-}
-/** 了承したら、その行を光らせる（見本のログと、本物の卓のログの同じ行） */
-function ackLogLit(row) {
-  if (!row) return;
-  row.li.classList.remove('lit'); void row.li.offsetWidth; row.li.classList.add('lit');
-  const lis = root.querySelectorAll('#log li'), D = window.__duel, li = lis[lis.length - (D.state.log.length - row.n) - 1];
-  if (li && li.animate) li.animate([{ background: '#f1c95b', color: '#262b3a' }, { background: '#f1c95b', color: '#262b3a', offset: .35 }, { background: 'transparent' }], { duration: 2400, easing: 'ease-out' });
-}
 /** 対象のマス・山（墓地など）の位置 */
 const ackRect = k => (k.startsWith('pile:') ? root.querySelector(`#board [data-pile="${k.slice(5)}"]`) : root.querySelector(`#board [data-zone="${k}"]`))?.getBoundingClientRect();
 const wideMQ = matchMedia('(orientation: landscape) and (min-width: 640px)');
@@ -545,9 +430,7 @@ function ackAsk(link, canChain) {
 <div class="info"><div class="scroll"><h3 id="ackName">${esc(d.name)}</h3><p class="kind">${esc(KIND(d))}</p><p class="eff">${esc(d.text || '')}</p>${link.tgt ? `<p class="tgt">${esc(link.tgt)}</p>` : ''}</div>
 <p class="hint">👆 タップで進む（［チェーンする］以外のどこでも・Enter キーでも）</p>
 <button type="button" class="chainBtn"${canChain ? '' : ' disabled'}>チェーンする<small>${canChain ? '自分のカードを重ねる' : '今できるカードなし'}</small></button></div>`;
-  let art;
-  if (document.getElementById('ackBig')?.checked !== false) art = bigCard(d); // カード風の大きなカード（ふだん）
-  else { art = cardImg(d, d.atk, d.def, true); art.className = 'art'; art.setAttribute('role', 'img'); art.setAttribute('aria-label', d.name); } // 前の形（卓のカードの絵をそのまま大きく）
+  const art = bigCard(d); // カード風の大きなカード
   ackPanel.querySelector('.artBox').replaceWith(art);
   ackLayer.hidden = false; ackNow = link; ackFit();
   return new Promise(res => {
@@ -562,55 +445,6 @@ function ackAsk(link, canChain) {
   });
 }
 async function ackToastShow(text) { ackToast.textContent = text; ackToast.hidden = false; await sleep(1800); ackToast.hidden = true; }
-/** チェーンの処理を、逆の順（3→2→1）に1つずつ見せる */
-async function ackResolve(links) {
-  ackPanel.className = wideMQ.matches ? 'at-right' : 'at-top'; ackSvg.innerHTML = '';
-  ackPanel.innerHTML = `<p class="who"><span class="chain" style="margin-left:0">チェーンの処理</span>あとから発動したほうから（${links.map(l => l.no).reverse().join('→')}）</p>
-<ol class="res">${[...links].reverse().map(l => `<li data-no="${l.no}"><b>${l.no}</b>${WHO_T(l.p)}の「${esc(CARD_POOL[l.code].name)}」</li>`).join('')}</ol>
-<p class="hint">DEMOなので、盤面のカードは動きません</p>`;
-  ackLayer.hidden = false;
-  // 神の宣告は、すぐ前のチェーンの発動を無効にする（無効にされた神の宣告は、何もしない）
-  const negated = new Set();
-  for (const l of [...links].reverse()) if (l.code === C.judge && !negated.has(l.no) && l.no > 1) negated.add(l.no - 1);
-  for (const l of [...links].reverse()) {
-    const li = ackPanel.querySelector(`li[data-no="${l.no}"]`); li.classList.add('now');
-    const n = CARD_POOL[l.code].name, neg = negated.has(l.no);
-    ackLogLit(ackLogAdd(`チェーン${l.no}：${n}の効果を処理${neg ? '（発動は無効）' : ''}`, `チェーン${l.no}：${n}の効果を処理${neg ? '（発動は無効）' : ''}`));
-    await sleep(1300); li.classList.remove('now'); li.classList.add('done');
-  }
-  await sleep(500); ackLayer.hidden = true;
-}
-async function runAck(a) {
-  const mine = document.getElementById('ackMine').checked, mode = document.querySelector('input[name="ackMode"]:checked')?.value || 'all';
-  // 盤面：相手は発動したカード（表）と、伏せた神の宣告。自分は伏せた神の宣告（チェックがある時）
-  const s = sceneState({ tp: a.tp, set: { 0: mine ? [C.judge] : [], 1: [a.card, C.judge] }, mons: a.mons, gy: a.gy });
-  const up = s.players[1].szone[0]; Object.assign(s.cards[up], { faceUp: true });
-  window.__duel.load(s); ackLogEl.innerHTML = '';
-  await sleep(350);
-  let my = mine; // 自分の神の宣告を、まだ使っていない
-  const links = [];
-  const act = async (p, code, tgt, targets, arrow) => {
-    const link = { p, code, no: links.length + 1, tgt, targets, arrow }; links.push(link);
-    const n = CARD_POOL[code].name;
-    const row = ackLogAdd(`P${p + 1}：${n}を発動（チェーン${link.no}）`, `${WHO_T(p)}：${n}を発動（チェーン${link.no}）`);
-    if (p === 0) { const S = window.__duel.state, u = S.players[0].szone[0]; if (u != null) { S.cards[u].faceUp = true; window.__duel.load(S); } ackLogLit(row); return 'ok'; } // 自分の発動は確かめない
-    const canChain = my;
-    if (mode === 'none' || (mode === 'chain' && !canChain)) { ackLogLit(row); ackFlash(targets); await ackToastShow(`${WHO_T(p)}が「${n}」を発動（チェーン${link.no}）`); return 'ok'; }
-    await ackCutin(window.__duel.state, code); // t53：カットイン → 確認画面
-    const v = await ackAsk(link, canChain); ackLogLit(row); if (v === 'ok') await ackFlash(targets); return v;
-  };
-  let v = await act(1, a.card, a.tgt, a.targets, a.arrow);
-  if (v === 'chain') {
-    my = false;
-    await act(0, C.judge, '', [], false);
-    await ackThink(); // 相手がチェーンを重ねる前の「間」
-    // 相手が、自分の神の宣告にさらに神の宣告を重ねる（チェーン3）
-    const S = window.__duel.state, u = S.players[1].szone[1]; if (u != null) { S.cards[u].faceUp = true; window.__duel.load(S); }
-    await act(1, C.judge, 'あなたの「神の宣告」（チェーン2）の発動を無効にして破壊する', ['0:st:0'], true);
-  }
-  if (mode === 'none' && links.length === 1) { const n = CARD_POOL[a.card].name; ackLogLit(ackLogAdd(`チェーン1：${n}の効果を処理`, `チェーン1：${n}の効果を処理`)); await sleep(600); return; } // 止めない時は、処理の箱も出さない
-  await ackResolve(links);
-}
 /* ---------- 演出と合わせて流す（先輩 11/23 07:24：本物の卓と同じ順で見たい） ----------
  * 本物のルールの処理（engine）で進めて、今ある演出をそのまま使う。新しい演出は作らない。順番：
  * 相手のカードの発動の演出 → 確認画面 → タップで了承 → 効果の演出 → 対象が黄色く光る。
@@ -667,7 +501,6 @@ async function ackFxFlow(a, fx) {
   // 足した場面（fxOnly）では、自分の伏せた神の宣告は置かない（対象を選ぶ途中で重ねると、卓の演出が止まることがあるため。チェーンは罠の場面で試せる）
   const D = window.__duel, mine = document.getElementById('ackMine').checked && !a.fxOnly, mode = document.querySelector('input[name="ackMode"]:checked')?.value || 'all';
   D.load(sceneState({ tp: a.tp, hand: fx.hand, set: { 0: [...(mine ? [C.judge] : []), ...(fx.set0 || [])], 1: fx.set1 }, setMons: fx.setMons1 ? { 1: fx.setMons1 } : undefined, deck: fx.deck1 ? { 1: fx.deck1 } : undefined, mons: a.mons, gy: a.gy }));
-  ackLogEl.hidden = true;
   const steps = [...fx.pre, ...(fx.auto ? [] : [(x, S) => x.type === 'activate' && S.cards[x.card].code === a.card && S.cards[x.card].controller === 1])]; // auto：必ず発動する効果（エンジンが自分で積む）
   const judgeOf = (L, S, p) => L.find(x => x.type === 'activate' && S.cards[x.card].code === C.judge && S.cards[x.card].controller === p);
   const chainOwner = {}; let resolving = 0;
@@ -725,12 +558,11 @@ async function ackFxFlow(a, fx) {
   // 対象のカードが動いた時（死者蘇生で相手の場へ、など）は、いまの場所を光らせる。場から離れた時（除外など）は、元のマス
   await ackFlash(flash.map(([u, x]) => (u != null && ackKeyOf(D.state, u)) || x)); // 効果の演出のあと、対象（効果を受けたマス）が黄色く光る
 }
-sheet.addEventListener('click', e => { if (e.target.closest('button.fx') && !e.target.closest('button[data-ack]')) ackLogEl.hidden = true; }, true);
 list.addEventListener('click', async e => {
   const b = e.target.closest('button[data-ack]'); if (!b || busy) return;
   e.stopImmediatePropagation();
-  unlock(); setAllies(false); setOpen(false); openBtn.hidden = true; busy = true;
-  try { if (document.getElementById('ackFx').checked || ACKS[b.dataset.ack].fxOnly) await runAckFx(ACKS[b.dataset.ack], ACK_FX[b.dataset.ack]); else await runAck(ACKS[b.dataset.ack]); } catch (err) { console.error(err); ackLayer.hidden = true; }
+  unlock(); setOpen(false); openBtn.hidden = true; busy = true;
+  try { await runAckFx(ACKS[b.dataset.ack], ACK_FX[b.dataset.ack]); } catch (err) { console.error(err); ackLayer.hidden = true; }
   busy = false; setOpen(true);
 }, true);
 document.getElementById('guideOpenDemo').onclick =() => { setOpen(false); window.__duel.openGuide(0); const g = root.querySelector('#guideDlg'); const back = new MutationObserver(() => { if (g.hidden) { back.disconnect(); setOpen(true); } }); back.observe(g, { attributes: true, attributeFilter: ['hidden'] }); };
