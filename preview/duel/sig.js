@@ -1,6 +1,6 @@
 // カードごとの専用演出（キャンバスに描く）。強力な制限カードの発動を、カード名と効果に合わせて見せる。
 // playSignature() は演出が終わったら解決する Promise を返す。カードの位置は画面上の四角（getBoundingClientRect）で受け取る
-import { cardImg, backImg } from './fx.js?v=20261124-1641-779a78829e';
+import { cardImg, backImg } from './fx.js?v=20261124-1710-1b80ba5a07';
 const TAU = Math.PI * 2;
 /** カード名の帯を、消え始める前にそのまま見せる長さ（ミリ秒。MASTER：読み終われるだけ長く） */
 const TITLE_HOLD = 1600;
@@ -119,6 +119,7 @@ export function playSignature(root, info) {
   ensureCanvas(root); setClip(root);
   return new Promise(resolve => {
     const S = setup(info);
+    S.boardEl = root.querySelector('#board'); // No.34：演出の途中で盤面が動いても、写しをマスについていかせる（draw で毎回ずらす）
     cv.style.display = 'block';
     const step = now => {
       if (S.done) return;
@@ -906,6 +907,8 @@ function draw(S) {
   const t = S.t, B = S.B, U = S.U;
   ctx.save(); ctx.clearRect(-50, -50, W + 100, H + 100);
   ctx.translate((Math.random() - .5) * S.shake, (Math.random() - .5) * S.shake);
+  // No.34（ボスの報告：神の宣告の演出でカードがずれた）：場所は始めに測った盤面（S.B）が基準。演出の途中で盤面が動いたら、その分だけ全体をずらす
+  { const br = S.boardEl && S.boardEl.isConnected ? S.boardEl.getBoundingClientRect() : null; if (br && br.width) ctx.translate(br.left - B.left, br.top - B.top); }
   if (S.dark > .01) { ctx.fillStyle = `rgba(0,0,0,${S.dark * .65})`; ctx.beginPath(); ctx.rect(-50, -50, W + 100, H + 100); if (S.mat && matAlpha(S) > .5) rr(ctx, S.mat.ox, S.mat.oy, S.mat.w, S.mat.h, 14); ctx.fill('evenodd'); }
   if (S.storm || S.rain) { ctx.strokeStyle = 'rgba(180,200,230,.35)'; ctx.lineWidth = 1; for (let i = 0; i < 60; i++) { const rx = (i * 53 + t * .9) % (W + 40) - 20, ry = (i * 97 + t * 1.6) % H; ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 6, ry + 16); ctx.stroke(); } }
   if (S.crack) { const k = Math.min(1, (t - S.crack.t) / 300); ctx.strokeStyle = 'rgba(30,15,5,.85)'; ctx.lineWidth = 2.5; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; ctx.beginPath(); ctx.moveTo(S.crack.x, S.crack.y); ctx.lineTo(S.crack.x + Math.cos(a) * 70 * U * k, S.crack.y + Math.sin(a) * 22 * U * k); ctx.stroke(); } }
