@@ -132,6 +132,26 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 #ackPanel ol.res li.now { border: 2px solid var(--d-edge); background: var(--d-accent); color: var(--d-accent-ink) }
 #ackPanel ol.res li.done { opacity: .55 }
 /* 止めない時：上に小さく出して、すぐ消える */
+/* t53（先輩 11/24）：カットイン。相手の発動の演出のあと、確認画面の前に、性格ごとの掛け声とセリフを画面の真ん中の帯で出す。無効にされた時は「なにっ！？」 */
+#ackCut { position: fixed; inset: 0; z-index: 59; display: grid; place-items: center; pointer-events: none; overflow: hidden }
+#ackCut[hidden] { display: none }
+#ackCut .band { width: 100%; box-sizing: border-box; padding: 14px 16px 16px; background: linear-gradient(100deg, rgba(20, 24, 40, .94), rgba(44, 50, 82, .94)); border-top: 3px solid var(--d-opp); border-bottom: 3px solid var(--d-opp);
+  color: #fff; transform: skewY(-4deg); animation: ackCutIn .28s cubic-bezier(.2, .9, .3, 1.1) both }
+#ackCut .band.stay { animation: none }
+#ackCut.out .band { animation: ackCutOut .22s ease-in both }
+#ackCut .in { transform: skewY(4deg); max-width: 640px; margin: 0 auto; display: grid; gap: 6px }
+#ackCut .who { font-size: 12px; font-weight: 700; opacity: .85; letter-spacing: .04em }
+#ackCut .who b { background: var(--d-opp); color: #fff; border-radius: 999px; padding: 2px 10px; margin-right: 6px }
+#ackCut .call { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: clamp(22px, 7vw, 34px); line-height: 1.2; color: var(--d-accent); text-shadow: 0 2px 0 rgba(0, 0, 0, .5) }
+#ackCut .line { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: clamp(17px, 5vw, 24px); line-height: 1.45; white-space: pre-line }
+#ackCut .card { font-size: 12px; opacity: .8 }
+#ackCut.neg .band { border-color: var(--d-bad); background: linear-gradient(100deg, rgba(60, 14, 20, .95), rgba(96, 26, 34, .95)) }
+#ackCut.neg .call { color: #fff; font-size: clamp(30px, 10vw, 48px) }
+@keyframes ackCutIn { from { transform: translateX(110%) skewY(-4deg) } to { transform: translateX(0) skewY(-4deg) } }
+@keyframes ackCutOut { to { transform: translateX(-110%) skewY(-4deg); opacity: .4 } }
+#demo .ack-persona { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px }
+#demo .ack-persona button { border: 1px solid var(--d-line); background: var(--d-panel-2); color: var(--d-ink); border-radius: 999px; padding: 6px 12px; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; min-height: 36px }
+#demo .ack-persona button[aria-pressed="true"] { border: 2px solid var(--d-edge); background: var(--d-accent); color: var(--d-accent-ink) }
 /* 先輩 11/23 18:02：相手がチェーンを重ねる前の「間」の札 */
 #ackThink { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 59; background: var(--d-panel); color: var(--d-ink); border: 1.5px solid var(--d-edge); border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 13px; box-shadow: 2px 3px 0 var(--d-edge); animation: ackThinkBlink 1s ease-in-out infinite alternate }
 #ackThink[hidden] { display: none }
@@ -174,14 +194,15 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 <svg id="ackFlash" aria-hidden="true"></svg>
 <div id="ackToast" role="status" hidden></div>
 <div id="ackThink" role="status" hidden>🤔 相手が考えています…</div>
+<div id="ackCut" role="status" aria-live="assertive" hidden></div>
 <ol id="ackLog" aria-label="ログ（見本）" hidden></ol>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261123-1810-6db36a2771';
-import { playSummon, cardImg, ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261123-1810-6db36a2771';
-import { play, unlock } from './sound.js?v=20261123-1810-6db36a2771';
-import { CARD_POOL } from './data/cardpool.js?v=20261123-1810-6db36a2771';
-import { createGame, legalActions } from './engine/game.js?v=20261123-1810-6db36a2771';
-import { answerCandidates } from './ai/cpu.js?v=20261123-1810-6db36a2771';
+import { mountDuel } from './embed.js?v=20261124-1610-5d1799f6f2';
+import { playSummon, cardImg, ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261124-1610-5d1799f6f2';
+import { play, unlock } from './sound.js?v=20261124-1610-5d1799f6f2';
+import { CARD_POOL } from './data/cardpool.js?v=20261124-1610-5d1799f6f2';
+import { createGame, legalActions } from './engine/game.js?v=20261124-1610-5d1799f6f2';
+import { answerCandidates } from './ai/cpu.js?v=20261124-1610-5d1799f6f2';
 
 const host = document.getElementById('duel-host');
 // 名札の帯：試作版（/preview/）の時だけ出す。版の名前は version.json（作る時に書く）から読む
@@ -293,7 +314,7 @@ const SCENES = [
 ];
 /** 場面の盤面を作る：決まったカードを手札・場に置き、3ターン目の tp のメインフェイズ1から始める */
 function sceneState(sc) {
-  const need = p => [...(sc.setMons?.[p] || []), ...(sc.set?.[p] || []), ...(sc.hand?.[p] || []), ...(sc.mons?.[p] || []), ...(sc.field?.[p] ? [sc.field[p]] : []), ...(sc.gy?.[p] || [])];
+  const need = p => [...(sc.deck?.[p] || []), ...(sc.setMons?.[p] || []), ...(sc.set?.[p] || []), ...(sc.hand?.[p] || []), ...(sc.mons?.[p] || []), ...(sc.field?.[p] ? [sc.field[p]] : []), ...(sc.gy?.[p] || [])];
   const fill = Array(20).fill(C.a);
   const s = createGame({ pool: CARD_POOL, decks: [0, 1].map(p => ({ main: [...fill, ...need(p)], extra: [] })), seed: 7, firstPlayer: sc.tp, shuffle: false });
   for (const p of [0, 1]) { const P = s.players[p]; for (const u of P.hand) Object.assign(s.cards[u], { zone: 'deck', faceUp: false }); P.deck.push(...P.hand); P.hand = []; P.normalSummonUsed = false; }
@@ -388,9 +409,41 @@ const ACKS = [
   { name: 'D-HERO デビルガイ', sub: '起動効果・あなたのモンスター1体が対象', tp: 1, card: '6658', fxOnly: true, mons: { 0: [C.c], 1: ['6658'] }, tgt: 'あなたの「V－タイガー・ジェット」を、2回目の相手のスタンバイフェイズまで除外する' },
   { name: '墓守の番兵', sub: 'リバース効果・反転召喚で表になって発動', tp: 1, card: '5511', fxOnly: true, mons: { 0: [C.c] }, tgt: 'あなたの「V－タイガー・ジェット」を手札に戻す' },
   { name: '暗黒ブラキ', sub: '誘発効果・召喚に成功した時', tp: 1, card: '10924', fxOnly: true, mons: { 0: [C.c] }, tgt: 'あなたの「V－タイガー・ジェット」を表側守備表示にする' },
+  { name: 'D-HERO ディアボリックガイ', sub: '墓地のモンスター効果・墓地から除外して', tp: 1, card: '6949', fxOnly: true, mons: { 0: [C.c] }, gy: { 1: ['6949'] }, flashEnd: 'oppMons', tgt: '相手のデッキから「D-HERO ディアボリックガイ」を特殊召喚する' },
+  { name: 'ブラック・ホール（無効にする）', sub: '［チェーンする］→神の宣告で止めると「なにっ！？」', tp: 1, card: C.hole, fxOnly: true, mons: { 0: [C.c], 1: [C.b] }, tgt: '対象はとらない：場のモンスターを全部破壊する' },
 ];
 /* 場面の見出し（ACKS の番号） */
-const ACK_GROUPS = [['🪤 罠', [0, 2]], ['✨ 魔法', [1, 3, 4, 5]], ['👹 モンスター効果', [6, 7, 8]]];
+const ACK_GROUPS = [['🪤 罠', [0, 2]], ['✨ 魔法', [1, 3, 4, 5, 10]], ['👹 モンスター効果', [6, 7, 8, 9]]];
+/** カットインのセリフ帳（docs/cutin-draft.json の写し。直す時は docs を直して、ここに写す。テストで同じかを確かめる） */
+const CUTIN = /*cutin-draft*/{"personas":[{"key":"hot","label":"熱血な少年"},{"key":"elite","label":"自信家のエリート"},{"key":"kaiser","label":"寡黙な強者"},{"key":"lady","label":"落ち着いた実力派の女性"},{"key":"girl","label":"元気な少女"}],"calls":{"quick":{"label":"速攻魔法を発動した時","hot":"速攻魔法、発動だぜ！","elite":"速攻魔法、発動！","kaiser":"速攻魔法、発動。","lady":"速攻魔法、発動よ！","girl":"速攻魔法、発動だよ！"},"spell":{"label":"魔法を発動した時（手札からも、伏せてあったものも）","hot":"魔法カード、発動だぜ！","elite":"魔法カード、発動！","kaiser":"魔法カード、発動。","lady":"魔法カード、発動よ！","girl":"魔法カード、発動だよ！"},"trap":{"label":"伏せてあった罠を発動した時","hot":"リバースカード、オープンだぜ！","elite":"リバースカード、オープン！","kaiser":"リバースカード、オープン。","lady":"リバースカード、オープンよ！","girl":"リバースカード、オープン！"},"monster":{"label":"場・手札のモンスターの効果を発動した時","hot":"モンスター効果、発動だぜ！","elite":"モンスター効果、発動！","kaiser":"モンスター効果、発動。","lady":"モンスター効果、発動よ！","girl":"モンスター効果、発動だよ！"},"grave":{"label":"墓地のモンスターの効果を発動した時","hot":"墓地のモンスターの効果、発動だぜ！","elite":"墓地のモンスターの効果、発動！","kaiser":"墓地のモンスターの効果を発動する。","lady":"墓地のモンスターの効果、発動よ！","girl":"墓地のモンスターの効果、発動だよ！"}},"negated":{"master":"なにっ！？","hot":"なにっ！？","elite":"なにぃっ！？","kaiser":"……なに。","lady":"なっ……！？","girl":"えぇっ！？"},"cards":[{"name":"融合","spec":"通常魔法","master":"見せてやるぜ！俺の切り札！","hot":"見せてやるぜ！\nオレの切り札を！","elite":"見せてやろう！\nこのオレ様の切り札を！","kaiser":"見せよう。\n俺の切り札を。","lady":"見せてあげるわ！\n私の切り札を！","girl":"見せてあげる！\n私の切り札だよ！"},{"name":"死者蘇生","spec":"通常魔法","master":"蘇れ！我のモンスターよ！！","hot":"蘇れ！\nオレのモンスター！！","elite":"蘇れ！\n我がしもべよ！！","kaiser":"蘇れ。\n俺のモンスターよ。","lady":"蘇って！\n私のモンスター！","girl":"お願い、蘇って！\n私のモンスター！"},{"name":"ハーピィの羽根帚","spec":"通常魔法","master":"全てやり直しだ！","hot":"全部まとめて\nやり直しだ！","elite":"全てやり直しだ！\n小細工は通用せん！","kaiser":"全て、やり直しだ。","lady":"全部、\nやり直しにさせてもらうわ！","girl":"ぜーんぶ\nやり直しだよ！"},{"name":"ブラック・ホール","spec":"通常魔法","master":"全てやり直しだ","hot":"全部飲みこめ！\nやり直しだ！","elite":"全てやり直しだ！\nひれ伏すがいい！","kaiser":"全て無に還す。\nやり直しだ。","lady":"全部まとめて、\nやり直しよ！","girl":"ぜんぶ吸いこんじゃえ！\nやり直しだよ！"},{"name":"ライトニング・ボルテックス","spec":"通常魔法","master":"くらえ！！","hot":"くらえーっ！！","elite":"消し飛べ！！","kaiser":"受けてみろ。","lady":"くらいなさい！！","girl":"くらえー！！"},{"name":"サイクロン","spec":"速攻魔法","master":"くらえ！","hot":"くらえ！","elite":"吹き飛べ！","kaiser":"吹き飛ばす。","lady":"くらいなさい！","girl":"えいっ、くらえ！"},{"name":"収縮","spec":"速攻魔法","master":"あまいぜ！","hot":"甘いぜ！","elite":"甘いな！","kaiser":"甘い。","lady":"甘いわね！","girl":"あまーい！"},{"name":"月の書","spec":"速攻魔法","master":"これはどうだ！","hot":"これはどうだ！","elite":"これならどうだ！","kaiser":"これはどうだ。","lady":"これは\nどうかしら？","girl":"これなら\nどう？"},{"name":"聖なるバリア －ミラーフォース－","spec":"通常罠","master":"残念だったな！くらえ！！","hot":"残念だったな！\nくらえ！！","elite":"残念だったな！\nその攻撃、そっくり返してやる！","kaiser":"残念だったな。\n受けてみろ。","lady":"残念だったわね！\nくらいなさい！","girl":"ざんねんでした！\nえいっ、くらえ！"},{"name":"奈落の落とし穴","spec":"通常罠","master":"落ちろ！！！","hot":"落ちろーっ！！","elite":"奈落の底へ\n落ちろ！！","kaiser":"落ちろ。","lady":"落ちなさい！","girl":"落ちちゃえー！"},{"name":"激流葬","spec":"通常罠","master":"つめがあまい！！！","hot":"詰めが甘いぜ！！","elite":"詰めが甘いわ！！","kaiser":"詰めが甘い。","lady":"詰めが\n甘いわね！","girl":"詰めが\nあまいよ！"},{"name":"次元幽閉","spec":"通常罠","master":"残念だったな！","hot":"残念だったな！","elite":"残念だったな！\n異次元で頭を冷やせ！","kaiser":"残念だったな。","lady":"残念だったわね！","girl":"ざんねんでした！"},{"name":"魔法の筒","spec":"通常罠","master":"そうはさせない！","hot":"そうはさせないぜ！","elite":"そうはさせん！\nその攻撃、貴様に返してやる！","kaiser":"そうはさせない。","lady":"そうは\nさせないわ！","girl":"そうは\nさせないよ！"},{"name":"リビングデッドの呼び声","spec":"永続罠","master":"蘇れ！","hot":"蘇れ！","elite":"蘇れ！\nまだ眠るには早い！","kaiser":"蘇れ。","lady":"蘇って！","girl":"起きて！\n蘇って！"},{"name":"神の宣告","spec":"カウンター罠","master":"そんなことを私が許すと思うのか！！","hot":"そんなこと、\nオレが許すと思うか！！","elite":"そんなことを、\nこのオレ様が許すと思うのか！！","kaiser":"俺が\n許すと思うか。","lady":"そんなこと、\n私が許すと思って？","girl":"そんなの、\n私がゆるさないもん！"},{"name":"神の警告","spec":"カウンター罠","master":"許さんぞ！！！！","hot":"許さねえぞ！！","elite":"許さんぞ！！","kaiser":"許さん。","lady":"許さないわ！","girl":"ぜったい\n許さないんだから！"}]}/*end*/;
+/** カットインを出す長さ（ミリ秒）：セリフあり／掛け声だけ／「なにっ！？」 */
+const CUTIN_MS = { line: 1700, call: 1200, neg: 1400 }; // セリフ → 掛け声の順に、それぞれこの長さ
+const personaGet = () => { const k = ackGet('demoPersona', 'hot'); return CUTIN.personas.some(x => x.key === k) ? k : 'hot'; };
+/** 掛け声の種類：速攻魔法／魔法（手札も伏せも）／伏せた罠／場・手札のモンスター効果／墓地のモンスター効果 */
+function cutKind(S, code) {
+  const d = CARD_POOL[code];
+  if (d.kind === 'spell') return d.subtype === '速攻' ? 'quick' : 'spell';
+  if (d.kind === 'trap') return 'trap';
+  const c = Object.values(S.cards).find(x => x.code === code && x.controller === 1 && (x.zone === 'gy' || x.zone === 'banished')) ;
+  const onField = Object.values(S.cards).some(x => x.code === code && x.controller === 1 && (x.zone === 'mzone' || x.zone === 'hand'));
+  return c && !onField ? 'grave' : 'monster';
+}
+/** カットインを出して、終わるまで待つ。neg＝無効にされた時の「なにっ！？」 */
+async function ackCutin(S, code, neg = false) {
+  const el = document.getElementById('ackCut'), per = personaGet(), P = CUTIN.personas.find(x => x.key === per), name = CARD_POOL[code].name;
+  const line = neg ? '' : (CUTIN.cards.find(c => c.name === name) || {})[per] || '';
+  const call = neg ? CUTIN.negated[per] : CUTIN.calls[cutKind(S, code)][per];
+  // セリフ（改行どおり）→ 掛け声 の順に出す（CODE 11:51）。セリフ帳にないカードは掛け声だけ
+  let shown = false;
+  const show = (big, small) => { el.innerHTML = `<div class="band${shown ? ' stay' : ''}"><div class="in"><p class="who"><b>CPU</b>${esc(P.label)}</p>${big}<p class="card">${small}</p></div></div>`; shown = true; }; // 2回目（セリフ→掛け声）は、帯は動かさず中身だけ替える
+  el.className = neg ? 'neg' : ''; el.hidden = false;
+  if (neg) { show(`<p class="call">${esc(call)}</p>`, `「${esc(name)}」の発動が無効になった`); await new Promise(r => setTimeout(r, CUTIN_MS.neg)); }
+  else {
+    if (line) { show(`<p class="line">${esc(line)}</p>`, `「${esc(name)}」`); await new Promise(r => setTimeout(r, CUTIN_MS.line)); }
+    show(`<p class="call">${esc(call)}</p>`, `「${esc(name)}」`); await new Promise(r => setTimeout(r, CUTIN_MS.call));
+  }
+  el.classList.add('out'); await new Promise(r => setTimeout(r, 220)); el.hidden = true; el.className = '';
+}
 /** 相手（CPU）がチェーンを重ねる前の「間」（ミリ秒）。先輩 11/23 18:02「ワンテンポおいてから」。本物の卓（t31・t33）も同じ長さにする */
 const OPP_THINK_MS = 1200;
 /** 相手がチェーンを重ねる前に、間をおいて「相手が考えています…」と出す */
@@ -400,6 +453,8 @@ const ackGet = (k, v) => { try { return localStorage.getItem(k) ?? v; } catch { 
 const ackPut = (k, v) => { try { localStorage.setItem(k, v); } catch { /* 保存できなくても動く */ } };
 list.insertAdjacentHTML('beforeend', `<h2>🛑 相手の発動の確認画面 <small>t30・了承するまで待つ</small></h2>
 <p class="note">相手がカードを発動した場面になって、確認画面が出ます。［了承］で効果の処理へ、［チェーンする］で自分のカードを重ねます（DEMOなので盤面のカードは動きません）。</p>
+<p class="note">相手（CPU）の性格：カットインのセリフと掛け声が変わります。</p>
+<div class="ack-persona" role="group" aria-label="相手の性格">${CUTIN.personas.map(x => `<button type="button" data-persona="${x.key}" aria-pressed="${personaGet() === x.key}">${esc(x.label)}</button>`).join('')}</div>
 <div class="ack-set" role="radiogroup" aria-label="止め方">${ACK_MODES.map(([v, t]) => `<label><input type="radio" name="ackMode" value="${v}"${ackGet('demoAckMode', 'all') === v ? ' checked' : ''}> ${t}</label>`).join('')}</div>
 <p class="note" id="ackModeNote"></p>
 <label><input type="checkbox" id="ackMine"${ackGet('demoAckMine', '1') === '1' ? ' checked' : ''}> 自分の場に、伏せた「神の宣告」がある（チェーンできる。罠の場面と、死者蘇生・ブラック・ホールだけ）</label>
@@ -411,6 +466,11 @@ const ackModeNote = () => {
   document.getElementById('ackModeNote').textContent = m === 'chain' ? '※「チェーンできる時だけ」：CPU戦だけで選べます（オンラインは伏せカードがばれないように「毎回」だけ。CODE 22:13 の決定）。' : m === 'none' ? '※止めない：確認画面は出さず、上に小さく出して進みます（ログの行は光ります）。' : '※毎回止める：チェーンできるカードが無い時も、同じ形（［チェーンする］は灰色）で待ちます。';
 };
 ackModeNote();
+list.addEventListener('click', e => {
+  const b = e.target.closest('button[data-persona]'); if (!b) return;
+  e.stopImmediatePropagation(); ackPut('demoPersona', b.dataset.persona);
+  for (const x of list.querySelectorAll('button[data-persona]')) x.setAttribute('aria-pressed', String(x === b));
+}, true);
 list.addEventListener('change', e => {
   if (e.target.name === 'ackMode') { ackPut('demoAckMode', e.target.value); ackModeNote(); }
   if (e.target.id === 'ackMine') ackPut('demoAckMine', e.target.checked ? '1' : '0');
@@ -536,6 +596,7 @@ async function runAck(a) {
     if (p === 0) { const S = window.__duel.state, u = S.players[0].szone[0]; if (u != null) { S.cards[u].faceUp = true; window.__duel.load(S); } ackLogLit(row); return 'ok'; } // 自分の発動は確かめない
     const canChain = my;
     if (mode === 'none' || (mode === 'chain' && !canChain)) { ackLogLit(row); ackFlash(targets); await ackToastShow(`${WHO_T(p)}が「${n}」を発動（チェーン${link.no}）`); return 'ok'; }
+    await ackCutin(window.__duel.state, code); // t53：カットイン → 確認画面
     const v = await ackAsk(link, canChain); ackLogLit(row); if (v === 'ok') await ackFlash(targets); return v;
   };
   let v = await act(1, a.card, a.tgt, a.targets, a.arrow);
@@ -572,6 +633,10 @@ const ACK_FX = [
   { setMons1: ['5511'], set1: [C.judge, C.judge, '4909'], pre: [a => a.type === 'flipSummon'], auto: true },
   // 暗黒ブラキ：相手が通常召喚 → 召喚に成功した時の誘発効果
   { hand: { 1: ['10924'] }, set1: [C.judge, C.judge, '4909'], pre: [a => a.type === 'normalSummon'] },
+  // ディアボリックガイ：相手のメインフェイズに、墓地から除外して発動（デッキにもう1枚）。相手はサイクロンも伏せる（すぐ処理されないように）
+  { set1: [C.judge, C.judge, '4909'], deck1: ['6949'], pre: [] },
+  // 無効にする場面：あなたは伏せた神の宣告を持つ。［チェーンする］で止めても、相手は重ねてこない（noCounter）→「なにっ！？」
+  { hand: { 1: [C.hole] }, set1: ['4909'], set0: [C.judge], pre: [], noCounter: true },
   // モンスター効果の3つは、相手の伏せカードにサイクロンも置く：だれも重ねられないと、エンジンが発動と同時に効果まで処理してしまい、確認画面が効果のあとになるため
 ];
 /** 光らせるマス：対象をとる時はその対象。とらない時は、効果を受けるモンスター（奈落・ミラーフォースは自分のモンスター、ブラック・ホールは全部） */
@@ -601,10 +666,11 @@ const ackIdle = async (n = 10) => { let calm = 0; for (let i = 0; i < n && calm 
 async function ackFxFlow(a, fx) {
   // 足した場面（fxOnly）では、自分の伏せた神の宣告は置かない（対象を選ぶ途中で重ねると、卓の演出が止まることがあるため。チェーンは罠の場面で試せる）
   const D = window.__duel, mine = document.getElementById('ackMine').checked && !a.fxOnly, mode = document.querySelector('input[name="ackMode"]:checked')?.value || 'all';
-  D.load(sceneState({ tp: a.tp, hand: fx.hand, set: { 0: [...(mine ? [C.judge] : []), ...(fx.set0 || [])], 1: fx.set1 }, setMons: fx.setMons1 ? { 1: fx.setMons1 } : undefined, mons: a.mons, gy: a.gy }));
+  D.load(sceneState({ tp: a.tp, hand: fx.hand, set: { 0: [...(mine ? [C.judge] : []), ...(fx.set0 || [])], 1: fx.set1 }, setMons: fx.setMons1 ? { 1: fx.setMons1 } : undefined, deck: fx.deck1 ? { 1: fx.deck1 } : undefined, mons: a.mons, gy: a.gy }));
   ackLogEl.hidden = true;
   const steps = [...fx.pre, ...(fx.auto ? [] : [(x, S) => x.type === 'activate' && S.cards[x.card].code === a.card && S.cards[x.card].controller === 1])]; // auto：必ず発動する効果（エンジンが自分で積む）
   const judgeOf = (L, S, p) => L.find(x => x.type === 'activate' && S.cards[x.card].code === C.judge && S.cards[x.card].controller === p);
+  const chainOwner = {}; let resolving = 0;
   let think = false, k = 0, seen = 0, plan = '', flash = [], logAt = D.state.log.length, myLeft = mine, firstPick = null;
   for (let guard = 0; guard < 90; guard++) {
     // 発動・効果の演出が終わるまで待つ。ただし、選ぶ欄が出ている間（対象を選ぶなど）は卓が演出中の印を出したままなので、待たずに先に答える
@@ -613,9 +679,16 @@ async function ackFxFlow(a, fx) {
     // 新しい「〇〇を発動（チェーンN）」のログの行を見て、確認画面を出す。対象を選ぶ前でも出す
     // （だれも重ねられない時、エンジンは対象を選んだのと同じ一手でチェーンを処理まで進めるので、チェーンが増えるのを待つと間に合わない）
     const fresh = S.log.slice(logAt); logAt = S.log.length;
+    // t53：相手の発動が無効になった時は「なにっ！？」（いま処理しているチェーンの、ひとつ前のチェーンが無効になる）
+    for (const ln of fresh) {
+      const rz = /^チェーン(\d+)：/.exec(ln.text); if (rz) resolving = Number(rz[1]);
+      const ng = /^「(.+?)」の発動を無効にした/.exec(ln.text);
+      if (ng && chainOwner[resolving - 1] === 1) await ackCutin(S, CODE_OF[ng[1]] || a.card, true);
+    }
     for (const ln of fresh) {
       const m = /^P([12])：「(.+?)」(?:の効果)?を発動（チェーン(\d+)）/.exec(ln.text); if (!m) continue;
       const p = Number(m[1]) - 1, no = Number(m[3]), code = CODE_OF[m[2]] || a.card; seen = Math.max(seen, no);
+      chainOwner[no] = p;
       if (p !== 1) { ackLitReal(no); continue; }
       const L = S.chain[no - 1] && S.cards[S.chain[no - 1].uid].code === code ? S.chain[no - 1] : null;
       // 重ねられるか：選ぶ欄が出ている間は、伏せた神の宣告が残っていて、魔法・罠の発動の時だけ（神の宣告はモンスターの効果は無効にできない）
@@ -624,7 +697,7 @@ async function ackFxFlow(a, fx) {
       if (no === 1 && L) flash = L.targets && L.targets.length ? L.targets.map(u => [u, ackKeyOf(S, u)]) : keys.map(x => [null, x]); // 対象をとる時は、カードを覚えておく
       let v = 'ok';
       if (mode === 'none' || (mode === 'chain' && !canChain)) { ackLitReal(no); ackToastShow(`相手が「${CARD_POOL[code].name}」を発動（チェーン${no}）`); }
-      else { v = await ackAsk({ p: 1, code, no, tgt }, canChain); ackLitReal(no); }
+      else { await ackCutin(S, code); v = await ackAsk({ p: 1, code, no, tgt }, canChain); ackLitReal(no); } // t53：発動の演出 → カットイン → 確認画面
       if (v === 'chain') plan = 'mine';
       if (no > 1 && v === 'ok' && keys.length) await ackFlash(keys); // チェーン3：何を無効にするのかを、盤面で光らせる
     }
@@ -632,6 +705,7 @@ async function ackFxFlow(a, fx) {
     // 確認画面の時にまだチェーンに積まれていなかった（対象を選ぶ前だった）時は、積まれたあとで光らせる対象を覚える
     if (!flash.length && S.chain[0] && S.chain[0].player === 1) { const L0 = S.chain[0]; flash = L0.targets && L0.targets.length ? L0.targets.map(u => [u, ackKeyOf(S, u)]) : ackKeys(S, L0, S.cards[L0.uid].code).map(x => [null, x]); }
     if (k >= steps.length && seen && !S.chain.length && !S.pending) break; // チェーンが全部処理された
+    if (plan === 'opp' && fx.noCounter) plan = 'done'; // この場面では、相手は重ねてこない
     const L = legalActions(S);
     let act = k < steps.length ? L.find(x => steps[k](x, S)) : null;
     if (act) k++;
@@ -646,6 +720,7 @@ async function ackFxFlow(a, fx) {
     await new Promise(r => setTimeout(r, 350));
   }
   await ackIdle(50); // 効果の演出（最長6秒）
+  if (a.flashEnd === 'oppMons') flash = D.state.players[1].mzone.filter(u => u != null).map(u => [u, ackKeyOf(D.state, u)]); // 特殊召喚されたモンスター
   if (!flash.length && firstPick) flash = firstPick; // チェーンがすぐ処理された時は、相手が選んだ対象を光らせる
   // 対象のカードが動いた時（死者蘇生で相手の場へ、など）は、いまの場所を光らせる。場から離れた時（除外など）は、元のマス
   await ackFlash(flash.map(([u, x]) => (u != null && ackKeyOf(D.state, u)) || x)); // 効果の演出のあと、対象（効果を受けたマス）が黄色く光る
