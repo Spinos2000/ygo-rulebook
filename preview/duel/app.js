@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261124-1710-1b80ba5a07';
-import { fullThink } from './ai/levels.js?v=20261124-1710-1b80ba5a07';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261124-1710-1b80ba5a07';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261124-1710-1b80ba5a07';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261124-1710-1b80ba5a07';
-import { playSignature, sigKey } from './sig.js?v=20261124-1710-1b80ba5a07';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261124-1710-1b80ba5a07';
-import { firstEntrance } from './aces.js?v=20261124-1710-1b80ba5a07';
-import { RULINGS } from './data/rulings.js?v=20261124-1710-1b80ba5a07';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261124-1710-1b80ba5a07';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261124-1710-1b80ba5a07';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261124-1710-1b80ba5a07';
-import { joinSiteRoom } from './net/site-room.js?v=20261124-1710-1b80ba5a07';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261124-1744-55b1a94147';
+import { fullThink } from './ai/levels.js?v=20261124-1744-55b1a94147';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261124-1744-55b1a94147';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261124-1744-55b1a94147';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261124-1744-55b1a94147';
+import { playSignature, sigKey } from './sig.js?v=20261124-1744-55b1a94147';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261124-1744-55b1a94147';
+import { firstEntrance } from './aces.js?v=20261124-1744-55b1a94147';
+import { RULINGS } from './data/rulings.js?v=20261124-1744-55b1a94147';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261124-1744-55b1a94147';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261124-1744-55b1a94147';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261124-1744-55b1a94147';
+import { joinSiteRoom } from './net/site-room.js?v=20261124-1744-55b1a94147';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261124-1710-1b80ba5a07';
-import { CARD_POOL } from './data/cardpool.js?v=20261124-1710-1b80ba5a07';
-import { DECKS } from './data/decks.js?v=20261124-1710-1b80ba5a07';
-import { SCRIPTS } from './cards/index.js?v=20261124-1710-1b80ba5a07';
+} from './engine/game.js?v=20261124-1744-55b1a94147';
+import { CARD_POOL } from './data/cardpool.js?v=20261124-1744-55b1a94147';
+import { DECKS } from './data/decks.js?v=20261124-1744-55b1a94147';
+import { SCRIPTS } from './cards/index.js?v=20261124-1744-55b1a94147';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -192,9 +192,10 @@ function commit(next) {
 }
 
 /* ---------- 攻撃の演出：演出の間は画面の更新とCPUの手番を止め、終わったら続ける ---------- */
+let boardHeld = false; // No.35：演出の間、盤面の高さの変更を待たせている
 let fxN = 0;   // 再生中の演出の数（0 になった時だけ画面を更新する。演出が重なっても途中で描き直さない）
 /** 演出の間は、画面のどこを押しても何も起きないようにする（MASTER：途中で飛ばす操作もなし） */
-function fxBlock() { const r = ROOT && ROOT.querySelector('.droot'); if (r) r.classList.toggle('fx-busy', fxN > 0); }
+function fxBlock() { const r = ROOT && ROOT.querySelector('.droot'); if (r) r.classList.toggle('fx-busy', fxN > 0); if (fxN === 0 && boardHeld) { boardHeld = false; measureBottom(); } } // No.35：演出の間に止めておいた盤面の高さを、演出が終わったら合わせる
 /** 召喚・攻撃・カードの演出の間（引く・手札に加える演出は除く）：スマホを横にした時は、盤面にかぶる手札を下へしまう */
 /**
  * 演出の記録（見張り用・COLOの道具が読む）：演出が始まるたびに { t, kind, uid, ... } を1件。最大2000件で古いのから消える。
@@ -469,7 +470,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261124-1710-1b80ba5a07', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261124-1744-55b1a94147', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1469,7 +1470,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261124-1710-1b80ba5a07';
+const DUEL_BUILD = '20261124-1744-55b1a94147';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -2818,7 +2819,11 @@ function measureBottom() {
   const b = $('#board');
   if (b && narrow()) {
     const top = b.getBoundingClientRect().top - r.getBoundingClientRect().top;
-    r.style.setProperty('--board-h', Math.max(260, Math.floor(window.innerHeight - top - dockBaseFor(dh, !S || (!S.chain.length && !S.pending && S.winner === null)) - 8)) + 'px'); // No.11：盤面はボタンの欄の高さが変わっても伸び縮みしない
+    const nbh = Math.max(260, Math.floor(window.innerHeight - top - dockBaseFor(dh, !S || (!S.chain.length && !S.pending && S.winner === null)) - 8)) + 'px';
+    // No.35（ボスの報告：ほとんどの演出でカードがずれる）：スマホのブラウザのバーが出入りすると画面の高さが変わり、盤面が伸び縮みしてマスが動く。
+    // 演出の写しは始めに測った場所に描くので、演出の間は盤面の高さを変えず、終わった時に合わせる（fxBlock）
+    if (fxN > 0 && r.style.getPropertyValue('--board-h') && r.style.getPropertyValue('--board-h') !== nbh) boardHeld = true;
+    else r.style.setProperty('--board-h', nbh); // No.11：盤面はボタンの欄の高さが変わっても伸び縮みしない
   } else if (b) {
     // マスの幅 × 86/59 がカードの高さ。段はその半分
     const w = b.clientWidth - 16, zw = (w - 6 * 5) / 6.48;

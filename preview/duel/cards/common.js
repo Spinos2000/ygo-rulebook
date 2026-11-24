@@ -1,11 +1,11 @@
 // カード効果で共通して使う処理
                                                                                 
-import { RuleError, cloneCard } from '../engine/types.js?v=20261124-1710-1b80ba5a07';
+import { RuleError, cloneCard } from '../engine/types.js?v=20261124-1744-55b1a94147';
                                                         
 import {
   defOf, choose, chooseOne, canSpecialSummon, specialSummon, release, sendToGy, newStep, monstersOf, hasLevelCombo,
   extraSummonZone, freeMZones, scriptOf, targetable, releasable, gyLocked, log, pl, opp, isFaceUpMonster, banish, moveCard, emit, shuffleDeck, cleanupOrphans, FIELD_ZONES,
-} from '../engine/game.js?v=20261124-1710-1b80ba5a07';
+} from '../engine/game.js?v=20261124-1744-55b1a94147';
 
 export const nameIs = (s           , uid        , name        ) => defOf(s, uid).name === name;
 export const deckOf = (s           , p          ) => [...s.players[p].deck];
