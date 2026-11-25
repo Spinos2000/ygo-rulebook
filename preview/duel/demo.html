@@ -189,12 +189,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 <div id="ackThink" role="status" hidden>🤔 相手が考えています…</div>
 <div id="ackCut" role="status" aria-live="assertive" hidden></div>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261125-2201-76b3df62e6';
-import { ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261125-2201-76b3df62e6';
-import { unlock } from './sound.js?v=20261125-2201-76b3df62e6';
-import { CARD_POOL } from './data/cardpool.js?v=20261125-2201-76b3df62e6';
-import { createGame, legalActions } from './engine/game.js?v=20261125-2201-76b3df62e6';
-import { answerCandidates } from './ai/cpu.js?v=20261125-2201-76b3df62e6';
+import { mountDuel } from './embed.js?v=20261125-2215-546fd39179';
+import { ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261125-2215-546fd39179';
+import { unlock } from './sound.js?v=20261125-2215-546fd39179';
+import { CARD_POOL } from './data/cardpool.js?v=20261125-2215-546fd39179';
+import { createGame, legalActions } from './engine/game.js?v=20261125-2215-546fd39179';
+import { answerCandidates } from './ai/cpu.js?v=20261125-2215-546fd39179';
 
 const host = document.getElementById('duel-host');
 // 名札の帯：試作版（/preview/）の時だけ出す。版の名前は version.json（作る時に書く）から読む
@@ -216,12 +216,18 @@ let busy = false;
  * 発動の演出 → チェーンの効果 → 結果の移動（墓地へ）の順に見えるかを、直す前と直した後で同じボタンで比べる。
  * 「自分が発動」＝下の人（P1）、「相手が発動」＝上の人（P2。CPU側と同じ見え方） */
 const C = { judge: '4861', warn: '9008', valley: '5533', reborn: '4842', bomber: '7094', dmagic: '5752', bm: '4041', skilled: '5649', mirror: '4887', torrent: '5114', thunder: '5544', hole: '4342', vortex: '5217', pit: '5400', witch: '4580', a: '5503', b: '5504', c: '6471', d: '7193' };
+const PIT_STEP = (a, S) => a.type === 'activate' && S.cards[a.card].code === C.pit;
 const SCENES = [
+  // 奈落の落とし穴の専用演出（先輩 11/25）。余分な1体は、関係ないモンスターに出ないことを見るため
+  ['🕳️ 奈落：召喚', '通常召喚に。となりの1体は関係なし', p => ({ tp: 1 - p, set: { [p]: [C.pit] }, mons: { [1 - p]: [C.a] }, hand: { [1 - p]: [C.b] }, steps: [a => a.type === 'normalSummon', PIT_STEP] })],
+  ['🕳️ 奈落：反転召喚', '裏側守備から表になった時', p => ({ tp: 1 - p, set: { [p]: [C.pit] }, setMons: { [1 - p]: [C.c] }, steps: [a => a.type === 'flipSummon', PIT_STEP] })],
+  ['🕳️ 奈落：3体同時', '異次元からの帰還の特殊召喚に', p => ({ tp: 1 - p, set: { [p]: [C.pit], [1 - p]: ['6078'] }, mons: { [1 - p]: [C.a] }, ban: { [1 - p]: [C.a, C.b, C.c] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === '6078', PIT_STEP] })],
+  ['🕳️ 奈落：無効にされる', '神の宣告で止まる。穴は開かない', p => ({ tp: 1 - p, set: { [p]: [C.pit], [1 - p]: [C.judge] }, hand: { [1 - p]: [C.b] }, steps: [a => a.type === 'normalSummon', PIT_STEP, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.judge && S.cards[a.card].controller === 1 - p] })],
   ['反転召喚（裏側守備から）', '横向きの裏から起き上がる（No.14）', p => ({ tp: p, setMons: { [p]: [C.c] }, steps: [(a, S) => a.type === 'flipSummon'] })],
 ];
 /** 場面の盤面を作る：決まったカードを手札・場に置き、3ターン目の tp のメインフェイズ1から始める */
 function sceneState(sc) {
-  const need = p => [...(sc.deck?.[p] || []), ...(sc.setMons?.[p] || []), ...(sc.set?.[p] || []), ...(sc.hand?.[p] || []), ...(sc.mons?.[p] || []), ...(sc.field?.[p] ? [sc.field[p]] : []), ...(sc.gy?.[p] || [])];
+  const need = p => [...(sc.ban?.[p] || []), ...(sc.deck?.[p] || []), ...(sc.setMons?.[p] || []), ...(sc.set?.[p] || []), ...(sc.hand?.[p] || []), ...(sc.mons?.[p] || []), ...(sc.field?.[p] ? [sc.field[p]] : []), ...(sc.gy?.[p] || [])];
   const fill = Array(20).fill(C.a);
   const s = createGame({ pool: CARD_POOL, decks: [0, 1].map(p => ({ main: [...fill, ...need(p)], extra: [] })), seed: 7, firstPlayer: sc.tp, shuffle: false });
   for (const p of [0, 1]) { const P = s.players[p]; for (const u of P.hand) Object.assign(s.cards[u], { zone: 'deck', faceUp: false }); P.deck.push(...P.hand); P.hand = []; P.normalSummonUsed = false; }
@@ -233,6 +239,7 @@ function sceneState(sc) {
     (sc.set?.[p] || []).forEach((code, i) => { const u = take(p, code); P.szone[i] = u; Object.assign(s.cards[u], { zone: 'szone', index: i, faceUp: false, position: null, controller: p, enteredTurn: 1 }); });
     (sc.hand?.[p] || []).forEach(code => { const u = take(p, code); P.hand.push(u); Object.assign(s.cards[u], { zone: 'hand', index: P.hand.length - 1, faceUp: false }); });
     if (sc.field?.[p]) { const u = take(p, sc.field[p]); P.fzone = u; Object.assign(s.cards[u], { zone: 'fzone', index: 0, faceUp: true, controller: p, enteredTurn: 1 }); }
+    (sc.ban?.[p] || []).forEach(code => { const u = take(p, code); P.banished.push(u); Object.assign(s.cards[u], { zone: 'banished', index: P.banished.length - 1, faceUp: true }); });
     (sc.gy?.[p] || []).forEach(code => { const u = take(p, code); P.gy.push(u); Object.assign(s.cards[u], { zone: 'gy', index: P.gy.length - 1, faceUp: true }); });
     P.deck.forEach((u, i) => { s.cards[u].index = i; });
   }
