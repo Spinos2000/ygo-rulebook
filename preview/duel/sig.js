@@ -1,6 +1,6 @@
 // カードごとの専用演出（キャンバスに描く）。強力な制限カードの発動を、カード名と効果に合わせて見せる。
 // playSignature() は演出が終わったら解決する Promise を返す。カードの位置は画面上の四角（getBoundingClientRect）で受け取る
-import { cardImg, backImg } from './fx.js?v=20261125-2144-da057b644c';
+import { cardImg, backImg } from './fx.js?v=20261125-2152-6a179d0c28';
 const TAU = Math.PI * 2;
 /** カード名の帯を、消え始める前にそのまま見せる長さ（ミリ秒。MASTER：読み終われるだけ長く） */
 const TITLE_HOLD = 1600;
@@ -106,6 +106,7 @@ function ensureCanvas(root) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   W = window.innerWidth; H = window.innerHeight;
   cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px'; // No.36：見た目の大きさを中身とそろえる（CSSの100vhは、iPhoneでバーが出ていると innerHeight より大きく、絵が縦にのびて下ほどずれた）
 }
 
 /**

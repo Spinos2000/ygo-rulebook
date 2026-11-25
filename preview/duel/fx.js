@@ -1,6 +1,6 @@
 // 攻撃の演出（キャンバスに描く）。種族ごとの攻撃・命中・カードの壊れ方と、神（幻神獣族・創造神族）の特別な演出。
 // playBattle() は演出が終わったら解決する Promise を返す。カードの位置は画面上の四角（getBoundingClientRect）で受け取る
-import { partnerLine } from './lines.js?v=20261125-2144-da057b644c';
+import { partnerLine } from './lines.js?v=20261125-2152-6a179d0c28';
 const TAU = Math.PI * 2;
 
 /* ---------- 相棒のひと言：着地したカードのそばに、短い吹き出しを2.4秒ほど出す ---------- */
@@ -225,6 +225,7 @@ function fit() {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   W = window.innerWidth; H = window.innerHeight;
   cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px'; // No.36：見た目の大きさを中身とそろえる（CSSの100vhは、iPhoneでバーが出ていると innerHeight より大きく、絵が縦にのびて下ほどずれた）
 }
 
 /**
