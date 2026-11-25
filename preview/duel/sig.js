@@ -1,6 +1,6 @@
 // カードごとの専用演出（キャンバスに描く）。強力な制限カードの発動を、カード名と効果に合わせて見せる。
 // playSignature() は演出が終わったら解決する Promise を返す。カードの位置は画面上の四角（getBoundingClientRect）で受け取る
-import { cardImg, backImg } from './fx.js?v=20261125-2246-6875be56c1';
+import { cardImg, backImg } from './fx.js?v=20261126-0849-79dedfcc20';
 const TAU = Math.PI * 2;
 /** カード名の帯を、消え始める前にそのまま見せる長さ（ミリ秒。MASTER：読み終われるだけ長く） */
 const TITLE_HOLD = 1600;
@@ -435,6 +435,7 @@ const FX = {
   /* 神の宣告：天から金の雷が落ち、光の柱の中で砕く */
   judgment(S) {
     at(S, 300, () => { S.dark = .8; });
+    at(S, 1000, () => fxHit(S)); // 雷が当たった瞬間を知らせる（演出の時計で）
     S.dest.forEach((c, i) => at(S, 1000 + i * 200, () => { S.bolts.push({ x: c.x, y: c.y, t: S.t, gold: 1 }); impact(S, c.x, c.y, 1, '#ffe08a'); explode(S, c, '#ffe08a'); S.pillar = { x: c.x, t: S.t }; }));
     at(S, 1700 + S.dest.length * 200, () => { S.pillar = null; });
     S.end = 2600 + S.dest.length * 200;
@@ -452,6 +453,13 @@ const FX = {
       const p = { c, i, w, h, x: c.x, y: c.y + h * .38, x0: c.x, y0: c.y, R: w * .6, r: 0, open: OPEN + i * GAP, grip: GRIP + i * GAP, fall: FALL + i * GAP, seed: Array.from({ length: 22 }, () => Math.random()) };
       c.pit = p; return p;
     });
+    // 先輩 11/25：奈落の時だけ、カード名の帯を、落ちるモンスター（足元の穴もふくむ）にかからない高さへずらす。上を先に探す
+    {
+      const hb = Math.max(34, 40 * U) / 2 + 6 * U, B = S.B, box = S.pits.map(p => [p.y0 - p.h / 2, p.y + p.R * .52]);
+      const ok = y => y - hb >= B.top && y + hb <= B.bottom && box.every(([a, b]) => y + hb <= a || y - hb >= b);
+      const ys = [B.cy, ...box.flatMap(([a, b]) => [a - hb, b + hb])].filter(ok).sort((u, v) => (u > B.cy) - (v > B.cy) || Math.abs(u - B.cy) - Math.abs(v - B.cy));
+      if (ys.length) S.titleY = ys[0];
+    }
     const n = S.pits.length, last = FALL + Math.max(0, n - 1) * GAP + DUR;
     S.pits.forEach(p => {
       const c = p.c;
@@ -495,6 +503,7 @@ const FX = {
   /* 神の警告：警報が鳴り響き、赤い光線が召喚を撃ち抜く */
   warning(S) {
     at(S, 300, () => { S.alarm = { t: S.t }; S.dark = .6; });
+    at(S, 1350, () => fxHit(S)); // 光線が当たった瞬間を知らせる（演出の時計で）
     at(S, 1200, () => { S.alarm = null; S.beamDown = S.dest.map(c => ({ x: c.x, y: c.y, t: S.t })); });
     S.dest.forEach(c => at(S, 1350, () => { impact(S, c.x, c.y, 1, '#ff4a3d'); explode(S, c, '#ff6b6b'); }));
     at(S, 1700, () => { S.beamDown = null; });
@@ -901,6 +910,8 @@ Object.assign(MAT, {
   },
 });
 
+/** 当たった瞬間を、画面の外へ知らせる（演出DEMOの「なにっ！？」が待つ）。演出の時計で進むので、遅い端末でも絵と合う */
+function fxHit(S) { window.dispatchEvent(new CustomEvent('fx-hit', { detail: { key: S.I.key } })); }
 /* ---------- 1コマ進める ---------- */
 function tick(S, now) {
   const dt = Math.min(32, now - (S.last || now)) * S.speed; S.last = now;
@@ -1292,7 +1303,7 @@ function draw(S) {
   if (S.flash > .01) { ctx.fillStyle = `rgba(${S.flashC},${S.flash * .5})`; ctx.fillRect(0, 0, W, H); }
   // カード名の帯
   if (S.title) {
-    const T = S.title, k = Math.min(1, (t - T.t) / 160), fo = Math.max(0, Math.min(1, (T.t + 160 + TITLE_HOLD + TITLE_OUT - t) / TITLE_OUT)), y = B.cy, bh = Math.max(34, 40 * U), fs = Math.min(26, Math.max(16, 21 * U));
+    const T = S.title, k = Math.min(1, (t - T.t) / 160), fo = Math.max(0, Math.min(1, (T.t + 160 + TITLE_HOLD + TITLE_OUT - t) / TITLE_OUT)), y = S.titleY ?? B.cy, bh = Math.max(34, 40 * U), fs = Math.min(26, Math.max(16, 21 * U));
     ctx.globalAlpha = k * fo; ctx.save(); ctx.translate((1 - k) * 40, 0); ctx.transform(1, 0, -.18, 1, 0, 0);
     ctx.fillStyle = 'rgba(10,10,14,.9)'; ctx.fillRect(-60, y - bh / 2, W + 200, bh);
     if (T.rb) { const g = ctx.createLinearGradient(0, 0, W, 0); for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, hsl(i * 60, 62, 1)); ctx.fillStyle = g; } else ctx.fillStyle = T.col;

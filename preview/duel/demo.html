@@ -52,11 +52,9 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 .pv-band b { font-family: Fredoka, "M PLUS Rounded 1c", sans-serif; font-weight: 600 }
 .pv-band a { color: #3a2f12; background: #fff7dc; border: 1.5px solid #c9a646; border-radius: 999px; padding: 2px 10px; text-decoration: none; white-space: nowrap }
 /* ---------- t30：相手の発動の確認画面（DEMOだけ。本物の卓にはまだ入れない） ---------- */
-#demo .ack-set { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0 6px }
-#demo .ack-set label { margin-top: 0 }
 #demo h3.ack-h { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: 13px; margin: 10px 0 4px; color: var(--d-sub) }
 #ackLayer { position: fixed; inset: 0; z-index: 58; background: rgba(8, 14, 28, .38) }
-#ackLayer[hidden], #ackToast[hidden] { display: none }
+#ackLayer[hidden] { display: none }
 #ackArrows { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible }
 #ackArrows .ring { fill: none; stroke: var(--d-accent); stroke-width: 3; rx: 8; animation: ackPulse 1s ease-in-out infinite alternate }
 #ackArrows .line { fill: none; stroke: var(--d-accent); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 10 7; animation: ackDash .8s linear infinite }
@@ -128,7 +126,6 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 #ackFlash { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 57; pointer-events: none; overflow: visible }
 #ackFlash .ring { fill: rgba(241, 201, 91, .28); stroke: var(--d-accent); stroke-width: 4; animation: ackBlink .32s ease-in-out 4 alternate }
 @keyframes ackBlink { from { opacity: .2 } to { opacity: 1 } }
-/* 止めない時：上に小さく出して、すぐ消える */
 /* t53（先輩 11/24）：カットイン。相手の発動の演出のあと、確認画面の前に、性格ごとの掛け声とセリフを画面の真ん中の帯で出す。無効にされた時は「なにっ！？」 */
 #ackCut { position: fixed; inset: 0; z-index: 59; display: grid; place-items: center; pointer-events: none; overflow: hidden }
 #ackCut[hidden] { display: none }
@@ -155,8 +152,6 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 #ackThink { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 59; background: var(--d-panel); color: var(--d-ink); border: 1.5px solid var(--d-edge); border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 13px; box-shadow: 2px 3px 0 var(--d-edge); animation: ackThinkBlink 1s ease-in-out infinite alternate }
 #ackThink[hidden] { display: none }
 @keyframes ackThinkBlink { from { opacity: .65 } to { opacity: 1 } }
-#ackToast { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 58; max-width: calc(100% - 32px); box-sizing: border-box;
-  background: var(--d-panel); color: var(--d-ink); border: 2px solid var(--d-edge); border-radius: 12px; box-shadow: 3px 4px 0 var(--d-edge); padding: 8px 14px; font-weight: 700; font-size: 14px }
   background: var(--d-panel); color: var(--d-ink); border: 1.5px solid var(--d-edge); border-radius: 12px; font-size: 12px; box-shadow: var(--d-shadow) }
 /* 横向き（スマホの横・パソコン）：確認の箱は、対象と反対の横に寄せる */
 @media (orientation: landscape) and (min-width: 640px) {
@@ -185,16 +180,15 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 </section>
 <div id="ackLayer" hidden><svg id="ackArrows" aria-hidden="true"></svg><div id="ackPanel" role="dialog" aria-modal="true" aria-labelledby="ackName"></div></div>
 <svg id="ackFlash" aria-hidden="true"></svg>
-<div id="ackToast" role="status" hidden></div>
 <div id="ackThink" role="status" hidden>🤔 相手が考えています…</div>
 <div id="ackCut" role="status" aria-live="assertive" hidden></div>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261125-2246-6875be56c1';
-import { ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261125-2246-6875be56c1';
-import { unlock } from './sound.js?v=20261125-2246-6875be56c1';
-import { CARD_POOL } from './data/cardpool.js?v=20261125-2246-6875be56c1';
-import { createGame, legalActions } from './engine/game.js?v=20261125-2246-6875be56c1';
-import { answerCandidates } from './ai/cpu.js?v=20261125-2246-6875be56c1';
+import { mountDuel } from './embed.js?v=20261126-0849-79dedfcc20';
+import { ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261126-0849-79dedfcc20';
+import { unlock } from './sound.js?v=20261126-0849-79dedfcc20';
+import { CARD_POOL } from './data/cardpool.js?v=20261126-0849-79dedfcc20';
+import { createGame, legalActions } from './engine/game.js?v=20261126-0849-79dedfcc20';
+import { answerCandidates } from './ai/cpu.js?v=20261126-0849-79dedfcc20';
 
 const host = document.getElementById('duel-host');
 // 名札の帯：試作版（/preview/）の時だけ出す。版の名前は version.json（作る時に書く）から読む
@@ -371,33 +365,24 @@ const OPP_THINK_MS = 1200;
 window.__demoCutin = (code, neg = false) => ackCutin(window.__duel.state, code, neg);
 /** 相手がチェーンを重ねる前に、間をおいて「相手が考えています…」と出す */
 async function ackThink() { const el = document.getElementById('ackThink'); el.hidden = false; await new Promise(r => setTimeout(r, OPP_THINK_MS)); el.hidden = true; }
-const ACK_MODES = [['all', '毎回止める'], ['chain', 'チェーンできる時だけ止める'], ['none', '止めない（上に小さく出す）']];
 const ackGet = (k, v) => { try { return localStorage.getItem(k) ?? v; } catch { return v; } };
 const ackPut = (k, v) => { try { localStorage.setItem(k, v); } catch { /* 保存できなくても動く */ } };
 secAck.insertAdjacentHTML('beforeend', `<h2>🛑 相手の発動の確認画面 <small>カットイン・確認画面・チェーン・演出（全部入り）</small></h2>
 <p class="note">相手がカードを発動した場面になって、確認画面が出ます。［了承］で効果の処理へ、［チェーンする］で自分のカードを重ねます（DEMOなので盤面のカードは動きません）。</p>
 <p class="note">相手（CPU）の性格：カットインのセリフと掛け声が変わります。</p>
 <div class="ack-persona" role="group" aria-label="相手の性格">${CUTIN.personas.map(x => `<button type="button" data-persona="${x.key}" aria-pressed="${personaGet() === x.key}">${esc(x.label)}</button>`).join('')}</div>
-<div class="ack-set" role="radiogroup" aria-label="止め方">${ACK_MODES.map(([v, t]) => `<label><input type="radio" name="ackMode" value="${v}"${ackGet('demoAckMode', 'all') === v ? ' checked' : ''}> ${t}</label>`).join('')}</div>
-<p class="note" id="ackModeNote"></p>
+<p class="note">確認画面とカットインは、相手が発動するたびに毎回出ます（先輩 11/26。チェーンできるカードが無い時も同じ形で、［チェーンする］は灰色）。</p>
 <label><input type="checkbox" id="ackMine"${ackGet('demoAckMine', '1') === '1' ? ' checked' : ''}> 自分の場に、伏せた「神の宣告」がある（チェーンできる。罠の場面と、死者蘇生・ブラック・ホールだけ）</label>
 ${ACK_GROUPS.map(([h, ids]) => `<h3 class="ack-h">${h}</h3><div class="row">${ids.map(i => { const a = ACKS[i]; return `<button class="fx" type="button" data-ack="${i}">${a.name}<small>相手が発動・${a.sub}</small></button>`; }).join('')}</div>`).join('')}`);
-const ackModeNote = () => {
-  const m = document.querySelector('input[name="ackMode"]:checked')?.value || 'all';
-  document.getElementById('ackModeNote').textContent = m === 'chain' ? '※「チェーンできる時だけ」：CPU戦だけで選べます（オンラインは伏せカードがばれないように「毎回」だけ。CODE 22:13 の決定）。' : m === 'none' ? '※止めない：確認画面は出さず、上に小さく出して進みます（ログの行は光ります）。' : '※毎回止める：チェーンできるカードが無い時も、同じ形（［チェーンする］は灰色）で待ちます。';
-};
-ackModeNote();
 list.addEventListener('click', e => {
   const b = e.target.closest('button[data-persona]'); if (!b) return;
   e.stopImmediatePropagation(); ackPut('demoPersona', b.dataset.persona);
   for (const x of list.querySelectorAll('button[data-persona]')) x.setAttribute('aria-pressed', String(x === b));
 }, true);
 list.addEventListener('change', e => {
-  if (e.target.name === 'ackMode') { ackPut('demoAckMode', e.target.value); ackModeNote(); }
   if (e.target.id === 'ackMine') ackPut('demoAckMine', e.target.checked ? '1' : '0');
 });
-const ackLayer = document.getElementById('ackLayer'), ackPanel = document.getElementById('ackPanel'), ackSvg = document.getElementById('ackArrows'),
-  ackToast = document.getElementById('ackToast');
+const ackLayer = document.getElementById('ackLayer'), ackPanel = document.getElementById('ackPanel'), ackSvg = document.getElementById('ackArrows');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const KIND = d => (d.kind === 'monster' ? `モンスター（${d.race || ''}・★${d.level ?? '？'}）` : `${d.kind === 'spell' ? '魔法' : '罠'}カード（${d.subtype || '通常'}${d.kind === 'spell' ? '魔法' : '罠'}）`);
 const WHO_T = p => (p === 1 ? '相手' : 'あなた');
@@ -462,7 +447,6 @@ function ackAsk(link, canChain) {
     ackPanel.querySelector('.chainBtn').onclick = e => { e.stopPropagation(); if (canChain && ready()) done('chain'); };
   });
 }
-async function ackToastShow(text) { ackToast.textContent = text; ackToast.hidden = false; await sleep(1800); ackToast.hidden = true; }
 /* ---------- 演出と合わせて流す（先輩 11/23 07:24：本物の卓と同じ順で見たい） ----------
  * 本物のルールの処理（engine）で進めて、今ある演出をそのまま使う。新しい演出は作らない。順番：
  * 相手のカードの発動の演出 → 確認画面 → タップで了承 → 効果の演出 → 対象が黄色く光る。
@@ -529,20 +513,21 @@ const ackIdle = async () => {
     if (calm < 3 && performance.now() - t0 > FX_WAIT_MAX) { console.warn('演出が終わらないまま、待つ上限になりました'); return; }
   }
 };
-/** 無効にする専用演出で、当たる瞬間（演出が始まってからのミリ秒。sig.js の神の宣告・神の警告と同じ） */
-const NEG_HIT_MS = { judgment: 1000, warning: 1350 };
+/** 無効にする専用演出（神の宣告・神の警告）が当たった時刻。sig.js が演出の時計で知らせる（遅い端末でも雷と合う） */
+const NEG_KEYS = { judgment: 1, warning: 1 };
+let negHitAt = -Infinity;
+window.addEventListener('fx-hit', e => { if (NEG_KEYS[e.detail?.key]) negHitAt = performance.now(); });
 /** 無効になった瞬間まで待つ：無効にしたカードの専用演出が当たる時。専用演出が出ない（切・演出が終わった）時は、すぐ */
 async function ackNegMoment(t0) {
   for (const t1 = performance.now(); performance.now() - t1 < FX_WAIT_MAX;) {
-    const f = window.__duel.fxLog.find(x => x.kind === 'sig' && NEG_HIT_MS[x.key] && x.t >= t0);
-    const fast = root.querySelector('#fxMode')?.value === 'short' ? 2 : 1;
-    if (f) { if (performance.now() - f.t >= NEG_HIT_MS[f.key] / fast) return; } else if (performance.now() - t1 > 250 && !root.querySelector('.droot.fx-busy')) return;
+    if (negHitAt >= t0) return;
+    if (performance.now() - t1 > 250 && !root.querySelector('.droot.fx-busy')) return;
     await new Promise(r => setTimeout(r, 30));
   }
 }
 async function ackFxFlow(a, fx) {
   // 足した場面（fxOnly）では、自分の伏せた神の宣告は置かない（対象を選ぶ途中で重ねると、卓の演出が止まることがあるため。チェーンは罠の場面で試せる）
-  const D = window.__duel, mine = document.getElementById('ackMine').checked && !a.fxOnly, mode = document.querySelector('input[name="ackMode"]:checked')?.value || 'all';
+  const D = window.__duel, mine = document.getElementById('ackMine').checked && !a.fxOnly;
   D.load(sceneState({ tp: a.tp, hand: fx.hand, set: { 0: [...(mine ? [C.judge] : []), ...(fx.set0 || [])], 1: fx.set1 }, setMons: fx.setMons1 ? { 1: fx.setMons1 } : undefined, deck: fx.deck1 ? { 1: fx.deck1 } : undefined, mons: a.mons, gy: a.gy }));
   const steps = [...fx.pre, ...(fx.auto ? [] : [(x, S) => x.type === 'activate' && S.cards[x.card].code === a.card && S.cards[x.card].controller === 1])]; // auto：必ず発動する効果（エンジンが自分で積む）
   const judgeOf = (L, S, p) => L.find(x => x.type === 'activate' && S.cards[x.card].code === C.judge && S.cards[x.card].controller === p);
@@ -577,8 +562,7 @@ async function ackFxFlow(a, fx) {
       const keys = L ? ackUids(S, L, code).map(u => ackKeyOf(S, u)).filter(Boolean) : [], tgt = no === 1 ? a.tgt : 'あなたの「神の宣告」（チェーン2）の発動を無効にして破壊する';
       if (no === 1 && L) flash = ackMarkOf(S, L, code); // カードと、今のようすを覚えておく
       let v = 'ok';
-      if (mode === 'none' || (mode === 'chain' && !canChain)) { ackLitReal(no); ackToastShow(`相手が「${CARD_POOL[code].name}」を発動（チェーン${no}）`); }
-      else { await ackCutin(S, code); v = await ackAsk({ p: 1, code, no, tgt }, canChain); ackLitReal(no); } // t53：発動の演出 → カットイン → 確認画面
+      await ackCutin(S, code); v = await ackAsk({ p: 1, code, no, tgt }, canChain); ackLitReal(no); // t53：発動の演出 → カットイン → 確認画面。先輩 11/26：設定で消せず、毎回必ず出す
       if (v === 'chain') plan = 'mine';
       if (no > 1 && v === 'ok' && keys.length) await ackFlash(keys); // チェーン3：何を無効にするのかを、盤面で光らせる
     }
