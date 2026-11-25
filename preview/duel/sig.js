@@ -1,6 +1,6 @@
 // カードごとの専用演出（キャンバスに描く）。強力な制限カードの発動を、カード名と効果に合わせて見せる。
 // playSignature() は演出が終わったら解決する Promise を返す。カードの位置は画面上の四角（getBoundingClientRect）で受け取る
-import { cardImg, backImg } from './fx.js?v=20261125-2215-546fd39179';
+import { cardImg, backImg } from './fx.js?v=20261125-2236-d79cd34c0b';
 const TAU = Math.PI * 2;
 /** カード名の帯を、消え始める前にそのまま見せる長さ（ミリ秒。MASTER：読み終われるだけ長く） */
 const TITLE_HOLD = 1600;
@@ -444,6 +444,8 @@ const FX = {
   pit(S) {
     const U = S.U, OPEN = 350, GRIP = 850, FALL = 1350, DUR = 850, GAP = 140;
     at(S, 250, () => { S.dark = .8; S.shake = 8; });
+    // t60：関係ないモンスターの場所。ここには、穴も輪もほこりも描かない
+    S.keep = (S.I.mons || []).filter(m => m.rect && !S.dest.some(c => c.uid === m.uid)).map(m => m.rect);
     S.pits = S.dest.map((c, i) => {
       const w = c.def ? c.h : c.w, h = c.def ? c.w : c.h; // 画面で見える幅と高さ（守備表示は横長）
       // 穴はカードの足元だけ。となりのカードにかからない大きさにする
@@ -970,6 +972,18 @@ function drawCard(c) {
   ctx.drawImage(c.img, -c.w / 2, -c.h / 2, c.w, c.h); ctx.restore();
 }
 /* ---------- 奈落の落とし穴 ---------- */
+/** 関係ないモンスターの場所を抜いて描く（そのカードの後ろを通るように見える）。奈落の時だけ */
+function pitKeep(S, f) {
+  if (!S.keep || !S.keep.length) { f(); return; }
+  ctx.save();
+  // 抜く場所は画面のゆれに合わせない（本物のカードはゆれない）。盤面が動いた分（No.34）だけずらす
+  const m = ctx.getTransform(), dpr = cv.width / (W || 1), b = S.boardEl && S.boardEl.isConnected ? S.boardEl.getBoundingClientRect() : null;
+  ctx.setTransform(dpr, 0, 0, dpr, b && b.width ? (b.left - S.B.left) * dpr : 0, b && b.width ? (b.top - S.B.top) * dpr : 0);
+  ctx.beginPath(); ctx.rect(-200, -200, W + 400, H + 400);
+  S.keep.forEach(q => ctx.rect(q.left - 1, q.top - 1, q.width + 2, q.height + 2));
+  ctx.clip('evenodd'); ctx.setTransform(m);
+  f(); ctx.restore();
+}
 const PIT_RY = .46; // 穴の平たさ（たて÷よこ）
 /** 落ちるカードが見える範囲：穴のふちより上と、穴の中（手前のふちより下は、地面に隠れる） */
 function pitClip(p) {
@@ -1046,9 +1060,11 @@ function draw(S) {
     g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(.62, 'rgba(0,0,0,1)'); g.addColorStop(.8, 'rgba(40,0,60,.85)'); g.addColorStop(1, 'rgba(40,0,60,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(h.x, h.y, h.r * 1.6, 0, TAU); ctx.fill();
   }
+  pitKeep(S, () => {
   (S.pits || []).forEach(p => drawPit(p, t, U));
   S.cards.forEach(c => { if (c.pit) { ctx.save(); pitClip(c.pit); } drawCard(c); if (c.burn && c.a > 0) { ctx.save(); ctx.translate(c.x, c.y); ctx.rotate((c.rot || 0) + (c.base || 0)); ctx.scale(c.s, c.s * c.sy); ctx.globalAlpha = Math.min(.85, c.burn) * c.a; ctx.fillStyle = '#1a0628'; ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h); ctx.restore(); } if (c.pit) ctx.restore(); });
   (S.pits || []).forEach(p => drawPitFront(p, t, U));
+  });
   if (S.surge) {
     const w = S.surge, up = w.up, sgn = up ? -1 : 1, fa = w.fade !== null ? Math.max(0, 1 - (t - w.fade) / 600) : 1;
     const L0 = B.left, R0 = B.right, band = 240 * U, back = w.front - sgn * band;
@@ -1240,6 +1256,7 @@ function draw(S) {
   if (S.waves) for (let i = 0; i < 4; i++) { const k9 = ((S.t - S.waves.t) / 500 + i / 4) % 1, wx2 = S.waves.from.x + (S.waves.to.x - S.waves.from.x) * k9, wy2 = S.waves.from.y + (S.waves.to.y - S.waves.from.y) * k9; ctx.strokeStyle = `rgba(192,139,255,${1 - k9})`; ctx.lineWidth = 3 * U; ctx.beginPath(); ctx.ellipse(wx2, wy2, (12 + k9 * 20) * U, (6 + k9 * 8) * U, 0, 0, TAU); ctx.stroke(); }
   if (S.swd) S.swd.forEach(s => { const k10 = Math.min(1, (t - s.t) / 180), yy2 = -40 + (s.y + 40) * k10; ctx.fillStyle = 'rgba(255,246,200,.9)'; ctx.fillRect(s.x - 2 * U, yy2 - 40 * U, 4 * U, 48 * U); ctx.fillRect(s.x - 8 * U, yy2 + 4 * U, 16 * U, 3 * U); glow(s.x, yy2, 16 * U, '#fff6c8', .8); });
   if (S.drain) glow(S.self.x, S.self.y, 60 * U, '#b45cff', .6);
+  pitKeep(S, () => {
   S.rings.forEach(r => { ctx.strokeStyle = r.c; ctx.globalAlpha = r.a; ctx.lineWidth = (r.lw || 4) * r.a + 1; ctx.beginPath(); ctx.ellipse(r.x, r.y, r.r, r.r * .55, 0, 0, TAU); ctx.stroke(); });
   ctx.globalAlpha = 1;
   S.parts.forEach(p => {
@@ -1249,6 +1266,7 @@ function draw(S) {
     else if (p.k === 'feather') { ctx.fillStyle = p.c; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.sz * 1.5, p.sz * .4, Math.atan2(p.vy, p.vx), 0, TAU); ctx.fill(); }
     else if (p.hue != null) { ctx.globalAlpha = 1; glowH(p.x, p.y, p.sz * 2.6, p.hue, al); }
     else { const r = p.sz * 2.6; ctx.drawImage(spr(p.c), p.x - r, p.y - r, r * 2, r * 2); }
+  });
   });
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   if (S.hole && S.hole.r > 1) {

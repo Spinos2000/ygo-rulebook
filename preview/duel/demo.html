@@ -189,12 +189,12 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 <div id="ackThink" role="status" hidden>🤔 相手が考えています…</div>
 <div id="ackCut" role="status" aria-live="assertive" hidden></div>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261125-2215-546fd39179';
-import { ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261125-2215-546fd39179';
-import { unlock } from './sound.js?v=20261125-2215-546fd39179';
-import { CARD_POOL } from './data/cardpool.js?v=20261125-2215-546fd39179';
-import { createGame, legalActions } from './engine/game.js?v=20261125-2215-546fd39179';
-import { answerCandidates } from './ai/cpu.js?v=20261125-2215-546fd39179';
+import { mountDuel } from './embed.js?v=20261125-2236-d79cd34c0b';
+import { ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261125-2236-d79cd34c0b';
+import { unlock } from './sound.js?v=20261125-2236-d79cd34c0b';
+import { CARD_POOL } from './data/cardpool.js?v=20261125-2236-d79cd34c0b';
+import { createGame, legalActions } from './engine/game.js?v=20261125-2236-d79cd34c0b';
+import { answerCandidates } from './ai/cpu.js?v=20261125-2236-d79cd34c0b';
 
 const host = document.getElementById('duel-host');
 // 名札の帯：試作版（/preview/）の時だけ出す。版の名前は version.json（作る時に書く）から読む
