@@ -688,54 +688,56 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 
 /* ===== 盤面のカード（案A4）：実物風・色を濃く・攻守の数字を大きく。1em ＝ カードの幅の1/8（マスの幅から計算） ===== */
 #board .zone { container-type: inline-size }
-#board .zone > .card:not(.back) { font-size: 9cqi; padding: 0; border-radius: .09em; border: .035em solid #0d0b09; overflow: hidden;
+/* No.37：演出の写し（盤面にあったカード）は、マスと同じ大きさの枠ごと作る（盤面のマスと同じ container-type: size）。枠そのものは見せない */
+.fly-layer > .zone.fly-zone { border-color: transparent; background: none; outline: none; box-shadow: none; aspect-ratio: auto; container-type: size; pointer-events: none }
+:is(#board, .fly-layer) .zone > .card:not(.back) { font-size: 9cqi; padding: 0; border-radius: .09em; border: .035em solid #0d0b09; overflow: hidden;
   box-shadow: 0 .08em .22em rgba(0,0,0,.7), inset 0 0 0 .05em rgba(255,255,255,.22), inset 0 0 .3em rgba(0,0,0,.6) }
-#board .zone > .card:not(.back)::before { background: repeating-linear-gradient(115deg, rgba(255,255,255,.06) 0 .03em, transparent .03em .09em), repeating-linear-gradient(25deg, rgba(0,0,0,.1) 0 .025em, transparent .025em .11em), linear-gradient(160deg, rgba(255,255,255,.18), transparent 40%, rgba(0,0,0,.3)) }
-#board .zone > .card.f-normal { background: linear-gradient(160deg, #d29a2e, #a8700f 60%, #7d5206) }
-#board .zone > .card.f-effect { background: linear-gradient(160deg, #d0601c, #a2420b 60%, #782e05) }
-#board .zone > .card.f-ritual { background: linear-gradient(160deg, #3f7fd6, #1f55a8 60%, #143c7d) }
-#board .zone > .card.f-fusion { background: linear-gradient(160deg, #8a46c8, #62269c 60%, #461974) }
-#board .zone > .card.f-spell { background: linear-gradient(160deg, #109f80, #056b55 60%, #03503f) }
-#board .zone > .card.f-trap { background: linear-gradient(160deg, #b8247a, #8a0f57 60%, #650a40) }
+:is(#board, .fly-layer) .zone > .card:not(.back)::before { background: repeating-linear-gradient(115deg, rgba(255,255,255,.06) 0 .03em, transparent .03em .09em), repeating-linear-gradient(25deg, rgba(0,0,0,.1) 0 .025em, transparent .025em .11em), linear-gradient(160deg, rgba(255,255,255,.18), transparent 40%, rgba(0,0,0,.3)) }
+:is(#board, .fly-layer) .zone > .card.f-normal { background: linear-gradient(160deg, #d29a2e, #a8700f 60%, #7d5206) }
+:is(#board, .fly-layer) .zone > .card.f-effect { background: linear-gradient(160deg, #d0601c, #a2420b 60%, #782e05) }
+:is(#board, .fly-layer) .zone > .card.f-ritual { background: linear-gradient(160deg, #3f7fd6, #1f55a8 60%, #143c7d) }
+:is(#board, .fly-layer) .zone > .card.f-fusion { background: linear-gradient(160deg, #8a46c8, #62269c 60%, #461974) }
+:is(#board, .fly-layer) .zone > .card.f-spell { background: linear-gradient(160deg, #109f80, #056b55 60%, #03503f) }
+:is(#board, .fly-layer) .zone > .card.f-trap { background: linear-gradient(160deg, #b8247a, #8a0f57 60%, #650a40) }
 /* 名前の板 */
-#board .zone > .card:not(.back) .top { display: flex; left: 5%; right: 5%; top: 3.6%; height: 9.2%; padding: 0 .08em 0 .1em; gap: .05em; align-items: center; border-radius: .03em; border: .02em solid rgba(0,0,0,.7);
+:is(#board, .fly-layer) .zone > .card:not(.back) .top { display: flex; left: 5%; right: 5%; top: 3.6%; height: 9.2%; padding: 0 .08em 0 .1em; gap: .05em; align-items: center; border-radius: .03em; border: .02em solid rgba(0,0,0,.7);
   background: linear-gradient(180deg, rgba(255,236,190,.55), rgba(255,220,150,.15) 45%, rgba(0,0,0,.12) 55%, rgba(255,220,150,.2)); box-shadow: inset 0 0 .06em rgba(0,0,0,.4) }
-#board .zone > .card:not(.back) .top .n { font-family: 'Shippori Mincho B1', var(--body), serif; font-weight: 800; font-size: .5em; line-height: 1; color: #151210; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: clip; display: block }
-#board .zone > .card.f-spell .top .n, #board .zone > .card.f-trap .top .n { color: #fff; text-shadow: 0 .03em 0 rgba(0,0,0,.7) }
+:is(#board, .fly-layer) .zone > .card:not(.back) .top .n { font-family: 'Shippori Mincho B1', var(--body), serif; font-weight: 800; font-size: .5em; line-height: 1; color: #151210; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: clip; display: block }
+:is(#board, .fly-layer) .zone > .card.f-spell .top .n, :is(#board, .fly-layer) .zone > .card.f-trap .top .n { color: #fff; text-shadow: 0 .03em 0 rgba(0,0,0,.7) }
 /* 属性：金の輪に色の玉と一文字 */
-#board .zone > .card:not(.back) .at { width: 2.5em; height: 2.5em; line-height: 2.5em; font-size: .29em; padding: 0; border: none; border-radius: 50%; flex: none; text-align: center; color: #fff; font-weight: 800; text-shadow: 0 0 .25em #000;
+:is(#board, .fly-layer) .zone > .card:not(.back) .at { width: 2.5em; height: 2.5em; line-height: 2.5em; font-size: .29em; padding: 0; border: none; border-radius: 50%; flex: none; text-align: center; color: #fff; font-weight: 800; text-shadow: 0 0 .25em #000;
   box-shadow: 0 0 0 .16em #e8bd55, 0 0 0 .26em #3a2706, inset .1em .14em .2em rgba(255,255,255,.55), inset -.1em -.14em .28em rgba(0,0,0,.5) }
 /* レベルの星 */
-#board .zone > .card:not(.back) .lv { display: flex; right: 6%; top: 14%; height: 5.4%; gap: .035em; align-items: center }
-#board .zone > .card:not(.back) .lv i { width: .38em; height: .38em; border: none; border-radius: 0; background: radial-gradient(circle at 40% 35%, #ffd36a, #e0500c 55%, #7a1d04); clip-path: polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%) }
+:is(#board, .fly-layer) .zone > .card:not(.back) .lv { display: flex; right: 6%; top: 14%; height: 5.4%; gap: .035em; align-items: center }
+:is(#board, .fly-layer) .zone > .card:not(.back) .lv i { width: .38em; height: .38em; border: none; border-radius: 0; background: radial-gradient(circle at 40% 35%, #ffd36a, #e0500c 55%, #7a1d04); clip-path: polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%) }
 /* 魔法・罠の種類の行 */
-#board .zone > .card:not(.back) .sp { display: block; right: 6%; top: 13.6%; font-size: .36em; font-weight: 800; color: #fff; text-shadow: 0 .04em 0 rgba(0,0,0,.6); white-space: nowrap; letter-spacing: 0 }
+:is(#board, .fly-layer) .zone > .card:not(.back) .sp { display: block; right: 6%; top: 13.6%; font-size: .36em; font-weight: 800; color: #fff; text-shadow: 0 .04em 0 rgba(0,0,0,.6); white-space: nowrap; letter-spacing: 0 }
 /* イラスト：額縁＋属性の色の光＋種族の紋 */
-#board .zone > .card:not(.back) .art { left: 11.5%; right: 11.5%; top: 20.4%; border: .01em solid #2a1f14; font-size: 3.1em; overflow: hidden; font-family: 'Shippori Mincho B1', var(--display), serif; font-weight: 800;
+:is(#board, .fly-layer) .zone > .card:not(.back) .art { left: 11.5%; right: 11.5%; top: 20.4%; border: .01em solid #2a1f14; font-size: 3.1em; overflow: hidden; font-family: 'Shippori Mincho B1', var(--display), serif; font-weight: 800;
   color: color-mix(in srgb, var(--atc, #fff) 30%, #fff); text-shadow: 0 .02em .03em rgba(0,0,0,.85), 0 0 .06em var(--atc, #fff);
   box-shadow: 0 0 0 .016em rgba(255,255,255,.55), 0 0 0 .025em rgba(0,0,0,.45), inset 0 0 .11em rgba(0,0,0,.75);
   background: radial-gradient(70% 60% at 50% 38%, var(--atc, #6a6e7e), color-mix(in srgb, var(--atc, #6a6e7e) 85%, #000) 45%, #06070c 100%) }
-#board .zone > .card:not(.back) .art::before { content: ""; position: absolute; inset: 0; background: linear-gradient(125deg, transparent 35%, rgba(255,255,255,.22) 47%, transparent 58%) }
+:is(#board, .fly-layer) .zone > .card:not(.back) .art::before { content: ""; position: absolute; inset: 0; background: linear-gradient(125deg, transparent 35%, rgba(255,255,255,.22) 47%, transparent 58%) }
 /* 説明の欄（魔法・罠）：羊皮紙 */
-#board .zone > .card:not(.back) .tb { left: 5%; right: 5%; top: 77.2%; bottom: 3.8%; border: .025em solid #5d4a2f; border-radius: .02em; background: linear-gradient(180deg, #e8d6ad, #cdb27c); box-shadow: inset 0 0 .08em rgba(0,0,0,.35); padding: .05em .1em; font-size: .28em; color: #1a1408 }
-#board .zone > .card:not(.back) .tb b { display: block; font-family: 'Shippori Mincho B1', var(--body), serif; font-weight: 800; white-space: nowrap; overflow: hidden }
+:is(#board, .fly-layer) .zone > .card:not(.back) .tb { left: 5%; right: 5%; top: 77.2%; bottom: 3.8%; border: .025em solid #5d4a2f; border-radius: .02em; background: linear-gradient(180deg, #e8d6ad, #cdb27c); box-shadow: inset 0 0 .08em rgba(0,0,0,.35); padding: .05em .1em; font-size: .28em; color: #1a1408 }
+:is(#board, .fly-layer) .zone > .card:not(.back) .tb b { display: block; font-family: 'Shippori Mincho B1', var(--body), serif; font-weight: 800; white-space: nowrap; overflow: hidden }
 /* モンスター：説明の欄をまるごと、金の縁の黒い数字の欄にする（攻撃力を大きく、守備力を小さく） */
-#board .zone > .card:not(.back):not(.f-spell):not(.f-trap) .tb { display: flex; align-items: center; justify-content: center; padding: 0; font-size: 1em; border: .025em solid #e8bd55;
+:is(#board, .fly-layer) .zone > .card:not(.back):not(.f-spell):not(.f-trap) .tb { display: flex; align-items: center; justify-content: center; padding: 0; font-size: 1em; border: .025em solid #e8bd55;
   background: linear-gradient(180deg, #2a1d0c, #100a04); box-shadow: inset 0 .04em 0 rgba(255,236,190,.3), inset 0 0 .12em rgba(0,0,0,.7) }
-#board .zone > .card:not(.back):not(.f-spell):not(.f-trap) .tb > b { display: none }
-#board .zone > .card:not(.back) .tb .ad { position: static; border: none; display: flex; align-items: center; justify-content: center; gap: .08em; font-family: var(--num); font-weight: 700; line-height: 1; letter-spacing: -.03em; text-shadow: none; white-space: nowrap; font-size: 1em }
-#board .zone > .card:not(.back) .tb .ad i { display: none }
-#board .zone > .card:not(.back) .tb .ad > span:first-child { font-size: 1.5em; color: #fff3d4; text-shadow: 0 0 .1em rgba(255,200,90,.5) }
-#board .zone > .card:not(.back) .tb .ad > span:last-child { font-size: 1em; color: #cdb27c }
-#board .zone > .card:not(.back) .tb .ad > span:last-child::before { content: "/"; color: #8a7650; margin-right: .06em; font-size: .85em }
-#board .zone > .card:not(.back) .tb .ad .up { color: #8dffb0 !important } #board .zone > .card:not(.back) .tb .ad .dn { color: #ff9a9a !important }
+:is(#board, .fly-layer) .zone > .card:not(.back):not(.f-spell):not(.f-trap) .tb > b { display: none }
+:is(#board, .fly-layer) .zone > .card:not(.back) .tb .ad { position: static; border: none; display: flex; align-items: center; justify-content: center; gap: .08em; font-family: var(--num); font-weight: 700; line-height: 1; letter-spacing: -.03em; text-shadow: none; white-space: nowrap; font-size: 1em }
+:is(#board, .fly-layer) .zone > .card:not(.back) .tb .ad i { display: none }
+:is(#board, .fly-layer) .zone > .card:not(.back) .tb .ad > span:first-child { font-size: 1.5em; color: #fff3d4; text-shadow: 0 0 .1em rgba(255,200,90,.5) }
+:is(#board, .fly-layer) .zone > .card:not(.back) .tb .ad > span:last-child { font-size: 1em; color: #cdb27c }
+:is(#board, .fly-layer) .zone > .card:not(.back) .tb .ad > span:last-child::before { content: "/"; color: #8a7650; margin-right: .06em; font-size: .85em }
+:is(#board, .fly-layer) .zone > .card:not(.back) .tb .ad .up { color: #8dffb0 !important } :is(#board, .fly-layer) .zone > .card:not(.back) .tb .ad .dn { color: #ff9a9a !important }
 /* 守備表示：守備力だけを青白く大きく */
-#board .zone > .card.def:not(.back) .tb .ad > span:first-child { display: none }
-#board .zone > .card.def:not(.back) .tb .ad > span:last-child { font-size: 1.6em; color: #bfe0ff; text-shadow: 0 0 .1em rgba(120,180,255,.55) }
-#board .zone > .card.def:not(.back) .tb .ad > span:last-child::before { content: "DEF"; font-size: .34em; color: #e8bd55; margin-right: .12em; letter-spacing: .02em }
+:is(#board, .fly-layer) .zone > .card.def:not(.back) .tb .ad > span:first-child { display: none }
+:is(#board, .fly-layer) .zone > .card.def:not(.back) .tb .ad > span:last-child { font-size: 1.6em; color: #bfe0ff; text-shadow: 0 0 .1em rgba(120,180,255,.55) }
+:is(#board, .fly-layer) .zone > .card.def:not(.back) .tb .ad > span:last-child::before { content: "DEF"; font-size: .34em; color: #e8bd55; margin-right: .12em; letter-spacing: .02em }
 /* 守備表示（横向き）：カードの長い辺がマスの幅に収まる大きさにする（隣のマスにはみ出さない） */
-#board .zone > .card.def { width: 64% }
-#board .zone > .card.def:not(.back) { font-size: 8cqi }
+:is(#board, .fly-layer) .zone > .card.def { width: 64% }
+:is(#board, .fly-layer) .zone > .card.def:not(.back) { font-size: 8cqi }
 
 /* ---------- 演出に合わせたプレイマットの柄（盤面の地だけが変わり、カードを置く枠は残る） ---------- */
 #board { position: relative }
@@ -748,10 +750,10 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* ===== 盤面（EXモンスターゾーンなし）：7列 × 半分の高さの段 10段。端の列は真ん中の列と半分ずつずれる ===== */
 #board { grid-template-columns: .74fr repeat(5, minmax(0, 1fr)) .74fr; grid-template-rows: repeat(10, var(--hr, 34px)); gap: 3px 4px; align-content: center }
 #board > .zone { aspect-ratio: auto; height: auto; min-height: 0; container-type: size; position: relative; z-index: 1 }
-#board > .zone > .card { width: min(92cqw, 94cqh * 59 / 86); font-size: calc(min(92cqw, 94cqh * 59 / 86) / 8) }
-#board > .zone > .card.def { width: min(64cqw, 92cqh); font-size: calc(min(64cqw, 92cqh) / 8) }
-#board > .zone > .card:not(.back) { font-size: calc(min(92cqw, 94cqh * 59 / 86) / 8 * .9) }
-#board > .zone > .card.def:not(.back) { font-size: calc(min(64cqw, 92cqh) / 8 * .9) }
+:is(#board, .fly-layer) > .zone > .card { width: min(92cqw, 94cqh * 59 / 86); font-size: calc(min(92cqw, 94cqh * 59 / 86) / 8) }
+:is(#board, .fly-layer) > .zone > .card.def { width: min(64cqw, 92cqh); font-size: calc(min(64cqw, 92cqh) / 8) }
+:is(#board, .fly-layer) > .zone > .card:not(.back) { font-size: calc(min(92cqw, 94cqh * 59 / 86) / 8 * .9) }
+:is(#board, .fly-layer) > .zone > .card.def:not(.back) { font-size: calc(min(64cqw, 92cqh) / 8 * .9) }
 #board > .zone.opp:not(.pile) { border-color: color-mix(in srgb, var(--mat-line) 60%, var(--opp) 40%) }
 @media (max-width: 860px) {
   /* スマホ：盤面は手札の開け閉めに関係なく、画面の端から端まで、上のLPから下のボタンまで（手札は盤面の下の方に重ねて出す） */
@@ -1119,7 +1121,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261126-1106</p>
+    <p class="menu-note ver">版：20261126-1136</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

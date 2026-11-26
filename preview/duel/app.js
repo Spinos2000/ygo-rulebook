@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261126-1106-e31f838aba';
-import { fullThink } from './ai/levels.js?v=20261126-1106-e31f838aba';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261126-1106-e31f838aba';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261126-1106-e31f838aba';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261126-1106-e31f838aba';
-import { playSignature, sigKey } from './sig.js?v=20261126-1106-e31f838aba';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261126-1106-e31f838aba';
-import { firstEntrance } from './aces.js?v=20261126-1106-e31f838aba';
-import { RULINGS } from './data/rulings.js?v=20261126-1106-e31f838aba';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261126-1106-e31f838aba';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261126-1106-e31f838aba';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261126-1106-e31f838aba';
-import { joinSiteRoom } from './net/site-room.js?v=20261126-1106-e31f838aba';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261126-1136-2e538bcd26';
+import { fullThink } from './ai/levels.js?v=20261126-1136-2e538bcd26';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261126-1136-2e538bcd26';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261126-1136-2e538bcd26';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261126-1136-2e538bcd26';
+import { playSignature, sigKey } from './sig.js?v=20261126-1136-2e538bcd26';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261126-1136-2e538bcd26';
+import { firstEntrance } from './aces.js?v=20261126-1136-2e538bcd26';
+import { RULINGS } from './data/rulings.js?v=20261126-1136-2e538bcd26';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261126-1136-2e538bcd26';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261126-1136-2e538bcd26';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261126-1136-2e538bcd26';
+import { joinSiteRoom } from './net/site-room.js?v=20261126-1136-2e538bcd26';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261126-1106-e31f838aba';
-import { CARD_POOL } from './data/cardpool.js?v=20261126-1106-e31f838aba';
-import { DECKS } from './data/decks.js?v=20261126-1106-e31f838aba';
-import { SCRIPTS } from './cards/index.js?v=20261126-1106-e31f838aba';
+} from './engine/game.js?v=20261126-1136-2e538bcd26';
+import { CARD_POOL } from './data/cardpool.js?v=20261126-1136-2e538bcd26';
+import { DECKS } from './data/decks.js?v=20261126-1136-2e538bcd26';
+import { SCRIPTS } from './cards/index.js?v=20261126-1136-2e538bcd26';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -560,7 +560,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261126-1106-e31f838aba', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261126-1136-2e538bcd26', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1272,6 +1272,7 @@ function renderBoard() {
     pile(me, 'gy', gridAt(7, 7)), pile(me, 'deck', gridAt(7, 9)),
   ];
   const keep = $('#board .mat-skin');
+  snapBoardLook(); // No.37：描き直す前の盤面のカードを覚えておく（演出の写しを盤面と同じ見た目にするため）
   $('#board').innerHTML = cells.join('');
   if (keep) $('#board').prepend(keep);
 }
@@ -1560,7 +1561,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261126-1106-e31f838aba';
+const DUEL_BUILD = '20261126-1136-2e538bcd26';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
@@ -2579,7 +2580,37 @@ function flyLayer() {
   if (!l) { l = document.createElement('div'); l.className = 'fly-layer'; $('.droot').appendChild(l); }
   return l;
 }
+/** No.37（ボスの注文 11-26「発動時と処理時のカードのデザインを統一して」）：演出の写しは盤面の外（fly-layer）にあるので、
+ *  盤面の見た目の決まり（#board .zone > .card）が効かず、手札と同じ見た目（灰色の絵・◆・白い枠の文）になっていた。
+ *  盤面にあったカードの写しは、そのマスと同じ大きさの枠ごと作り、盤面と同じ見た目・同じ大きさにする。 */
+const boardLook = new Map();
+function snapBoardLook() {
+  const b = $('#board'); if (!b) return;
+  b.querySelectorAll('.zone:not(.pile) > .card[data-uid]').forEach(e => {
+    const z = e.parentElement, r = z.getBoundingClientRect();
+    if (r.width < 4) return;
+    const zcls = [...z.classList].filter(k => !/^(aim-|zone-pick)/.test(k)).join(' ');
+    boardLook.set(String(e.dataset.uid), { code: (S.cards[e.dataset.uid] || {}).code, html: e.outerHTML, face: !e.classList.contains('back'), def: e.classList.contains('def'), zcls, w: r.width, h: r.height, cx: r.left + r.width / 2, cy: r.top + r.height / 2 });
+  });
+}
+/** 写しの場所が、そのカードが盤面にいたマスなら、盤面と同じ見た目の写し（マスの大きさの枠ごと）を返す。ちがえば null */
+function fieldGhost(m, rect) {
+  const b = boardLook.get(String(m.u)); if (!b || !m.d || b.code !== m.d.code) return null; // 読み直し・新しい対戦で、同じ番号の別のカードと取りちがえない
+  const cx = rect.left + rect.width / 2, cy = rect.top + rect.width * 86 / 59 / 2;
+  if (Math.abs(cx - b.cx) > b.w / 2 || Math.abs(cy - b.cy) > b.h / 2) return null;
+  const wrap = document.createElement('div');
+  wrap.className = `${b.zcls} fly-zone`;
+  wrap.innerHTML = m.face ? (b.face ? b.html : `<span class="${faceCls(m.d)}${b.def ? ' def' : ''}">${faceHtml(m.u, m.d, false)}</span>`) : (b.face ? `<span class="card back${b.def ? ' def' : ''}"></span>` : b.html);
+  const c = wrap.firstElementChild;
+  if (!c) return null;
+  c.classList.remove('sel', 'can', 'picked'); c.style.visibility = ''; c.removeAttribute('data-uid'); c.removeAttribute('aria-label'); c.setAttribute('aria-hidden', 'true');
+  Object.assign(wrap.style, { position: 'fixed', left: (cx - b.w / 2) + 'px', top: (cy - b.h / 2) + 'px', width: b.w + 'px', height: b.h + 'px', margin: 0, zIndex: 2 });
+  flyLayer().appendChild(wrap);
+  return wrap;
+}
 function ghost(m, rect) {
+  const fg = fieldGhost(m, rect);
+  if (fg) return fg;
   const el = document.createElement('span');
   el.className = m.face ? faceCls(m.d) : 'card back';
   if (m.face) el.innerHTML = faceHtml(m.u, m.d, false);
