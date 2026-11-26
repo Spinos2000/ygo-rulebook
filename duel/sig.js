@@ -1,6 +1,6 @@
 // カードごとの専用演出（キャンバスに描く）。強力な制限カードの発動を、カード名と効果に合わせて見せる。
 // playSignature() は演出が終わったら解決する Promise を返す。カードの位置は画面上の四角（getBoundingClientRect）で受け取る
-import { cardImg, backImg } from './fx.js?v=20261122-0953-df31350498';
+import { cardImg, backImg } from './fx.js?v=20261126-1250-a6f77c141d';
 const TAU = Math.PI * 2;
 /** カード名の帯を、消え始める前にそのまま見せる長さ（ミリ秒。MASTER：読み終われるだけ長く） */
 const TITLE_HOLD = 1600;
@@ -10,7 +10,7 @@ const TITLE_OUT = 250;
 /* ---------- どのカードにどの演出を使うか ---------- */
 const SIG = {
   'ブラック・ホール': 'hole', 'ライトニング・ボルテックス': 'vortex', '激流葬': 'torrent', '聖なるバリアミラーフォース': 'mirror',
-  '大嵐': 'storm', 'サイクロン': 'cyclone', 'ハーピィの羽根帚': 'harpie', 'ナイト・ショット': 'night', '神の宣告': 'judgment', '神の警告': 'warning',
+  '大嵐': 'storm', 'サイクロン': 'cyclone', 'ハーピィの羽根帚': 'harpie', 'ナイト・ショット': 'night', '神の宣告': 'judgment', '神の警告': 'warning', '奈落の落とし穴': 'pit',
   '強欲な壺': 'greed', '増援': 'reinforce', '封印の黄金櫃': 'sarco', '死者蘇生': 'revive',
   '早すぎた埋葬': 'burial', 'リビングデッドの呼び声': 'call', '超融合': 'superfusion', '未来融合フューチャー・フュージョン': 'future',
   '洗脳ブレインコントロール': 'brain', '光の護封剣': 'swords', '王宮のお触れ': 'decree', 'スキルドレイン': 'drain',
@@ -106,6 +106,7 @@ function ensureCanvas(root) {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   W = window.innerWidth; H = window.innerHeight;
   cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px'; // No.36：見た目の大きさを中身とそろえる（CSSの100vhは、iPhoneでバーが出ていると innerHeight より大きく、絵が縦にのびて下ほどずれた）
 }
 
 /**
@@ -119,6 +120,7 @@ export function playSignature(root, info) {
   ensureCanvas(root); setClip(root);
   return new Promise(resolve => {
     const S = setup(info);
+    S.boardEl = root.querySelector('#board'); // No.34：演出の途中で盤面が動いても、写しをマスについていかせる（draw で毎回ずらす）
     cv.style.display = 'block';
     const step = now => {
       if (S.done) return;
@@ -148,7 +150,7 @@ function setup(I) {
   }
   S.cards.push(S.self);
   const add = c => { const o = mk(c); if (o) S.cards.push(o); return o; };
-  S.dest = (I.dest || []).map(add).filter(Boolean);
+  S.dest = (I.dest || []).map(q => { const o = add(q); if (o && q.ban) o.ban = q.ban; return o; }).filter(Boolean);
   const known = new Map(S.dest.map(c => [c.uid, c]));
   S.att = I.att ? (known.get(I.att.uid) || add(I.att)) : null;
   S.target = I.target ? (known.get(I.target.uid) || null) : null;
@@ -433,14 +435,75 @@ const FX = {
   /* 神の宣告：天から金の雷が落ち、光の柱の中で砕く */
   judgment(S) {
     at(S, 300, () => { S.dark = .8; });
+    at(S, 1000, () => fxHit(S)); // 雷が当たった瞬間を知らせる（演出の時計で）
     S.dest.forEach((c, i) => at(S, 1000 + i * 200, () => { S.bolts.push({ x: c.x, y: c.y, t: S.t, gold: 1 }); impact(S, c.x, c.y, 1, '#ffe08a'); explode(S, c, '#ffe08a'); S.pillar = { x: c.x, t: S.t }; }));
     at(S, 1700 + S.dest.length * 200, () => { S.pillar = null; });
     S.end = 2600 + S.dest.length * 200;
   },
 
+  /* 奈落の落とし穴：足元に底の見えない穴が開き、影に引きずり込まれて落ちる。穴の底で砕け、閉じた穴から異次元の裂け目へ消える（破壊して除外） */
+  pit(S) {
+    const U = S.U, OPEN = 350, GRIP = 850, FALL = 1350, DUR = 850, GAP = 140;
+    at(S, 250, () => { S.dark = .8; S.shake = 8; });
+    // t60：関係ないモンスターの場所。ここには、穴も輪もほこりも描かない
+    S.keep = (S.I.mons || []).filter(m => m.rect && !S.dest.some(c => c.uid === m.uid)).map(m => m.rect);
+    S.pits = S.dest.map((c, i) => {
+      const w = c.def ? c.h : c.w, h = c.def ? c.w : c.h; // 画面で見える幅と高さ（守備表示は横長）
+      // 穴はカードの足元だけ。となりのカードにかからない大きさにする
+      const p = { c, i, w, h, x: c.x, y: c.y + h * .38, x0: c.x, y0: c.y, R: w * .6, r: 0, open: OPEN + i * GAP, grip: GRIP + i * GAP, fall: FALL + i * GAP, seed: Array.from({ length: 22 }, () => Math.random()) };
+      c.pit = p; return p;
+    });
+    // 先輩 11/25：奈落の時だけ、カード名の帯を、落ちるモンスター（足元の穴もふくむ）にかからない高さへずらす。上を先に探す
+    {
+      const hb = Math.max(34, 40 * U) / 2 + 6 * U, B = S.B, box = S.pits.map(p => [p.y0 - p.h / 2, p.y + p.R * .52]);
+      const ok = y => y - hb >= B.top && y + hb <= B.bottom && box.every(([a, b]) => y + hb <= a || y - hb >= b);
+      const ys = [B.cy, ...box.flatMap(([a, b]) => [a - hb, b + hb])].filter(ok).sort((u, v) => (u > B.cy) - (v > B.cy) || Math.abs(u - B.cy) - Math.abs(v - B.cy));
+      if (ys.length) S.titleY = ys[0];
+    }
+    const n = S.pits.length, last = FALL + Math.max(0, n - 1) * GAP + DUR;
+    S.pits.forEach(p => {
+      const c = p.c;
+      at(S, p.open, () => { S.shake = Math.max(S.shake, 12 * U); S.rings.push({ x: p.x, y: p.y, r: 6, v: 5 * U, a: .9, c: '#a06bff', lw: 3 }); for (let k = 0; k < 16; k++) { const a = Math.random() * TAU; P(S, { x: p.x + Math.cos(a) * p.R * .8, y: p.y + Math.sin(a) * p.R * .3, vx: Math.cos(a) * 2.4 * U, vy: -2 - Math.random() * 3, life: 40, sz: 2.4 * U, c: k % 2 ? '#8a6a4a' : '#5a4030', grav: .22 }); } });
+      hook(S, t => {
+        if (t < p.open) return true;
+        const o = Math.min(1, (t - p.open) / 420); p.r = p.close ? Math.max(0, 1 - (t - p.close) / 360) : ease(o);
+        // ふちの土や光が、穴の底へ吸いこまれていく
+        if (!p.close && Math.random() < .7) { const a = Math.random() * TAU; P(S, { x: p.x + Math.cos(a) * p.R * p.r, y: p.y + Math.sin(a) * p.R * .34 * p.r, vx: -Math.cos(a) * 1.2 * U, vy: .6 * U, life: 24, sz: 1.8 * U, c: Math.random() < .5 ? '#a06bff' : '#6a4a3a', grav: .05 }); }
+        if (c.a > 0 && t >= p.grip && t < p.fall) {
+          // 影の手につかまれて、もがく
+          const k = (t - p.grip) / (p.fall - p.grip);
+          c.x = p.x0 + Math.sin(t / 22) * 2.4 * U * k; c.y = p.y0 + p.h * .06 * k; c.rot = Math.sin(t / 38) * .07 * k;
+        } else if (c.a > 0 && t >= p.fall) {
+          // 穴のふちの向こうへ、加速しながら沈む。落ちるほど暗く、小さくなる
+          const q = Math.min(1, (t - p.fall) / DUR), e = q * q;
+          c.x = p.x0 + Math.sin(t / 30) * 2 * U * (1 - q); c.y = p.y0 + p.h * (.06 + 1.15 * e); c.rot = (p.i % 2 ? -1 : 1) * .32 * e; c.s = 1 - .28 * e; c.burn = .9 * e;
+          if (q < 1 && Math.random() < .8) P(S, { x: c.x + (Math.random() - .5) * p.w * .7, y: p.y - 4 * U, vx: (Math.random() - .5), vy: -1.5 - Math.random() * 2, life: 22, sz: 2 * U, c: '#a06bff' });
+          if (q >= 1) c.a = 0;
+        }
+        return !p.close || t < p.close + 420;
+      });
+      // 穴の底で砕ける（破壊）
+      at(S, p.fall + DUR, () => {
+        c.a = 0; p.boom = S.t; S.shake = Math.max(S.shake, 16 * U); S.flash = Math.max(S.flash, .7); S.flashC = '180,120,255';
+        S.rings.push({ x: p.x, y: p.y, r: 8, v: 10 * U, a: 1, c: '#ffffff', lw: 4 }, { x: p.x, y: p.y, r: 4, v: 7 * U, a: 1, c: '#a06bff', lw: 6 });
+        burst(S, p.x, p.y, 46, ['#ffffff', '#d7b8ff', '#a06bff', '#5a2bb0'], 8, 40, 3); burst(S, p.x, p.y - 4 * U, 18, ['#ffffff', '#d7b8ff'], 12, 22, 1.8, 'streak');
+      });
+      // 穴が閉じ、残った光が除外の置き場へ飛ぶ（除外）。除外されずに墓地などへ行った時は、光だけで終わる
+      at(S, p.fall + DUR + 260, () => {
+        p.close = S.t;
+        const to = p.c.ban; if (!to) return;
+        p.rift = S.t;
+        for (let k = 0; k < 26; k++) P(S, { x: p.x + (Math.random() - .5) * p.R, y: p.y + (Math.random() - .5) * 10 * U, vx: (to.x - p.x) * (.03 + Math.random() * .012), vy: (to.y - p.y) * (.03 + Math.random() * .012) - 1, life: 46, sz: 2.6 * U, c: k % 3 ? '#a06bff' : '#8fe6ff', drag: .972 });
+      });
+    });
+    if (!n) return FX.generic(S);
+    S.end = last + 1300;
+  },
+
   /* 神の警告：警報が鳴り響き、赤い光線が召喚を撃ち抜く */
   warning(S) {
     at(S, 300, () => { S.alarm = { t: S.t }; S.dark = .6; });
+    at(S, 1350, () => fxHit(S)); // 光線が当たった瞬間を知らせる（演出の時計で）
     at(S, 1200, () => { S.alarm = null; S.beamDown = S.dest.map(c => ({ x: c.x, y: c.y, t: S.t })); });
     S.dest.forEach(c => at(S, 1350, () => { impact(S, c.x, c.y, 1, '#ff4a3d'); explode(S, c, '#ff6b6b'); }));
     at(S, 1700, () => { S.beamDown = null; });
@@ -744,6 +807,22 @@ Object.assign(MAT, {
     matFill(x, w, h, ['#f6e2a0', '#c99a3c', '#5a3c12']);
     x.globalCompositeOperation = 'lighter'; matRays(x, w / 2, -40, 18, Math.hypot(w, h) * 1.2, 'rgba(255,245,200,.12)', t / 3000);
   },
+  /* 奈落の落とし穴：ひび割れた黒い大地。穴のまわりから紫のひびが走る */
+  pit(S, x, w, h, t) {
+    matFill(x, w, h, ['#1a1420', '#2a1c22', '#0b0810']);
+    (S.pits || []).forEach(p => {
+      const k = Math.min(1, Math.max(0, (t - p.open) / 700)); if (k <= 0) return;
+      const c = loc(S, p), R = Math.hypot(w, h) * .5 * k;
+      x.lineCap = 'round';
+      for (let i = 0; i < 9; i++) {
+        const a0 = p.seed[i] * TAU; let px = c.x, py = c.y;
+        x.beginPath(); x.moveTo(px, py);
+        for (let j = 1; j <= 6; j++) { const a = a0 + (p.seed[(i * 3 + j) % 22] - .5) * 1.1; px += Math.cos(a) * R / 6; py += Math.sin(a) * R / 6 * .7; x.lineTo(px, py); }
+        x.strokeStyle = 'rgba(0,0,0,.75)'; x.lineWidth = 5; x.stroke();
+        x.strokeStyle = `rgba(160,107,255,${.35 + .2 * Math.sin(t / 160 + i)})`; x.lineWidth = 1.6; x.stroke();
+      }
+    });
+  },
   /* 神の警告：赤い警報。斜めの縞が点滅する */
   warning(S, x, w, h, t) {
     matFill(x, w, h, ['#3a0808', '#6a1010', '#300606']);
@@ -831,6 +910,8 @@ Object.assign(MAT, {
   },
 });
 
+/** 当たった瞬間を、画面の外へ知らせる（演出DEMOの「なにっ！？」が待つ）。演出の時計で進むので、遅い端末でも絵と合う */
+function fxHit(S) { window.dispatchEvent(new CustomEvent('fx-hit', { detail: { key: S.I.key } })); }
 /* ---------- 1コマ進める ---------- */
 function tick(S, now) {
   const dt = Math.min(32, now - (S.last || now)) * S.speed; S.last = now;
@@ -901,11 +982,81 @@ function drawCard(c) {
   if (c.glow) { ctx.shadowColor = c.gc; ctx.shadowBlur = 22; }
   ctx.drawImage(c.img, -c.w / 2, -c.h / 2, c.w, c.h); ctx.restore();
 }
+/* ---------- 奈落の落とし穴 ---------- */
+/** 関係ないモンスターの場所を抜いて描く（そのカードの後ろを通るように見える）。奈落の時だけ */
+function pitKeep(S, f) {
+  if (!S.keep || !S.keep.length) { f(); return; }
+  ctx.save();
+  // 抜く場所は画面のゆれに合わせない（本物のカードはゆれない）。盤面が動いた分（No.34）だけずらす
+  const m = ctx.getTransform(), dpr = cv.width / (W || 1), b = S.boardEl && S.boardEl.isConnected ? S.boardEl.getBoundingClientRect() : null;
+  ctx.setTransform(dpr, 0, 0, dpr, b && b.width ? (b.left - S.B.left) * dpr : 0, b && b.width ? (b.top - S.B.top) * dpr : 0);
+  ctx.beginPath(); ctx.rect(-200, -200, W + 400, H + 400);
+  S.keep.forEach(q => ctx.rect(q.left - 1, q.top - 1, q.width + 2, q.height + 2));
+  ctx.clip('evenodd'); ctx.setTransform(m);
+  f(); ctx.restore();
+}
+const PIT_RY = .46; // 穴の平たさ（たて÷よこ）
+/** 落ちるカードが見える範囲：穴のふちより上と、穴の中（手前のふちより下は、地面に隠れる） */
+function pitClip(p) {
+  if (p.r <= 0 || p.c.s >= 1 && p.c.y <= p.y0 + 1) return; // 落ち始めるまでは全部見せる
+  const R = p.R * Math.max(p.r, .01);
+  ctx.beginPath(); ctx.moveTo(p.x - p.w * 1.2, -100); ctx.lineTo(p.x + p.w * 1.2, -100); ctx.lineTo(p.x + p.w * 1.2, p.y); ctx.lineTo(p.x + R, p.y);
+  ctx.ellipse(p.x, p.y, R, R * PIT_RY, 0, 0, Math.PI); ctx.lineTo(p.x - p.w * 1.2, p.y); ctx.closePath(); ctx.clip();
+}
+/** 穴の奥：内側へ行くほど暗い段が重なり、真ん中は何も見えない黒 */
+function drawPit(p, t, U) {
+  if (p.r <= 0) return;
+  const R = p.R * p.r;
+  ctx.save(); ctx.translate(p.x, p.y);
+  ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.beginPath(); ctx.ellipse(0, 0, R * 1.08, R * PIT_RY * 1.12, 0, 0, TAU); ctx.fill();
+  // ふち：ぎざぎざに割れた地面
+  ctx.beginPath(); for (let i = 0; i <= 22; i++) { const a = i / 22 * TAU, j = 1 + (p.seed[i % 22] - .5) * .12; ctx.lineTo(Math.cos(a) * R * j, Math.sin(a) * R * PIT_RY * j); } ctx.closePath();
+  ctx.fillStyle = '#4a3638'; ctx.fill(); ctx.save(); ctx.clip();
+  ['#2a1b26', '#1c1120', '#110a18', '#08040c', '#000000'].forEach((c, k) => { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(0, R * PIT_RY * .05 * k, R * (.95 - k * .15), R * PIT_RY * (.95 - k * .15), 0, 0, TAU); ctx.fill(); });
+  // 落ちていく紫のもや
+  ctx.globalCompositeOperation = 'lighter';
+  for (let k = 0; k < 3; k++) { const f = (t / 900 + k / 3) % 1; ctx.strokeStyle = `rgba(140,90,255,${.35 * (1 - f)})`; ctx.lineWidth = 2 * U; ctx.beginPath(); ctx.ellipse(0, 0, R * (1 - f), R * PIT_RY * (1 - f), 0, 0, TAU); ctx.stroke(); }
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(190,140,255,.9)'; ctx.lineWidth = 1.8 * U; ctx.stroke();
+  ctx.restore();
+}
+/** 手前：穴から伸びて巻きつく影の手と、最後の「除外」の裂け目 */
+function drawPitFront(p, t, U) {
+  const c = p.c, R = p.R * p.r;
+  if (R > 1 && t >= p.grip - 150 && !p.close) {
+    const k = Math.min(1, (t - p.grip + 150) / 350), sink = Math.min(1, Math.max(0, (t - p.fall) / 850)), up = p.h * .62 * k * (1 - sink);
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 0; i < 4; i++) {
+      const s = (i - 1.5) / 1.5, x0 = p.x + s * R * .72, y0 = p.y + R * PIT_RY * .35 * Math.sqrt(1 - Math.min(1, s * s * .6)), w = Math.sin(t / 110 + i * 1.7) * 7 * U, top = y0 - up * (.62 + .38 * p.seed[i]);
+      const x1 = p.x + s * p.w * .4 + w;
+      [['rgba(12,4,24,.92)', 4.2], ['rgba(140,90,240,.6)', 1]].forEach(([col, lw]) => { ctx.strokeStyle = col; ctx.lineWidth = lw * U; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.bezierCurveTo(x0 + w * 1.4, y0 - up * .35, x1 - w * 1.6, y0 - up * .6, x1, top); ctx.stroke(); });
+      // 指先
+      ctx.strokeStyle = 'rgba(12,4,24,.9)'; ctx.lineWidth = 2 * U;
+      for (let f = -1; f <= 1; f++) { ctx.beginPath(); ctx.moveTo(x1, top); ctx.lineTo(x1 + (f * 5 - s * 4) * U * k, top - 7 * U * k * (1 - sink)); ctx.stroke(); }
+    }
+    ctx.restore();
+  }
+  if (p.rift) {
+    // 閉じた穴の上に開く、横長の異次元の裂け目と「除外」の文字
+    const e = t - p.rift, k = Math.min(1, e / 180), fo = Math.max(0, Math.min(1, (1250 - e) / 350)); if (fo <= 0) return;
+    ctx.save(); ctx.translate(p.x, p.y0); ctx.globalAlpha = fo;
+    ctx.globalCompositeOperation = 'lighter'; glow(0, 0, p.w * .75, '#a06bff', .7 * fo * k); ctx.globalAlpha = fo;
+    const L = p.w * .62 * k, hh = (5 + 2 * Math.sin(e / 60)) * U;
+    ctx.fillStyle = '#e9dcff'; ctx.beginPath(); ctx.moveTo(-L, 0); ctx.quadraticCurveTo(0, -hh * 2, L, 0); ctx.quadraticCurveTo(0, hh * 2, -L, 0); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    const fs = Math.max(13, Math.min(p.w * .34, 24 * U)), z = 1 + .5 * (1 - k);
+    ctx.scale(z, z); ctx.font = `700 ${fs}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    ctx.lineWidth = 5 * U; ctx.strokeStyle = 'rgba(24,8,48,.95)'; ctx.strokeText('除外', 0, 0); ctx.fillStyle = '#ffffff'; ctx.fillText('除外', 0, 0);
+    ctx.restore();
+  }
+}
 const FONT = '"Zen Maru Gothic","M PLUS Rounded 1c","Hiragino Sans","Yu Gothic",sans-serif';
 function draw(S) {
   const t = S.t, B = S.B, U = S.U;
   ctx.save(); ctx.clearRect(-50, -50, W + 100, H + 100);
   ctx.translate((Math.random() - .5) * S.shake, (Math.random() - .5) * S.shake);
+  // No.34（ボスの報告：神の宣告の演出でカードがずれた）：場所は始めに測った盤面（S.B）が基準。演出の途中で盤面が動いたら、その分だけ全体をずらす
+  { const br = S.boardEl && S.boardEl.isConnected ? S.boardEl.getBoundingClientRect() : null; if (br && br.width) ctx.translate(br.left - B.left, br.top - B.top); }
   if (S.dark > .01) { ctx.fillStyle = `rgba(0,0,0,${S.dark * .65})`; ctx.beginPath(); ctx.rect(-50, -50, W + 100, H + 100); if (S.mat && matAlpha(S) > .5) rr(ctx, S.mat.ox, S.mat.oy, S.mat.w, S.mat.h, 14); ctx.fill('evenodd'); }
   if (S.storm || S.rain) { ctx.strokeStyle = 'rgba(180,200,230,.35)'; ctx.lineWidth = 1; for (let i = 0; i < 60; i++) { const rx = (i * 53 + t * .9) % (W + 40) - 20, ry = (i * 97 + t * 1.6) % H; ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 6, ry + 16); ctx.stroke(); } }
   if (S.crack) { const k = Math.min(1, (t - S.crack.t) / 300); ctx.strokeStyle = 'rgba(30,15,5,.85)'; ctx.lineWidth = 2.5; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; ctx.beginPath(); ctx.moveTo(S.crack.x, S.crack.y); ctx.lineTo(S.crack.x + Math.cos(a) * 70 * U * k, S.crack.y + Math.sin(a) * 22 * U * k); ctx.stroke(); } }
@@ -920,7 +1071,11 @@ function draw(S) {
     g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(.62, 'rgba(0,0,0,1)'); g.addColorStop(.8, 'rgba(40,0,60,.85)'); g.addColorStop(1, 'rgba(40,0,60,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(h.x, h.y, h.r * 1.6, 0, TAU); ctx.fill();
   }
-  S.cards.forEach(c => { drawCard(c); if (c.burn && c.a > 0) { ctx.save(); ctx.translate(c.x, c.y); ctx.rotate((c.rot || 0) + (c.base || 0)); ctx.scale(c.s, c.s * c.sy); ctx.globalAlpha = Math.min(.85, c.burn) * c.a; ctx.fillStyle = '#1a0628'; ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h); ctx.restore(); } });
+  pitKeep(S, () => {
+  (S.pits || []).forEach(p => drawPit(p, t, U));
+  S.cards.forEach(c => { if (c.pit) { ctx.save(); pitClip(c.pit); } drawCard(c); if (c.burn && c.a > 0) { ctx.save(); ctx.translate(c.x, c.y); ctx.rotate((c.rot || 0) + (c.base || 0)); ctx.scale(c.s, c.s * c.sy); ctx.globalAlpha = Math.min(.85, c.burn) * c.a; ctx.fillStyle = '#1a0628'; ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h); ctx.restore(); } if (c.pit) ctx.restore(); });
+  (S.pits || []).forEach(p => drawPitFront(p, t, U));
+  });
   if (S.surge) {
     const w = S.surge, up = w.up, sgn = up ? -1 : 1, fa = w.fade !== null ? Math.max(0, 1 - (t - w.fade) / 600) : 1;
     const L0 = B.left, R0 = B.right, band = 240 * U, back = w.front - sgn * band;
@@ -1112,6 +1267,7 @@ function draw(S) {
   if (S.waves) for (let i = 0; i < 4; i++) { const k9 = ((S.t - S.waves.t) / 500 + i / 4) % 1, wx2 = S.waves.from.x + (S.waves.to.x - S.waves.from.x) * k9, wy2 = S.waves.from.y + (S.waves.to.y - S.waves.from.y) * k9; ctx.strokeStyle = `rgba(192,139,255,${1 - k9})`; ctx.lineWidth = 3 * U; ctx.beginPath(); ctx.ellipse(wx2, wy2, (12 + k9 * 20) * U, (6 + k9 * 8) * U, 0, 0, TAU); ctx.stroke(); }
   if (S.swd) S.swd.forEach(s => { const k10 = Math.min(1, (t - s.t) / 180), yy2 = -40 + (s.y + 40) * k10; ctx.fillStyle = 'rgba(255,246,200,.9)'; ctx.fillRect(s.x - 2 * U, yy2 - 40 * U, 4 * U, 48 * U); ctx.fillRect(s.x - 8 * U, yy2 + 4 * U, 16 * U, 3 * U); glow(s.x, yy2, 16 * U, '#fff6c8', .8); });
   if (S.drain) glow(S.self.x, S.self.y, 60 * U, '#b45cff', .6);
+  pitKeep(S, () => {
   S.rings.forEach(r => { ctx.strokeStyle = r.c; ctx.globalAlpha = r.a; ctx.lineWidth = (r.lw || 4) * r.a + 1; ctx.beginPath(); ctx.ellipse(r.x, r.y, r.r, r.r * .55, 0, 0, TAU); ctx.stroke(); });
   ctx.globalAlpha = 1;
   S.parts.forEach(p => {
@@ -1121,6 +1277,7 @@ function draw(S) {
     else if (p.k === 'feather') { ctx.fillStyle = p.c; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.sz * 1.5, p.sz * .4, Math.atan2(p.vy, p.vx), 0, TAU); ctx.fill(); }
     else if (p.hue != null) { ctx.globalAlpha = 1; glowH(p.x, p.y, p.sz * 2.6, p.hue, al); }
     else { const r = p.sz * 2.6; ctx.drawImage(spr(p.c), p.x - r, p.y - r, r * 2, r * 2); }
+  });
   });
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   if (S.hole && S.hole.r > 1) {
@@ -1146,7 +1303,7 @@ function draw(S) {
   if (S.flash > .01) { ctx.fillStyle = `rgba(${S.flashC},${S.flash * .5})`; ctx.fillRect(0, 0, W, H); }
   // カード名の帯
   if (S.title) {
-    const T = S.title, k = Math.min(1, (t - T.t) / 160), fo = Math.max(0, Math.min(1, (T.t + 160 + TITLE_HOLD + TITLE_OUT - t) / TITLE_OUT)), y = B.cy, bh = Math.max(34, 40 * U), fs = Math.min(26, Math.max(16, 21 * U));
+    const T = S.title, k = Math.min(1, (t - T.t) / 160), fo = Math.max(0, Math.min(1, (T.t + 160 + TITLE_HOLD + TITLE_OUT - t) / TITLE_OUT)), y = S.titleY ?? B.cy, bh = Math.max(34, 40 * U), fs = Math.min(26, Math.max(16, 21 * U));
     ctx.globalAlpha = k * fo; ctx.save(); ctx.translate((1 - k) * 40, 0); ctx.transform(1, 0, -.18, 1, 0, 0);
     ctx.fillStyle = 'rgba(10,10,14,.9)'; ctx.fillRect(-60, y - bh / 2, W + 200, bh);
     if (T.rb) { const g = ctx.createLinearGradient(0, 0, W, 0); for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, hsl(i * 60, 62, 1)); ctx.fillStyle = g; } else ctx.fillStyle = T.col;

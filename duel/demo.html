@@ -44,130 +44,191 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 #demo button.fx:active { transform: translateY(1px) }
 #demo label { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 6px }
 #demo .guide-open { width: 100%; margin-top: 10px }
+#demo details.dev { margin-top: 18px; border-top: 1px solid var(--d-line); padding-top: 8px }
+#demo details.dev summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--d-sub); min-height: 32px }
+/* 名札の帯（先輩 11/23 08:56）：試作版（/preview/）で開いた時だけ、いちばん上に細く出す */
+.pv-band { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 12px; padding: 5px 12px; background: #fde9a8; color: #3a2f12; border-bottom: 1.5px solid #c9a646; font: 700 13px/1.4 "Zen Maru Gothic", "M PLUS Rounded 1c", sans-serif }
+.pv-band[hidden] { display: none }
+.pv-band b { font-family: Fredoka, "M PLUS Rounded 1c", sans-serif; font-weight: 600 }
+.pv-band a { color: #3a2f12; background: #fff7dc; border: 1.5px solid #c9a646; border-radius: 999px; padding: 2px 10px; text-decoration: none; white-space: nowrap }
+/* t61（先輩の答えA 11/26）：スマホの幅では上の帯が卓を押し下げ、下の欄が盤面に重なる。スマホでは帯をしまい、🎬の欄の見出しの下に出す。PCは今のまま */
+#demo .pv-sub { display: none; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--d-sub) }
+#demo .pv-sub b { font-family: Fredoka, "M PLUS Rounded 1c", sans-serif; font-weight: 600 }
+#demo .pv-sub a { color: var(--d-ink); background: var(--d-panel-2); border: 1px solid var(--d-line); border-radius: 999px; padding: 2px 10px; text-decoration: none; white-space: nowrap }
+@media (max-width: 860px) { .pv-band:not([hidden]) { display: none } #demo .pv-sub:not([hidden]) { display: flex } }
+/* ---------- t30：相手の発動の確認画面（DEMOだけ。本物の卓にはまだ入れない） ---------- */
+#demo h3.ack-h { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: 13px; margin: 10px 0 4px; color: var(--d-sub) }
+#ackLayer { position: fixed; inset: 0; z-index: 58; background: rgba(8, 14, 28, .38) }
+#ackLayer[hidden] { display: none }
+#ackArrows { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible }
+#ackArrows .ring { fill: none; stroke: var(--d-accent); stroke-width: 3; rx: 8; animation: ackPulse 1s ease-in-out infinite alternate }
+#ackArrows .line { fill: none; stroke: var(--d-accent); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 10 7; animation: ackDash .8s linear infinite }
+#ackArrows .head { fill: var(--d-accent) }
+@keyframes ackPulse { from { opacity: .55 } to { opacity: 1 } }
+@keyframes ackDash { to { stroke-dashoffset: -17 } }
+#ackPanel { position: absolute; left: 12px; right: 12px; max-width: 560px; margin: 0 auto; max-height: calc(100% - 24px); overflow-y: auto; background: var(--d-panel); color: var(--d-ink);
+  border: 2.5px solid var(--d-edge); border-radius: 16px; box-shadow: 5px 6px 0 var(--d-edge); padding: 12px 14px 14px; box-sizing: border-box }
+#ackPanel.at-top { top: calc(12px + env(safe-area-inset-top, 0px)) }
+#ackPanel.at-bottom { bottom: calc(12px + env(safe-area-inset-bottom, 0px)) }
+#ackPanel .who { display: flex; align-items: center; gap: 8px; font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: 14px; margin: 0 0 8px }
+#ackPanel .who .tag { background: var(--d-opp); color: #fff; border-radius: 999px; padding: 3px 10px; font-size: 13px }
+#ackPanel .who .tag.me { background: var(--d-me) }
+#ackPanel .who .chain { border: 1.5px solid var(--d-edge); border-radius: 999px; padding: 2px 10px; background: var(--d-accent); color: var(--d-accent-ink); font-family: Fredoka, inherit; font-size: 13px }
+#ackPanel .body { display: flex; gap: 12px; align-items: flex-start }
+#ackPanel .art { flex: none; width: 100px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, .25) }
+#ackPanel .txt { min-width: 0; flex: 1 }
+#ackPanel h3 { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: 19px; line-height: 1.3; margin: 0 0 2px }
+#ackPanel .kind { font-size: 12px; color: var(--d-sub); margin: 0 0 6px }
+#ackPanel .eff { font-size: 13.5px; line-height: 1.55; margin: 0; padding: 8px 10px; background: var(--d-panel-2); border: 1px solid var(--d-line); border-radius: 10px; max-height: 9.6em; overflow-y: auto; white-space: pre-wrap }
+#ackPanel .tgt { font-size: 13px; font-weight: 700; margin: 8px 0 0 }
+#ackPanel .tgt::before { content: "🎯 " }
+/* CODE 22:10（MASTERの決定）：［了承］はなし。［チェーンする］以外のどこをタップしても了承。［チェーンする］は大きめで、右上に離して置く */
+#ackPanel .chainBtn { margin-left: auto; min-width: 128px; min-height: 56px; border-radius: 12px; font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: 16px; line-height: 1.2; cursor: pointer; padding: 6px 12px; border: 2px solid var(--d-me); background: var(--d-panel); color: var(--d-me); box-shadow: 3px 3px 0 var(--d-me) }
+#ackPanel .chainBtn small { display: block; font-family: "M PLUS Rounded 1c", inherit; font-weight: 500; font-size: 11px }
+#ackPanel .chainBtn:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--d-me) }
+#ackLayer { cursor: pointer }
+#ackPanel .who .tag, #ackPanel .who .chain, #ackPanel .chainBtn small { white-space: nowrap }
+#ackPanel .chainBtn:disabled { border-color: var(--d-line); background: var(--d-panel-2); color: var(--d-sub); box-shadow: none; opacity: .75; cursor: not-allowed }
+#ackPanel .hint { font-size: 12px; color: var(--d-sub); margin: 10px 0 0; text-align: center; opacity: .35; transition: opacity .2s }
+#ackPanel.ready .hint { opacity: 1 }
+/* CODE 23:17（先輩の注文）：確認画面は画面いっぱい。縦は上半分にカードの絵・下半分に文、横は左半分に絵・右半分に文。矢印はやめて、了承のあと盤面で対象を一瞬光らせる */
+#ackPanel.full { inset: 0; top: 0; right: 0; bottom: 0; left: 0; width: auto; max-width: none; max-height: none; margin: 0; transform: none; border: 0; border-radius: 0; box-shadow: none; overflow: hidden;
+  display: grid; grid-template-rows: 1fr 1fr; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px) }
+#ackPanel.full .artArea { position: relative; min-height: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 45%, var(--d-panel) 0%, var(--d-panel-2) 75%) }
+#ackPanel.full .who { position: absolute; top: 10px; left: 12px; right: 12px; margin: 0; z-index: 1 }
+#ackPanel.full .art { border-radius: 12px; box-shadow: 0 10px 28px rgba(0, 0, 0, .3) }
+#ackPanel.full .info { min-height: 0; display: flex; flex-direction: column; padding: 14px 16px 14px; border-top: 2.5px solid var(--d-edge) }
+#ackPanel.full .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain }
+#ackPanel.full h3 { font-size: 22px }
+#ackPanel.full .kind { font-size: 13px }
+#ackPanel.full .eff { font-size: 15px; line-height: 1.65; max-height: none; overflow: visible }
+#ackPanel.full .tgt { font-size: 14px }
+#ackPanel.full .hint { margin: 8px 0 0 }
+#ackPanel.full .chainBtn { margin: 8px 0 0; width: 100%; min-height: 60px; font-size: 18px }
+/* 先輩 11/23 08:56：確認画面のカードを「カード風に大きく」。種類ごとの枠の色・大きな名前・属性とレベルの星／種類・大きな印・文の枠・攻撃力と守備力。
+   大きさは --u（カードの幅の1%）で決めるので、縦でも横でも同じ形のまま縮む。外の画像は使わない */
+#ackPanel .bc { --u: 2.4px; position: relative; box-sizing: border-box; display: flex; flex-direction: column; gap: calc(var(--u) * 1.6); padding: calc(var(--u) * 4.2);
+  border-radius: calc(var(--u) * 4.5); border: calc(var(--u) * 1.1) solid #24150b; background: linear-gradient(160deg, var(--bc1), var(--bc2)); color: #1b1b1b; overflow: hidden;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .3); font-family: "Zen Maru Gothic", "M PLUS Rounded 1c", sans-serif; line-height: 1.2 }
+#ackPanel .bc::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, rgba(0,0,0,.04) 0 calc(var(--u) * 1), transparent calc(var(--u) * 1) calc(var(--u) * 3)); pointer-events: none }
+#ackPanel .bc.f-normal { --bc1: #ecc97c; --bc2: #c99d4c; --bcBox: #f6ead0; --bcMark: #ffd36b }
+#ackPanel .bc.f-effect { --bc1: #e29a5e; --bc2: #b4652e; --bcBox: #f4e3cd; --bcMark: #ffab5e }
+#ackPanel .bc.f-fusion { --bc1: #b597de; --bc2: #7a5aac; --bcBox: #eee7f6; --bcMark: #d3a8ff }
+#ackPanel .bc.f-ritual { --bc1: #94c0ee; --bc2: #4f86c6; --bcBox: #e6eef8; --bcMark: #8fd0ff }
+#ackPanel .bc.f-spell { --bc1: #3cc0a2; --bc2: #127a64; --bcBox: #e3f3ec; --bcMark: #14f0bd }
+#ackPanel .bc.f-trap { --bc1: #d071a1; --bc2: #963f6c; --bcBox: #f6e4ec; --bcMark: #ff5fb8 }
+#ackPanel .bc-top { position: relative; display: flex; align-items: center; gap: calc(var(--u) * 2); padding: calc(var(--u) * 1.6) calc(var(--u) * 2.4); background: rgba(255,255,255,.55); border: calc(var(--u) * .5) solid rgba(0,0,0,.35); border-radius: calc(var(--u) * 1.6) }
+#ackPanel .bc-name { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1b1b1b }
+#ackPanel .bc-attr { flex: none; width: calc(var(--u) * 10); height: calc(var(--u) * 10); border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: calc(var(--u) * 5.4); border: calc(var(--u) * .5) solid rgba(0,0,0,.4) }
+#ackPanel .bc-sub { position: relative; min-height: calc(var(--u) * 6); display: flex; justify-content: flex-end; align-items: center; gap: calc(var(--u) * .6); font-weight: 700; font-size: calc(var(--u) * 5); color: #1b1b1b }
+#ackPanel .bc-sub i { width: calc(var(--u) * 5.4); height: calc(var(--u) * 5.4); border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffc27a, #d0451c); border: calc(var(--u) * .3) solid rgba(0,0,0,.3); flex: none }
+#ackPanel .bc-art { position: relative; flex: none; align-self: center; width: calc(var(--u) * 82); height: calc(var(--u) * 66); display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, #3e4560, #161a27 75%); border: calc(var(--u) * .8) solid rgba(0,0,0,.6); box-shadow: inset 0 0 0 calc(var(--u) * .6) rgba(255,255,255,.3) }
+#ackPanel .bc-art span { font-size: calc(var(--u) * 40); line-height: 1; color: var(--bcMark); text-shadow: 0 0 calc(var(--u) * 5) var(--bcMark), 0 0 calc(var(--u) * 12) var(--bcMark); font-family: "Zen Maru Gothic", sans-serif; font-weight: 700 }
+#ackPanel .bc-box { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: calc(var(--u) * 2) calc(var(--u) * 2.6); background: var(--bcBox); border: calc(var(--u) * .5) solid rgba(0,0,0,.4); border-radius: calc(var(--u) * 1) }
+#ackPanel .bc-type { margin: 0 0 calc(var(--u) * 1); font-weight: 700; font-size: calc(var(--u) * 4.4) }
+#ackPanel .bc-text { flex: 1; min-height: 0; margin: 0; overflow: hidden; font-family: "M PLUS Rounded 1c", sans-serif; font-size: calc(var(--u) * 4.1); line-height: 1.35; -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent) }
+#ackPanel .bc-stat { margin: calc(var(--u) * 1) 0 0; padding-top: calc(var(--u) * .8); border-top: calc(var(--u) * .4) solid rgba(0,0,0,.55); text-align: right; font-family: Fredoka, sans-serif; font-weight: 600; font-size: calc(var(--u) * 5.2) }
+#ackFlash { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 57; pointer-events: none; overflow: visible }
+#ackFlash .ring { fill: rgba(241, 201, 91, .28); stroke: var(--d-accent); stroke-width: 4; animation: ackBlink .32s ease-in-out 4 alternate }
+@keyframes ackBlink { from { opacity: .2 } to { opacity: 1 } }
+/* t53（先輩 11/24）：カットイン。相手の発動の演出のあと、確認画面の前に、性格ごとの掛け声とセリフを画面の真ん中の帯で出す。無効にされた時は「なにっ！？」 */
+#ackCut { position: fixed; inset: 0; z-index: 59; display: grid; place-items: center; pointer-events: none; overflow: hidden }
+#ackCut[hidden] { display: none }
+#ackCut .band { width: 100%; box-sizing: border-box; padding: 14px 16px 16px; background: linear-gradient(100deg, rgba(20, 24, 40, .94), rgba(44, 50, 82, .94)); border-top: 3px solid var(--d-opp); border-bottom: 3px solid var(--d-opp);
+  color: #fff; transform: skewY(-4deg); animation: ackCutIn .28s cubic-bezier(.2, .9, .3, 1.1) both }
+#ackCut .band.stay { animation: none }
+#ackCut.out .band { animation: ackCutOut .22s ease-in both }
+#ackCut .in { transform: skewY(4deg); max-width: 640px; margin: 0 auto; display: grid; gap: 6px; text-align: center; min-width: 0 }
+/* 先輩 11/24 16:28：文字はすべて真ん中そろえ。セリフ帳の改行の所だけで改行し、ほかでは折り返さない（入りきらない時は ackFitCut で文字を小さくする） */
+#ackCut .in > p { margin: 0; min-width: 0; white-space: pre; word-break: keep-all; overflow-wrap: normal; overflow: hidden }
+#ackCut .who { font-size: 12px; font-weight: 700; opacity: .85; letter-spacing: .04em }
+#ackCut .who b { background: var(--d-opp); color: #fff; border-radius: 999px; padding: 2px 10px; margin-right: 6px }
+#ackCut .call { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: clamp(22px, 7vw, 34px); line-height: 1.2; color: var(--d-accent); text-shadow: 0 2px 0 rgba(0, 0, 0, .5) }
+#ackCut .line { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: clamp(17px, 5vw, 24px); line-height: 1.45 }
+#ackCut .card { font-size: 12px; opacity: .8 }
+#ackCut.neg .band { border-color: var(--d-bad); background: linear-gradient(100deg, rgba(60, 14, 20, .95), rgba(96, 26, 34, .95)) }
+#ackCut.neg .call { color: #fff; font-size: clamp(30px, 10vw, 48px) }
+@keyframes ackCutIn { from { transform: translateX(110%) skewY(-4deg) } to { transform: translateX(0) skewY(-4deg) } }
+@keyframes ackCutOut { to { transform: translateX(-110%) skewY(-4deg); opacity: .4 } }
+#demo .ack-persona { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px }
+#demo .ack-persona button { border: 1px solid var(--d-line); background: var(--d-panel-2); color: var(--d-ink); border-radius: 999px; padding: 6px 12px; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; min-height: 36px }
+#demo .ack-persona button[aria-pressed="true"] { border: 2px solid var(--d-edge); background: var(--d-accent); color: var(--d-accent-ink) }
+/* 先輩 11/23 18:02：相手がチェーンを重ねる前の「間」の札 */
+#ackThink { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 59; background: var(--d-panel); color: var(--d-ink); border: 1.5px solid var(--d-edge); border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 13px; box-shadow: 2px 3px 0 var(--d-edge); animation: ackThinkBlink 1s ease-in-out infinite alternate }
+#ackThink[hidden] { display: none }
+@keyframes ackThinkBlink { from { opacity: .65 } to { opacity: 1 } }
+  background: var(--d-panel); color: var(--d-ink); border: 1.5px solid var(--d-edge); border-radius: 12px; font-size: 12px; box-shadow: var(--d-shadow) }
+/* 横向き（スマホの横・パソコン）：確認の箱は、対象と反対の横に寄せる */
+@media (orientation: landscape) and (min-width: 640px) {
+  #ackPanel { left: auto; right: auto; width: min(440px, 46vw); margin: 0; top: 50%; bottom: auto; transform: translateY(-50%) }
+  #ackPanel.at-left { left: calc(12px + env(safe-area-inset-left, 0px)) }
+  #ackPanel.at-right { right: calc(12px + env(safe-area-inset-right, 0px)) }
+}
+@media (orientation: landscape) and (min-width: 640px) {
+  #ackPanel.full { grid-template-rows: none; grid-template-columns: 1fr 1fr }
+  #ackPanel.full .info { border-top: 0; border-left: 2.5px solid var(--d-edge) }
+}
+@media (orientation: landscape) and (min-width: 640px) and (max-height: 500px) {
+  #ackPanel.full h3 { font-size: 19px } #ackPanel.full .eff { font-size: 14px } #ackPanel.full .chainBtn { min-height: 50px; font-size: 16px }
+  #ackPanel { padding: 8px 12px 10px } #ackPanel .art { width: 84px } #ackPanel h3 { font-size: 16px } #ackPanel .eff { font-size: 13px; max-height: 6.6em } #ackPanel .chainBtn { min-height: 46px }
+}
 </style>
+<div class="pv-band" id="pv-band" role="note" hidden>🎬 デモ版（演出の見本）<b id="pv-ver"></b><a href="../">🧪 試作版に戻る</a></div>
 <div id="duel-host"></div>
 <button id="demoOpen" type="button">🎬 演出を選ぶ</button>
 <section id="demo" aria-label="演出を選ぶ">
   <header><h1>🎬 演出DEMO</h1><button class="close" type="button" id="demoClose">閉じる</button></header>
-  <p class="note">ボタンを押すと、すぐその演出が出ます。対戦は進めなくて大丈夫です。</p>
-  <label><input type="checkbox" id="demoSlow"> ゆっくり再生（半分の速さ）</label>
-  <button type="button" class="fx guide-open" id="guideOpenDemo">📖 操作ガイドを開く<small>はじめて卓を開いた時に出る案内（何度でも開けます）</small></button>
-  <div id="demoList"></div>
+  <p class="pv-sub" id="pv-sub" hidden>🎬 デモ版（演出の見本）<b class="pv-ver"></b><a href="../">🧪 試作版に戻る</a></p>
+  <p class="note">ボタンを押すと、すぐその場面が始まります。対戦は進めなくて大丈夫です。</p>
+  <div id="demoList"><div id="secAck"></div><div id="secLook"></div>
+    <details id="secDev" class="dev"><summary>🔧 そのほか（開発用）</summary><button type="button" class="fx guide-open" id="guideOpenDemo">📖 操作ガイドを開く<small>はじめて卓を開いた時に出る案内（何度でも開けます）</small></button></details>
+  </div>
 </section>
+<div id="ackLayer" hidden><svg id="ackArrows" aria-hidden="true"></svg><div id="ackPanel" role="dialog" aria-modal="true" aria-labelledby="ackName"></div></div>
+<svg id="ackFlash" aria-hidden="true"></svg>
+<div id="ackThink" role="status" hidden>🤔 相手が考えています…</div>
+<div id="ackCut" role="status" aria-live="assertive" hidden></div>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261122-0953-df31350498';
-import { playSummon } from './fx.js?v=20261122-0953-df31350498';
-import { play, unlock } from './sound.js?v=20261122-0953-df31350498';
-import { CARD_POOL } from './data/cardpool.js?v=20261122-0953-df31350498';
-import { createGame, legalActions } from './engine/game.js?v=20261122-0953-df31350498';
-import { answerCandidates } from './ai/cpu.js?v=20261122-0953-df31350498';
+import { mountDuel } from './embed.js?v=20261126-1250-a6f77c141d';
+import { ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261126-1250-a6f77c141d';
+import { unlock } from './sound.js?v=20261126-1250-a6f77c141d';
+import { CARD_POOL } from './data/cardpool.js?v=20261126-1250-a6f77c141d';
+import { createGame, legalActions } from './engine/game.js?v=20261126-1250-a6f77c141d';
+import { answerCandidates } from './ai/cpu.js?v=20261126-1250-a6f77c141d';
 
 const host = document.getElementById('duel-host');
+// 名札の帯：試作版（/preview/）の時だけ出す。版の名前は version.json（作る時に書く）から読む
+if (location.pathname.indexOf('/preview/') >= 0) {
+  document.getElementById('pv-band').hidden = false;
+  document.getElementById('pv-sub').hidden = false; // t61：スマホの時は、帯の代わりに🎬の欄の見出しの下に出す
+  fetch('./version.json', { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).then(v => { if (v && v.ver) document.querySelectorAll('#pv-ver, .pv-ver').forEach(b => { b.textContent = `版${String(v.ver).slice(-4)}`; }); }).catch(() => {});
+}
 mountDuel(host, { demo: true });
 const root = host.shadowRoot;
 
-/* カード：本物のカードのデータ（名前で探す）。ラーの翼神竜は今のデッキに入っていないので、見た目用の仮のデータ */
-const byName = Object.fromEntries(Object.values(CARD_POOL).map(d => [d.name, d]));
-const RA = { name: 'ラーの翼神竜', kind: 'monster', frame: 'effect', level: 10, attribute: '神', race: '幻神獣族', atk: 0, def: 0, text: '' };
-const card = n => (n === RA.name ? RA : byName[n]);
-
-/* 並べる演出：[見出し, [ボタンの名前, カード名, 分類, 形]] 形＝ me（自分）／cpu（CPU側）／short（2回目）／allies（仲間あり）／alone（仲間なし）／how:◯◯（ふつうの召喚） */
-const LIST = [
-  ['👑 神・レベル10以上', '★5・約4秒', [
-    ['オシリスの天空竜', 'オシリスの天空竜', 'god', 'me', '赤'], ['オベリスクの巨神兵', 'オベリスクの巨神兵', 'god', 'me', '青'], ['ラーの翼神竜', RA.name, 'god', 'me', '金'],
-    ['邪神アバター', '邪神アバター', 'god', 'me', '闇・Lv10'], ['F・G・D', 'F・G・D', 'god', 'me', '闇・Lv12'], ['ユベル－Das Extremer Traurig Drachen', 'ユベル－Das Extremer Traurig Drachen', 'god', 'me', '闇・Lv12']]],
-  ['🌟 ロマンエース', '★4・約3秒', [
-    ['マジシャン・オブ・ブラックカオス', 'マジシャン・オブ・ブラックカオス', 'roman', 'me', '闇'], ['青眼の究極竜', '青眼の究極竜', 'roman', 'me', '光'], ['究極恐獣', '究極恐獣', 'roman', 'me', '地']]],
-  ['🏆 トップエース', '★4・約3秒', [
-    ['ブラック・マジシャン', 'ブラック・マジシャン', 'top', 'me', '闇'], ['青眼の白龍', '青眼の白龍', 'top', 'me', '光'], ['神獣王バルバロス', '神獣王バルバロス', 'top', 'me', '地']]],
-  ['⭐ エース', '★3・約2秒', [
-    ['人造人間－サイコ・ショッカー', '人造人間－サイコ・ショッカー', 'ace', 'me', '闇'], ['ユベル', 'ユベル', 'ace', 'me', '闇'], ['XYZ－ドラゴン・キャノン', 'XYZ－ドラゴン・キャノン', 'ace', 'me', '光'], ['バスター・ブレイダー', 'バスター・ブレイダー', 'ace', 'me', '地']]],
-  ['🤝 相棒（特別枠）', 'ふつうの召喚＋相棒の音・ひと言', [
-    ['サイレント・マジシャン LV４', 'サイレント・マジシャン LV４', 'partner', 'me', '光'], ['黄泉ガエル', '黄泉ガエル', 'partner', 'me', '水'],
-    ['サイバー・ダーク・エッジ', 'サイバー・ダーク・エッジ', 'partner', 'cpu', 'CPU側']]],
-  ['🤖 CPU側で出た時', '', [
-    ['人造人間－サイコ・ショッカー', '人造人間－サイコ・ショッカー', 'ace', 'cpu', 'エース・CPU'], ['青眼の白龍', '青眼の白龍', 'top', 'cpu', 'トップエース・CPU']]],
-  ['🔁 2回目から（短い演出）', '約0.8秒', [
-    ['ブラック・マジシャン', 'ブラック・マジシャン', 'top', 'short', '2回目'], ['サイレント・マジシャン LV４', 'サイレント・マジシャン LV４', 'partner', 'short', '2回目']]],
-  ['🃏 ふつうの召喚（切り札でない）', '', [
-    ['通常召喚', 'クィーンズ・ナイト', '', 'how:normal', 'クィーンズ・ナイト'], ['特殊召喚', 'クィーンズ・ナイト', '', 'how:special', 'クィーンズ・ナイト'],
-    ['セット', 'クィーンズ・ナイト', '', 'how:set', '裏側'], ['反転召喚', 'クィーンズ・ナイト', '', 'how:flip', 'クィーンズ・ナイト']]],
-];
-
-const list = document.getElementById('demoList');
-list.innerHTML = LIST.map(([h, sub, items], gi) => `<h2>${h} <small>${sub}</small></h2><div class="row">${items.map((it, i) => card(it[1]) ? `<button class="fx" type="button" data-g="${gi}" data-i="${i}">${it[0]}<small>${it[4]}</small></button>` : '').join('')}</div>`).join('');
-
+/* デモ版（先輩 11/24 16:11 に整理）：いちばん上に「🛑 相手の発動の確認画面」（全部入り）、次に「先輩に見てほしい見本」、下に開発用をたたむ */
+const list = document.getElementById('demoList'), secAck = document.getElementById('secAck'), secLook = document.getElementById('secLook'), secDev = document.getElementById('secDev');
 const sheet = document.getElementById('demo'), openBtn = document.getElementById('demoOpen');
 const setOpen = on => { sheet.hidden = !on; openBtn.hidden = on; };
 document.getElementById('demoClose').onclick = () => setOpen(false);
 openBtn.onclick = () => setOpen(true);
-
-/* 相棒の「仲間あり」：自分のデッキのモンスター2枚を、場の左右のマスに表側で並べる（見た目だけ。DEMOの盤面の中だけの話） */
-let alliesOn = [];
-function setAllies(on) {
-  const D = window.__duel, S = D && D.state; if (!S) return;
-  const P = S.players[0];
-  if (on && !alliesOn.length) {
-    const mons = P.deck.map(u => S.cards[u]).filter(c => CARD_POOL[c.code]?.kind === 'monster').slice(0, 2);
-    mons.forEach((c, k) => { const i = k ? 4 : 0; P.deck = P.deck.filter(u => u !== c.uid); P.mzone[i] = c.uid; Object.assign(c, { zone: 'mzone', index: i, faceUp: true, position: 'atk', controller: 0 }); alliesOn.push([c.uid, i]); });
-  } else if (!on && alliesOn.length) {
-    alliesOn.forEach(([u, i]) => { const c = S.cards[u]; P.mzone[i] = null; P.deck.push(u); Object.assign(c, { zone: 'deck', index: 0, faceUp: false }); });
-    alliesOn = [];
-  } else return;
-  D.load(S);
-}
-/* 帯を置いてよい範囲（本物の卓と同じ決め方：上の帯の下から、手札・ボタンの上まで） */
-function safeArea() {
-  const vh = innerHeight; let top = 0, bottom = vh;
-  const tb = root.querySelector('.top'); if (tb) top = Math.max(top, tb.getBoundingClientRect().bottom);
-  for (const q of ['#dock', '#tray', '#chain']) { const e = root.querySelector(q); if (!e || e.hidden) continue; const r = e.getBoundingClientRect(); if (r.height && r.top > vh * .35 && r.top < vh) bottom = Math.min(bottom, r.top); }
-  return { top, bottom };
-}
-/* 盤面のマス（自分の真ん中・CPUの真ん中）と、仲間の位置 */
-const zoneRect = key => root.querySelector(`#board [data-zone="${key}"]`)?.getBoundingClientRect();
 let busy = false;
-list.addEventListener('click', async e => {
-  const b = e.target.closest('button.fx'); if (!b || busy) return;
-  const [, , cls, kind] = LIST[b.dataset.g][2][b.dataset.i], d = card(LIST[b.dataset.g][2][b.dataset.i][1]);
-  unlock(); setOpen(false); busy = true; openBtn.hidden = true;
-  const droot = root.querySelector('.droot'); droot.classList.add('fx-busy', 'fx-stage'); // 本物の卓と同じく、演出の間はどこも押せない
-  setAllies(kind === 'allies');
-  await new Promise(r => setTimeout(r, 250)); // 欄が閉じて、盤面が描き直されてから
-  const cpu = kind === 'cpu', rect = zoneRect(cpu ? '1:mz:2' : '0:mz:2');
-  const how = kind.startsWith('how:') ? kind.slice(4) : 'normal';
-  const allies = kind === 'allies' ? [zoneRect('0:mz:0'), zoneRect('0:mz:4')].filter(Boolean) : [];
-  const ace = cls ? { cls, big: kind !== 'short', fallback: false, side: cpu ? 'CPU' : 'あなた' } : null;
-  const slow = document.getElementById('demoSlow').checked;
-  try {
-    await playSummon(root, { rect, d, atk: d.atk, def: d.def, pos: 'atk', how, faceDown: how === 'set', mats: [], allies, ace, safe: safeArea(),
-      // 相棒：2回目からも相棒の音（MASTERの決定：見た目はふつう、音とひと言で特別に。ひと言は初めての時だけ）
-      onLand: () => { if (cls === 'partner') play(['aceBond']); else if (ace && ace.big) play([cls === 'god' ? 'aceGod' : 'aceLand']); else play([how === 'set' ? 'set' : how === 'special' ? 'special' : 'summon']); },
-      mat: root.querySelector('.mat-skin'), speed: slow ? .5 : 1 });
-  } catch (err) { console.error(err); }
-  droot.classList.remove('fx-busy', 'fx-stage'); busy = false; setOpen(true);
-});
 /* ---------- 順番の確かめ（No.7）：場面を作って、本物の対戦と同じ流れで発動まで進める ----------
  * 発動の演出 → チェーンの効果 → 結果の移動（墓地へ）の順に見えるかを、直す前と直した後で同じボタンで比べる。
  * 「自分が発動」＝下の人（P1）、「相手が発動」＝上の人（P2。CPU側と同じ見え方） */
 const C = { judge: '4861', warn: '9008', valley: '5533', reborn: '4842', bomber: '7094', dmagic: '5752', bm: '4041', skilled: '5649', mirror: '4887', torrent: '5114', thunder: '5544', hole: '4342', vortex: '5217', pit: '5400', witch: '4580', a: '5503', b: '5504', c: '6471', d: '7193' };
+const PIT_STEP = (a, S) => a.type === 'activate' && S.cards[a.card].code === C.pit;
 const SCENES = [
-  ['ミラーフォース', '攻撃された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.mirror] }, mons: { [1 - p]: [C.a, C.b, C.c] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', a => a.type === 'attack', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.mirror] })],
-  ['ミラーフォース（ウィッチ）', 'ウィッチの効果で選び待ち（No.7）', p => ({ tp: 1 - p, set: { [p]: [C.mirror] }, mons: { [1 - p]: [C.witch, C.b, C.c] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', (a, S) => a.type === 'attack' && S.cards[a.attacker].code !== C.witch, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.mirror] })],
-  ['奈落の落とし穴', '専用演出なしの罠', p => ({ tp: 1 - p, set: { [p]: [C.pit] }, mons: { [1 - p]: [C.a] }, hand: { [1 - p]: [C.b] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.pit] })],
-  ['ディメンション・マジック', '処理でリリースして特殊召喚（見張りNo.）', p => ({ tp: p, hand: { [p]: [C.dmagic, C.bm] }, mons: { [p]: [C.skilled], [1 - p]: [C.b] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.dmagic] })],
-  ['ボマー・ドラゴン', '戦闘で破壊→墓地で発動して相手を破壊', p => ({ tp: 1 - p, mons: { [p]: [C.bomber], [1 - p]: [C.b] }, steps: [a => a.type === 'nextPhase' && a.to === 'battle', (a, S) => a.type === 'attack' && a.target !== null] })],
-  ['神の宣告にチェーンして神の宣告', 'チェーン2のカウンター罠（召喚は通る）', p => ({ tp: p, hand: { [p]: [C.c] }, set: { [p]: [C.judge], [1 - p]: [C.judge] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.judge && S.cards[a.card].controller === 1 - p, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.judge && S.cards[a.card].controller === p] })],
-  ['神の警告にチェーンして神の宣告', 'チェーン2のカウンター罠（召喚は通る）', p => ({ tp: p, hand: { [p]: [C.c] }, set: { [p]: [C.judge], [1 - p]: [C.warn] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.warn, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.judge] })],
+  // 奈落の落とし穴の専用演出（先輩 11/25）。余分な1体は、関係ないモンスターに出ないことを見るため
+  ['🕳️ 奈落：召喚', '通常召喚に。となりの1体は関係なし', p => ({ tp: 1 - p, set: { [p]: [C.pit] }, mons: { [1 - p]: [C.a] }, hand: { [1 - p]: [C.b] }, steps: [a => a.type === 'normalSummon', PIT_STEP] })],
+  ['🕳️ 奈落：反転召喚', '裏側守備から表になった時', p => ({ tp: 1 - p, set: { [p]: [C.pit] }, setMons: { [1 - p]: [C.c] }, steps: [a => a.type === 'flipSummon', PIT_STEP] })],
+  ['🕳️ 奈落：3体同時', '異次元からの帰還の特殊召喚に', p => ({ tp: 1 - p, set: { [p]: [C.pit], [1 - p]: ['6078'] }, mons: { [1 - p]: [C.a] }, ban: { [1 - p]: [C.a, C.b, C.c] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === '6078', PIT_STEP] })],
+  ['🕳️ 奈落：無効にされる', '神の宣告で止まる。穴は開かない', p => ({ tp: 1 - p, set: { [p]: [C.pit], [1 - p]: [C.judge] }, hand: { [1 - p]: [C.b] }, steps: [a => a.type === 'normalSummon', PIT_STEP, (a, S) => a.type === 'activate' && S.cards[a.card].code === C.judge && S.cards[a.card].controller === 1 - p] })],
   ['反転召喚（裏側守備から）', '横向きの裏から起き上がる（No.14）', p => ({ tp: p, setMons: { [p]: [C.c] }, steps: [(a, S) => a.type === 'flipSummon'] })],
-  ['死者蘇生（ネクロバレー）', '発動できて、処理で無効（No.10）', p => ({ tp: p, hand: { [p]: [C.reborn] }, field: { [1 - p]: C.valley }, gy: { [p]: [C.b] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.reborn] })],
-  ['激流葬', '召喚された時に発動', p => ({ tp: 1 - p, set: { [p]: [C.torrent] }, mons: { [1 - p]: [C.a, C.b] }, hand: { [1 - p]: [C.c] }, steps: [a => a.type === 'normalSummon', (a, S) => a.type === 'activate' && S.cards[a.card].code === C.torrent] })],
-  ['サンダー・ブレイク', '手札を1枚捨てて発動', p => ({ tp: p, set: { [p]: [C.thunder] }, hand: { [p]: [C.a] }, mons: { [1 - p]: [C.b, C.c] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.thunder] })],
-  ['ブラック・ホール', '場のモンスターを全部破壊', p => ({ tp: p, hand: { [p]: [C.hole] }, mons: { [p]: [C.a], [1 - p]: [C.b, C.c, C.d] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.hole] })],
-  ['ライトニング・ボルテックス', '手札を1枚捨てて発動', p => ({ tp: p, hand: { [p]: [C.vortex, C.a] }, mons: { [1 - p]: [C.b, C.c, C.d] }, steps: [(a, S) => a.type === 'activate' && S.cards[a.card].code === C.vortex] })],
 ];
 /** 場面の盤面を作る：決まったカードを手札・場に置き、3ターン目の tp のメインフェイズ1から始める */
 function sceneState(sc) {
-  const need = p => [...(sc.setMons?.[p] || []), ...(sc.set?.[p] || []), ...(sc.hand?.[p] || []), ...(sc.mons?.[p] || []), ...(sc.field?.[p] ? [sc.field[p]] : []), ...(sc.gy?.[p] || [])];
+  const need = p => [...(sc.ban?.[p] || []), ...(sc.deck?.[p] || []), ...(sc.setMons?.[p] || []), ...(sc.set?.[p] || []), ...(sc.hand?.[p] || []), ...(sc.mons?.[p] || []), ...(sc.field?.[p] ? [sc.field[p]] : []), ...(sc.gy?.[p] || [])];
   const fill = Array(20).fill(C.a);
   const s = createGame({ pool: CARD_POOL, decks: [0, 1].map(p => ({ main: [...fill, ...need(p)], extra: [] })), seed: 7, firstPlayer: sc.tp, shuffle: false });
   for (const p of [0, 1]) { const P = s.players[p]; for (const u of P.hand) Object.assign(s.cards[u], { zone: 'deck', faceUp: false }); P.deck.push(...P.hand); P.hand = []; P.normalSummonUsed = false; }
@@ -179,6 +240,7 @@ function sceneState(sc) {
     (sc.set?.[p] || []).forEach((code, i) => { const u = take(p, code); P.szone[i] = u; Object.assign(s.cards[u], { zone: 'szone', index: i, faceUp: false, position: null, controller: p, enteredTurn: 1 }); });
     (sc.hand?.[p] || []).forEach(code => { const u = take(p, code); P.hand.push(u); Object.assign(s.cards[u], { zone: 'hand', index: P.hand.length - 1, faceUp: false }); });
     if (sc.field?.[p]) { const u = take(p, sc.field[p]); P.fzone = u; Object.assign(s.cards[u], { zone: 'fzone', index: 0, faceUp: true, controller: p, enteredTurn: 1 }); }
+    (sc.ban?.[p] || []).forEach(code => { const u = take(p, code); P.banished.push(u); Object.assign(s.cards[u], { zone: 'banished', index: P.banished.length - 1, faceUp: true }); });
     (sc.gy?.[p] || []).forEach(code => { const u = take(p, code); P.gy.push(u); Object.assign(s.cards[u], { zone: 'gy', index: P.gy.length - 1, faceUp: true }); });
     P.deck.forEach((u, i) => { s.cards[u].index = i; });
   }
@@ -204,7 +266,7 @@ async function driveScene(sc) {
     await new Promise(r => setTimeout(r, 350));
   }
 }
-list.insertAdjacentHTML('beforeend', `<h2>🧭 順番の確かめ <small>発動 → 効果 → 墓地へ</small></h2><p class="note">押すと場面ができて、発動まで自動で進みます（本物の対戦と同じ流れ）。演出の順番を見る用です。</p><div class="row">${SCENES.map(([n, sub], i) => [0, 1].map(p => `<button class="fx" type="button" data-scene="${i}" data-p="${p}">${n}<small>${p ? '相手（上）が発動' : '自分（下）が発動'}・${sub}</small></button>`).join('')).join('')}</div>`);
+secLook.insertAdjacentHTML('beforeend', `<h2>🔍 先輩に見てほしい見本 <small>まだ確かめていないもの</small></h2><p class="note">押すと場面ができて、本物の対戦と同じ流れで進みます。</p><div class="row">${SCENES.map(([n, sub], i) => [0, 1].map(p => `<button class="fx" type="button" data-scene="${i}" data-p="${p}">${n}<small>${p ? '相手（上）が発動' : '自分（下）が発動'}・${sub}</small></button>`).join('')).join('')}</div>`);
 list.addEventListener('click', async e => {
   const b = e.target.closest('button[data-scene]'); if (!b || busy) return;
   e.stopImmediatePropagation();
@@ -213,7 +275,340 @@ list.addEventListener('click', async e => {
   try { window.__duel.load(sceneState(sc)); await driveScene(sc); await fxIdle(); } catch (err) { console.error(err); }
   busy = false; setOpen(true);
 }, true);
-document.getElementById('guideOpenDemo').onclick = () => { setOpen(false); window.__duel.openGuide(0); const g = root.querySelector('#guideDlg'); const back = new MutationObserver(() => { if (g.hidden) { back.disconnect(); setOpen(true); } }); back.observe(g, { attributes: true, attributeFilter: ['hidden'] }); };
+/* ---------- 不具合の番号ごとの場面（t19。MEMEの test/fixtures/scenes/ を、作る時に fixtures/scenes/ に写す） ----------
+ * 押すと、その不具合が起きた時と同じ盤面になる（見る用。席は場面の seat の人。相手のカードの見え方も本物と同じ）。
+ * オンラインの場面は、通信の続きは再生しないので「盤面だけ」。他の演出のボタンを押すと、ふだんの見え方に戻る */
+const SCENE_DIR = './fixtures/scenes/';
+let fixScenes = [];
+const sceneSeatOff = () => { if (fixScenes.on) { fixScenes.on = false; window.__duel.previewSeat(null); } };
+sheet.addEventListener('click', e => { if (e.target.closest('button.fx') && !e.target.closest('button[data-fix]')) sceneSeatOff(); }, true); // 欄（list の外側）で先に受ける：順番の確かめのボタンも止める前に戻す
+fetch(SCENE_DIR + 'index.json').then(r => (r.ok ? r.json() : [])).then(idx => {
+  fixScenes = (Array.isArray(idx) ? idx : []).filter(s => s.online); // No.10・No.18 は済み。オンラインの場面（開発用）だけ残す
+  if (!fixScenes.length) return;
+  const label = s => (/^\d/.test(String(s.no)) ? `No.${s.no}` : String(s.no));
+  secDev.insertAdjacentHTML('beforeend', `<h2>🌐 オンラインの場面 <small>開発用・盤面だけ</small></h2><p class="note">押すと、その時と同じ盤面になります（通信の続きは再生しません）。</p><div class="row">${fixScenes.map((s, i) => `<button class="fx" type="button" data-fix="${i}" title="${esc(s.note || '')}">${esc(label(s))}の場面<small>${esc(s.title || '')}${s.online ? '・盤面だけ' : ''}</small></button>`).join('')}</div>`);
+}).catch(() => { /* 場面のファイルが無い時（作る前の手元など）は、ボタンを出さない */ });
+function esc(t) { return String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+list.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-fix]'); if (!b || busy) return;
+  e.stopImmediatePropagation();
+  const s = fixScenes[b.dataset.fix]; if (!s) return;
+  busy = true;
+  try {
+    const sc = await (await fetch(SCENE_DIR + s.file)).json();
+    const st = structuredClone(sc.state);
+    st.askZone = [0, 1]; // 見る用の席（previewSeat）はオンラインと同じ形なので、マスを聞く相手も2人
+    setOpen(false);
+    window.__duel.previewSeat(Number(sc.seat) || 0, sc.online ? '相手' : 'CPU'); fixScenes.on = true;
+    window.__duel.load(st);
+  } catch (err) { console.error('場面を読みこめませんでした', s.file, err); setOpen(true); }
+  busy = false;
+}, true);
+/* ---------- t30：相手の発動の確認画面（DEMOだけ。MASTERが使い心地を見てから本物の卓に入れる） ----------
+ * 相手がカード・効果を発動したら、カードの絵・名前・効果の文・対象への矢印を大きく出して、［了承］を押すまで待つ。
+ * ［チェーンする］はいつも出す（いまその場で発動できるカードが無い時は灰色で押せない。自分の画面だけの話なので、相手には分からない）。
+ * チェーン2・3が重なった時は1つずつ確認画面を出し、処理は逆の順（3→2→1）で見せる。了承したら、ログのその行が光る。
+ * DEMOなので、盤面のカードは動かない（ログと画面の流れだけ） */
+const ACKS = [
+  { name: '奈落の落とし穴', sub: 'あなたの召喚に・対象1体', tp: 0, card: C.pit, arrow: true,
+    targets: ['0:mz:0'], tgt: 'あなたの「V－タイガー・ジェット」を破壊して除外する' },
+  { name: '死者蘇生', sub: '墓地のカード1枚が対象', tp: 1, card: C.reborn, mons: { 0: [C.a] }, gy: { 0: [C.b] }, arrow: true,
+    targets: ['pile:0:gy'], tgt: 'あなたの墓地の「X－ヘッド・キャノン」を、相手の場に特殊召喚する' },
+  { name: '聖なるバリア －ミラーフォース－', sub: 'あなたの攻撃宣言に・対象をとらない', tp: 0, card: C.mirror, mons: { 0: [C.c, C.b, C.a] }, arrow: false,
+    targets: ['0:mz:0', '0:mz:1', '0:mz:2'], tgt: '対象はとらない：あなたの攻撃表示のモンスターを全部破壊する' },
+  { name: 'ブラック・ホール', sub: '手札から・場のモンスター全部', tp: 1, card: C.hole, mons: { 0: [C.c], 1: [C.b] }, arrow: false,
+    targets: ['0:mz:0', '1:mz:0'], tgt: '対象はとらない：場のモンスターを全部破壊する' },
+  // ここから下は、本物の流れ（演出と合わせて流す）だけで動く場面（fxOnly）
+  { name: 'サイクロン', sub: '速攻魔法・あなたの召喚に・伏せカード1枚が対象', tp: 0, card: '4909', fxOnly: true, tgt: 'あなたの伏せカード1枚を破壊する' },
+  { name: '早すぎた埋葬', sub: '装備魔法・墓地のモンスター1体が対象', tp: 1, card: '4966', fxOnly: true, gy: { 1: [C.b] }, tgt: '相手の墓地の「X－ヘッド・キャノン」を特殊召喚して、このカードを装備する' },
+  { name: 'D-HERO デビルガイ', sub: '起動効果・あなたのモンスター1体が対象', tp: 1, card: '6658', fxOnly: true, mons: { 0: [C.c], 1: ['6658'] }, tgt: 'あなたの「V－タイガー・ジェット」を、2回目の相手のスタンバイフェイズまで除外する' },
+  { name: '墓守の番兵', sub: 'リバース効果・反転召喚で表になって発動', tp: 1, card: '5511', fxOnly: true, mons: { 0: [C.c] }, tgt: 'あなたの「V－タイガー・ジェット」を手札に戻す' },
+  { name: '暗黒ブラキ', sub: '誘発効果・召喚に成功した時', tp: 1, card: '10924', fxOnly: true, mons: { 0: [C.c] }, tgt: 'あなたの「V－タイガー・ジェット」を表側守備表示にする' },
+  { name: 'D-HERO ディアボリックガイ', sub: '墓地のモンスター効果・墓地から除外して', tp: 1, card: '6949', fxOnly: true, mons: { 0: [C.c] }, gy: { 1: ['6949'] }, flashEnd: 'oppMons', tgt: '相手のデッキから「D-HERO ディアボリックガイ」を特殊召喚する' },
+  { name: 'ブラック・ホール（無効にする）', sub: '［チェーンする］→神の宣告で止めると「なにっ！？」', tp: 1, card: C.hole, fxOnly: true, mons: { 0: [C.c], 1: [C.b] }, tgt: '対象はとらない：場のモンスターを全部破壊する' },
+];
+/* 場面の見出し（ACKS の番号） */
+const ACK_GROUPS = [['🪤 罠', [0, 2]], ['✨ 魔法', [1, 3, 4, 5, 10]], ['👹 モンスター効果', [6, 7, 8, 9]]];
+/** カットインのセリフ帳（docs/cutin-draft.json の写し。直す時は docs を直して、ここに写す。テストで同じかを確かめる） */
+const CUTIN = /*cutin-draft*/{"personas":[{"key":"hot","label":"熱血な少年"},{"key":"elite","label":"自信家のエリート"},{"key":"kaiser","label":"寡黙な強者"},{"key":"lady","label":"落ち着いた実力派の女性"},{"key":"girl","label":"元気な少女"}],"calls":{"quick":{"label":"速攻魔法を発動した時","hot":"速攻魔法、発動だぜ！","elite":"速攻魔法、発動！","kaiser":"速攻魔法、発動。","lady":"速攻魔法、発動よ！","girl":"速攻魔法、発動だよ！"},"spell":{"label":"魔法を発動した時（手札からも、伏せてあったものも）","hot":"魔法カード、発動だぜ！","elite":"魔法カード、発動！","kaiser":"魔法カード、発動。","lady":"魔法カード、発動よ！","girl":"魔法カード、発動だよ！"},"trap":{"label":"伏せてあった罠を発動した時","hot":"リバースカード、オープンだぜ！","elite":"リバースカード、オープン！","kaiser":"リバースカード、オープン。","lady":"リバースカード、オープンよ！","girl":"リバースカード、オープン！"},"monster":{"label":"場・手札のモンスターの効果を発動した時","hot":"モンスター効果、発動だぜ！","elite":"モンスター効果、発動！","kaiser":"モンスター効果、発動。","lady":"モンスター効果、発動よ！","girl":"モンスター効果、発動だよ！"},"grave":{"label":"墓地のモンスターの効果を発動した時","hot":"墓地のモンスターの効果、発動だぜ！","elite":"墓地のモンスターの効果、発動！","kaiser":"墓地のモンスターの効果を発動する。","lady":"墓地のモンスターの効果、発動よ！","girl":"墓地のモンスターの効果、発動だよ！"}},"negated":{"master":"なにっ！？","hot":"なにっ！？","elite":"なにぃっ！？","kaiser":"……なに。","lady":"なっ……！？","girl":"えぇっ！？"},"cards":[{"name":"融合","spec":"通常魔法","master":"見せてやるぜ！俺の切り札！","hot":"見せてやるぜ！\nオレの切り札を！","elite":"見せてやろう！\nこのオレ様の切り札を！","kaiser":"見せよう。\n俺の切り札を。","lady":"見せてあげるわ！\n私の切り札を！","girl":"見せてあげる！\n私の切り札だよ！"},{"name":"死者蘇生","spec":"通常魔法","master":"蘇れ！我のモンスターよ！！","hot":"蘇れ！\nオレのモンスター！！","elite":"蘇れ！\n我がしもべよ！！","kaiser":"蘇れ。\n俺のモンスターよ。","lady":"蘇って！\n私のモンスター！","girl":"お願い、蘇って！\n私のモンスター！"},{"name":"ハーピィの羽根帚","spec":"通常魔法","master":"全てやり直しだ！","hot":"全部まとめて\nやり直しだ！","elite":"全てやり直しだ！\n小細工は通用せん！","kaiser":"全て、やり直しだ。","lady":"全部、\nやり直しにさせてもらうわ！","girl":"ぜーんぶ\nやり直しだよ！"},{"name":"ブラック・ホール","spec":"通常魔法","master":"全てやり直しだ","hot":"全部飲みこめ！\nやり直しだ！","elite":"全てやり直しだ！\nひれ伏すがいい！","kaiser":"全て無に還す。\nやり直しだ。","lady":"全部まとめて、\nやり直しよ！","girl":"ぜんぶ吸いこんじゃえ！\nやり直しだよ！"},{"name":"ライトニング・ボルテックス","spec":"通常魔法","master":"くらえ！！","hot":"くらえーっ！！","elite":"消し飛べ！！","kaiser":"受けてみろ。","lady":"くらいなさい！！","girl":"くらえー！！"},{"name":"サイクロン","spec":"速攻魔法","master":"くらえ！","hot":"くらえ！","elite":"吹き飛べ！","kaiser":"吹き飛ばす。","lady":"くらいなさい！","girl":"えいっ、くらえ！"},{"name":"収縮","spec":"速攻魔法","master":"あまいぜ！","hot":"甘いぜ！","elite":"甘いな！","kaiser":"甘い。","lady":"甘いわね！","girl":"あまーい！"},{"name":"月の書","spec":"速攻魔法","master":"これはどうだ！","hot":"これはどうだ！","elite":"これならどうだ！","kaiser":"これはどうだ。","lady":"これは\nどうかしら？","girl":"これなら\nどう？"},{"name":"聖なるバリア －ミラーフォース－","spec":"通常罠","master":"残念だったな！くらえ！！","hot":"残念だったな！\nくらえ！！","elite":"残念だったな！\nその攻撃、そっくり返してやる！","kaiser":"残念だったな。\n受けてみろ。","lady":"残念だったわね！\nくらいなさい！","girl":"ざんねんでした！\nえいっ、くらえ！"},{"name":"奈落の落とし穴","spec":"通常罠","master":"落ちろ！！！","hot":"落ちろーっ！！","elite":"奈落の底へ\n落ちろ！！","kaiser":"落ちろ。","lady":"落ちなさい！","girl":"落ちちゃえー！"},{"name":"激流葬","spec":"通常罠","master":"つめがあまい！！！","hot":"詰めが甘いぜ！！","elite":"詰めが甘いわ！！","kaiser":"詰めが甘い。","lady":"詰めが\n甘いわね！","girl":"詰めが\nあまいよ！"},{"name":"次元幽閉","spec":"通常罠","master":"残念だったな！","hot":"残念だったな！","elite":"残念だったな！\n異次元で頭を冷やせ！","kaiser":"残念だったな。","lady":"残念だったわね！","girl":"ざんねんでした！"},{"name":"魔法の筒","spec":"通常罠","master":"そうはさせない！","hot":"そうはさせないぜ！","elite":"そうはさせん！\nその攻撃、貴様に返してやる！","kaiser":"そうはさせない。","lady":"そうは\nさせないわ！","girl":"そうは\nさせないよ！"},{"name":"リビングデッドの呼び声","spec":"永続罠","master":"蘇れ！","hot":"蘇れ！","elite":"蘇れ！\nまだ眠るには早い！","kaiser":"蘇れ。","lady":"蘇って！","girl":"起きて！\n蘇って！"},{"name":"神の宣告","spec":"カウンター罠","master":"そんなことを私が許すと思うのか！！","hot":"そんなこと、\nオレが許すと思うか！！","elite":"そんなことを、\nこのオレ様が許すと思うのか！！","kaiser":"俺が\n許すと思うか。","lady":"そんなこと、\n私が許すと思って？","girl":"そんなの、\n私がゆるさないもん！"},{"name":"神の警告","spec":"カウンター罠","master":"許さんぞ！！！！","hot":"許さねえぞ！！","elite":"許さんぞ！！","kaiser":"許さん。","lady":"許さないわ！","girl":"ぜったい\n許さないんだから！"}]}/*end*/;
+/** カットインを出す長さ（ミリ秒）：セリフあり／掛け声だけ／「なにっ！？」 */
+const CUTIN_MS = { line: 1700, call: 1200, neg: 1400 }; // セリフ → 掛け声の順に、それぞれこの長さ
+const personaGet = () => { const k = ackGet('demoPersona', 'hot'); return CUTIN.personas.some(x => x.key === k) ? k : 'hot'; };
+/** 掛け声の種類：速攻魔法／魔法（手札も伏せも）／伏せた罠／場・手札のモンスター効果／墓地のモンスター効果 */
+function cutKind(S, code) {
+  const d = CARD_POOL[code];
+  if (d.kind === 'spell') return d.subtype === '速攻' ? 'quick' : 'spell';
+  if (d.kind === 'trap') return 'trap';
+  const c = Object.values(S.cards).find(x => x.code === code && x.controller === 1 && (x.zone === 'gy' || x.zone === 'banished')) ;
+  const onField = Object.values(S.cards).some(x => x.code === code && x.controller === 1 && (x.zone === 'mzone' || x.zone === 'hand'));
+  return c && !onField ? 'grave' : 'monster';
+}
+/** カットインの各行が帯の幅に入りきらない時は、入るまで文字を小さくする（行の途中で折り返さないため） */
+function ackFitCut(el) {
+  for (const p of el.querySelectorAll('.in > p')) {
+    p.style.fontSize = ''; let fs = parseFloat(getComputedStyle(p).fontSize);
+    while (p.scrollWidth > p.clientWidth + 1 && fs > 10) { fs -= 1; p.style.fontSize = `${fs}px`; }
+  }
+}
+/** カットインを出して、終わるまで待つ。neg＝無効にされた時の「なにっ！？」 */
+async function ackCutin(S, code, neg = false) {
+  const el = document.getElementById('ackCut'), per = personaGet(), P = CUTIN.personas.find(x => x.key === per), name = CARD_POOL[code].name;
+  const line = neg ? '' : (CUTIN.cards.find(c => c.name === name) || {})[per] || '';
+  const call = neg ? CUTIN.negated[per] : CUTIN.calls[cutKind(S, code)][per];
+  // セリフ（改行どおり）→ 掛け声 の順に出す（CODE 11:51）。セリフ帳にないカードは掛け声だけ
+  let shown = false;
+  const show = (big, small) => { el.innerHTML = `<div class="band${shown ? ' stay' : ''}"><div class="in"><p class="who"><b>CPU</b>${esc(P.label)}</p>${big}<p class="card">${small}</p></div></div>`; shown = true; ackFitCut(el); }; // 2回目（セリフ→掛け声）は、帯は動かさず中身だけ替える
+  el.className = neg ? 'neg' : ''; el.hidden = false;
+  if (neg) { show(`<p class="call">${esc(call)}</p>`, `「${esc(name)}」の発動が無効になった`); await new Promise(r => setTimeout(r, CUTIN_MS.neg)); }
+  else {
+    if (line) { show(`<p class="line">${esc(line)}</p>`, `「${esc(name)}」`); await new Promise(r => setTimeout(r, CUTIN_MS.line)); }
+    show(`<p class="call">${esc(call)}</p>`, `「${esc(name)}」`); await new Promise(r => setTimeout(r, CUTIN_MS.call));
+  }
+  el.classList.add('out'); await new Promise(r => setTimeout(r, 220)); el.hidden = true; el.className = '';
+}
+/** 相手（CPU）がチェーンを重ねる前の「間」（ミリ秒）。先輩 11/23 18:02「ワンテンポおいてから」。本物の卓（t31・t33）も同じ長さにする */
+const OPP_THINK_MS = 1200;
+/* 確かめ用：カットインだけを出す（window.__demoCutin(カード番号, 無効か)） */
+window.__demoCutin = (code, neg = false) => ackCutin(window.__duel.state, code, neg);
+/** 相手がチェーンを重ねる前に、間をおいて「相手が考えています…」と出す */
+async function ackThink() { const el = document.getElementById('ackThink'); el.hidden = false; await new Promise(r => setTimeout(r, OPP_THINK_MS)); el.hidden = true; }
+const ackGet = (k, v) => { try { return localStorage.getItem(k) ?? v; } catch { return v; } };
+const ackPut = (k, v) => { try { localStorage.setItem(k, v); } catch { /* 保存できなくても動く */ } };
+secAck.insertAdjacentHTML('beforeend', `<h2>🛑 相手の発動の確認画面 <small>カットイン・確認画面・チェーン・演出（全部入り）</small></h2>
+<p class="note">相手がカードを発動した場面になって、確認画面が出ます。［了承］で効果の処理へ、［チェーンする］で自分のカードを重ねます（DEMOなので盤面のカードは動きません）。</p>
+<p class="note">相手（CPU）の性格：カットインのセリフと掛け声が変わります。</p>
+<div class="ack-persona" role="group" aria-label="相手の性格">${CUTIN.personas.map(x => `<button type="button" data-persona="${x.key}" aria-pressed="${personaGet() === x.key}">${esc(x.label)}</button>`).join('')}</div>
+<p class="note">確認画面とカットインは、相手が発動するたびに毎回出ます（先輩 11/26。チェーンできるカードが無い時も同じ形で、［チェーンする］は灰色）。</p>
+<label><input type="checkbox" id="ackMine"${ackGet('demoAckMine', '1') === '1' ? ' checked' : ''}> 自分の場に、伏せた「神の宣告」がある（チェーンできる。罠の場面と、死者蘇生・ブラック・ホールだけ）</label>
+${ACK_GROUPS.map(([h, ids]) => `<h3 class="ack-h">${h}</h3><div class="row">${ids.map(i => { const a = ACKS[i]; return `<button class="fx" type="button" data-ack="${i}">${a.name}<small>相手が発動・${a.sub}</small></button>`; }).join('')}</div>`).join('')}`);
+list.addEventListener('click', e => {
+  const b = e.target.closest('button[data-persona]'); if (!b) return;
+  e.stopImmediatePropagation(); ackPut('demoPersona', b.dataset.persona);
+  for (const x of list.querySelectorAll('button[data-persona]')) x.setAttribute('aria-pressed', String(x === b));
+}, true);
+list.addEventListener('change', e => {
+  if (e.target.id === 'ackMine') ackPut('demoAckMine', e.target.checked ? '1' : '0');
+});
+const ackLayer = document.getElementById('ackLayer'), ackPanel = document.getElementById('ackPanel'), ackSvg = document.getElementById('ackArrows');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const KIND = d => (d.kind === 'monster' ? `モンスター（${d.race || ''}・★${d.level ?? '？'}）` : `${d.kind === 'spell' ? '魔法' : '罠'}カード（${d.subtype || '通常'}${d.kind === 'spell' ? '魔法' : '罠'}）`);
+const WHO_T = p => (p === 1 ? '相手' : 'あなた');
+/** 対象のマス・山（墓地など）の位置 */
+const ackRect = k => (k.startsWith('pile:') ? root.querySelector(`#board [data-pile="${k.slice(5)}"]`) : root.querySelector(`#board [data-zone="${k}"]`))?.getBoundingClientRect();
+const wideMQ = matchMedia('(orientation: landscape) and (min-width: 640px)');
+/** カード風の大きなカード（HTMLで描くので、大きくしても文字がにじまない）。幅：高さ＝100：146 */
+const BC_RATIO = 100 / 146;
+function bigCard(d) {
+  const kind = d.kind || 'monster', mon = kind === 'monster', frame = mon ? (d.frame || 'effect') : kind;
+  const el = document.createElement('div'); el.className = `art bc f-${frame}`; el.setAttribute('role', 'img'); el.setAttribute('aria-label', d.name);
+  const attrCol = mon ? (ATTR[d.attribute] || '#6a6e7e') : kind === 'spell' ? '#0f6e56' : '#993556';
+  const mark = mon ? (RACE_CHAR[d.race] || String(d.race || '？').charAt(0)) : ((kind === 'spell' ? SPELL_MARK : TRAP_MARK)[d.subtype] || (kind === 'spell' ? '✦' : '◆'));
+  const sub = mon ? Array.from({ length: Math.min(12, d.level ?? 0) }, () => '<i></i>').join('') : `【${kind === 'spell' ? '魔法' : '罠'}カード】${esc((kind === 'spell' ? SPELL_MARK : TRAP_MARK)[d.subtype] || '')}`;
+  const type = mon ? `【${esc(d.race || '')}／${esc(FRAME_NAME[d.frame] || '効果')}】` : '';
+  el.innerHTML = `<div class="bc-top"><span class="bc-name">${esc(d.name)}</span><span class="bc-attr" style="background:${attrCol}">${esc(mon ? (d.attribute || '？') : kind === 'spell' ? '魔' : '罠')}</span></div>
+<div class="bc-sub">${sub}</div><div class="bc-art"><span>${esc(mark)}</span></div>
+<div class="bc-box">${type ? `<p class="bc-type">${type}</p>` : ''}<p class="bc-text">${esc(d.text || '')}</p>${mon ? `<p class="bc-stat">ATK/${d.atk ?? 0}　DEF/${d.def ?? 0}</p>` : ''}</div>`;
+  return el;
+}
+/** 確認画面の絵を、上半分（横の時は左半分）にちょうど入る大きさにする */
+function ackFit() {
+  const box = ackPanel.querySelector('.artArea'), art = ackPanel.querySelector('.art'); if (!box || !art) return;
+  const r = box.getBoundingClientRect(), k = art.classList.contains('bc') ? BC_RATIO : art.width / art.height, top = 44; // 上の「相手が発動」の帯の分をあける
+  let h = r.height - top - 12, w = h * k; if (w > r.width - 24) { w = r.width - 24; h = w / k; }
+  art.style.width = `${Math.max(40, w)}px`; art.style.height = `${Math.max(58, h)}px`; art.style.marginTop = `${top - 12}px`;
+  if (art.classList.contains('bc')) {
+    art.style.setProperty('--u', `${Math.max(40, w) / 100}px`);
+    // 名前：大きい字（カードの幅の8%）から始めて、1行に入るまで小さくする（長い名前も切れないように）
+    const n = art.querySelector('.bc-name'); let f = 8; n.style.fontSize = `calc(var(--u) * ${f})`;
+    while (n.scrollWidth > n.clientWidth + 1 && f > 3) { f -= .25; n.style.fontSize = `calc(var(--u) * ${f})`; }
+  }
+}
+/** 了承のあと、盤面の対象を一瞬光らせる（確認画面は画面いっぱいで盤面が隠れるので、矢印のかわり） */
+const ackFlashEl = document.getElementById('ackFlash');
+async function ackFlash(targets) {
+  const rs = (targets || []).map(ackRect).filter(r => r && r.width); if (!rs.length) return;
+  ackFlashEl.innerHTML = rs.map(r => `<rect class="ring" rx="10" x="${r.left - 5}" y="${r.top - 5}" width="${r.width + 10}" height="${r.height + 10}"/>`).join('');
+  await sleep(1300); ackFlashEl.innerHTML = '';
+}
+let ackNow = null;
+addEventListener('resize', () => { if (ackNow && !ackLayer.hidden) ackFit(); });
+/** 確認画面を出して、押されたボタン（'ok'／'chain'）を返す */
+function ackAsk(link, canChain) {
+  const d = CARD_POOL[link.code];
+  ackPanel.className = 'full'; ackSvg.innerHTML = '';
+  ackPanel.innerHTML = `<div class="artArea"><p class="who"><span class="tag${link.p ? '' : ' me'}">${WHO_T(link.p)}が発動</span><span class="chain">チェーン${link.no}</span></p><span class="artBox"></span></div>
+<div class="info"><div class="scroll"><h3 id="ackName">${esc(d.name)}</h3><p class="kind">${esc(KIND(d))}</p><p class="eff">${esc(d.text || '')}</p>${link.tgt ? `<p class="tgt">${esc(link.tgt)}</p>` : ''}</div>
+<p class="hint">👆 タップで進む（［チェーンする］以外のどこでも・Enter キーでも）</p>
+<button type="button" class="chainBtn"${canChain ? '' : ' disabled'}>チェーンする<small>${canChain ? '自分のカードを重ねる' : '今できるカードなし'}</small></button></div>`;
+  const art = bigCard(d); // カード風の大きなカード
+  ackPanel.querySelector('.artBox').replaceWith(art);
+  ackLayer.hidden = false; ackNow = link; ackFit();
+  return new Promise(res => {
+    const done = v => { removeEventListener('keydown', key); ackLayer.onclick = null; ackLayer.hidden = true; ackNow = null; res(v); };
+    const key = e => { if (e.key === 'Enter' && ready()) { e.preventDefault(); done('ok'); } };
+    addEventListener('keydown', key);
+    // 出てから0.6秒は、タップを受け付けない（続けてタップしていた指で、読まずに進まないように）
+    const t0 = performance.now(), ready = () => performance.now() - t0 >= 600;
+    setTimeout(() => ackPanel.classList.add('ready'), 600);
+    ackLayer.onclick = e => { if (e.target.closest('.chainBtn') || !ready()) return; done('ok'); };
+    ackPanel.querySelector('.chainBtn').onclick = e => { e.stopPropagation(); if (canChain && ready()) done('chain'); };
+  });
+}
+/* ---------- 演出と合わせて流す（先輩 11/23 07:24：本物の卓と同じ順で見たい） ----------
+ * 本物のルールの処理（engine）で進めて、今ある演出をそのまま使う。新しい演出は作らない。順番：
+ * 相手のカードの発動の演出 → 確認画面 → タップで了承 → 効果の演出 → 対象が黄色く光る。
+ * ［チェーンする］：自分の神の宣告の発動の演出 → 相手のチェーン3の発動の演出と確認画面 → 処理 3→2→1（それぞれの効果の演出）
+ * 相手の伏せカードに神の宣告をもう1枚置く：だれも重ねられない時、エンジンは発動と同時にチェーンを処理するので、チェーン3の確認画面を出す間がなくなるため（本物の卓では t31 で、了承まで処理を止める） */
+/** カード名 → 番号（ログの「〇〇を発動」の行から、どのカードかを知る） */
+const CODE_OF = Object.fromEntries(Object.entries(CARD_POOL).map(([c, d]) => [d.name, c]));
+const ACK_FX = [
+  { hand: { 0: [C.c] }, set1: [C.pit, C.judge, C.judge], pre: [a => a.type === 'normalSummon'] },
+  { hand: { 1: [C.reborn] }, set1: [C.judge, C.judge], pre: [] },
+  { set1: [C.mirror, C.judge, C.judge], pre: [a => a.type === 'nextPhase' && a.to === 'battle', a => a.type === 'attack'] },
+  { hand: { 1: [C.hole] }, set1: [C.judge, C.judge], pre: [] },
+  // サイクロン：あなたが召喚した時 → 相手が伏せたサイクロンを発動（あなたのターン）。あなたの伏せカード（激流葬）が対象
+  { hand: { 0: [C.c] }, set1: ['4909', C.judge, C.judge], set0: [C.torrent], pre: [a => a.type === 'normalSummon'] },
+  // 早すぎた埋葬：相手のターンに、手札から発動。相手の墓地のモンスターが対象
+  { hand: { 1: ['4966'] }, set1: [C.judge, C.judge], pre: [] },
+  // デビルガイ：相手のメインフェイズに、起動効果を発動。あなたのモンスターが対象（モンスターの効果なので、神の宣告ではチェーンできない＝灰色）
+  { set1: [C.judge, C.judge, '4909'], pre: [] },
+  // 墓守の番兵：相手が反転召喚 → リバース効果（必ず発動）。発動はエンジンが自分でチェーンに積む
+  { setMons1: ['5511'], set1: [C.judge, C.judge, '4909'], pre: [a => a.type === 'flipSummon'], auto: true },
+  // 暗黒ブラキ：相手が通常召喚 → 召喚に成功した時の誘発効果
+  { hand: { 1: ['10924'] }, set1: [C.judge, C.judge, '4909'], pre: [a => a.type === 'normalSummon'] },
+  // ディアボリックガイ：相手のメインフェイズに、墓地から除外して発動（デッキにもう1枚）。相手はサイクロンも伏せる（すぐ処理されないように）
+  { set1: [C.judge, C.judge, '4909'], deck1: ['6949'], pre: [] },
+  // 無効にする場面：あなたは伏せた神の宣告を持つ。［チェーンする］で止めても、相手は重ねてこない（noCounter）→「なにっ！？」
+  { hand: { 1: [C.hole] }, set1: ['4909'], set0: [C.judge], pre: [], noCounter: true },
+  // モンスター効果の3つは、相手の伏せカードにサイクロンも置く：だれも重ねられないと、エンジンが発動と同時に効果まで処理してしまい、確認画面が効果のあとになるため
+];
+/** 光らせるマス：対象をとる時はその対象。とらない時は、効果を受けるモンスター（奈落・ミラーフォースは自分のモンスター、ブラック・ホールは全部） */
+const ackKeyOf = (S, u) => { const c = S.cards[u]; if (!c) return null; if (c.zone === 'mzone') return `${c.controller}:mz:${c.index}`; if (c.zone === 'szone') return `${c.controller}:st:${c.index}`; if (c.zone === 'gy') return `pile:${c.owner}:gy`; return null; };
+/** 効果を受けそうなカード（対象をとる時はその対象） */
+function ackUids(S, L, code) {
+  if (L.targets && L.targets.length) return L.targets;
+  if (code === C.judge) { const prev = S.chain[S.chain.length - 2]; return prev ? [prev.uid] : []; }
+  const mons = p => S.players[p].mzone.filter(u => u != null && S.cards[u].faceUp && (code !== C.mirror || S.cards[u].position === 'atk'));
+  return code === C.hole ? [...mons(0), ...mons(1)] : mons(0);
+}
+/** カードの今のようす。前と比べて、効果で本当に変わったかを見る */
+const ackSig = (S, u) => { const c = S.cards[u]; return c ? [c.zone, c.index, c.controller, c.position, c.faceUp].join('|') : ''; };
+/** 光らせる候補：[カード, 今のマス, 今のようす, 対象をとるか] */
+const ackMark = (S, us, target) => us.map(u => [u, ackKeyOf(S, u), ackSig(S, u), target]);
+const ackMarkOf = (S, L, code) => ackMark(S, ackUids(S, L, code), !!(L.targets && L.targets.length));
+/** 本物の卓のログで、そのチェーンの発動の行を光らせる */
+function ackLitReal(no) {
+  const li = [...root.querySelectorAll('#log li')].reverse().find(l => l.textContent.includes(`（チェーン${no}）`));
+  if (li && li.animate) li.animate([{ background: '#f1c95b', color: '#262b3a' }, { background: '#f1c95b', color: '#262b3a', offset: .35 }, { background: 'transparent' }], { duration: 2400, easing: 'ease-out' });
+}
+async function runAckFx(a, fx) {
+  // 卓の「発動するか聞くタイミング」を、流している間だけ「いつも」にする（何もできない人の自動のパスで、チェーン3が確認画面より先に処理されないように）。終わったら元に戻す
+  const cm = root.querySelector('#chainMode'), cm0 = cm ? cm.value : null;
+  if (cm) cm.value = 'always';
+  // 流している間は、卓のふだんの「〇〇を発動／発動しない」の帯を隠す（聞き方が2つ続けて出ないように。CODE 07:40）
+  const hide = document.createElement('style'); hide.id = 'ackHideDock'; hide.textContent = '#dock { visibility: hidden !important }'; root.appendChild(hide);
+  try { await ackFxFlow(a, fx); } finally { if (cm) cm.value = cm0; hide.remove(); }
+}
+/** 演出を待つ長い上限（ミリ秒）。卓の「演出中」の印が残ったままになった時に、止まり続けないため */
+const FX_WAIT_MAX = 20000;
+/** 演出が終わる（「演出中」の印が続けて3回ない）まで待つ。上限まで終わらなかったら、知らせを残して先へ進む */
+const ackIdle = async () => {
+  const t0 = performance.now();
+  for (let calm = 0; calm < 3;) {
+    await new Promise(r => setTimeout(r, 120));
+    calm = root.querySelector('.droot.fx-busy') ? 0 : calm + 1;
+    if (calm < 3 && performance.now() - t0 > FX_WAIT_MAX) { console.warn('演出が終わらないまま、待つ上限になりました'); return; }
+  }
+};
+/** 無効にする専用演出（神の宣告・神の警告）が当たった時刻。sig.js が演出の時計で知らせる（遅い端末でも雷と合う） */
+const NEG_KEYS = { judgment: 1, warning: 1 };
+let negHitAt = -Infinity;
+window.addEventListener('fx-hit', e => { if (NEG_KEYS[e.detail?.key]) negHitAt = performance.now(); });
+/** 無効になった瞬間まで待つ：無効にしたカードの専用演出が当たる時。専用演出が出ない（切・演出が終わった）時は、すぐ */
+async function ackNegMoment(t0) {
+  for (const t1 = performance.now(); performance.now() - t1 < FX_WAIT_MAX;) {
+    if (negHitAt >= t0) return;
+    if (performance.now() - t1 > 250 && !root.querySelector('.droot.fx-busy')) return;
+    await new Promise(r => setTimeout(r, 30));
+  }
+}
+async function ackFxFlow(a, fx) {
+  // 足した場面（fxOnly）では、自分の伏せた神の宣告は置かない（対象を選ぶ途中で重ねると、卓の演出が止まることがあるため。チェーンは罠の場面で試せる）
+  const D = window.__duel, mine = document.getElementById('ackMine').checked && !a.fxOnly;
+  D.load(sceneState({ tp: a.tp, hand: fx.hand, set: { 0: [...(mine ? [C.judge] : []), ...(fx.set0 || [])], 1: fx.set1 }, setMons: fx.setMons1 ? { 1: fx.setMons1 } : undefined, deck: fx.deck1 ? { 1: fx.deck1 } : undefined, mons: a.mons, gy: a.gy }));
+  const steps = [...fx.pre, ...(fx.auto ? [] : [(x, S) => x.type === 'activate' && S.cards[x.card].code === a.card && S.cards[x.card].controller === 1])]; // auto：必ず発動する効果（エンジンが自分で積む）
+  const judgeOf = (L, S, p) => L.find(x => x.type === 'activate' && S.cards[x.card].code === C.judge && S.cards[x.card].controller === p);
+  // t53：相手の発動が無効になったカードを、新しいログの行から探す（いま処理しているチェーンの、ひとつ前のチェーンが無効になる）
+  const negated = () => {
+    let code = null;
+    for (const ln of D.state.log.slice(negAt)) {
+      const rz = /^チェーン(\d+)：/.exec(ln.text); if (rz) resolving = Number(rz[1]);
+      const ng = /^「(.+?)」の発動を無効にした/.exec(ln.text);
+      if (ng && chainOwner[resolving - 1] === 1) code = CODE_OF[ng[1]] || a.card;
+    }
+    negAt = D.state.log.length;
+    return code;
+  };
+  let negAt = D.state.log.length, negCut = null;
+  const chainOwner = {}, mons0 = new Set(D.state.players[1].mzone); let resolving = 0;
+  let think = false, k = 0, seen = 0, plan = '', flash = [], logAt = D.state.log.length, myLeft = mine, firstPick = null;
+  for (let guard = 0; guard < 90; guard++) {
+    await Promise.all([ackIdle(), negCut]); negCut = null; // 発動・効果の演出と「なにっ！？」が、どちらも終わるまで待つ（対象を選ぶ欄が出ている時も）
+    let S = D.state; if (!S || S.winner !== null) break;
+    // 新しい「〇〇を発動（チェーンN）」のログの行を見て、確認画面を出す。対象を選ぶ前でも出す
+    // （だれも重ねられない時、エンジンは対象を選んだのと同じ一手でチェーンを処理まで進めるので、チェーンが増えるのを待つと間に合わない）
+    const fresh = S.log.slice(logAt); logAt = S.log.length;
+    for (const ln of fresh) {
+      const m = /^P([12])：「(.+?)」(?:の効果)?を発動（チェーン(\d+)）/.exec(ln.text); if (!m) continue;
+      const p = Number(m[1]) - 1, no = Number(m[3]), code = CODE_OF[m[2]] || a.card; seen = Math.max(seen, no);
+      chainOwner[no] = p;
+      if (p !== 1) { ackLitReal(no); continue; }
+      const L = S.chain[no - 1] && S.cards[S.chain[no - 1].uid].code === code ? S.chain[no - 1] : null;
+      // 重ねられるか：選ぶ欄が出ている間は、伏せた神の宣告が残っていて、魔法・罠の発動の時だけ（神の宣告はモンスターの効果は無効にできない）
+      const canChain = S.pending ? (myLeft && CARD_POOL[code].kind !== 'monster') : legalActions(S).some(x => x.type === 'activate' && S.cards[x.card]?.controller === 0);
+      const keys = L ? ackUids(S, L, code).map(u => ackKeyOf(S, u)).filter(Boolean) : [], tgt = no === 1 ? a.tgt : 'あなたの「神の宣告」（チェーン2）の発動を無効にして破壊する';
+      if (no === 1 && L) flash = ackMarkOf(S, L, code); // カードと、今のようすを覚えておく
+      let v = 'ok';
+      await ackCutin(S, code); v = await ackAsk({ p: 1, code, no, tgt }, canChain); ackLitReal(no); // t53：発動の演出 → カットイン → 確認画面。先輩 11/26：設定で消せず、毎回必ず出す
+      if (v === 'chain') plan = 'mine';
+      if (no > 1 && v === 'ok' && keys.length) await ackFlash(keys); // チェーン3：何を無効にするのかを、盤面で光らせる
+    }
+    S = D.state;
+    // 確認画面の時にまだチェーンに積まれていなかった（対象を選ぶ前だった）時は、積まれたあとで光らせる対象を覚える
+    if (!flash.length && S.chain[0] && S.chain[0].player === 1) flash = ackMarkOf(S, S.chain[0], S.cards[S.chain[0].uid].code);
+    if (k >= steps.length && seen && !S.chain.length && !S.pending) break; // チェーンが全部処理された
+    if (plan === 'opp' && fx.noCounter) plan = 'done'; // この場面では、相手は重ねてこない
+    const L = legalActions(S);
+    let act = k < steps.length ? L.find(x => steps[k](x, S)) : null;
+    if (act) k++;
+    else if (plan === 'mine' && (act = judgeOf(L, S, 0))) { plan = 'opp'; myLeft = false; }      // 自分の神の宣告（チェーン2）
+    else if (plan === 'opp' && (act = judgeOf(L, S, 1))) { plan = 'done'; think = true; } // 相手がさらに神の宣告（チェーン3）。重ねる前に間をおく
+    else if (S.pending) { const c = answerCandidates(S, S.pending.request, 4), mineOf = v => { const u = Array.isArray(v) ? v[0] : v; return typeof u === 'number' && S.cards[u] && S.cards[u].controller === 0; }; const v = S.pending.request.player === 1 ? (c.find(mineOf) ?? c[0]) : c[0]; act = c.length ? { type: 'answer', value: v } : null; if (act && S.pending.request.player === 1 && !firstPick) firstPick = ackMark(S, [].concat(v).filter(u => typeof u === 'number' && S.cards[u]), true); } // 相手が最初に選んだもの（対象）を覚えておく
+    else if (S.window && S.window.respondDue && !S.chain.length) act = { type: 'offer' };
+    else act = L.find(x => x.type === 'offer') || L.find(x => x.type === 'pass');
+    if (!act) break;
+    if (think) { think = false; await ackThink(); } // 相手がチェーンを重ねる前の「間」
+    const actAt = performance.now();
+    try { D.act(act); } catch (err) { console.warn('確認画面の場面を進められませんでした', act, err); break; }
+    // 先輩 11/25：「なにっ！？」は無効になった瞬間に出す。演出は止めずに流し、次へ進むのは両方が終わってから
+    { const code = negated(); if (code) negCut = ackNegMoment(actAt).then(() => ackCutin(D.state, code, true)).catch(err => console.error(err)); }
+    await new Promise(r => setTimeout(r, 350));
+  }
+  await Promise.all([ackIdle(), negCut]); // 効果の演出が終わるまで
+  if (a.flashEnd === 'oppMons') flash = D.state.players[1].mzone.filter(u => u != null && !mons0.has(u)).map(u => [u, ackKeyOf(D.state, u), '', true]); // 新しく特殊召喚されたモンスター
+  if (!flash.length && firstPick) flash = firstPick; // チェーンがすぐ処理された時は、相手が選んだ対象を光らせる
+  // 対象のカードが動いた時（死者蘇生で相手の場へ、など）は、いまの場所を光らせる。場から離れた時（除外など）は、元のマス
+  // 無効にされた時など、変わらなかったカードは光らせない。対象をとらない効果は、変わる前のマス
+  await ackFlash(flash.filter(([u, , sig]) => ackSig(D.state, u) !== sig).map(([u, x, , target]) => (target && ackKeyOf(D.state, u)) || x).filter(Boolean));
+}
+list.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-ack]'); if (!b || busy) return;
+  e.stopImmediatePropagation();
+  unlock(); setOpen(false); openBtn.hidden = true; busy = true;
+  try { await runAckFx(ACKS[b.dataset.ack], ACK_FX[b.dataset.ack]); } catch (err) { console.error(err); ackLayer.hidden = true; }
+  busy = false; setOpen(true);
+}, true);
+document.getElementById('guideOpenDemo').onclick =() => { setOpen(false); window.__duel.openGuide(0); const g = root.querySelector('#guideDlg'); const back = new MutationObserver(() => { if (g.hidden) { back.disconnect(); setOpen(true); } }); back.observe(g, { attributes: true, attributeFilter: ['hidden'] }); };
 // ?guide を付けて開いた時は、はじめから操作ガイドを開く
 if (new URLSearchParams(location.search).has('guide')) setTimeout(() => document.getElementById('guideOpenDemo').click(), 300); else setOpen(true);
 </script>

@@ -4,17 +4,17 @@
 // - 部屋の部品（Room）は、サイトの room().join(name) と同じ形（presence・onPeers・leave）。
 //   本番ではサイトの Firestore の部屋を、試す時は下の「手元の部屋」を渡す
 // - 2台とも全部の情報を持つ作り（MASTERの決定）。相手の手札・伏せカードを画面で見せないのは画面の仕事
-import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261122-0953-df31350498';
-import { answerCandidates } from '../ai/cpu.js?v=20261122-0953-df31350498';
-import { CARD_POOL } from '../data/cardpool.js?v=20261122-0953-df31350498';
-import { DECKS } from '../data/decks.js?v=20261122-0953-df31350498';
+import { createGame, applyAction, actorOf, legalActions } from '../engine/game.js?v=20261126-1250-a6f77c141d';
+import { answerCandidates } from '../ai/cpu.js?v=20261126-1250-a6f77c141d';
+import { CARD_POOL } from '../data/cardpool.js?v=20261126-1250-a6f77c141d';
+import { DECKS } from '../data/decks.js?v=20261126-1250-a6f77c141d';
                                                                       
 
 /* ===================== 部屋（サイトの room() と同じ形） ===================== */
                                                                                           
                        
                                          
-                                                                                       
+                                                                                                            
                             
  
 
@@ -44,14 +44,23 @@ export function tabRoom(name        , uid        )       {
   const docs = new Map                                           ();
   const subs = new Set            ();
   const tellAll = () => subs.forEach(f => f());
+  // 「部屋の様子を教えて」（ask）の聞き直し（t12）：①答えが来るまで、少しずつ聞き直す（相手のタブが裏で眠っていて、最初の1回を聞きのがすことがある）
+  // ②知らないタブ（戻ってきた相手）から知らせが来たら、1回聞き直す（自分の前の欄を、そのタブが持っているかもしれない）
+  const ask = () => { try { ch.postMessage({ uid, ask: true, at: Date.now() }); } catch { /* 閉じたあと */ } };
+  const known = new Set        ();
+  let answered = false, tries = 0, ready                      = null;
+  const again = setInterval(() => { if (answered || ++tries > 10) { clearInterval(again); return; } ask(); }, 1000);
+  (again                                     ).unref?.();
   ch.onmessage = (e              ) => {
     const m = e.data                                                                            ;
+    if (m.uid !== uid && !m.ask && !m.leave) { if (!known.has(m.uid)) { known.add(m.uid); if (answered) ask(); } if (!answered) { answered = true; clearInterval(again); const f = ready; ready = null; if (f) setTimeout(f, 50); } }
+    if (m.leave) known.delete(m.uid);
     // 入ってきたタブに、知っている欄を全部送り返す（頼んできたタブ自身の前の欄も。読み直したタブが前の操作を取り戻せるように＝Firestore と同じ形。💜MIMIの頼み）
-    if (m.ask) { for (const [id, d] of docs) ch.postMessage({ uid: id, p: d.p, at: d.updatedAt }); return; }
+    if (m.ask) { for (const [id, d] of docs) ch.postMessage({ uid: id, p: d.p, at: d.updatedAt }); if (m.uid !== uid && ready) { const f = ready; ready = null; setTimeout(f, 200); } return; } // 同じ時に開いたタブ（まだ欄が無い）がいる：待たずに始める
     if (m.leave) docs.delete(m.uid); else docs.set(m.uid, { p: m.p, updatedAt: m.at });
     tellAll();
   };
-  ch.postMessage({ uid, ask: true, at: Date.now() }); // 先にいる人に、今の中身をもう一度送ってもらう
+  ask(); // 先にいる人に、今の中身をもう一度送ってもらう
   return {
     presence: async p => {
       const d = { p: JSON.parse(JSON.stringify(p ?? {})), updatedAt: Date.now() };
@@ -60,16 +69,20 @@ export function tabRoom(name        , uid        )       {
     onPeers: cb => {
       const f = () => cb({ peers: [...docs].map(([id, d]) => ({ uid: id, isMe: id === uid, presence: d.p, updatedAt: d.updatedAt })) });
       // 最初の知らせは、ほかのタブからの送り返しを少し待ってから（読み直した時に、自分の前の欄が届いてから始めるため）
-      const first = setTimeout(() => { subs.add(f); f(); }, 200);
-      return () => { clearTimeout(first); subs.delete(f); };
+      // 答えが来たら少しあとに、来なければ1.2秒で始める（だれもいない部屋に初めて入った時は、待たせすぎない）
+      let started = false;
+      const go = () => { if (started) return; started = true; clearTimeout(first); subs.add(f); f(); };
+      const first = setTimeout(go, answered ? 200 : 1200);
+      if (!answered) ready = go;
+      return () => { started = true; clearTimeout(first); subs.delete(f); };
     },
-    leave: async () => { docs.delete(uid); ch.postMessage({ uid, leave: true, at: Date.now() }); ch.close(); },
+    leave: async () => { clearInterval(again); docs.delete(uid); ch.postMessage({ uid, leave: true, at: Date.now() }); ch.close(); },
   };
 }
 
 /** お試し版・本番を作る時（scripts/build.mjs）に、できあがった .js ぜんぶの指紋をここに書きこむ（手元では 'dev'）。
  *  画面（app.js）にも同じ指紋が書かれるので、卓を開いた時に「app.js の指紋」とこれが同じか比べる（ちがえばページを読み直す） */
-export const BUILD_FP = '20261122-0953-df31350498';
+export const BUILD_FP = '20261126-1250-a6f77c141d';
 
 /* ===================== エンジンの指紋 ===================== */
 /**
@@ -99,6 +112,21 @@ export function engineFingerprint()         {
  * 盤面の印：盤面の大事な所（LP・手札・場・墓地・除外・番・フェイズ・乱数の位置・聞く相手 askZone）から作る短い文字。
  * 2台が同じ数の操作を入れた時に、相手の印と比べて、ちがえばすぐ「ずれ」と分かる（ずれたまま対戦が進まないように）
  */
+/** 届いた操作の項目の並び順を、エンジンの今できる操作の並び順にそろえる（t20）。
+ *  サイトの部屋（Firestore）は、欄の中の項目をアルファベット順に並べかえて返す（{type,card,tributes} → {card,tributes,type}）。
+ *  エンジンは並び順まで見て「今できる操作か」を比べるので、そのままだと子の召喚が親の側で「モンスターゾーンに空きがありません」になっていた */
+export function inOrder(s           , a        )         {
+  if (!a || s.pending || a.type === 'surrender' || a.type === 'answer') return a;
+  const key = (x        ) => { const o = { ...x }                           ; delete o.zone; if (Array.isArray(o.tributes)) o.tributes = [...(o.tributes            )].sort((m, n) => m - n); return JSON.stringify(Object.keys(o).sort().map(k => [k, o[k]])); };
+  const k = key(a);
+  const x = legalActions(s).find(l => l.type === a.type && key(l) === k);
+  return x ? ({ ...x, ...a }          ) : a;
+}
+
+/** 見張りの時計がこれより長く止まっていたら「この端末が寝ていた」とみなして、待ち時間を数え直す。
+ *  裏に回ったタブの時計は1分に1回まで間引かれる（Chrome）ので、それより長くする。「いなくなった」までの時間の半分より長くはしない（t20：間引きのたびに数え直して、3時間たっても「いなくなった」にならなかった） */
+export const SLEPT_MS = 90000;
+
 export function stateCheck(s           )         {
   const pl = s.players.map(P => [P.lp, P.hand, P.deck.length, P.mzone, P.szone, P.fzone, P.gy, P.banished]);
   const field = Object.values(s.cards).filter(c => c.zone === 'mzone' || c.zone === 'szone' || c.zone === 'fzone').map(c => [c.uid, c.code, c.faceUp, c.position, c.controller]);
@@ -144,6 +172,8 @@ export function stateCheck(s           )         {
               
                                                   
                                                 
+                                                                     
+                                          
  
 
 /** 公式試合／練習（電卓と同じく親が決める） */
@@ -205,6 +235,10 @@ export class DuelLink {
           initialKey                = null; // 入った時に部屋にあった相手の欄の目じるし（''＝無かった）
           lastJ = ''; // 返事をした相手の合図
           live = false; // 相手の欄が、入った後に一度でも変わったか（＝今そこにいる相手か）
+          rebuilt = 0; // 写しから組み立て直した回数（くり返さないように）
+          got           = []; // 相手の操作のうち、盤面に入れた分（echo に写す）
+          lastHeard = 0; // 部屋の知らせ（onPeers）を最後に受け取った時刻
+          relistenAt = 0; // 最後に聞き直した時刻
           lastBeat = 0; // 自分の心拍が最後に動いた時刻（スマホが裏に回って止まっていたかを見る）
           round = 0; // 何回目の対戦か（もう一度で1つ増える）
           toldChooser = 0; // 決める人の知らせを出した回
@@ -225,12 +259,28 @@ export class DuelLink {
     this.seat = o.host ? 0 : 1;
     this.doc.j = Math.random().toString(36).slice(2, 10);
     // 自分の欄は、最初に部屋の中身を読んでから書く（つながり直しの時に、前の操作を消さないため）
-    this.unsub = o.room.onPeers(ch => this.onPeers(ch.peers));
+    this.unsub = this.listen();
     // いることを知らせる＋相手がいなくなっていないか見る
     this.beat = setInterval(() => this.heartbeat(), o.heartbeatMs ?? 30000);
     (this.beat                                     ).unref?.(); // テストでプログラムが終われなくならないように（画面では何もしない）
     this.watch = setInterval(() => this.watchAway(), Math.min(1000, o.heartbeatMs ?? 30000));
     (this.watch                                     ).unref?.();
+  }
+
+  /** 部屋を聞く。聞くのがエラーで止まったら、3秒後に聞き直す（Firestore の Listen は、エラーのあとは二度と知らせてこない） */
+          listen()             {
+    this.lastHeard = Date.now();
+    return this.o.room.onPeers(ch => { this.lastHeard = Date.now(); this.onPeers(ch.peers, !!ch.fromCache); }, () => {
+      if (this.stopped) return;
+      const t = setTimeout(() => this.relisten(), 3000); (t                                     ).unref?.();
+    });
+  }
+  /** 聞き直す（t20：サイトで Listen のつながりが切れたまま、相手の操作が3時間届かなかった） */
+          relisten() {
+    if (this.stopped) return;
+    this.relistenAt = Date.now();
+    try { this.unsub(); } catch { /* もう止まっている */ }
+    this.unsub = this.listen();
   }
 
   /** 30秒ごと：いることを自分の欄に書く */
@@ -247,7 +297,7 @@ export class DuelLink {
     const now = Date.now(), iv = Math.min(1000, this.o.heartbeatMs ?? 30000), away = this.o.awayMs ?? 180000;
     // スマホが裏に回る・画面が暗くなるなどで、自分の時計が止まっていた時は、戻ったばかりで相手の新しい知らせがまだ届いていない。
     // その時に「3分たった」と決めつけないよう、待ち時間を今から数え直す（接続が毎回切れる件の対策）
-    if (this.lastBeat && now - this.lastBeat > Math.max(iv * 2.5, 5000)) { this.lastSeen = now; if (this.chooserAt) this.chooserAt = now; }
+    if (this.lastBeat && now - this.lastBeat > Math.max(iv * 2.5, Math.min(SLEPT_MS, away / 2))) { this.lastSeen = now; if (this.chooserAt) this.chooserAt = now; }
     this.lastBeat = now;
     // 先攻・後攻を決める人が、選ばないまま「いなくなった」と同じ時間（3分）たった：その対戦は始めずに終わる（記録しない）
     const waitingPick = this.o.chooseFirst && this.toldChooser === this.round + 1 && (!this.state || this.state.winner !== null);
@@ -259,6 +309,11 @@ export class DuelLink {
       return;
     }
     if (this.doc.end) return;
+    // 相手は30秒ごとに欄を書くので、2回半ぶん何も変わらなければ、こちらの聞くつながりが切れているかもしれない：聞き直す（1分半に1回まで）
+    const quiet = Math.max((this.o.heartbeatMs ?? 30000) * 2.5, 5000);
+    // （相手がいる時は相手の欄の変わり目で見る。自分の書きこみでも知らせは来るので、知らせの時刻だけでは切れたと分からない）
+    const heard = this.live ? this.lastSeen : this.lastHeard;
+    if (this.joined && now - heard > quiet && now - this.relistenAt > quiet) this.relisten();
     if (this.state && this.lastSeen && now - this.lastSeen > away && this.giveUpSent && this.state.winner === null) {
       // 子が降参を送ったまま、親がいなくなった：自分の降参で終わる（親が戻れば、親も子の降参を入れて同じ答えになる。CODE 02:21 でこの形に決定）
       this.giveUpNow();
@@ -276,7 +331,7 @@ export class DuelLink {
           retry                                       = null;
           write() {
     if (this.stopped && !this.doc.end) return;
-    if (this.state) this.doc.chk = { round: this.round, n: this.doc.ops.length + this.applied, h: stateCheck(this.state) };
+    if (this.state) { this.doc.chk = { round: this.round, n: this.doc.ops.length + this.applied, h: stateCheck(this.state) }; this.doc.echo = { round: this.round, ops: this.got }; }
     let p                  ;
     try { p = this.o.room.presence(this.doc); } catch (e) { p = Promise.reject(e); }
     p.catch(() => {
@@ -286,10 +341,22 @@ export class DuelLink {
     });
   }
 
+  /** ずれを見つけた：知らせて止まる。自分の欄に「ずれで終わり」を書いて、相手の画面も同じ知らせで止める（記録はしない） */
+          desync(detail        ) {
+    if (this.stopped) return;
+    this.doc.end = { winner: null, reason: 'desync' }; this.doc.round = this.round;
+    this.write();
+    this.o.on({ type: 'desync', detail });
+    this.stop();
+  }
+
           stop() { if (this.retry) { clearTimeout(this.retry); this.retry = null; } this.stopped = true; if (this.beat) { clearInterval(this.beat); this.beat = null; } if (this.watch) { clearInterval(this.watch); this.watch = null; } if (this.timer) { clearTimeout(this.timer); this.timer = null; } }
 
-          onPeers(peers        ) {
+          onPeers(peers        , fromCache = false) {
     if (this.stopped) return;
+    // t22：サイトは Firestore の「端末に覚えておく機能」を使うので、読み直した直後の最初の知らせは、端末に覚えていた古い中身のことがある。
+    // 古い自分の欄を「続き」として引きついで書きもどすと、相手の側では操作が減って見えて「ずれ」になる。入る時は、サーバーからの知らせを待つ
+    if (!this.joined && fromCache) return;
     const keyOf = (d         ) => [d.at, d.ops?.length, d.ready, d.rematchAsk, d.start?.round, d.round, d.end ? JSON.stringify(d.end) : ''].join('|');
     if (!this.joined) {
       const o0 = peers.find(p => !p.isMe && (p.presence                  )?.app === 'ygo-duel');
@@ -299,11 +366,18 @@ export class DuelLink {
       const mine = peers.find(p => p.isMe)?.presence                       ;
       // ただし、古い欄（いなくなったと決まる時間より前に書かれたもの）は前の対戦の残りなので引きつがない
       const fresh = (d          ) => !!d && Date.now() - (d.at ?? 0) < (this.o.awayMs ?? 180000);
-      if (mine && mine.app === 'ygo-duel' && mine.v === this.o.version && mine.end?.reason !== 'away' && mine.end?.reason !== 'nochoose' && (mine.start || mine.ops?.length) && fresh(mine)) this.doc = { ...mine, ops: [...(mine.ops ?? [])], j: this.doc.j };
+      if (mine && mine.app === 'ygo-duel' && mine.v === this.o.version && mine.end?.reason !== 'away' && mine.end?.reason !== 'nochoose' && mine.end?.reason !== 'desync' && (mine.start || mine.ops?.length) && fresh(mine)) {
+        this.doc = { ...mine, ops: [...(mine.ops ?? [])], j: this.doc.j };
+        // 自分の欄が古い時（相手は、自分の欄にあるより多くの自分の操作を、もう入れている）は、相手の写しから自分の操作を取り直す（t25）
+        const e = (o0?.presence                       )?.echo;
+        if (e && e.round === this.doc.round && (e.ops?.length ?? 0) > this.doc.ops.length) this.doc.ops = [...e.ops];
+      }
       this.doc.at = Date.now();
       this.lastBeat = Date.now();
       this.write();
     }
+    // 自分の欄が部屋から消えていたら（サイトの片づけなど。t25）、すぐ書き直す（相手から、こちらが消えて見えないように）
+    if (!peers.some(p => p.isMe) && (this.doc.ops.length || this.state)) this.write();
     const other = peers.find(p => !p.isMe && (p.presence                  )?.app === 'ygo-duel');
     if (!other) return;
     const them = other.presence           ;
@@ -322,6 +396,8 @@ export class DuelLink {
     if (key !== this.seenKey || !this.lastSeen) { this.seenKey = key; this.lastSeen = Date.now(); }
     // 相手が「いなくなった」と決めた印は、今の対戦のものだけ信じる（前の対戦の印が残っていても、次の対戦は止めない）
     if (them.end?.reason === 'away' && this.state && them.round === this.round) { this.o.on({ type: 'away' }); this.stop(); return; }
+    // 相手の画面が「ずれ」で止まった（t20：今までは、こちらは3分待たされて「いなくなった」で終わっていた）
+    if (them.end?.reason === 'desync' && this.state && them.round === this.round && !this.stopped) { this.o.on({ type: 'desync', detail: '相手の画面で、2人の盤面がずれた' }); this.stop(); return; }
     // 先攻・後攻を選ばないまま3分（相手の側が先に気づいた時）
     if (them.end?.reason === 'nochoose' && this.o.chooseFirst && this.toldChooser === this.round + 1 && them.round === this.round) { this.o.on({ type: 'away', reason: 'nochoose' }); this.stop(); return; }
     if (them.v !== this.o.version || (them.fp && them.fp !== this.doc.fp) || (them.b && them.b !== this.doc.b)) { this.o.on({ type: 'version', mine: this.o.version, theirs: them.v }); return; }
@@ -332,7 +408,7 @@ export class DuelLink {
     }
     // もう一度：親が新しい約束（回数が1つ大きい）を書いたら、子は前の対戦を片づけて作り直す
     if (!this.o.host && them.start && them.start.round > this.round && this.state) {
-      this.state = null; this.applied = 0; this.doc.ops = []; this.giveUpSent = false; delete this.doc.end;
+      this.state = null; this.applied = 0; this.got = []; this.doc.ops = []; this.giveUpSent = false; delete this.doc.end;
     }
     // 最初の約束：親が書く。子は親の約束を読んで同じ盤面を作る
     if (!this.state) {
@@ -359,31 +435,41 @@ export class DuelLink {
         if (skipGuest) { if (this.o.host && ti === gi) { ti++; continue; } if (!this.o.host && mi === gi) { mi++; continue; } }
         const meNow = actorOf(s) === this.seat;
         // 降参は番に関係なく入る
-        if (!meNow && mine[mi]?.type === 'surrender') { s = applyAction(s, mine[mi++]); continue; }
-        if (meNow && theirs[ti]?.type === 'surrender') { s = applyAction(s, theirs[ti++]); continue; }
-        if (meNow) { if (mi >= mine.length) break; s = applyAction(s, mine[mi++]); }
-        else { if (ti >= theirs.length) break; s = applyAction(s, theirs[ti++]); }
+        if (!meNow && mine[mi]?.type === 'surrender') { s = applyAction(s, inOrder(s, mine[mi++])); continue; }
+        if (meNow && theirs[ti]?.type === 'surrender') { s = applyAction(s, inOrder(s, theirs[ti++])); continue; }
+        if (meNow) { if (mi >= mine.length) break; s = applyAction(s, inOrder(s, mine[mi++])); }
+        else { if (ti >= theirs.length) break; s = applyAction(s, inOrder(s, theirs[ti++])); }
       }
-      this.state = s; this.applied = ti; this.round = st.round;
+      this.state = s; this.applied = ti; this.got = theirs.slice(0, ti); this.round = st.round;
       if (this.doc.round !== st.round) { this.doc.round = st.round; this.write(); }
       this.o.on({ type: 'start', state: this.state, seat: this.seat, round: st.round, mode: st.mode, resumed: mi + ti > 0 });
+    }
+    // 相手の写しに、自分の欄より多くの自分の操作がある：この端末の自分の欄から操作が消えている（黙って止まらずに「ずれ」と知らせる。t25）
+    const te = them.echo;
+    if (te && this.state && te.round === this.round && them.round === this.round && (te.ops?.length ?? 0) > this.doc.ops.length) {
+      // 写しの頭が自分の欄と同じなら、写しから自分の操作を取り直して、盤面を組み立て直す（読み直した直後に古い覚えで入ってしまった時）。ちがえば「ずれ」
+      const same = this.doc.ops.every((o, i) => JSON.stringify(Object.entries(o).sort()) === JSON.stringify(Object.entries(te.ops[i] ?? {}).sort()));
+      if (!same || this.rebuilt >= 2) { this.desync('自分の送った操作が、この端末の欄から消えていた'); return; }
+      this.rebuilt++;
+      this.doc.ops = [...te.ops]; this.state = null; this.applied = 0; this.got = []; this.giveUpSent = false;
+      this.onPeers(peers); return;
     }
     // 相手の操作を、まだ入れていない分だけ順に入れる
     const ops = them.round === this.round ? (them.ops ?? []) : [];
     while (this.applied < ops.length && this.state && this.state.winner === null) {
       const a = ops[this.applied];
       // 降参だけは、番に関係なくいつでも届く（MIMIの指摘）
-      if (actorOf(this.state) === this.seat && !(a.type === 'surrender' && a.player !== this.seat)) { this.o.on({ type: 'desync', detail: `自分の番なのに相手の操作が届いた（${this.applied}番目）` }); return; }
+      if (actorOf(this.state) === this.seat && !(a.type === 'surrender' && a.player !== this.seat)) { this.desync(`自分の番なのに相手の操作が届いた（${this.applied}番目）`); return; }
       this.state.askZone = [0, 1]; // 画面が盤面を書きかえていても、2台で必ず同じにしてから入れる
-      try { this.state = applyAction(this.state, a); } catch (e) { this.o.on({ type: 'desync', detail: `相手の操作を入れられない：${(e         ).message}` }); return; }
-      this.applied++;
+      try { this.state = applyAction(this.state, inOrder(this.state, a)); } catch (e) { this.desync(`相手の操作を入れられない：${(e         ).message}`); return; }
+      this.applied++; this.got.push(a);
       this.o.on({ type: 'remote', action: a, state: this.state });
     }
     // 盤面の印を比べる：同じ数の操作を入れたところで印がちがえば、すぐ「ずれ」（降参が入った時は順番が前後するので比べない）
     const ck = them.chk;
     if (ck && this.state && ck.round === this.round && ck.n === this.doc.ops.length + this.applied && ck.h !== stateCheck(this.state)
       && !this.doc.ops.some(o => o.type === 'surrender') && !(them.ops ?? []).some(o => o.type === 'surrender')) {
-      this.o.on({ type: 'desync', detail: `盤面の印がちがう（${ck.n}手目）` }); this.stop(); return;
+      this.desync(`盤面の印がちがう（${ck.n}手目）`); return;
     }
     // 子：降参を送ったあと、親が（子の降参を入れて）決着を書いた → 自分の降参を入れて決着。親の降参が先に入っていたら、上でもう決着している
     if (!this.o.host && this.giveUpSent && this.state && this.state.winner === null && them.end && !them.end.reason && them.round === this.round) { this.giveUpNow(); return; }
@@ -480,7 +566,7 @@ export class DuelLink {
   /** 親：決着のあと「もう一度（同じ相手と）」。新しい種で、同じデッキ・同じ公式／練習で始め直す */
   rematch()          {
     if (!this.o.host || !this.state || this.state.winner === null || this.stopped) return false;
-    this.state = null; this.applied = 0; this.doc.ops = []; this.giveUpSent = false; delete this.doc.end; delete this.doc.start;
+    this.state = null; this.applied = 0; this.got = []; this.doc.ops = []; this.giveUpSent = false; delete this.doc.end; delete this.doc.start;
     this.write();
     return true;
   }

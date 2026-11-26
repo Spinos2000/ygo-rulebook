@@ -2,13 +2,13 @@
 // 1. 見えないカード（相手の手札・伏せカード・デッキ、自分のデッキの順番）を、デッキリストからまだ見えていないカードで埋めた「ありえる世界」を何通りも作る
 // 2. それぞれの世界で、相手も手札・伏せカードを使って最善を尽くす前提で各候補を先読みし、盤面の点数を勝率に直して平均する
 // 3. 勝率が一番高い手を選ぶ。ただし、切り札を出す手・一気に大ダメージを与える手が最善手から10%以内なら、そちら（ロマン）を選ぶ
-import { actorOf, defOf, scriptOf, monstersOf, fieldCards, opp, isOnField, poolDef } from '../engine/game.js?v=20261122-0953-df31350498';
-import { cloneState } from '../engine/types.js?v=20261122-0953-df31350498';
+import { actorOf, defOf, scriptOf, monstersOf, fieldCards, opp, isOnField, poolDef } from '../engine/game.js?v=20261126-1250-a6f77c141d';
+import { cloneState } from '../engine/types.js?v=20261126-1250-a6f77c141d';
                                                                       
-import { scoreCandidates, cpuDecide, evaluate, answerCandidates,                                            } from './cpu.js?v=20261122-0953-df31350498';
-import { DECK_WEIGHTS } from './deck-weights.js?v=20261122-0953-df31350498';
-import { DECKS } from '../data/decks.js?v=20261122-0953-df31350498';
-import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js?v=20261122-0953-df31350498';
+import { scoreCandidates, cpuDecide, evaluate, answerCandidates,                                            } from './cpu.js?v=20261126-1250-a6f77c141d';
+import { DECK_WEIGHTS } from './deck-weights.js?v=20261126-1250-a6f77c141d';
+import { DECKS } from '../data/decks.js?v=20261126-1250-a6f77c141d';
+import { applyAction, WORK, legalActions, currentStats } from '../engine/game.js?v=20261126-1250-a6f77c141d';
 
                                
                            
@@ -210,6 +210,26 @@ function weakTribute(s           , a        )          {
                                                                                                                                                 
 
 /** 理想のCPUの考え（行動と勝率の見積もり） */
+/** 手札に加える答えが、今の手札とどれだけ組み合わさるか（大きいほど良い）。手札に加える選択でなければ0
+ * - 儀式モンスターが手札にあって儀式魔法が無い時の儀式魔法、その逆：+2
+ * - 同じ名前のカードがもう手札にある：-1（組み合わさる相手がそろっていない時の2枚目は使いにくい） */
+export function handFit(s           , me          , a        )         {
+  const r = s.pending?.request;
+  if (a.type !== 'answer' || !r || r.kind !== 'cards' || r.player !== me || !r.prompt.includes('手札に加える') || !Array.isArray(a.value)) return 0;
+  const hand = s.players[me].hand.map(u => defOf(s, u));
+  const ritualSpell = (d                          ) => d.kind === 'spell' && d.subtype === '儀式';
+  const ritualMon = (d                          ) => d.kind === 'monster' && d.frame === 'ritual';
+  const hasSpell = hand.some(ritualSpell), hasMon = hand.some(ritualMon);
+  let v = 0;
+  for (const u of a.value            ) {
+    const d = defOf(s, u);
+    if (ritualSpell(d) && hasMon && !hasSpell) v += 2;
+    if (ritualMon(d) && hasSpell && !hasMon) v += 2;
+    if (hand.some(h => h.name === d.name)) v -= 1;
+  }
+  return v;
+}
+
 export function idealThink(s           , opt               = {}, deckNames                   = ['', ''])          {
   const o = { ...DEF, ...opt };
   const rnd = opt.random ?? Math.random;
@@ -357,6 +377,15 @@ export function idealThink(s           , opt               = {}, deckNames      
   // 勝率がほぼ同じ手（差 tie 未満）からランダムに選ぶ
   const near = list.filter(a => a.rate >= bestRate - (opt.tie ?? 1e-9));
   let pick = near[Math.floor(rnd() * near.length)];
+  // 手札に加えるカードを選ぶ時、見込みが同じなら手札と組み合わさる方を選ぶ（t13・試合40：マジシャン・オブ・ブラックカオスが手札にあるのに、
+  // マンジュ・ゴッドで2枚目を加えて儀式魔法が無いまま。見込みはどれも63%（差は0.2%）で、見積もりのばらつきで選んでいた）
+  // 見込みの差が1%以内の候補で比べ、組み合わさり方が一番良い中から見込みの高い方
+  if (s.pending) {
+    const close = list.filter(a => a.rate >= bestRate - 0.01);
+    const fit = close.map(a => handFit(s, me, a.action));
+    const top = Math.max(...fit);
+    if (close.length > 1 && top > Math.min(...fit)) pick = close.filter((_, i) => fit[i] === top).reduce((x, y) => (y.rate > x.rate ? y : x));
+  }
   // 負けそうな時（最善でも勝率5%未満）は、勝率がほぼ同じ（1%以内）手の中から、盤面の点数が一番良い手を選ぶ。
   // どの手も0%に見えて適当に選ぶ（攻撃できるのに攻撃しない など）のを防ぎ、最後まで最善を尽くす
   if (bestRate < 0.05) {

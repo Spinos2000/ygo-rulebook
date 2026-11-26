@@ -1,19 +1,28 @@
 // 攻撃の演出（キャンバスに描く）。種族ごとの攻撃・命中・カードの壊れ方と、神（幻神獣族・創造神族）の特別な演出。
 // playBattle() は演出が終わったら解決する Promise を返す。カードの位置は画面上の四角（getBoundingClientRect）で受け取る
-import { partnerLine } from './lines.js?v=20261122-0953-df31350498';
+import { partnerLine } from './lines.js?v=20261126-1250-a6f77c141d';
 const TAU = Math.PI * 2;
 
 /* ---------- 相棒のひと言：着地したカードのそばに、短い吹き出しを2.4秒ほど出す ---------- */
+/** No.28：デュエル卓（.droot）の背景と文字の色を組で読む。読めない時は明るい組（明るい背景に濃い字） */
+function duelPalette(root) {
+  const dr = root && root.querySelector && root.querySelector('.droot');
+  const cs = dr ? getComputedStyle(dr) : null;
+  const bg = cs && cs.getPropertyValue('--panel').trim(), ink = cs && cs.getPropertyValue('--ink').trim();
+  return bg && ink ? { bg, ink } : { bg: '#fffdf8', ink: '#262b3a' };
+}
 function partnerSay(root, info, partner) {
   const r = (info.track && info.track()) || info.rect; if (!r) return;
   root.querySelectorAll('.partner-say').forEach(x => x.remove()); // 前の吹き出しが残っていたら消す（続けて出た時に重ならないように）
   const b = document.createElement('div');
   b.className = 'partner-say';
   b.setAttribute('role', 'status');
+  // No.28：吹き出しはデュエル卓の色の外（root の直下）に置くので、var(--ink) だとサイトの文字の色（暗い見た目では白）を拾い、背景は明るいまま→白い字が読めなかった。卓の色を読んで、背景と文字を組で使う
+  const pal = duelPalette(root);
   const vw = innerWidth, w = Math.min(240, vw - 24), cx = r.left + r.width / 2;
   const left = Math.max(12, Math.min(vw - w - 12, cx - w / 2)), above = r.top > 120;
   Object.assign(b.style, { position: 'fixed', left: left + 'px', width: w + 'px', zIndex: 60, pointerEvents: 'none', boxSizing: 'border-box',
-    background: 'var(--panel, #fffdf8)', color: 'var(--ink, #262b3a)', border: '2px solid #ffb35c', borderRadius: '14px', padding: '6px 10px',
+    background: pal.bg, color: pal.ink, border: '2px solid #ffb35c', borderRadius: '14px', padding: '6px 10px',
     boxShadow: '0 6px 18px rgba(0,0,0,.35)', font: '700 13px/1.45 var(--display, sans-serif)', textAlign: 'center' });
   if (above) b.style.bottom = (innerHeight - r.top + 8) + 'px'; else b.style.top = (r.bottom + 8) + 'px';
   const who = document.createElement('small');
@@ -63,12 +72,12 @@ function spr(c) {
 }
 function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
 const FRAME = { normal: '#f1d98a', effect: '#e9a36f', ritual: '#9cb8ec', fusion: '#b9a3e0', spell: '#5dbfa1', trap: '#d98bb2' };
-const ATTR = { 闇: '#534ab7', 光: '#b8902a', 地: '#8a6a3a', 水: '#2f6fb0', 炎: '#c4473a', 風: '#2e8b57', 神: '#a9841f' };
+export const ATTR = { 闇: '#534ab7', 光: '#b8902a', 地: '#8a6a3a', 水: '#2f6fb0', 炎: '#c4473a', 風: '#2e8b57', 神: '#a9841f' };
 /* 対戦卓のカード（app.js の faceHtml と duel-ui.js のカードの形）と同じ文字・記号 */
-const RACE_CHAR = { ドラゴン族: '竜', 魔法使い族: '魔', 機械族: '機', 戦士族: '戦', 悪魔族: '悪', 天使族: '天', アンデット族: '屍', 獣族: '獣', 獣戦士族: '獣', 鳥獣族: '鳥', 爬虫類族: '爬', 恐竜族: '恐', 水族: '水', 海竜族: '海', 魚族: '魚', 炎族: '炎', 雷族: '雷', 岩石族: '岩', 植物族: '植', 昆虫族: '虫', 幻神獣族: '神' };
-const SPELL_MARK = { 通常: '✦', 速攻: '➶', 永続: '∞', 装備: '⚔', フィールド: '◈', 儀式: '✧' };
-const TRAP_MARK = { 通常: '◆', 永続: '∞', カウンター: '↺' };
-const FRAME_NAME = { normal: '通常', effect: '効果', ritual: '儀式', fusion: '融合' };
+export const RACE_CHAR = { ドラゴン族: '竜', 魔法使い族: '魔', 機械族: '機', 戦士族: '戦', 悪魔族: '悪', 天使族: '天', アンデット族: '屍', 獣族: '獣', 獣戦士族: '獣', 鳥獣族: '鳥', 爬虫類族: '爬', 恐竜族: '恐', 水族: '水', 海竜族: '海', 魚族: '魚', 炎族: '炎', 雷族: '雷', 岩石族: '岩', 植物族: '植', 昆虫族: '虫', 幻神獣族: '神' };
+export const SPELL_MARK = { 通常: '✦', 速攻: '➶', 永続: '∞', 装備: '⚔', フィールド: '◈', 儀式: '✧' };
+export const TRAP_MARK = { 通常: '◆', 永続: '∞', カウンター: '↺' };
+export const FRAME_NAME = { normal: '通常', effect: '効果', ritual: '儀式', fusion: '融合' };
 const CARD_FONT = '"M PLUS Rounded 1c","Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif';
 const CARD_DISPLAY = '"Zen Maru Gothic","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",sans-serif';
 const CARD_NUM = '"Fredoka","M PLUS Rounded 1c",sans-serif';
@@ -216,6 +225,7 @@ function fit() {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   W = window.innerWidth; H = window.innerHeight;
   cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px'; // No.36：見た目の大きさを中身とそろえる（CSSの100vhは、iPhoneでバーが出ていると innerHeight より大きく、絵が縦にのびて下ほどずれた）
 }
 
 /**
@@ -714,6 +724,7 @@ export function playSummon(root, info) {
       speed: (info.speed || 1) * (window.__fxSlow || 1), L: SUMMON_LAND[how] || 600, hit: false, bolt: null, done: false,
       mats: (info.mats || []).map(m => ({ x: m.rect.left + m.rect.width / 2, y: m.rect.top + m.rect.height / 2, w: m.rect.width, h: m.rect.height, img: cardImg(m.d, m.atk, m.def), a: 1, s: 1 })) };
     S.fromDef = !!info.fromDef; // No.14：反転召喚の前が裏側守備表示（横向き）だった
+    S.side = info.pos === 'def' && r.width > r.height; // No.27：守備表示で出た（盤面のカードは横向き）
     S.end = S.L + (how === 'god' ? 900 : how === 'ace' ? 1100 : how === 'partner' ? 1100 : how === 'set' ? 250 : 650);
     if (A && big) {
       S.plate = { label: A.label, side: A.side || '' };
@@ -864,7 +875,8 @@ function fusionTick(S) {
   }
   S.dark = Math.min(.6, t / 500);
 }
-function sImg(S, img, x, y, s, a, sx) { ctx.save(); ctx.translate(x, y); ctx.scale(s * (sx == null ? 1 : sx), s); ctx.globalAlpha = Math.max(0, Math.min(1, a)); ctx.drawImage(img, -S.w / 2, -S.h / 2, S.w, S.h); ctx.restore(); }
+// No.27：守備表示のカードは盤面で横向き（右へ90度）。場所の箱（S.w×S.h）は横長なので、縦の絵をそのまま入れると縮んで見える。回して縦横を入れ替えて描く
+function sImg(S, img, x, y, s, a, sx) { ctx.save(); ctx.translate(x, y); if (S.side) ctx.rotate(Math.PI / 2); ctx.scale(s * (sx == null ? 1 : sx), s); ctx.globalAlpha = Math.max(0, Math.min(1, a)); if (S.side) ctx.drawImage(img, -S.h / 2, -S.w / 2, S.h, S.w); else ctx.drawImage(img, -S.w / 2, -S.h / 2, S.w, S.h); ctx.restore(); }
 /** 名前の帯の高さ：盤面のうち、手札・ボタン・チェーンの欄に隠れていない所（safe）の、出てきたカードと反対側の半分の真ん中 */
 function plateY(S) {
   let top = clipR ? clipR.top : 0, bot = clipR ? clipR.bottom : H;
@@ -959,8 +971,8 @@ function summonDraw(S) {
   else if (k === 'flip') {
     // No.14（ボスの報告：反転召喚の時にカードがずれる）：裏側守備表示のカードは盤面で横向き。演出も横向きの裏から始めて、裏返りながら縦に起き上がる
     const p = Math.min(1, t / L), sx = Math.cos(p * Math.PI), s = 1 + .15 * Math.sin(p * Math.PI);
-    ctx.save(); ctx.translate(x, y - 10 * Math.sin(p * Math.PI)); if (S.fromDef) ctx.rotate(Math.PI / 2 * (1 - ease(p))); // 盤面の守備表示と同じ向き（右へ90度）から
-    ctx.scale(s * Math.abs(sx), s); ctx.drawImage(sx > 0 ? backImg() : img, -S.w / 2, -S.h / 2, S.w, S.h); ctx.restore();
+    ctx.save(); ctx.translate(x, y - 10 * Math.sin(p * Math.PI)); if (S.side) ctx.rotate(Math.PI / 2); else if (S.fromDef) ctx.rotate(Math.PI / 2 * (1 - ease(p))); // 盤面の守備表示と同じ向き（右へ90度）から
+    ctx.scale(s * Math.abs(sx), s); if (S.side) ctx.drawImage(sx > 0 ? backImg() : img, -S.h / 2, -S.w / 2, S.h, S.w); else ctx.drawImage(sx > 0 ? backImg() : img, -S.w / 2, -S.h / 2, S.w, S.h); ctx.restore();
   }
   else if (k === 'ritual') { if (t > L * .5) { const p = Math.min(1, (t - L * .5) / (L * .5)); sImg(S, img, x, y - 40 * U * (1 - ease(p)), .6 + .4 * ease(p), p); } }
   else if (k === 'fusion') {
