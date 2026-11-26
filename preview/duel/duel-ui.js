@@ -349,6 +349,13 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent }
 /* 演出の間は、透明な幕で画面全体をおおって、どこを押しても何も起きないようにする */
 /* スマホを横にした時：召喚・攻撃・カードの演出の間だけ、盤面にかぶる手札を下へしまう（盤面は動かさない） */
 @media (max-width: 860px) and (orientation: landscape) { .droot.fx-stage .tray { transform: translateY(115%) !important; transition: transform .25s ease } }
+/* スマホを横にした時（指で触る画面で、横向き・高さ500以下）：盤面と下の欄が収まらず重なるので、卓の上に「縦にしてください」を全面に出す（先輩の決定C 11-26）。
+   見た目だけ。対戦・タイマー・オンラインの接続はそのまま動き続け、縦に戻せば続きから遊べる。PC・タブレット・縦は変えない */
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  .droot::after { content: "📱\\A スマホを縦にしてください\\A\\A 縦に戻すと、そのまま続きから遊べます"; white-space: pre-wrap; position: fixed; inset: 0; z-index: 2147483000;
+    display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
+    background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; font-weight: 700; line-height: 1.6; pointer-events: auto; touch-action: none }
+}
 /* 辞書（公式Q&A）の窓：スマホでも長い答えを折り返して読める。外側を押す・閉じる・Escで閉じる */
 .rul-box { max-width: 560px }
 /* 長い答えを読み進めても「閉じる」が見えるように、見出しは窓の上に固定する */
@@ -1112,7 +1119,7 @@ export const MARKUP = `
       <button class="btn danger" id="surrender">🏳 降参する</button>
     </div>
     <p class="menu-note">LP（ライフポイント）を先に0にした方が負けです。1ターンは「ドロー → スタンバイ → メイン1 → バトル → メイン2 → エンド」の順に進み、上の帯に今のフェイズが出ます。カードを押すと、そのカードでできる操作が出ます。光っているカードは今発動できます。墓地・除外・EXデッキの枠を押すと中身を見られます。<span class="pc-only">Ctrl+Z でひとつ戻せます。</span></p>
-    <p class="menu-note ver">版：20261126-0849</p>
+    <p class="menu-note ver">版：20261126-0913</p>
   </div>
 </div>
 <div class="overlay su" id="setup" hidden role="dialog" aria-modal="true" aria-labelledby="suTitle">

@@ -51,6 +51,11 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 .pv-band[hidden] { display: none }
 .pv-band b { font-family: Fredoka, "M PLUS Rounded 1c", sans-serif; font-weight: 600 }
 .pv-band a { color: #3a2f12; background: #fff7dc; border: 1.5px solid #c9a646; border-radius: 999px; padding: 2px 10px; text-decoration: none; white-space: nowrap }
+/* t61（先輩の答えA 11/26）：スマホの幅では上の帯が卓を押し下げ、下の欄が盤面に重なる。スマホでは帯をしまい、🎬の欄の見出しの下に出す。PCは今のまま */
+#demo .pv-sub { display: none; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--d-sub) }
+#demo .pv-sub b { font-family: Fredoka, "M PLUS Rounded 1c", sans-serif; font-weight: 600 }
+#demo .pv-sub a { color: var(--d-ink); background: var(--d-panel-2); border: 1px solid var(--d-line); border-radius: 999px; padding: 2px 10px; text-decoration: none; white-space: nowrap }
+@media (max-width: 860px) { .pv-band:not([hidden]) { display: none } #demo .pv-sub:not([hidden]) { display: flex } }
 /* ---------- t30：相手の発動の確認画面（DEMOだけ。本物の卓にはまだ入れない） ---------- */
 #demo h3.ack-h { font-family: "Zen Maru Gothic", inherit; font-weight: 700; font-size: 13px; margin: 10px 0 4px; color: var(--d-sub) }
 #ackLayer { position: fixed; inset: 0; z-index: 58; background: rgba(8, 14, 28, .38) }
@@ -173,6 +178,7 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 <button id="demoOpen" type="button">🎬 演出を選ぶ</button>
 <section id="demo" aria-label="演出を選ぶ">
   <header><h1>🎬 演出DEMO</h1><button class="close" type="button" id="demoClose">閉じる</button></header>
+  <p class="pv-sub" id="pv-sub" hidden>🎬 デモ版（演出の見本）<b class="pv-ver"></b><a href="../">🧪 試作版に戻る</a></p>
   <p class="note">ボタンを押すと、すぐその場面が始まります。対戦は進めなくて大丈夫です。</p>
   <div id="demoList"><div id="secAck"></div><div id="secLook"></div>
     <details id="secDev" class="dev"><summary>🔧 そのほか（開発用）</summary><button type="button" class="fx guide-open" id="guideOpenDemo">📖 操作ガイドを開く<small>はじめて卓を開いた時に出る案内（何度でも開けます）</small></button></details>
@@ -183,18 +189,19 @@ body { margin: 0; background: var(--d-bg); color: var(--d-ink); font-family: "M 
 <div id="ackThink" role="status" hidden>🤔 相手が考えています…</div>
 <div id="ackCut" role="status" aria-live="assertive" hidden></div>
 <script type="module">
-import { mountDuel } from './embed.js?v=20261126-0849-79dedfcc20';
-import { ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261126-0849-79dedfcc20';
-import { unlock } from './sound.js?v=20261126-0849-79dedfcc20';
-import { CARD_POOL } from './data/cardpool.js?v=20261126-0849-79dedfcc20';
-import { createGame, legalActions } from './engine/game.js?v=20261126-0849-79dedfcc20';
-import { answerCandidates } from './ai/cpu.js?v=20261126-0849-79dedfcc20';
+import { mountDuel } from './embed.js?v=20261126-0913-b71a5909b1';
+import { ATTR, RACE_CHAR, SPELL_MARK, TRAP_MARK, FRAME_NAME } from './fx.js?v=20261126-0913-b71a5909b1';
+import { unlock } from './sound.js?v=20261126-0913-b71a5909b1';
+import { CARD_POOL } from './data/cardpool.js?v=20261126-0913-b71a5909b1';
+import { createGame, legalActions } from './engine/game.js?v=20261126-0913-b71a5909b1';
+import { answerCandidates } from './ai/cpu.js?v=20261126-0913-b71a5909b1';
 
 const host = document.getElementById('duel-host');
 // 名札の帯：試作版（/preview/）の時だけ出す。版の名前は version.json（作る時に書く）から読む
 if (location.pathname.indexOf('/preview/') >= 0) {
   document.getElementById('pv-band').hidden = false;
-  fetch('./version.json', { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).then(v => { if (v && v.ver) document.getElementById('pv-ver').textContent = `版${String(v.ver).slice(-4)}`; }).catch(() => {});
+  document.getElementById('pv-sub').hidden = false; // t61：スマホの時は、帯の代わりに🎬の欄の見出しの下に出す
+  fetch('./version.json', { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).then(v => { if (v && v.ver) document.querySelectorAll('#pv-ver, .pv-ver').forEach(b => { b.textContent = `版${String(v.ver).slice(-4)}`; }); }).catch(() => {});
 }
 mountDuel(host, { demo: true });
 const root = host.shadowRoot;
