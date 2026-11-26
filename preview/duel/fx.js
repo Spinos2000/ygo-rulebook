@@ -1,6 +1,6 @@
 // 攻撃の演出（キャンバスに描く）。種族ごとの攻撃・命中・カードの壊れ方と、神（幻神獣族・創造神族）の特別な演出。
 // playBattle() は演出が終わったら解決する Promise を返す。カードの位置は画面上の四角（getBoundingClientRect）で受け取る
-import { partnerLine } from './lines.js?v=20261126-1250-a6f77c141d';
+import { partnerLine } from './lines.js?v=20261126-1839-bcfef5e5cd';
 const TAU = Math.PI * 2;
 
 /* ---------- 相棒のひと言：着地したカードのそばに、短い吹き出しを2.4秒ほど出す ---------- */
@@ -215,6 +215,17 @@ function maskToBoard() {
 
 /* ---------- キャンバス ---------- */
 let cv = null, ctx = null, W = 0, H = 0;
+/** 先輩 11-26：紙を innerHeight にすると、innerHeight が見える高さより小さい時、下に帯が残った。
+ *  CSSの箱（100vw×100vh）・innerHeight・見えている高さの、一番大きいものを紙の大きさにする（はみ出た分は画面の外なので見えない） */
+function screenSize() {
+  const was = cv.style.display; cv.style.width = cv.style.height = ''; cv.style.display = 'block';
+  const r = cv.getBoundingClientRect ? cv.getBoundingClientRect() : { width: 0, height: 0 }; cv.style.display = was;
+  const de = document.documentElement || {}, vv = window.visualViewport;
+  return {
+    w: Math.ceil(Math.max(r.width, window.innerWidth, de.clientWidth || 0, vv ? vv.width + vv.offsetLeft : 0)),
+    h: Math.ceil(Math.max(r.height, window.innerHeight, de.clientHeight || 0, vv ? vv.height + vv.offsetTop : 0)),
+  };
+}
 function ensureCanvas(root) {
   if (cv && cv.isConnected) return;
   cv = document.createElement('canvas'); cv.className = 'fx-layer';
@@ -223,7 +234,7 @@ function ensureCanvas(root) {
 }
 function fit() {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  W = window.innerWidth; H = window.innerHeight;
+  ({ w: W, h: H } = screenSize());
   cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   cv.style.width = W + 'px'; cv.style.height = H + 'px'; // No.36：見た目の大きさを中身とそろえる（CSSの100vhは、iPhoneでバーが出ていると innerHeight より大きく、絵が縦にのびて下ほどずれた）
 }
