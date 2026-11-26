@@ -1,25 +1,25 @@
 // 対戦画面（第5段階：CPU対戦）。エンジンは ./engine/game.js、CPU は ./ai/cpu.js
 // 画面の考え方：やることは画面下の「操作ドック」にまとめる。カードを押すと、PCは右の欄、スマホは下から出るシートに操作が出る。
-import { aceInfo, aceCodes } from './ai/aces.js?v=20261126-0913-b71a5909b1';
-import { fullThink } from './ai/levels.js?v=20261126-0913-b71a5909b1';
-import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261126-0913-b71a5909b1';
-import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261126-0913-b71a5909b1';
-import { playBattle, playSummon, rarityOf } from './fx.js?v=20261126-0913-b71a5909b1';
-import { playSignature, sigKey } from './sig.js?v=20261126-0913-b71a5909b1';
-import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261126-0913-b71a5909b1';
-import { firstEntrance } from './aces.js?v=20261126-0913-b71a5909b1';
-import { RULINGS } from './data/rulings.js?v=20261126-0913-b71a5909b1';
-import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261126-0913-b71a5909b1';
-import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261126-0913-b71a5909b1';
-import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261126-0913-b71a5909b1';
-import { joinSiteRoom } from './net/site-room.js?v=20261126-0913-b71a5909b1';
+import { aceInfo, aceCodes } from './ai/aces.js?v=20261126-1106-e31f838aba';
+import { fullThink } from './ai/levels.js?v=20261126-1106-e31f838aba';
+import { lineFor, effectLine, randomPersona, PERSONA_KEYS } from './lines.js?v=20261126-1106-e31f838aba';
+import { play, unlock, soundEnabled, setSoundEnabled } from './sound.js?v=20261126-1106-e31f838aba';
+import { playBattle, playSummon, rarityOf } from './fx.js?v=20261126-1106-e31f838aba';
+import { playSignature, sigKey } from './sig.js?v=20261126-1106-e31f838aba';
+import { playerName, whoText, whoNames, resultText, oppWord } from './names.js?v=20261126-1106-e31f838aba';
+import { firstEntrance } from './aces.js?v=20261126-1106-e31f838aba';
+import { RULINGS } from './data/rulings.js?v=20261126-1106-e31f838aba';
+import { rulingsFor, nameIndex, linkNames, rulingsHtml } from './rulings.js?v=20261126-1106-e31f838aba';
+import { GUIDE_KEY, guidePages, guideHtml } from './guide.js?v=20261126-1106-e31f838aba';
+import { DuelLink, tabRoom, BUILD_FP } from './net/duel-link.js?v=20261126-1106-e31f838aba';
+import { joinSiteRoom } from './net/site-room.js?v=20261126-1106-e31f838aba';
 import {
   createGame, applyAction, legalActions, defOf, monstersOf, currentAtk, currentDef, PHASE_LABEL, tributesFor, setPool,
   actorOf, activatableList, whyIllegal,
-} from './engine/game.js?v=20261126-0913-b71a5909b1';
-import { CARD_POOL } from './data/cardpool.js?v=20261126-0913-b71a5909b1';
-import { DECKS } from './data/decks.js?v=20261126-0913-b71a5909b1';
-import { SCRIPTS } from './cards/index.js?v=20261126-0913-b71a5909b1';
+} from './engine/game.js?v=20261126-1106-e31f838aba';
+import { CARD_POOL } from './data/cardpool.js?v=20261126-1106-e31f838aba';
+import { DECKS } from './data/decks.js?v=20261126-1106-e31f838aba';
+import { SCRIPTS } from './cards/index.js?v=20261126-1106-e31f838aba';
 
 // 画面の部品は、置き場所（Shadow DOM の中）から探す。boot() で決まる
 let ROOT = document;
@@ -268,7 +268,7 @@ function queueBattleFx(prev, next) {
     if (el) { matRects.set(u, el.getBoundingClientRect()); sigSkip.add(u); }
   }
   // 攻撃：まだ画面に残っている前の状態の盤面（カードの位置）で再生する
-  const battles = fresh.filter(x => x.kind === 'battle').map(x => { const j = battleInfo(prev, next, x); if (j) j.seq = x.seq; return j; }).filter(Boolean);
+  const battles = fresh.filter(x => x.kind === 'battle').map(x => { const j = battleInfo(prev, next, x); if (j) { j.seq = x.seq; j.bump = x.destroyed; } return j; }).filter(Boolean);
   // カードごとの専用演出（ブラック・ホールなど）：これも前の状態の盤面で再生する
   // 専用演出の無いカードも、チェーンで処理が続く時は、処理の順番どおりに1つずつ見せる（奈落の落とし穴 → 神の宣告 → 神の宣告 で、
   // 最後に通る奈落の分が、ほかのカードの移動に混ざって何も流れないように見えていた。MASTERの注文 11-25）
@@ -309,6 +309,12 @@ function queueBattleFx(prev, next) {
   fxN++; fxBlock();
   (async () => {
     const gone = new Set(), hidden = []; // この続きの中でもう壊れたカード。最後まで盤面に出さない（次の演出の時に、壊れたカードが戻って見えないように）
+    // 専用演出・攻撃の演出で壊れて消えたカードは、その場で行き先（墓地・除外）の数を足す（先輩 11-26：チェーンの途中で墓地が0のまま見えた）。
+    // 最後の描き直しで実際の数に戻るので、二重にはならない。1枚につき1回だけ足す
+    const counted = new Set(), countGone = uids => (uids || []).forEach(u => {
+      const n = next.cards[u]; if (!n || counted.has(u) || !['gy', 'banished'].includes(n.zone)) return;
+      counted.add(u); bumpCnt(`${n.owner}:${n.zone}`, 1);
+    });
     for (const j of jobs) {
       fxStage(true);
       if (j.res) {
@@ -332,6 +338,7 @@ function queueBattleFx(prev, next) {
       try { await (j.sig ? playSignature(ROOT, j.info) : playBattle(ROOT, j.info)); } catch (e) { console.error(e); }
       if (brd) brd.classList.remove('skin-on');
       if (j.sig) (j.info.dest || []).forEach(c => { gone.add(c.uid); hidden.push(c.el); });
+      countGone(j.sig ? (j.info.dest || []).map(c => c.uid) : j.bump);
       hide.forEach(el => { if (!hidden.includes(el)) el.style.visibility = ''; });
     }
     hidden.forEach(el => { el.style.visibility = ''; });
@@ -553,7 +560,7 @@ const waiting = new Map();
 function getWorker() {
   if (worker || workerBroken) return worker;
   try {
-    worker = new Worker(new URL('./ai/worker.js?v=20261126-0913-b71a5909b1', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./ai/worker.js?v=20261126-1106-e31f838aba', import.meta.url), { type: 'module' });
     worker.onmessage = e => {
       // 考えている途中の知らせ（0.3秒ごと）：表示だけ変えて、答えの待ちは続ける
       if (e.data && e.data.progress) { if (e.data.id === reqId) thinkProgress(e.data.frac, e.data.critical); return; }
@@ -1553,7 +1560,7 @@ const ONLINE = (() => { try { return new URLSearchParams(location.search).has('o
 const NET_AWAY_SHOW = 45000; // 相手の知らせがこれだけ来なかったら「つながりが切れたかも」を出す（3分で終わりは通信の部品が決める）
 let netUi = null; // 相手を探している間：{ step, key, myKey, deck, mode, host, room, link, status, peerName }
 /** 版の印：「duel-ui.js の版の文字」-「指紋」（scripts/build.mjs が書きこむ。同じ印を net/duel-link.js の BUILD_FP にも書きこむ） */
-const DUEL_BUILD = '20261126-0913-b71a5909b1';
+const DUEL_BUILD = '20261126-1106-e31f838aba';
 const BUILT = !DUEL_BUILD.startsWith('__');
 /** オンライン対戦の版：版の印（作っていない時は画面の版の文字）。印がちがう相手とは「版ちがい」で始めない */
 const netVer = () => (BUILT ? DUEL_BUILD : (($('.ver') && $('.ver').textContent) || '').replace(/^版：/, '').trim() || 'dev');
